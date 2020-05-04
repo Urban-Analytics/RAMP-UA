@@ -31,7 +31,8 @@ class Microsim:
         for f in glob.glob(msm_dir+'/ass_hh_*_OA11_2020.csv'):
             house_dfs.append(pd.read_csv(f))
         if len(house_dfs)==0:
-            raise Exception(f"No household csv files found in {msm_dir}. Have you downloaded and extracted the necessary data? (see {DATA_DIR} README)")
+            raise Exception(f"No household csv files found in {msm_dir}.",
+                            f"Have you downloaded and extracted the necessary data? (see {DATA_DIR} README)")
         households = pd.concat(house_dfs)
         
         # individuals
@@ -39,7 +40,8 @@ class Microsim:
         for f in glob.glob(msm_dir+'/ass_*_MSOA11_2020.csv'):
             indiv_dfs.append(pd.read_csv(f))
         if len(indiv_dfs) == 0:
-            raise Exception(f"No individual csv files found in {msm_dir}. Have you downloaded and extracted the necessary data? (see {DATA_DIR} README)")
+            raise Exception(f"No individual csv files found in {msm_dir}.",
+                            f"Have you downloaded and extracted the necessary data? (see {DATA_DIR} README)")
         individuals = pd.concat(indiv_dfs)
         
         # THE FOLLOWING SHOULD BE DONE AS PART OF A TEST SUITE
@@ -47,9 +49,13 @@ class Microsim:
         #TODO: check that each individual has a household    
         #TODO: graph number of people per household just to sense check
         
+        
+        
         print("Have read files:",
-              f"\n\tHouseholds:  {len(house_dfs)} files with {len(households)} households",
-              f"\n\tIndividuals: {len(indiv_dfs)} files with {len(individuals)} individuals")
+              f"\n\tHouseholds:  {len(house_dfs)} files with {len(households)}",
+              f"households in {len(households.Area.unique())} areas",
+              f"\n\tIndividuals: {len(indiv_dfs)} files with {len(individuals)}",
+              f"individuals in {len(individuals.Area.unique())} areas")
         
         return (households, individuals)
     

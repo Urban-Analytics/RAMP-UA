@@ -1,0 +1,5 @@
+# Mac crap
+.DS_Store
+
+# spyder project
+.spyproject/
