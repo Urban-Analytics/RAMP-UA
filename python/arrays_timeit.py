@@ -13,9 +13,11 @@ Created on Mon May  4 15:25:32 2020
 
 import random
 from tqdm import tqdm
+tqdm.pandas() # Activate tqdm for pandas, provides df.progress_apply()
 import pandas as pd
 import numpy as np
 import timeit
+
 
 age = []
 print("Creating initial array", flush=True)
@@ -39,6 +41,7 @@ def increment_age_pd1(): # THIS TAKES AGES!
         
 def increment_age_pd2():
     return age_pd.apply(lambda x: x+1)
+    #return age_pd.progress_apply(lambda x: x+1) # progress bar version
     
 print(f"Time using numpy (for loop):")
 print(timeit.timeit( increment_age_np1, number=100), flush=True)

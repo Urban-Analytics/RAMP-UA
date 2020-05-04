@@ -12,6 +12,8 @@ import pandas as pd
 import glob
 import os
 
+import click # command-line interface
+
 DATA_DIR = "../../data/"
 
 class Microsim:
@@ -71,8 +73,14 @@ class Microsim:
     
 
 # PROGRAM ENTRY POINT
-        
-if __name__=="__main__":
+# Uses 'click' library so that it can be run from the command line
+@click.command()
+@click.option('--iterations', default=10, help='Number of model iterations')
+def run(iterations):
+    num_iter=iterations
     m = Microsim()
-    for i in range(10):
+    for i in range(num_iter):
         m.step()
+
+if __name__=="__main__":
+    run()
