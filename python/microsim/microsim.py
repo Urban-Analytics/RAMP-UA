@@ -10,6 +10,9 @@ Created on Wed Apr 29 19:59:25 2020
 
 import pandas as pd
 import glob
+import os
+
+DATA_DIR = "../../data/"
 
 class Microsim:
     
@@ -20,23 +23,33 @@ class Microsim:
     @classmethod
     def _read_msm_data(cls):
         """Read the csv files that have the indivduls and households"""
+        
+        msm_dir = os.path.join(DATA_DIR,"msm_data")
     
         # households
-        df_list = []
-        for f in glob.glob('data/msm_data_v0.1/ass_hh_*_OA11_2020.csv'):
-            df_list.append(pd.read_csv(f))
-        households = pd.concat(df_list)
+        house_dfs = []
+        for f in glob.glob(msm_dir+'/ass_hh_*_OA11_2020.csv'):
+            house_dfs.append(pd.read_csv(f))
+        if len(house_dfs)==0:
+            raise Exception(f"No household csv files found in {msm_dir}. Have you downloaded and extracted the necessary data? (see {DATA_DIR} README)")
+        households = pd.concat(house_dfs)
         
         # individuals
-        df_list = []
-        for f in glob.glob('data/msm_data_v0.1/ass_*_MSOA11_2020.csv'):
-            df_list.append(pd.read_csv(f))
-        individuals = pd.concat(df_list)
+        indiv_dfs= []
+        for f in glob.glob(msm_dir+'/ass_*_MSOA11_2020.csv'):
+            indiv_dfs.append(pd.read_csv(f))
+        if len(indiv_dfs) == 0:
+            raise Exception(f"No individual csv files found in {msm_dir}. Have you downloaded and extracted the necessary data? (see {DATA_DIR} README)")
+        individuals = pd.concat(indiv_dfs)
         
         # THE FOLLOWING SHOULD BE DONE AS PART OF A TEST SUITE
         #TODO: check that correct numbers of rows have been read.    
         #TODO: check that each individual has a household    
         #TODO: graph number of people per household just to sense check
+        
+        print("Have read files:",
+              f"\n\tHouseholds:  {len(house_dfs)} files with {len(households)} households",
+              f"\n\tIndividuals: {len(indiv_dfs)} files with {len(individuals)} individuals")
         
         return (households, individuals)
     
