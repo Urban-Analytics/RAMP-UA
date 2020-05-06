@@ -4,6 +4,6 @@ The data aren't actually stored on github. You should download the following loc
 
 ## Original synthetic population
 
-Download and extract: [msm_data_v0.1.zip](https://osf.io/29dr7/}
+Download and extract: [msm_data_v0.1.zip](https://osf.io/29dr7/)
 
 
