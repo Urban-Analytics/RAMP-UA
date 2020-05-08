@@ -1,5 +1,13 @@
+
+# Built python files
+__pycache__
+
 # Mac crap
 .DS_Store
 
-# spyder project
+# IDE project files
 .spyproject/
+.idea/
+
+# Others
+*.swp
