@@ -13,9 +13,9 @@ import glob
 import os
 import random
 import time
-import re # For analysing file names
+import re  # For analysing file names
 import typing
-from tqdm import tqdm # For a progress bar
+from tqdm import tqdm  # For a progress bar
 
 import click  # command-line interface
 
@@ -119,7 +119,7 @@ class Microsim:
         for i in tqdm(range(len(household_files)), desc="Reading raw microsim data"):
             house_file = household_files[i]
             indiv_file = individual_files[i]
-            area = re.search(r".*?ass_hh_(E\d.*?)_OA.*", house_file).group(1) # Area is in the file name
+            area = re.search(r".*?ass_hh_(E\d.*?)_OA.*", house_file).group(1)  # Area is in the file name
             # (and check that both files refer to the same area)
             assert area == re.search(r".*?ass_(E\d.*?)_MSOA.*", indiv_file).group(1)
 
@@ -127,13 +127,13 @@ class Microsim:
             indiv_df = pd.read_csv(indiv_file)
 
             # Increment the counters
-            house_df["HID"] = house_df["HID"].apply(lambda x: x+HID_counter)
-            house_df["HRPID"] = house_df["HRPID"].apply(lambda x: x+PID_counter) # Also increase the HRP
+            house_df["HID"] = house_df["HID"].apply(lambda x: x + HID_counter)
+            house_df["HRPID"] = house_df["HRPID"].apply(lambda x: x + PID_counter)  # Also increase the HRP
 
-            indiv_df["PID"] = indiv_df["PID"].apply(lambda x: x+PID_counter)
-            indiv_df["HID"] = indiv_df["HID"].apply(lambda x: x+HID_counter) # Also increase the link to HID
+            indiv_df["PID"] = indiv_df["PID"].apply(lambda x: x + PID_counter)
+            indiv_df["HID"] = indiv_df["HID"].apply(lambda x: x + HID_counter)  # Also increase the link to HID
 
-            HID_counter = max(house_df["HID"]) + 1 # Want next counter to start at one larger than current
+            HID_counter = max(house_df["HID"]) + 1  # Want next counter to start at one larger than current
             PID_counter = max(indiv_df["PID"]) + 1
 
             # Save the dataframes for concatination later
@@ -162,7 +162,6 @@ class Microsim:
               f"individuals in {len(individuals.Area.unique())} areas")
 
         # TODO Join individuls to households (create lookup columns in each)
-
 
         return (individuals, households)
 
@@ -279,9 +278,9 @@ class Microsim:
         print("TEMP adding individual flows")
         # TODO First need to go back to read_retail_flows_data and include the MSOA code and an AREA_ID
 
-        for area in tqdm(flow_matrix.values): # Easier to operate over a 2D matrix rather than a dataframe
-            oa_num:int = area[0]
-            oa_code:str = area[1]
+        for area in tqdm(flow_matrix.values):  # Easier to operate over a 2D matrix rather than a dataframe
+            oa_num: int = area[0]
+            oa_code: str = area[1]
             # Get rid of the area codes, so are now just left with flows to locations
             area = list(area[2:])
             # Destinations with positive flows and the flows themselves
@@ -293,33 +292,30 @@ class Microsim:
                     flows.append(flow)
 
             # Create empty lists to hold the vanues and flows for each individuals
-            individuals[f"{flow_type}_Venues"] = [ [] for _ in range(len(individuals)) ]
-            individuals[f"{flow_type}_Probabilities"] = [ [] for _ in range(len(individuals)) ]
+            individuals[f"{flow_type}_Venues"] = [[] for _ in range(len(individuals))]
+            individuals[f"{flow_type}_Probabilities"] = [[] for _ in range(len(individuals))]
 
             # Now assign individuals in those areas to those flows
             # This ridiculous 'apply' line is the only way I could get pandas to update the particular
             # rows required. Something like 'individuals.loc[ ...] = dests' (see below) didn't work becuase
             # instead of inserting the 'dests' list itself, pandas tried to unpack the list and insert
             # the individual values instead.
-            #individuals.loc[individuals.Area == oa_code, f"{flow_type}_Venues"] = dests
-            #individuals.loc[individuals.Area == oa_code, f"{flow_type}_Probabilities"] = flow
-
-            # TODO make this quicker by creating a AreaNumber for easier lookup OR make the Area part of the index (?)
+            # individuals.loc[individuals.Area == oa_code, f"{flow_type}_Venues"] = dests
+            # individuals.loc[individuals.Area == oa_code, f"{flow_type}_Probabilities"] = flow
 
             # Use a hierarchical index on the Area to speed up finding all individuals in an area (?)
             individuals.set_index(["Area", "PID"], inplace=True, drop=False)
 
             individuals.loc["E02004189", f"{flow_type}_Venues"] = \
-               individuals.loc["E02004189", f"{flow_type}_Venues"].apply(lambda _: dests).values
+                individuals.loc["E02004189", f"{flow_type}_Venues"].apply(lambda _: dests).values
             individuals.loc["E02004189", f"{flow_type}_Probabilities"] = \
                 individuals.loc["E02004189", f"{flow_type}_Probabilities"].apply(lambda _: flows).values
-            #individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Venues"] = \
+            # individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Venues"] = \
             #    individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Venues"].apply(lambda _: dests)
-            #individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"] = \
+            # individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"] = \
             #    individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"].apply(lambda _: flows)
 
         print("HERE")
-
 
     def step(self) -> None:
         """Step (iterate) the model"""
