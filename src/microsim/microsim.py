@@ -13,6 +13,7 @@ import glob
 import os
 import random
 import time
+import re # For analysing file names
 import typing
 from tqdm import tqdm # For a progress bar
 
@@ -93,27 +94,61 @@ class Microsim:
 
         msm_dir = os.path.join(cls.DATA_DIR, "msm_data")
 
-        # households
-        house_dfs = []
-        for f in glob.glob(msm_dir + '/ass_hh_*_OA11_2020.csv'):
-            house_dfs.append(pd.read_csv(f))
-        if len(house_dfs) == 0:
+        # Can't just read in all the files because the microsimulation restarts the house and index numbering with
+        # each file, but we need the IDs to be consistent across the whole area. So read the files in one-by-one
+        # and make sure houses and individual IDs are unique
+        household_files = glob.glob(msm_dir + '/ass_hh_*_OA11_2020.csv')
+        if len(household_files) == 0:
             raise Exception(f"No household csv files found in {msm_dir}.",
                             f"Have you downloaded and extracted the necessary data? (see {cls.DATA_DIR} README)")
-        households = pd.concat(house_dfs)
-
-        # individuals
-        indiv_dfs = []
-        for f in glob.glob(msm_dir + '/ass_*_MSOA11_2020.csv'):
-            indiv_dfs.append(pd.read_csv(f))
-        if len(indiv_dfs) == 0:
+        individual_files = glob.glob(msm_dir + '/ass_*_MSOA11_2020.csv')
+        if len(individual_files) == 0:
             raise Exception(f"No individual csv files found in {msm_dir}.",
                             f"Have you downloaded and extracted the necessary data? (see {cls.DATA_DIR} README)")
+        assert (len(household_files) == len(individual_files))
+        household_files.sort()
+        individual_files.sort()
+
+        # Create a DataFrame from each file, then concatenate them later
+        house_dfs = []
+        indiv_dfs = []
+
+        # Keep track of the house and person indices
+        PID_counter = 0
+        HID_counter = 0
+        for i in tqdm(range(len(household_files)), desc="Reading individuals and households"):
+            house_file = household_files[i]
+            indiv_file = individual_files[i]
+            area = re.search(r".*?ass_hh_(E\d.*?)_OA.*", house_file).group(1) # Area is in the file name
+            # (and check that both files refer to the same area)
+            assert area == re.search(r".*?ass_(E\d.*?)_MSOA.*", indiv_file).group(1)
+
+            house_df = pd.read_csv(house_file)
+            indiv_df = pd.read_csv(indiv_file)
+
+            # Increment the counters
+            house_df["HID"] = house_df["HID"].apply(lambda x: x+HID_counter)
+            house_df["HRPID"] = house_df["HRPID"].apply(lambda x: x+PID_counter) # Also increase the HRP
+
+            indiv_df["PID"] = indiv_df["PID"].apply(lambda x: x+PID_counter)
+            indiv_df["HID"] = indiv_df["HID"].apply(lambda x: x+HID_counter) # Also increase the link to HID
+
+            HID_counter = max(house_df["HID"]) + 1 # Want next counter to start at one larger than current
+            PID_counter = max(indiv_df["PID"]) + 1
+
+            # Save the dataframes for concatination later
+            house_dfs.append(house_df)
+            indiv_dfs.append(indiv_df)
+
+        households = pd.concat(house_dfs)
+        households.set_index("HID", inplace=True, drop=False)
         individuals = pd.concat(indiv_dfs)
+        individuals.set_index("PID", inplace=True, drop=False)
 
         # THE FOLLOWING SHOULD BE DONE AS PART OF A TEST SUITE
         # TODO: check that correct numbers of rows have been read.
         # TODO: check that each individual has a household
+        # TODO: check that individuals are correctly linked to households (I had to re-do the PID and HID indexing)
         # TODO: graph number of people per household just to sense check
 
         print("Have read files:",
@@ -165,7 +200,7 @@ class Microsim:
         # Read the stores
         stores = pd.read_csv(os.path.join(dir, "devon smkt.csv"))
         stores['ID'] = list(stores.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1
-        stores = stores.set_index("ID", drop=True)
+        stores = stores.set_index("ID")
 
         # Read the flows
         rows = []  # Build up all the rows in the matrix gradually then add all at once
