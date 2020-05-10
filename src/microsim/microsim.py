@@ -116,7 +116,7 @@ class Microsim:
         # Keep track of the house and person indices
         PID_counter = 0
         HID_counter = 0
-        for i in tqdm(range(len(household_files)), desc="Reading individuals and households"):
+        for i in tqdm(range(len(household_files)), desc="Reading raw microsim data"):
             house_file = household_files[i]
             indiv_file = individual_files[i]
             area = re.search(r".*?ass_hh_(E\d.*?)_OA.*", house_file).group(1) # Area is in the file name
@@ -145,6 +145,10 @@ class Microsim:
         individuals = pd.concat(indiv_dfs)
         individuals.set_index("PID", inplace=True, drop=False)
 
+        # Make sure HIDs and PIDs are unique
+        assert len(households["HID"].unique()) == len(households)
+        assert len(individuals["PID"].unique()) == len(individuals)
+
         # THE FOLLOWING SHOULD BE DONE AS PART OF A TEST SUITE
         # TODO: check that correct numbers of rows have been read.
         # TODO: check that each individual has a household
@@ -158,6 +162,7 @@ class Microsim:
               f"individuals in {len(individuals.Area.unique())} areas")
 
         # TODO Join individuls to households (create lookup columns in each)
+
 
         return (individuals, households)
 
@@ -298,10 +303,20 @@ class Microsim:
             # the individual values instead.
             #individuals.loc[individuals.Area == oa_code, f"{flow_type}_Venues"] = dests
             #individuals.loc[individuals.Area == oa_code, f"{flow_type}_Probabilities"] = flow
-            individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Venues"] = \
-                individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Venues"].apply(lambda _: dests)
-            individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"] = \
-                individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"].apply(lambda _: flows)
+
+            # TODO make this quicker by creating a AreaNumber for easier lookup OR make the Area part of the index (?)
+
+            # Use a hierarchical index on the Area to speed up finding all individuals in an area (?)
+            individuals.set_index(["Area", "PID"], inplace=True, drop=False)
+
+            individuals.loc["E02004189", f"{flow_type}_Venues"] = \
+               individuals.loc["E02004189", f"{flow_type}_Venues"].apply(lambda _: dests).values
+            individuals.loc["E02004189", f"{flow_type}_Probabilities"] = \
+                individuals.loc["E02004189", f"{flow_type}_Probabilities"].apply(lambda _: flows).values
+            #individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Venues"] = \
+            #    individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Venues"].apply(lambda _: dests)
+            #individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"] = \
+            #    individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"].apply(lambda _: flows)
 
         print("HERE")
 
