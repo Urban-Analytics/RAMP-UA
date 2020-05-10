@@ -1,6 +1,7 @@
 
 # Built python files
 __pycache__
+.pytest_cache/
 
 # Mac crap
 .DS_Store
