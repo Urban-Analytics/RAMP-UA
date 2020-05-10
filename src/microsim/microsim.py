@@ -14,6 +14,7 @@ import os
 import random
 import time
 import typing
+from tqdm import tqdm # For a progress bar
 
 import click  # command-line interface
 
@@ -227,16 +228,48 @@ class Microsim:
         return stores, flow_matrix
 
     @classmethod
-    def add_individual_flows(cls, flow_type: str, individuals: pd.DataFrame, flows: pd.DataFrame) -> pd.DataFrame:
+    def add_individual_flows(cls, flow_type: str, individuals: pd.DataFrame, flow_matrix: pd.DataFrame) -> pd.DataFrame:
         """
         Take a flow matrix from MSOAs to (e.g. retail) locations and assign flows to individuals
         :param flow_type: What type of flows are these. This will be appended to the column names. E.g. "Retail".
         :param individuals: The DataFrame contining information about all individuals
-        :param flows: The flow matrix, created by (e.g.) read_retail_flows_data()
+        :param flow_matrix: The flow matrix, created by (e.g.) read_retail_flows_data()
         :return: The DataFrame of individuals with new locations and probabilities added
         """
-        # TODO HERE
-        pass
+        print("TEMP adding individual flows")
+        # TODO First need to go back to read_retail_flows_data and include the MSOA code and an AREA_ID
+
+        for area in tqdm(flow_matrix.values): # Easier to operate over a 2D matrix rather than a dataframe
+            oa_num:int = area[0]
+            oa_code:str = area[1]
+            # Get rid of the area codes, so are now just left with flows to locations
+            area = list(area[2:])
+            # Destinations with positive flows and the flows themselves
+            dests = []
+            flows = []
+            for i, flow in enumerate(area):
+                if flow > 0.0:
+                    dests.append(i)
+                    flows.append(flow)
+
+            # Create empty lists to hold the vanues and flows for each individuals
+            individuals[f"{flow_type}_Venues"] = [ [] for _ in range(len(individuals)) ]
+            individuals[f"{flow_type}_Probabilities"] = [ [] for _ in range(len(individuals)) ]
+
+            # Now assign individuals in those areas to those flows
+            # This ridiculous 'apply' line is the only way I could get pandas to update the particular
+            # rows required. Something like 'individuals.loc[ ...] = dests' (see below) didn't work becuase
+            # instead of inserting the 'dests' list itself, pandas tried to unpack the list and insert
+            # the individual values instead.
+            #individuals.loc[individuals.Area == oa_code, f"{flow_type}_Venues"] = dests
+            #individuals.loc[individuals.Area == oa_code, f"{flow_type}_Probabilities"] = flow
+            individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Venues"] = \
+                individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Venues"].apply(lambda _: dests)
+            individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"] = \
+                individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"].apply(lambda _: flows)
+
+        print("HERE")
+
 
     def step(self) -> None:
         """Step (iterate) the model"""
