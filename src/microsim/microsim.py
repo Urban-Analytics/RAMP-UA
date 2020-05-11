@@ -65,9 +65,9 @@ class Microsim:
         # The individuals are at MSOA level, so use that file to construct a list of areas
         self.all_msoas = Microsim.extract_msoas_from_indiviuals(self.individuals)
 
-        # See if we need to restrict by a study area (optional parameter passed by the user
-        self.study_msoas = self.all_msoas if len(study_msoas) == 0 else \
-            Microsim.check_study_area(self.all_msoas, self.study_msoas)
+        # See if we need to restrict by a study area (optional parameter passed by the user).
+        # If so, then remove individuals and households not in the study area
+        self.study_msoas = Microsim.check_study_area(self.all_msoas, study_msoas, self.individuals, self.households)
 
         # Attach a load of health attributes to each individual
         self.individuals = Microsim.attach_health_data(self.individuals)
@@ -182,21 +182,45 @@ class Microsim:
         :param individuals:
         :return:
         """
-        areas = individuals.Area.unique()
+        areas = list(individuals.Area.unique())
         areas.sort()
         return areas
 
     @classmethod
-    def check_study_area(cls, all_msoas:List[str], study_msoas:List[str]) -> List[str]:
+    def check_study_area(cls, all_msoas:List[str], study_msoas:List[str], individuals: pd.DataFrame, households: pd.DataFrame) \
+            -> (List[str], pd.DataFrame, pd.DataFrame):
         """
-        It is possible to optionally subset all MSOAs used in the analysis (i.e. create a study area). Check
-        that the given study area. Check that the given study areas all exist in the entire area and, if so,
-        return the study area
+        It is possible to optionally subset all MSOAs used in the analysis (i.e. create a study area). If so, then
+        remove all individuals and households who are outside of the study area, returning new DataFrames.
         :param all_msoas: All areas that could be used (e.g. all MSOAs in the UK)
         :param study_msoas: A subset of those areas that could be used
-        :return:
+        :param individuals: The DataFrame of individuals.
+        :param households:  The DataFrame of households
+        :return: A tuple containing:
+          - [0] a list of the MSOAs being used (either all, or just those in the study area)
+          - [1] the new list of individuals (which might be shorter than the original if using a smaller study area)
+          - [2] the new list of households
         """
-        XXXX
+        # No study area subset provided, use the whole area.
+        if study_msoas is None or len(study_msoas) == 0:
+            return all_msoas, individuals, households
+        # Check that all areas in both arrays are unique
+        for d, l in [("all msoas", all_msoas), ("study area msoas", study_msoas)]:
+            if len(l) != len(set(l)):
+                raise Exception(f"There are some duplicate areas in the {d} list: {l}.")
+        for area in study_msoas:
+            if area not in all_msoas:
+                raise Exception(f"Area '{area}' in the list of case study areas is not in the national dataset")
+
+        # Which individuals and houeholds to keep
+        individuals_to_keep = individuals.loc[individuals.Area.isin(study_msoas), :]
+        assert (len(individuals_to_keep.Area.unique()) == len(study_msoas))
+        households_to_keep = households.loc[households.HID.isin(individuals_to_keep.HID), :]
+        print(f"\tUsing a subset study area consisting of {len(study_msoas)} MSOAs.\n"
+              f"\tBefore subsetting: {len(individuals)} individuals, {len(households)} househods.",
+              f"\tAfter subsetting: {len(individuals_to_keep)} individuals, {len(households_to_keep)} househods.")
+
+        return (study_msoas, individuals_to_keep, households_to_keep)
 
 
     @classmethod
@@ -339,6 +363,7 @@ class Microsim:
 
             # Use a hierarchical index on the Area to speed up finding all individuals in an area (?)
             individuals.set_index(["Area", "PID"], inplace=True, drop=False)
+            raise Exception("Need areas before continuing")
 
             individuals.loc["E02004189", f"{flow_type}_Venues"] = \
                 individuals.loc["E02004189", f"{flow_type}_Venues"].apply(lambda _: dests).values
@@ -349,7 +374,9 @@ class Microsim:
             # individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"] = \
             #    individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"].apply(lambda _: flows)
 
-        print("HERE")
+        # Reset the index so that it's just PID
+        individuals.set_index("PID", inplace=True, drop=False)
+        return individuals
 
     def step(self) -> None:
         """Step (iterate) the model"""
@@ -364,7 +391,11 @@ class Microsim:
 @click.option('--iterations', default=10, help='Number of model iterations')
 def run(iterations):
     num_iter = iterations
-    m = Microsim()
+
+    # Temporarily only want to use Devon MSOAs
+    devon_msoas = pd.read_csv("../../data/devon_msoas.csv", header=None, names=["x","y","Num","Code","Desc"])
+
+    m = Microsim(study_msoas=list(devon_msoas.Code))
     for i in range(num_iter):
         m.step()
     print("End of program")

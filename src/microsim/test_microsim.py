@@ -44,8 +44,36 @@ def test_random(setup):
 
 def test_extract_msoas_from_indiviuals():
     """Check that a list of areas can be successfully extracted from a DataFrame of indviduals"""
-    individuals = pd.DataFrame(data={"Area":["C", "A", "F"]})
+    individuals = pd.DataFrame(data={"Area": ["C", "A", "F", "A", "A", "F"]})
     areas = Microsim.extract_msoas_from_indiviuals(individuals)
     assert len(areas) == 3
     # Check the order is correct too
-    assert False not in [ x==y for (x,y) in zip(areas,["A", "C", "F"])]
+    assert False not in [x == y for (x, y) in zip(areas, ["A", "C", "F"])]
+
+
+def test_check_study_area():
+    all_msoa_list = ["C", "A", "F", "B", "D", "E"]
+    individuals = pd.DataFrame(
+        data={"PID": [1, 2, 3, 4, 5, 6], "HID": [1, 1, 2, 2, 2, 3], "Area": ["B", "B", "A", "A", "A", "D"]})
+    households = pd.DataFrame(data={"HID": [1, 2, 3]})
+
+    with pytest.raises(Exception):
+        # Check that it catches duplicate areas
+        assert Microsim.check_study_area(all_msoa_list, ["A", "A", "B"], individuals, households)
+        assert Microsim.check_study_area(all_msoa_list + ["A"], ["A", "B"], individuals, households)
+        # Check that it catches subset areas that aren't in the whole dataset
+        assert Microsim.check_study_area(all_msoa_list, ["A", "B", "G"], individuals, households)
+
+    # Should return whole dataset if no subset is provided
+    assert Microsim.check_study_area(all_msoa_list, None, individuals, households)[0] == all_msoa_list
+    assert Microsim.check_study_area(all_msoa_list, [], individuals, households)[0] == all_msoa_list
+
+    with pytest.raises(Exception):
+        # No individuals in area "E" so this should fail:
+        assert Microsim.check_study_area(all_msoa_list, ["A", "B", "E"], individuals, households)
+
+    # Correctly subset and remove individuals
+    x = Microsim.check_study_area(all_msoa_list, ["A", "D"], individuals, households)
+    assert x[0] == ["A", "D"]  # List of areas
+    assert list(x[1].PID.unique()) == [3, 4, 5, 6]  # List of individuals
+    assert list(x[2].HID.unique()) == [2, 3]  # List of households
