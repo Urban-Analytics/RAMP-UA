@@ -1,6 +1,8 @@
 import pytest
 import multiprocessing
-import microsim
+import pandas as pd
+from microsim import Microsim
+
 
 @pytest.fixture()
 def setup():
@@ -8,6 +10,7 @@ def setup():
     print("\n I'm the fixture - setUp", flush=True)
     yield
     print("\nI'm the fixture - tearDown", flush=True)
+
 
 def _get_rand(microsim, N=100):
     """Get a random number using the Microsimulation object's random number generator"""
@@ -34,10 +37,15 @@ def test_random(setup):
     # Check that this still happens even if they are executed in pools.
     # Create a large number of microsims and check that all random numbers are unique
     pool = multiprocessing.Pool()
-    m = [ microsim.Microsim(read_data=False) for _ in range(10000)]
-    r = pool.map( _get_rand, m)
+    m = [microsim.Microsim(read_data=False) for _ in range(10000)]
+    r = pool.map(_get_rand, m)
     assert len(r) == len(set(r))
 
 
-
-
+def test_extract_msoas_from_indiviuals():
+    """Check that a list of areas can be successfully extracted from a DataFrame of indviduals"""
+    individuals = pd.DataFrame(data={"Area":["C", "A", "F"]})
+    areas = Microsim.extract_msoas_from_indiviuals(individuals)
+    assert len(areas) == 3
+    # Check the order is correct too
+    assert False not in [ x==y for (x,y) in zip(areas,["A", "C", "F"])]

@@ -15,6 +15,7 @@ import random
 import time
 import re  # For analysing file names
 import typing
+from typing import List
 from tqdm import tqdm  # For a progress bar
 
 import click  # command-line interface
@@ -39,10 +40,11 @@ class Microsim:
 
     DATA_DIR = "../../data/"
 
-    def __init__(self, random_seed: float = None, read_data: bool = True):
+    def __init__(self, study_msoas: List[str] = [], random_seed: float = None, read_data: bool = True):
         """
         Microsim constructor.
         ----------
+        :param study_msoas: An optional list of MSOA codes to restrict the model to
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
@@ -59,6 +61,13 @@ class Microsim:
 
         # This is the main population of individuals and their households
         self.individuals, self.households = Microsim.read_msm_data()
+
+        # The individuals are at MSOA level, so use that file to construct a list of areas
+        self.all_msoas = Microsim.extract_msoas_from_indiviuals(self.individuals)
+
+        # See if we need to restrict by a study area (optional parameter passed by the user
+        self.study_msoas = self.all_msoas if len(study_msoas) == 0 else \
+            Microsim.check_study_area(self.all_msoas, self.study_msoas)
 
         # Attach a load of health attributes to each individual
         self.individuals = Microsim.attach_health_data(self.individuals)
@@ -164,6 +173,31 @@ class Microsim:
         # TODO Join individuls to households (create lookup columns in each)
 
         return (individuals, households)
+
+    @classmethod
+    def extract_msoas_from_indiviuals(cls, individuals: pd.DataFrame) -> List[str]:
+        """
+        Analyse a DataFrame of individuals and extract the unique MSOA codes, returning them as a list in ascending
+        order
+        :param individuals:
+        :return:
+        """
+        areas = individuals.Area.unique()
+        areas.sort()
+        return areas
+
+    @classmethod
+    def check_study_area(cls, all_msoas:List[str], study_msoas:List[str]) -> List[str]:
+        """
+        It is possible to optionally subset all MSOAs used in the analysis (i.e. create a study area). Check
+        that the given study area. Check that the given study areas all exist in the entire area and, if so,
+        return the study area
+        :param all_msoas: All areas that could be used (e.g. all MSOAs in the UK)
+        :param study_msoas: A subset of those areas that could be used
+        :return:
+        """
+        XXXX
+
 
     @classmethod
     def attach_health_data(cls, individuals: pd.DataFrame) -> pd.DataFrame:
