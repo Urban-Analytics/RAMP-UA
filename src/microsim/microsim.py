@@ -67,7 +67,8 @@ class Microsim:
 
         # See if we need to restrict by a study area (optional parameter passed by the user).
         # If so, then remove individuals and households not in the study area
-        self.study_msoas = Microsim.check_study_area(self.all_msoas, study_msoas, self.individuals, self.households)
+        self.study_msoas, self.individuals, self.households = \
+            Microsim.check_study_area(self.all_msoas, study_msoas, self.individuals, self.households)
 
         # Attach a load of health attributes to each individual
         self.individuals = Microsim.attach_health_data(self.individuals)
@@ -83,7 +84,7 @@ class Microsim:
 
         # Read the locations of schools, workplaces, etc.
         # self.schools = Microsim.read_school_data()
-        self.stores, self.stores_flows = Microsim.read_retail_flows_data()  # (list of shops and a flow matrix)
+        self.stores, self.stores_flows = Microsim.read_retail_flows_data(self.study_msoas)  # (list of shops and a flow matrix)
         # self.workplaces = Microsim.read_workplace_data()
 
         # Assign probabilities that each individual will go to each location (most of these will be 0!)
@@ -250,13 +251,18 @@ class Microsim:
         return individuals
 
     @classmethod
-    def read_retail_flows_data(cls) -> (pd.DataFrame, pd.DataFrame):
+    def read_retail_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
         """
         Read the flows between each MSOA and the most commonly visited shops
 
+        :type study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
         :return: A tuple of two dataframes. One containing all of the flows and another
         containing information about the stores themselves.
         """
+        # TODO Need to read full retail flows, not just those of Devon (temporarily created by Mark).
+        # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
+        # working with Devon subset of flows
+        print("WARNING: not currently subsetting retail flows")
         dir = os.path.join(cls.DATA_DIR, "temp-retail")
 
         # Read the stores
@@ -272,6 +278,7 @@ class Microsim:
             # See the README for info about these variables. This is only tempoarary so I can't be bothered
             # to explain properly
             oa = None
+            oa_name = ""
             num_dests = None
             dests = None
             flows = None
@@ -281,6 +288,7 @@ class Microsim:
                 line_list = raw_line.strip().split()
                 if count == 1:  # OA and number of destinations
                     oa = int(line_list[0])
+                    oa_name = study_msoas[oa-1] # The OA names are stored in a separate file temporarily
                     num_dests = int(line_list[1])
                 elif count == 2:  # Top N (=10) destinations in the OA
                     # First number is the OA (don't need this), rest are the destinations
@@ -305,7 +313,7 @@ class Microsim:
                         flow = flows[i]
                         row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
                     assert len([x for x in row if x > 0]) == num_dests  # There should only be N >0 flows
-                    row = [oa, "NA"] + row  # Insert the OA number and code (don't know this yet now)
+                    row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
 
                     rows.append(row)
 
