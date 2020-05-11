@@ -52,12 +52,5 @@ print(timeit.timeit( increment_age_np2, number=100), flush=True)
 print(f"Time using pd (apply):")
 print(timeit.timeit(increment_age_pd2, number=100), flush=True)
 
-# Takes too long,just to one run below with a progress bar
-#print(f"Time using pd (normal)")
+#print(f"Time using pd (normal)") # Takes too long
 #print(timeit.timeit(increment_age_pd1, number=100))
-
-print("Single run of slow pandas method:", flush=True)
-print()
-
-for i in tqdm(range(len(age))):
-    age_pd.iloc[ i,:] =+ 1

@@ -1,7 +1,7 @@
 import pytest
 import multiprocessing
 import pandas as pd
-from microsim import Microsim
+from microsim import Microsim, ActivityLocation
 
 
 @pytest.fixture()
@@ -77,3 +77,30 @@ def test_check_study_area():
     assert x[0] == ["A", "D"]  # List of areas
     assert list(x[1].PID.unique()) == [3, 4, 5, 6]  # List of individuals
     assert list(x[2].HID.unique()) == [2, 3]  # List of households
+
+
+def test_add_individual_flows():
+    # TODO write test for Microsim.add_individual_flows()
+    assert False
+
+
+def test_read_retail_flows_data():
+    # TODO write test to Microsim.read_retail_flows_data()
+    assert False
+
+
+def test_ActivityLocation():
+    # TODO write tests to check that ActivtyLocaiton objects are created properly
+    assert False
+
+
+def test_get_danger_and_ids():
+    # TODO write tests to make sure that the ActivityLocation.get_danger and get_ids functions
+    # return the correct values and are indexed properly (each ID should refer to a specific object and danger)
+    a = ActivityLocation(XXXX)
+    assert False
+
+
+def test_update_dangers():
+    # TODO write a test that updates the Danger score for an ActivityLocation
+    assert False

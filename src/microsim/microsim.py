@@ -15,10 +15,66 @@ import random
 import time
 import re  # For analysing file names
 import typing
-from typing import List
+from enum import Enum  # For disease status
+from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 
 import click  # command-line interface
+
+
+class DiseaseStatus(Enum):
+    """Represent the different statuses of the disease"""
+    SUSCEPTIBLE = 0
+    EXPOSED = 1
+    INFECTED = 2
+    RECOVERED = 3
+
+class ActivityLocation():
+    """Class to represent information about activity locations, e.g. retail destinations, workpaces, etc."""
+    def __init__(self, name: str, locations: pd.DataFrame, flows: pd.DataFrame):
+        """
+        Initialise an ActivityLocation
+        :param name: A name to use to refer to this activity. Column names in the big DataFrame of individuals
+        will be named according to this
+        :param locations: A dataframe containing information about each loction
+        :param flows: A dataframe containing flows
+        """
+        self._name = name
+        # Check that the locations DataFrame has an ID column and a Danger column
+        if "ID" not in locations.columns or "Danger" not in locations.columns:
+            raise Exception(f"Activity '{name}' dataframe needs columns called 'ID' and 'Danger."
+                            f"It only has: {locations.columns}")
+        # Check that the DataFrame's ID column is also an index, this is to ensure that the IDs always
+        # refer to the same thing
+        if locations.index.name != "ID" or False in (locations.index == locations.ID):
+            raise Exception(f"Activity '{name}' dataframe needs to have an index column called 'ID'"
+                            f"that is equal to the 'ID' columns.")
+        self._locations = locations
+        self._flows = flows
+
+    def __repr__(self):
+        return f"<{self._name} ActivityLocation>"
+
+    def get_dangers(self) -> List[float]:
+        """Get the danger associated with each location as a list. These will be in the same order as the
+        location IDs returned by `get_ids()`"""
+        return list(self._locations.Danger)
+
+    def get_ids(self) -> List[int]:
+        """Retrn the IDs of each retail destination"""
+        return list(self._locations.ID)
+
+    def update_dangers(self, dangers: List[float]):
+        """
+        Update the danger associated with each location
+        :param dangers: A list of dangers for each location. Must be in the same order as the locations as
+        returned by `get_ids`.
+        """
+        if len(dangers) != len(self._locations):
+            raise Exception(f"The number of danger scores ({len(dangers)}) is not the same as the number of"
+                            f"activity locations ({len(self._locations)}).")
+        self._locations["Danger"] = dangers
+
 
 
 class Microsim:
@@ -83,14 +139,27 @@ class Microsim:
         self.core_population = self.individuals.copy()
 
         # Read the locations of schools, workplaces, etc.
-        # self.schools = Microsim.read_school_data()
-        self.stores, self.stores_flows = Microsim.read_retail_flows_data(self.study_msoas)  # (list of shops and a flow matrix)
+        # For each type of activity (store, retail, etc), create ActivityLocation objects to keep all the
+        # required information together.
+        self.activity_locatons: Dict[str, ActivityLocation] = {}
+
+        # Retail
+        retail_name = "Retail" # How to refer to this in data frame columns etc.
+        stores, stores_flows = Microsim.read_retail_flows_data(self.study_msoas)  # (list of shops and a flow matrix)
+
+        # Workplaces etc.
         # self.workplaces = Microsim.read_workplace_data()
+        # self.schools = Microsim.read_school_data()
 
         # Assign probabilities that each individual will go to each location (most of these will be 0!)
         # Do this by adding two new columns, both storing lists. One lists ids of the locations that
         # the individual may visit, the other has the probability of them visitting those places
-        self.individuals = Microsim.add_individual_flows("Retail", self.individuals, self.stores_flows)
+        self.individuals = Microsim.add_individual_flows(retail_name, self.individuals, stores_flows)
+
+        self.activity_locatons[retail_name] = ActivityLocation(retail_name, stores, stores_flows)
+
+        # Assign initial SEIR status
+        self.individuals = Microsim.assign_initial_disease_status(self.individuals)
 
         print(".. End of __init__() .. ")
         return
@@ -188,7 +257,8 @@ class Microsim:
         return areas
 
     @classmethod
-    def check_study_area(cls, all_msoas:List[str], study_msoas:List[str], individuals: pd.DataFrame, households: pd.DataFrame) \
+    def check_study_area(cls, all_msoas: List[str], study_msoas: List[str], individuals: pd.DataFrame,
+                         households: pd.DataFrame) \
             -> (List[str], pd.DataFrame, pd.DataFrame):
         """
         It is possible to optionally subset all MSOAs used in the analysis (i.e. create a study area). If so, then
@@ -223,7 +293,6 @@ class Microsim:
 
         return (study_msoas, individuals_to_keep, households_to_keep)
 
-
     @classmethod
     def attach_health_data(cls, individuals: pd.DataFrame) -> pd.DataFrame:
         """
@@ -255,7 +324,7 @@ class Microsim:
         """
         Read the flows between each MSOA and the most commonly visited shops
 
-        :type study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
+        :param study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
         :return: A tuple of two dataframes. One containing all of the flows and another
         containing information about the stores themselves.
         """
@@ -263,15 +332,18 @@ class Microsim:
         # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
         # working with Devon subset of flows
         print("WARNING: not currently subsetting retail flows")
+        print("Reading retail flow data...", )
         dir = os.path.join(cls.DATA_DIR, "temp-retail")
 
         # Read the stores
         stores = pd.read_csv(os.path.join(dir, "devon smkt.csv"))
         stores['ID'] = list(stores.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1
-        stores = stores.set_index("ID")
+        stores['Danger'] = 0 # All stores have a disease danger associated with them, initialise it to 0
+        stores.set_index("ID", inplace=True, drop=False)
 
         # Read the flows
         rows = []  # Build up all the rows in the matrix gradually then add all at once
+        total_flows = 0  # For info & checking
         with open(os.path.join(dir, "DJR002.TXT")) as f:
             count = 1  # Mark's file comes in batches of 3 lines, each giving different data
 
@@ -288,7 +360,7 @@ class Microsim:
                 line_list = raw_line.strip().split()
                 if count == 1:  # OA and number of destinations
                     oa = int(line_list[0])
-                    oa_name = study_msoas[oa-1] # The OA names are stored in a separate file temporarily
+                    oa_name = study_msoas[oa - 1]  # The OA names are stored in a separate file temporarily
                     num_dests = int(line_list[1])
                 elif count == 2:  # Top N (=10) destinations in the OA
                     # First number is the OA (don't need this), rest are the destinations
@@ -302,6 +374,7 @@ class Microsim:
                     assert int(line_list[0]) == oa
                     flows = [float(x) for x in line_list[1:]]  # Make the destinations numbers
                     assert len(flows) == num_dests
+                    total_flows += sum(flows)
 
                     # Have read all information for this area. Store the info in the flows matrix
 
@@ -330,21 +403,48 @@ class Microsim:
         columns += [f"Loc_{i}" for i in stores.index]  # Columns for each store
         flow_matrix = pd.DataFrame(data=rows, columns=columns)
 
+        # Check that we haven't lost any flows (need two sums, once to get the flows for each row, then
+        # to add up all rows
+        total_flows2 = flow_matrix.iloc[:, 2:].apply(lambda row: sum(row)).sum()
+        assert total_flows == total_flows2
+
+        print(f"... read {total_flows} flows from {len(flow_matrix)} areas.")
+
         return stores, flow_matrix
 
     @classmethod
     def add_individual_flows(cls, flow_type: str, individuals: pd.DataFrame, flow_matrix: pd.DataFrame) -> pd.DataFrame:
         """
-        Take a flow matrix from MSOAs to (e.g. retail) locations and assign flows to individuals
+        Take a flow matrix from MSOAs to (e.g. retail) locations and assign flows to individuals.
         :param flow_type: What type of flows are these. This will be appended to the column names. E.g. "Retail".
         :param individuals: The DataFrame contining information about all individuals
         :param flow_matrix: The flow matrix, created by (e.g.) read_retail_flows_data()
         :return: The DataFrame of individuals with new locations and probabilities added
         """
-        print("TEMP adding individual flows")
-        # TODO First need to go back to read_retail_flows_data and include the MSOA code and an AREA_ID
 
-        for area in tqdm(flow_matrix.values):  # Easier to operate over a 2D matrix rather than a dataframe
+        # Check that there aren't any individuals who wont be given any flows
+        if len(individuals.loc[-individuals.Area.isin(flow_matrix.Area_Code)]) > 0:
+            raise Exception(f"Some individuals will not be assigned any flows to: '{flow_type}' because their"
+                            f"MSOA is not in the flow matrix: "
+                            f"{individuals.loc[-individuals.Area.isin(flow_matrix.Area_Code)]}.")
+
+        # Check that there aren't any duplicate flows
+        if len(flow_matrix) != len(flow_matrix.Area_Code.unique()):
+            raise Exception("There are duplicate area codes in the flow matrix: ", flow_matrix.Area_Code)
+
+        # Names for the new columns
+        venues_col = f"{flow_type}_Venues"
+        flows_col = f"{flow_type}_Flows"
+
+        # Create empty lists to hold the vanues and flows for each individuals
+        individuals[venues_col] = [[] for _ in range(len(individuals))]
+        individuals[flows_col] = [[] for _ in range(len(individuals))]
+
+        # Use a hierarchical index on the Area to speed up finding all individuals in an area
+        # (not sure this makes much difference).
+        individuals.set_index(["Area", "PID"], inplace=True, drop=False)
+
+        for area in tqdm(flow_matrix.values, desc=f"Assigning individual flows for {flow_type}"):  # Easier to operate over a 2D matrix rather than a dataframe
             oa_num: int = area[0]
             oa_code: str = area[1]
             # Get rid of the area codes, so are now just left with flows to locations
@@ -357,10 +457,6 @@ class Microsim:
                     dests.append(i)
                     flows.append(flow)
 
-            # Create empty lists to hold the vanues and flows for each individuals
-            individuals[f"{flow_type}_Venues"] = [[] for _ in range(len(individuals))]
-            individuals[f"{flow_type}_Probabilities"] = [[] for _ in range(len(individuals))]
-
             # Now assign individuals in those areas to those flows
             # This ridiculous 'apply' line is the only way I could get pandas to update the particular
             # rows required. Something like 'individuals.loc[ ...] = dests' (see below) didn't work becuase
@@ -368,15 +464,14 @@ class Microsim:
             # the individual values instead.
             # individuals.loc[individuals.Area == oa_code, f"{flow_type}_Venues"] = dests
             # individuals.loc[individuals.Area == oa_code, f"{flow_type}_Probabilities"] = flow
+            #
+            # A quicker way to do this is probably to create N subsets of individuals (one table for
+            # each area) and then concatenate them at the end.
 
-            # Use a hierarchical index on the Area to speed up finding all individuals in an area (?)
-            individuals.set_index(["Area", "PID"], inplace=True, drop=False)
-            raise Exception("Need areas before continuing")
-
-            individuals.loc["E02004189", f"{flow_type}_Venues"] = \
-                individuals.loc["E02004189", f"{flow_type}_Venues"].apply(lambda _: dests).values
-            individuals.loc["E02004189", f"{flow_type}_Probabilities"] = \
-                individuals.loc["E02004189", f"{flow_type}_Probabilities"].apply(lambda _: flows).values
+            individuals.loc[oa_code, venues_col] = \
+                individuals.loc[oa_code, venues_col].apply(lambda _: dests).values
+            individuals.loc[oa_code, flows_col] = \
+                individuals.loc[oa_code, flows_col].apply(lambda _: flows).values
             # individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Venues"] = \
             #    individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Venues"].apply(lambda _: dests)
             # individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"] = \
@@ -384,13 +479,82 @@ class Microsim:
 
         # Reset the index so that it's just PID
         individuals.set_index("PID", inplace=True, drop=False)
+
+        # Check everyone has some flows (all list lengths are >0)
+        assert False not in (individuals.loc[:, venues_col].apply(lambda cell: len(cell)) > 0).values
+        assert False not in (individuals.loc[:, flows_col].apply(lambda cell: len(cell)) > 0).values
+
         return individuals
+
+    @classmethod
+    def assign_initial_disease_status(cls, individuals: pd.DataFrame) -> pd.DataFrame:
+        """
+        Create a new column to represent the initial disease status of the individuals and assign them
+        an initial status.
+        :param individuals: The dataframe containin synthetic individuals
+        :return: A new DataFrame for the individuals with the additional column
+        """
+        print("Assigning initial disease status ...",)
+        individuals["Disease_Status"] = [random.choice(list(DiseaseStatus)) for _ in range(len(individuals))]
+        print(f"... finished assigning initial status for {len(individuals)} individuals.")
+        return individuals
+
+
+    def update_venue_danger(self):
+        print("\tUpdating danger associated with visiting each venue")
+        print("XXXX HERE")
+        for name in tqdm(self.activity_locatons, desc=f"Updating dangers for activity locations"):
+            print(f"\tAnalysing {name} activity")
+            # Get the details of the location activity
+            activity = self.activity_locatons[name]
+            loc_ids = activity.get_ids() # Locations where the activity can take place
+            loc_dangers = activity.get_dangers() # Current dangers associated with each place
+
+            # Now look up those venues in the table of individuals
+
+            venues_col = f"{name}_Venues" # The names of the venues and
+            flows_col = f"{name}_Flows"   # flows in the individuals DataFrame
+
+            # 2D lists, for each individual the venues they visit and the flows to the venue (i.e. how much they visit it)
+            statuses = self.individuals.Disease_Status
+            venues = self.individuals.loc[:, venues_col]
+            flows = self.individuals.loc[:, flows_col]
+            assert len(venues) == len(flows) and len(venues) == len(statuses)
+            for i, (v, f, s) in enumerate(zip(venues, flows, statuses)): # For each individual
+                if s == DiseaseStatus.INFECTED:
+                    # v and f are lists of flows and venues for the individual. Go through each one
+                    for venue, flow in zip(v, f):
+                        # Increase the danger by the flow multiplied by some disease risk
+                        loc_dangers[venue] += ( flow * 0.1)
+
+            # Now we have the dangers associated with each location, apply these back to the main dataframe
+            activity.update_dangers(loc_dangers)
+
+        return
+
+
+    def update_venue_risks(self):
+        print("\tAssigning risks of visiting different venues to the individuals")
+        print("XXXX HERE")
+        x=1
+        return
 
     def step(self) -> None:
         """Step (iterate) the model"""
         self.iteration += 1
         print(f"Iteration: {self.iteration}")
+
+        # Update the danger associated with each venue (i.e. the as people with the disease visit them they
+        # become more dangerous
+        self.update_venue_danger()
+
+        # Update the risks to individuals who visit those venues
+        self.update_venue_risks()
+
+        # Update the r
+
         # XXXX HERE
+
 
 
 # PROGRAM ENTRY POINT
@@ -401,7 +565,7 @@ def run(iterations):
     num_iter = iterations
 
     # Temporarily only want to use Devon MSOAs
-    devon_msoas = pd.read_csv("../../data/devon_msoas.csv", header=None, names=["x","y","Num","Code","Desc"])
+    devon_msoas = pd.read_csv("../../data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
 
     m = Microsim(study_msoas=list(devon_msoas.Code))
     for i in range(num_iter):
