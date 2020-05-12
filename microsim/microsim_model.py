@@ -18,8 +18,9 @@ import typing
 from enum import Enum  # For disease status
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
-
 import click  # command-line interface
+
+from microsim.microsim_analysis import MicrosimAnalysis
 
 
 class DiseaseStatus(Enum):
@@ -94,7 +95,7 @@ class Microsim:
     XXXX
     """
 
-    DATA_DIR = "../../data/"
+    DATA_DIR = "./data/"
 
     def __init__(self, study_msoas: List[str] = [], random_seed: float = None, read_data: bool = True):
         """
@@ -679,9 +680,9 @@ class Microsim:
         # Update the risks to individuals who visit those venues
         self.update_venue_risks()
 
-        # Update the r
-
-        # XXXX HERE
+        # Do some analysis
+        MicrosimAnalysis.population_distribution(self.individuals, ["DC1117EW_C_AGE"])
+        MicrosimAnalysis.location_danger_distribution(self.activity_locatons['Retail'], ["Danger"])
 
 
 
@@ -693,7 +694,7 @@ def run(iterations):
     num_iter = iterations
 
     # Temporarily only want to use Devon MSOAs
-    devon_msoas = pd.read_csv("../../data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
+    devon_msoas = pd.read_csv("./data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
 
     m = Microsim(study_msoas=list(devon_msoas.Code))
     for i in range(num_iter):
