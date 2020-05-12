@@ -61,6 +61,10 @@ class ActivityLocation():
         location IDs returned by `get_ids()`"""
         return list(self._locations.Danger)
 
+    def get_name(self) -> str:
+        """Get the name of this activity. This is used to label columns in the file of individuals"""
+        return self._name
+
     def get_ids(self) -> List[int]:
         """Retrn the IDs of each retail destination"""
         return list(self._locations.ID)
@@ -95,9 +99,12 @@ class Microsim:
     XXXX
     """
 
-    DATA_DIR = "./data/"
 
-    def __init__(self, study_msoas: List[str] = [], random_seed: float = None, read_data: bool = True):
+
+    def __init__(self,
+                 study_msoas: List[str] = [], random_seed: float = None, read_data: bool = True,
+                 data_dir = "./data/",
+                 ):
         """
         Microsim constructor.
         ----------
@@ -106,12 +113,13 @@ class Microsim:
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
             in debugging).
+        :param data_dir: Optionally provide a root data directory
         """
 
         # Administrative variables that need to be defined
         self.iteration = 0
         self.random = random.Random(time.time() if random_seed is None else random_seed)
-
+        Microsim.DATA_DIR = data_dir
 
         # Now the main chunk of initialisation is to read the input data.
         if not read_data:  # Optionally can not do this, usually for debugging
@@ -143,7 +151,7 @@ class Microsim:
         # Read the locations of schools, workplaces, etc.
         # For each type of activity (store, retail, etc), create ActivityLocation objects to keep all the
         # required information together.
-        self.activity_locatons: Dict[str, ActivityLocation] = {}
+        self.activity_locations: Dict[str, ActivityLocation] = {}
 
         # Read Retail
         retail_name = "Retail" # How to refer to this in data frame columns etc.
@@ -168,11 +176,11 @@ class Microsim:
 
         # Assign Retail
         self.individuals = Microsim.add_individual_flows(retail_name, self.individuals, stores_flows)
-        self.activity_locatons[retail_name] = ActivityLocation(retail_name, stores, stores_flows)
+        self.activity_locations[retail_name] = ActivityLocation(retail_name, stores, stores_flows)
 
         # Assign Schools
         self.individuals = Microsim.add_individual_flows(school_name, self.individuals, schools_flows)
-        self.activity_locatons[school_name] = ActivityLocation(school_name, schools, schools_flows)
+        self.activity_locations[school_name] = ActivityLocation(school_name, schools, schools_flows)
 
         # Assign initial SEIR status
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
@@ -235,9 +243,16 @@ class Microsim:
             house_dfs.append(house_df)
             indiv_dfs.append(indiv_df)
 
+        # Concatenate the files
         households = pd.concat(house_dfs)
-        households.set_index("HID", inplace=True, drop=False)
         individuals = pd.concat(indiv_dfs)
+
+        # Manually set some column types
+        # Should save a bit of memory because not duplicating area strings
+        individuals["Area"] = individuals["Area"].astype('category')
+
+        # Set the index
+        households.set_index("HID", inplace=True, drop=False)
         individuals.set_index("PID", inplace=True, drop=False)
 
         # Make sure HIDs and PIDs are unique
@@ -619,22 +634,24 @@ class Microsim:
     def assign_initial_disease_status(cls, individuals: pd.DataFrame) -> pd.DataFrame:
         """
         Create a new column to represent the initial disease status of the individuals and assign them
-        an initial status.
+        an initial status. Also create a column to record the number of days with that status
         :param individuals: The dataframe containin synthetic individuals
         :return: A new DataFrame for the individuals with the additional column
         """
         print("Assigning initial disease status ...",)
         individuals["Disease_Status"] = [random.choice(list(DiseaseStatus)) for _ in range(len(individuals))]
+        individuals["Disease_Status"] = individuals["Disease_Status"].astype('category')
+        individuals["Days_With_Status"] = 0 # Also keep the number of days that have elapsed with this status
         print(f"... finished assigning initial status for {len(individuals)} individuals.")
         return individuals
 
 
     def update_venue_danger(self):
         print("\tUpdating danger associated with visiting each venue")
-        for name in tqdm(self.activity_locatons, desc=f"Updating dangers for activity locations"):
+        for name in tqdm(self.activity_locations, desc=f"Updating dangers for activity locations"):
             print(f"\tAnalysing {name} activity")
             # Get the details of the location activity
-            activity = self.activity_locatons[name]
+            activity = self.activity_locations[name]
             loc_ids = activity.get_ids() # Locations where the activity can take place
             loc_dangers = activity.get_dangers() # Current dangers associated with each place
 
@@ -660,14 +677,24 @@ class Microsim:
 
         return
 
-
-    def update_venue_risks(self):
-        print("\tAssigning risks of visiting different venues to the individuals")
-        x=1
-        self.individuals
-
-        x=1
-        return
+    @classmethod
+    def calculate_new_disease_status(cls, row: pd.Series, activity_locations: List[ActivityLocation]):
+        """
+        Given a row of the DataFrame of individuals (as pd.Series object) calculate their
+        disease status
+        :param row: The row (a Series) with the information about an individual
+        :param activity_locations: The activity locations that people currently visit
+        :return: The new disease status for that individual
+        """
+        # Can access th individual's data using the 'row' variable like a dictionary.
+        for activity_name, activity in activity_locations.items():
+            # Work through each activity, and find the total risk
+            assert activity_name == activity.get_name()
+            venus = row[f"{activity_name}_Venues"]
+            flows = row[f"{activity_name}_Flows"]
+            venus + flows # Just to see how long this might take
+            pass
+        return row['Disease_Status'] # TEMP DON'T ACTUALLT DO ANYTHING
 
     def step(self) -> None:
         """Step (iterate) the model"""
@@ -679,7 +706,15 @@ class Microsim:
         self.update_venue_danger()
 
         # Update the risks to individuals who visit those venues
-        self.update_venue_risks()
+        # (need to pass activity locations as well becasue the calculate_new_disease_status needs to be class-level
+        # rather than object level (otherwise I couldn't get the argument passing to work properly)
+        tqdm.pandas(desc="Calculating new disease status") # means pd.apply() has a progress bar
+        self.individuals["Disease_Status"] = self.individuals.progress_apply(
+            func=Microsim.calculate_new_disease_status, axis=1, activity_locations=self.activity_locations)
+
+        # Increase the number of days that each individual has had their current status
+        self.individuals["Days_With_Status"] = self.individuals["Days_With_Status"].apply(
+            lambda x: x + 1)
 
         # Do some analysis
         fig = MicrosimAnalysis.population_distribution(self.individuals, ["DC1117EW_C_AGE"])
