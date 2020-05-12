@@ -111,6 +111,7 @@ class Microsim:
         self.iteration = 0
         self.random = random.Random(time.time() if random_seed is None else random_seed)
 
+
         # Now the main chunk of initialisation is to read the input data.
         if not read_data:  # Optionally can not do this, usually for debugging
             return
@@ -143,9 +144,13 @@ class Microsim:
         # required information together.
         self.activity_locatons: Dict[str, ActivityLocation] = {}
 
-        # Retail
+        # Read Retail
         retail_name = "Retail" # How to refer to this in data frame columns etc.
         stores, stores_flows = Microsim.read_retail_flows_data(self.study_msoas)  # (list of shops and a flow matrix)
+
+        # Read Schools
+        school_name = "School"
+        schools, schools_flows = Microsim.read_school_flows_data(self.study_msoas)  # (list of schools and a flow matrix)
 
         # Workplaces etc.
         # self.workplaces = Microsim.read_workplace_data()
@@ -154,9 +159,14 @@ class Microsim:
         # Assign probabilities that each individual will go to each location (most of these will be 0!)
         # Do this by adding two new columns, both storing lists. One lists ids of the locations that
         # the individual may visit, the other has the probability of them visitting those places
-        self.individuals = Microsim.add_individual_flows(retail_name, self.individuals, stores_flows)
 
+        # Assign Retail
+        self.individuals = Microsim.add_individual_flows(retail_name, self.individuals, stores_flows)
         self.activity_locatons[retail_name] = ActivityLocation(retail_name, stores, stores_flows)
+
+        # Assign Schools
+        self.individuals = Microsim.add_individual_flows(school_name, self.individuals, schools_flows)
+        self.activity_locatons[school_name] = ActivityLocation(school_name, schools, schools_flows)
 
         # Assign initial SEIR status
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
@@ -293,6 +303,7 @@ class Microsim:
 
         return (study_msoas, individuals_to_keep, households_to_keep)
 
+
     @classmethod
     def attach_health_data(cls, individuals: pd.DataFrame) -> pd.DataFrame:
         """
@@ -318,6 +329,103 @@ class Microsim:
         pass
         print("... finished.")
         return individuals
+
+
+    @classmethod
+    def read_school_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
+        """
+        Read the flows between each MSOA and the most likely schools attended by pupils in this area
+        ??? We will not allocate a single school to a given pupil due to uncertainty in catchment area
+        Instead, like in the retail flow, each pupil will visit schools with a given likelihood ???
+
+        :type study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
+        :return: A tuple of two dataframes. One containing all of the flows and another
+        containing information about the schools themselves.
+        """
+        # TODO Need to read full school flows, not just those of Devon
+        print("WARNING: not currently subsetting school flows")
+        dir = os.path.join(cls.DATA_DIR, "temp-schools")
+
+        # Read the schools
+        schools = pd.read_csv(os.path.join(dir, "exeter schools.csv"))
+        schools['ID'] = list(schools.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1
+        schools = schools.set_index("ID")
+
+        # Read the flows
+        rows = []  # Build up all the rows in the matrix gradually then add all at once
+        with open(os.path.join(dir, "DJS002.TXT")) as f:
+            count = 1  # Mark's file comes in batches of 3 lines, each giving different data. However, some lines overrun and are read as several lines rather than 1 (hence use of dests_tmp and flows_tmp)
+            oa = None
+            oa_name = ""
+            num_dests = None
+            dests = None
+            flows = None
+            dests_tmp = None
+            flows_tmp = None
+
+            for lineno, raw_line in enumerate(f):
+                # print(f"{lineno}: '{raw_line}'")
+                line_list = raw_line.strip().split()
+                if count == 1:  # primary/secondary school, OA and number of schools
+                    oa = int(line_list[1])
+                    oa_name = study_msoas[oa-1] # The OA names are stored in a separate file temporarily
+                    num_dests = int(line_list[2])
+                elif count == 2:  # school ids
+                    dests_tmp = [int(x) for x in line_list[0:]]  # Make the destinations numbers
+                    # check if dests exists from previous iteration and add dests_tmp
+                    if dests == None:
+                        dests = dests_tmp
+                    else:
+                        dests.extend(dests_tmp)
+                    if len(dests) < num_dests: # need to read next line
+                        count = 1 # counteracts count being increased by 1 later
+                    else:
+                        assert len(dests) == num_dests
+                elif count == 3:  # Flows per 1,000 pupils
+                    flows_tmp = [float(x) for x in line_list[0:]]  # Make the destinations numbers
+                    # check if dests exists from previous iteration and add dests_tmp
+                    if flows == None:
+                        flows = flows_tmp
+                    else:
+                        flows.extend(flows_tmp)
+                    if len(flows) < num_dests: # need to read next line
+                        count = 2 # counteracts count being increased by 1 later
+                    else:
+                        assert len(flows) == num_dests
+
+                        # Have read all information for this area. Store the info in the flows matrix
+
+                        # We should have one line in the matrix for each OA, and OA codes are incremental
+                        # assert len(flow_matrix) == oa - 1
+                        row = [0.0 for _ in range(len(schools))]  # Initially assume all flows are 0
+                        for i in range(num_dests):  # Now add the flows
+                            dest = dests[i]
+                            flow = flows[i]
+                            row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
+                        assert len([x for x in row if x > 0]) == num_dests  # There should only be N >0 flows
+                        row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
+
+                        rows.append(row)
+
+                        # Add the row to the matrix. As the OA numbers are incremental they should equal the number
+                        # of rows
+                        # flow_matrix.loc[oa-1] = row
+                        # assert len(flow_matrix) == oa
+                        count = 0
+                        # reset dests and flows
+                        dests = None
+                        flows = None
+
+                count += 1
+
+        # Have finished reading the file, now create the matrix. MSOAs as rows, school locations as columns
+        columns = ["Area_ID", "Area_Code"]  # A number (ID) and full code for each MSOA
+        columns += [f"Loc_{i}" for i in schools.index]  # Columns for each school
+        flow_matrix = pd.DataFrame(data=rows, columns=columns)
+
+        return schools, flow_matrix
+
+
 
     @classmethod
     def read_retail_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
