@@ -631,7 +631,6 @@ class Microsim:
 
     def update_venue_danger(self):
         print("\tUpdating danger associated with visiting each venue")
-        print("XXXX HERE")
         for name in tqdm(self.activity_locatons, desc=f"Updating dangers for activity locations"):
             print(f"\tAnalysing {name} activity")
             # Get the details of the location activity
@@ -664,7 +663,9 @@ class Microsim:
 
     def update_venue_risks(self):
         print("\tAssigning risks of visiting different venues to the individuals")
-        print("XXXX HERE")
+        x=1
+        self.individuals
+
         x=1
         return
 
