@@ -681,8 +681,9 @@ class Microsim:
         self.update_venue_risks()
 
         # Do some analysis
-        MicrosimAnalysis.population_distribution(self.individuals, ["DC1117EW_C_AGE"])
-        MicrosimAnalysis.location_danger_distribution(self.activity_locatons['Retail'], ["Danger"])
+        fig = MicrosimAnalysis.population_distribution(self.individuals, ["DC1117EW_C_AGE"])
+        fig.show()
+        #MicrosimAnalysis.location_danger_distribution(self.activity_locatons['Retail'], ["Danger"])
 
 
 

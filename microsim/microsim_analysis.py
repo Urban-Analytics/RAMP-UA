@@ -49,6 +49,8 @@ class MicrosimAnalysis:
             #ax.scatter(data.DateTime, data.Count, s=0.02, c="black")
             ax.set_title(f"Histogram of {var}")
 
+        return fig
+
     #@classmethod
     #def location_danger_distribution(cls, activity_location: ActivityLocation):
     #    """
