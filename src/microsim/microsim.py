@@ -147,10 +147,15 @@ class Microsim:
         # Read Retail
         retail_name = "Retail" # How to refer to this in data frame columns etc.
         stores, stores_flows = Microsim.read_retail_flows_data(self.study_msoas)  # (list of shops and a flow matrix)
+        Microsim.check_sim_flows(stores, stores_flows)
 
         # Read Schools
         school_name = "School"
         schools, schools_flows = Microsim.read_school_flows_data(self.study_msoas)  # (list of schools and a flow matrix)
+        print("TEMPORARILY TRIMMING SCHOOLS FLOWS")
+        schools_flows = schools_flows.iloc[0:107, :]
+
+
 
         # Workplaces etc.
         # self.workplaces = Microsim.read_workplace_data()
@@ -344,12 +349,14 @@ class Microsim:
         """
         # TODO Need to read full school flows, not just those of Devon
         print("WARNING: not currently subsetting school flows")
+        print("Reading retail flow data...", )
         dir = os.path.join(cls.DATA_DIR, "temp-schools")
 
         # Read the schools
         schools = pd.read_csv(os.path.join(dir, "exeter schools.csv"))
         schools['ID'] = list(schools.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1
-        schools = schools.set_index("ID")
+        schools['Danger'] = 0 # All schools have a disease danger associated with them, initialise it to 0
+        schools.set_index("ID", inplace=True, drop=False)
 
         # Read the flows
         rows = []  # Build up all the rows in the matrix gradually then add all at once
@@ -519,6 +526,19 @@ class Microsim:
         print(f"... read {total_flows} flows from {len(flow_matrix)} areas.")
 
         return stores, flow_matrix
+
+    @classmethod
+    def check_sim_flows(cls, locations: pd.DataFrame, flows: pd.DataFrame):
+        """
+        Check that the flow matrix looks OK, raising an error if not
+        :param locations: A DataFrame with information about each location (destination)
+        :param flows: The flow matrix itself, showing flows from origin MSOAs to destinations
+        :return:
+        """
+        # TODO All MSOA codes are unique
+        # TODO Locations have 'Danger' and 'ID' columns
+        # TODO Number of destination columns ('Loc_*') matches number of locaitons
+        # TODO Number of origins (rows) in the flow matrix matches number of OAs in the locations
 
     @classmethod
     def add_individual_flows(cls, flow_type: str, individuals: pd.DataFrame, flow_matrix: pd.DataFrame) -> pd.DataFrame:
