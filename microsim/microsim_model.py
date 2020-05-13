@@ -638,14 +638,16 @@ class Microsim:
         :param path: Optional directory to write the files to (default '.')
         :return:
         """
+        # TODO Implement export and import functions. Currently don't work; embedded objects in cells not supported yet
         # Export individuals
         # feather can't cope with ENUMs so convert them to a number (get their 'value')
         individuals = self.individuals.copy()
-        individuals["Disease_Status"] = individuals["Disease_Status"].apply(lambda x: x.value)
+        individuals["Disease_Status"] = individuals["Disease_Status"].apply(lambda x: x.value
         pyarrow.feather.write_feather(individuals, "/Users/nick/Desktop/individuals.feather")
+        # Export locations
 
 
-    def import_from_feather(self, path="."):
+    def import_from_feather(self, path="./export/"):
         pass
 
     @classmethod
