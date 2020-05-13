@@ -19,7 +19,7 @@ from enum import Enum  # For disease status
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
-import feather # For reading and writing DataFrames to disk
+import pyarrow # For reading and writing DataFrames to disk
 
 from microsim.microsim_analysis import MicrosimAnalysis
 
@@ -642,7 +642,7 @@ class Microsim:
         # feather can't cope with ENUMs so convert them to a number (get their 'value')
         individuals = self.individuals.copy()
         individuals["Disease_Status"] = individuals["Disease_Status"].apply(lambda x: x.value)
-        feather.write_dataframe(individuals, "/Users/nick/Desktop/individuals.feather")
+        pyarrow.feather.write_feather(individuals, "/Users/nick/Desktop/individuals.feather")
 
 
     def import_from_feather(self, path="."):
