@@ -19,17 +19,9 @@ from enum import Enum  # For disease status
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
-import pyarrow # For reading and writing DataFrames to disk
+import arrow # For reading and writing DataFrames to disk
 
 from microsim.microsim_analysis import MicrosimAnalysis
-
-
-class DiseaseStatus(Enum):
-    """Represent the different statuses of the disease"""
-    SUSCEPTIBLE = 0
-    EXPOSED = 1
-    INFECTED = 2
-    RECOVERED = 3
 
 class ActivityLocation():
     """Class to represent information about activity locations, e.g. retail destinations, workpaces, etc."""
@@ -640,10 +632,8 @@ class Microsim:
         """
         # TODO Implement export and import functions. Currently don't work; embedded objects in cells not supported yet
         # Export individuals
-        # feather can't cope with ENUMs so convert them to a number (get their 'value')
         individuals = self.individuals.copy()
-        individuals["Disease_Status"] = individuals["Disease_Status"].apply(lambda x: x.value
-        pyarrow.feather.write_feather(individuals, "/Users/nick/Desktop/individuals.feather")
+        arrow.feather.write_feather(individuals, "/Users/nick/Desktop/individuals.feather")
         # Export locations
 
 
@@ -659,7 +649,7 @@ class Microsim:
         :return: A new DataFrame for the individuals with the additional column
         """
         print("Assigning initial disease status ...",)
-        individuals["Disease_Status"] = [random.choice(list(DiseaseStatus)) for _ in range(len(individuals))]
+        individuals["Disease_Status"] = [random.choice( range(0,4)) for _ in range(len(individuals))]
         individuals["Disease_Status"] = individuals["Disease_Status"].astype('category')
         individuals["Days_With_Status"] = 0 # Also keep the number of days that have elapsed with this status
         print(f"... finished assigning initial status for {len(individuals)} individuals.")
@@ -686,7 +676,7 @@ class Microsim:
             flows = self.individuals.loc[:, flows_col]
             assert len(venues) == len(flows) and len(venues) == len(statuses)
             for i, (v, f, s) in enumerate(zip(venues, flows, statuses)): # For each individual
-                if s == DiseaseStatus.INFECTED:
+                if s == 1: # infected?
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue, flow in zip(v, f):
                         # Increase the danger by the flow multiplied by some disease risk
