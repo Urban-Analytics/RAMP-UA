@@ -19,6 +19,7 @@ from enum import Enum  # For disease status
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
+import feather # For reading and writing DataFrames to disk
 
 from microsim.microsim_analysis import MicrosimAnalysis
 
@@ -629,6 +630,23 @@ class Microsim:
         assert False not in (individuals.loc[:, flows_col].apply(lambda cell: len(cell)) > 0).values
 
         return individuals
+
+
+    def export_to_feather(self, path="./export/"):
+        """
+        Export the dataframes that represent the current model state. See also `import_from_feather`.
+        :param path: Optional directory to write the files to (default '.')
+        :return:
+        """
+        # Export individuals
+        # feather can't cope with ENUMs so convert them to a number (get their 'value')
+        individuals = self.individuals.copy()
+        individuals["Disease_Status"] = individuals["Disease_Status"].apply(lambda x: x.value)
+        feather.write_dataframe(individuals, "/Users/nick/Desktop/individuals.feather")
+
+
+    def import_from_feather(self, path="."):
+        pass
 
     @classmethod
     def assign_initial_disease_status(cls, individuals: pd.DataFrame) -> pd.DataFrame:

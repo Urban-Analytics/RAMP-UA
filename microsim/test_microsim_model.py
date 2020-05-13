@@ -104,3 +104,13 @@ def test_get_danger_and_ids():
 def test_update_dangers():
     # TODO write a test that updates the Danger score for an ActivityLocation
     assert False
+
+
+def test_export_to_feather():
+    # TODO write a test that checks the export_to_feather() and  import_to_feather() functions
+    assert False
+
+
+def test_import_from_feather():
+    # TODO write a test that checks the export_to_feather() and  import_to_feather() functions
+    assert False
