@@ -206,7 +206,8 @@ class Microsim:
         household_files = glob.glob(msm_dir + '/ass_hh_*_OA11_2020.csv')
         if len(household_files) == 0:
             raise Exception(f"No household csv files found in {msm_dir}.",
-                            f"Have you downloaded and extracted the necessary data? (see {cls.DATA_DIR} README)")
+                            f"Have you downloaded and extracted the necessary data? (see {cls.DATA_DIR} README).",
+                            f"The directory has these files in it: {os.listdir(msm_dir)}")
         individual_files = glob.glob(msm_dir + '/ass_*_MSOA11_2020.csv')
         if len(individual_files) == 0:
             raise Exception(f"No individual csv files found in {msm_dir}.",
@@ -723,7 +724,7 @@ class Microsim:
     def step(self) -> None:
         """Step (iterate) the model"""
         self.iteration += 1
-        print(f"Iteration: {self.iteration}")
+        print(f"\nIteration: {self.iteration}\n")
 
         # Update the danger associated with each venue (i.e. the as people with the disease visit them they
         # become more dangerous

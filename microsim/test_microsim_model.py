@@ -1,16 +1,40 @@
 import pytest
 import multiprocessing
 import pandas as pd
-from microsim import Microsim, ActivityLocation
+from microsim.microsim_model import Microsim, ActivityLocation
 
 
+# ********************************************************
+# These tests run through a whole dummy model process
+# ********************************************************
+
+# This 'fixture' means that other functions (e.g. step) can use the object created here.
+# Note: Don't try to run this test, it will be called when running the others that need it, like `test_step()`.
 @pytest.fixture()
-def setup():
-    """Used to perform setup stuff that other tests can use"""
-    print("\n I'm the fixture - setUp", flush=True)
-    yield
-    print("\nI'm the fixture - tearDown", flush=True)
+def test_microsim():
+    """Test the microsim constructor by reading dummy data. The microsim object created here can then be passed
+    to other functions for them to do their tests
+    """
+    with pytest.raises(FileNotFoundError):
+        # This should fail because the directory doesn't exist
+        m = Microsim(data_dir="./bad_directory")
 
+    m = Microsim(data_dir="./dummy_data")
+
+    # Finished initialising the model. Pass it to other tests who need it.
+    yield m # (this could be 'return' but 'yield' means that any cleaning can be done here
+
+    print("Cleaning up .... (actually nothing to clean up at the moment")
+
+
+
+def test_step(test_microsim):
+    """Test the step method."""
+    assert False
+
+# ********************************************************
+# Other (unit) tests
+# ********************************************************
 
 def _get_rand(microsim, N=100):
     """Get a random number using the Microsimulation object's random number generator"""
@@ -19,7 +43,7 @@ def _get_rand(microsim, N=100):
     return microsim.random.random()
 
 
-def test_random(setup):
+def test_random():
     """
     Checks that random classes are produce different (or the same!) numbers when they should do
     :return:
@@ -114,3 +138,4 @@ def test_export_to_feather():
 def test_import_from_feather():
     # TODO write a test that checks the export_to_feather() and  import_to_feather() functions
     assert False
+
