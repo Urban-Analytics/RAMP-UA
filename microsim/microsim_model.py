@@ -23,6 +23,14 @@ import arrow # For reading and writing DataFrames to disk
 
 from microsim.microsim_analysis import MicrosimAnalysis
 
+class ColumnNames:
+    """Used to record standard dataframe column names used throughout"""
+
+    DANGER = "Danger" # Danger associated with a location
+    LOCATION_NAME = "Location_Name" # Name of a location
+    LOCATION_ID = "ID" # Unique ID for each location
+
+
 class ActivityLocation():
     """Class to represent information about activity locations, e.g. retail destinations, workpaces, etc."""
     def __init__(self, name: str, locations: pd.DataFrame, flows: pd.DataFrame):
@@ -34,13 +42,15 @@ class ActivityLocation():
         :param flows: A dataframe containing flows
         """
         self._name = name
-        # Check that the locations DataFrame has an ID column and a Danger column
-        if "ID" not in locations.columns or "Danger" not in locations.columns:
-            raise Exception(f"Activity '{name}' dataframe needs columns called 'ID' and 'Danger."
+        # Check that the dataframe has all the standard columns needed
+        if ColumnNames.LOCATION_ID not in locations.columns or \
+            ColumnNames.DANGER not in locations.columns or \
+            ColumnNames.LOCATION_NAME not in locations.columns:
+            raise Exception(f"Activity '{name}' dataframe needs columns called 'ID' and 'Danger' and 'Location_Name'."
                             f"It only has: {locations.columns}")
         # Check that the DataFrame's ID column is also an index, this is to ensure that the IDs always
         # refer to the same thing
-        if locations.index.name != "ID" or False in (locations.index == locations.ID):
+        if locations.index.name != ColumnNames.LOCATION_ID or False in (locations.index == locations[ColumnNames.LOCATION_ID]):
             raise Exception(f"Activity '{name}' dataframe needs to have an index column called 'ID'"
                             f"that is equal to the 'ID' columns.")
         self._locations = locations
@@ -52,7 +62,7 @@ class ActivityLocation():
     def get_dangers(self) -> List[float]:
         """Get the danger associated with each location as a list. These will be in the same order as the
         location IDs returned by `get_ids()`"""
-        return list(self._locations.Danger)
+        return list(self._locations[ColumnNames.DANGER])
 
     def get_name(self) -> str:
         """Get the name of this activity. This is used to label columns in the file of individuals"""
@@ -60,7 +70,7 @@ class ActivityLocation():
 
     def get_ids(self) -> List[int]:
         """Retrn the IDs of each retail destination"""
-        return list(self._locations.ID)
+        return list(self._locations[ColumnNames.LOCATION_ID])
 
     def update_dangers(self, dangers: List[float]):
         """
@@ -71,7 +81,7 @@ class ActivityLocation():
         if len(dangers) != len(self._locations):
             raise Exception(f"The number of danger scores ({len(dangers)}) is not the same as the number of"
                             f"activity locations ({len(self._locations)}).")
-        self._locations["Danger"] = dangers
+        self._locations[ColumnNames.DANGER] = dangers
 
 
 
@@ -363,9 +373,11 @@ class Microsim:
 
         # Read the schools
         schools = pd.read_csv(os.path.join(dir, "exeter schools.csv"))
-        schools['ID'] = list(schools.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1
-        schools['Danger'] = 0 # All schools have a disease danger associated with them, initialise it to 0
-        schools.set_index("ID", inplace=True, drop=False)
+        # Add some standard columns that we need
+        schools[ColumnNames.LOCATION_ID] = list(schools.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1
+        schools[ColumnNames.DANGER] = 0 # All schools have a disease danger associated with them, initialise it to 0
+        schools[ColumnNames.LOCATION_NAME] = schools.EstablishmentName # Name of the school
+        schools.set_index(ColumnNames.LOCATION_ID, inplace=True, drop=False)
 
         # Read the flows
         rows = []  # Build up all the rows in the matrix gradually then add all at once
@@ -461,9 +473,11 @@ class Microsim:
 
         # Read the stores
         stores = pd.read_csv(os.path.join(dir, "devon smkt.csv"))
-        stores['ID'] = list(stores.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1
-        stores['Danger'] = 0 # All stores have a disease danger associated with them, initialise it to 0
-        stores.set_index("ID", inplace=True, drop=False)
+        # Add some standard columns that all locations need
+        stores[ColumnNames.LOCATION_ID] = list(stores.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1
+        stores[ColumnNames.DANGER] = 0 # All stores have a disease danger associated with them, initialise it to 0
+        stores[ColumnNames.LOCATION_NAME] = stores.store_name # Standard name for the location
+        stores.set_index(ColumnNames.LOCATION_ID, inplace=True, drop=False)
 
         # Read the flows
         rows = []  # Build up all the rows in the matrix gradually then add all at once
