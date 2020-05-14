@@ -19,7 +19,7 @@ from enum import Enum  # For disease status
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
-import arrow # For reading and writing DataFrames to disk
+import pyarrow.feather as feather # For reading and writing DataFrames to disk
 
 from microsim.microsim_analysis import MicrosimAnalysis
 
@@ -164,6 +164,7 @@ class Microsim:
         # Read Schools
         school_name = "School"
         schools, schools_flows = Microsim.read_school_flows_data(self.study_msoas)  # (list of schools and a flow matrix)
+        Microsim.check_sim_flows(schools, schools_flows)
         print("TEMPORARILY TRIMMING SCHOOLS FLOWS")
         schools_flows = schools_flows.iloc[0:107, :]
 
@@ -188,7 +189,6 @@ class Microsim:
         # Assign initial SEIR status
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
 
-        print(".. End of __init__() .. ")
         return
 
     @classmethod
@@ -563,6 +563,7 @@ class Microsim:
         # TODO Locations have 'Danger' and 'ID' columns
         # TODO Number of destination columns ('Loc_*') matches number of locaitons
         # TODO Number of origins (rows) in the flow matrix matches number of OAs in the locations
+        return
 
     @classmethod
     def add_individual_flows(cls, flow_type: str, individuals: pd.DataFrame, flow_matrix: pd.DataFrame) -> pd.DataFrame:
@@ -645,10 +646,13 @@ class Microsim:
         :param path: Optional directory to write the files to (default '.')
         :return:
         """
-        # TODO Implement export and import functions. Currently don't work; embedded objects in cells not supported yet
-        # Export individuals
+        # Export individuals. Need to drop the flows columns because feather can't currently export those
         individuals = self.individuals.copy()
-        arrow.feather.write_feather(individuals, "/Users/nick/Desktop/individuals.feather")
+        for activity_name, activity in self.activity_locations.items():
+            individuals = individuals.drop(f"{activity_name}_Venues", 1)
+            individuals = individuals.drop(f"{activity_name}_Flows", 1)
+
+        feather.write_feather(individuals, "/Users/nick/Desktop/individuals.feather")
         # Export locations
 
 
@@ -665,8 +669,9 @@ class Microsim:
         """
         print("Assigning initial disease status ...",)
         individuals["Disease_Status"] = [random.choice( range(0,4)) for _ in range(len(individuals))]
-        individuals["Disease_Status"] = individuals["Disease_Status"].astype('category')
+        #individuals["Disease_Status"] = individuals["Disease_Status"].astype('category')
         individuals["Days_With_Status"] = 0 # Also keep the number of days that have elapsed with this status
+        individuals["Current_Risk"] = 0 # This is the risk that people get when visiting locations.
         print(f"... finished assigning initial status for {len(individuals)} individuals.")
         return individuals
 
@@ -734,12 +739,15 @@ class Microsim:
         # (need to pass activity locations as well becasue the calculate_new_disease_status needs to be class-level
         # rather than object level (otherwise I couldn't get the argument passing to work properly)
         tqdm.pandas(desc="Calculating new disease status") # means pd.apply() has a progress bar
-        self.individuals["Disease_Status"] = self.individuals.progress_apply(
-            func=Microsim.calculate_new_disease_status, axis=1, activity_locations=self.activity_locations)
+        #self.individuals["Disease_Status"] = self.individuals.progress_apply(
+         #   func=Microsim.calculate_new_disease_status, axis=1, activity_locations=self.activity_locations)
 
         # Increase the number of days that each individual has had their current status
         self.individuals["Days_With_Status"] = self.individuals["Days_With_Status"].apply(
             lambda x: x + 1)
+
+
+        self.export_to_feather()
 
         # Do some analysis
         fig = MicrosimAnalysis.population_distribution(self.individuals, ["DC1117EW_C_AGE"])
