@@ -1,0 +1,10 @@
+# Tex stuff
+
+*.aux
+*.bbl
+*.log
+*.blg
+*.out
+*.toc
+*.tdo
+*.synctex.gz

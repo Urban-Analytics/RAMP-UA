@@ -1,4 +1,4 @@
-all: figs
+all: 
 	pdflatex dynamic_model.tex
 	bibtex dynamic_model
 	pdflatex dynamic_model.tex
