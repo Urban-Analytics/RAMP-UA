@@ -19,7 +19,7 @@ def test_microsim():
         # This should fail because the directory doesn't exist
         m = Microsim(data_dir="./bad_directory")
 
-    m = Microsim(data_dir="./dummy_data")
+    m = Microsim(data_dir="./dummy_data", testing=True)
 
     # Finished initialising the model. Pass it to other tests who need it.
     yield m # (this could be 'return' but 'yield' means that any cleaning can be done here

@@ -15,6 +15,7 @@ import random
 import time
 import re  # For analysing file names
 import typing
+import warnings
 from enum import Enum  # For disease status
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
@@ -106,7 +107,7 @@ class Microsim:
 
     def __init__(self,
                  study_msoas: List[str] = [], random_seed: float = None, read_data: bool = True,
-                 data_dir = "./data/",
+                 data_dir = "./data/", testing=False
                  ):
         """
         Microsim constructor.
@@ -117,12 +118,16 @@ class Microsim:
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
             in debugging).
         :param data_dir: Optionally provide a root data directory
+        :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!)
         """
 
         # Administrative variables that need to be defined
         self.iteration = 0
         self.random = random.Random(time.time() if random_seed is None else random_seed)
         Microsim.DATA_DIR = data_dir
+        Microsim.testing = testing
+        if self.testing:
+            warnings.warn("Running in testing mode. Some exceptions will be disabled.")
 
         # Now the main chunk of initialisation is to read the input data.
         if not read_data:  # Optionally can not do this, usually for debugging
@@ -165,8 +170,10 @@ class Microsim:
         school_name = "School"
         schools, schools_flows = Microsim.read_school_flows_data(self.study_msoas)  # (list of schools and a flow matrix)
         Microsim.check_sim_flows(schools, schools_flows)
+        # At the moment we dont do primary and secondary, so trim off all the secondary schools (these
+        # will have been read in after the primary
         print("TEMPORARILY TRIMMING SCHOOLS FLOWS")
-        schools_flows = schools_flows.iloc[0:107, :]
+        schools_flows = schools_flows.iloc[0:len(self.study_msoas), :]
 
 
 
@@ -499,6 +506,12 @@ class Microsim:
                 line_list = raw_line.strip().split()
                 if count == 1:  # OA and number of destinations
                     oa = int(line_list[0])
+                    if oa >= len(study_msoas):
+                        msg = f"Attempting to read more output areas ({oa}) than are present in the study area {study_msoas}."
+                        if cls.testing:
+                            warnings.warn(msg)
+                        else:
+                            raise Exception(msg)
                     oa_name = study_msoas[oa - 1]  # The OA names are stored in a separate file temporarily
                     num_dests = int(line_list[1])
                 elif count == 2:  # Top N (=10) destinations in the OA
@@ -524,7 +537,7 @@ class Microsim:
                         dest = dests[i]
                         flow = flows[i]
                         row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
-                    assert len([x for x in row if x > 0]) == num_dests  # There should only be N >0 flows
+                    assert len([x for x in row if x > 0]) == num_dests  # There should only be positive flows (no 0s)
                     row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
 
                     rows.append(row)
@@ -760,13 +773,17 @@ class Microsim:
 # Uses 'click' library so that it can be run from the command line
 @click.command()
 @click.option('--iterations', default=10, help='Number of model iterations')
-def run(iterations):
+@click.option('--data_dir', default="./data/", help='Root directory to load data from')
+def run(iterations, data_dir):
     num_iter = iterations
 
     # Temporarily only want to use Devon MSOAs
-    devon_msoas = pd.read_csv("./data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
+    #devon_msoas = pd.read_csv("./data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
+    #m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
-    m = Microsim(study_msoas=list(devon_msoas.Code))
+    # Temporily use dummy data for testing
+    data_dir="./dummy_data/"
+    m = Microsim(data_dir=data_dir, testing=True)
     for i in range(num_iter):
         m.step()
     print("End of program")
