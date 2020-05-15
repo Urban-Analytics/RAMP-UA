@@ -21,16 +21,25 @@ def test_microsim():
 
     m = Microsim(data_dir="./dummy_data", testing=True)
 
+    # TODO check that the dummy data have been read in correctly. E.g. check the number of individuals is
+    # accurate, that they link to households correctly, that they have the right flows, etc.
+
     # Finished initialising the model. Pass it to other tests who need it.
     yield m # (this could be 'return' but 'yield' means that any cleaning can be done here
 
-    print("Cleaning up .... (actually nothing to clean up at the moment")
+    print("Cleaning up .... (actually nothing to clean up at the moment)")
 
 
 
 def test_step(test_microsim):
     """Test the step method."""
-    assert False
+    for i in range(10):
+        test_microsim.step()
+        # TODO test the step method. Make sure all the characteristics of the individuals are as they should be
+        # (e.g. disease status, flows, etc.)
+        # TODO make sure the characteristics of the locations are as they should be. E.g the 'Danger' etc.
+
+    print("End of test step")
 
 # ********************************************************
 # Other (unit) tests
