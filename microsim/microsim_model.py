@@ -89,7 +89,6 @@ class ActivityLocation():
         self._locations[ColumnNames.LOCATION_DANGER] = dangers
 
 
-
 class Microsim:
     """
     A class used to represent the microsimulation model.
@@ -194,6 +193,13 @@ class Microsim:
         # Assign Schools
         self.individuals = Microsim.add_individual_flows(school_name, self.individuals, schools_flows)
         self.activity_locations[school_name] = ActivityLocation(school_name, schools, schools_flows)
+
+        # Assign households. This is slightly different to retail, schools, etc. because we already know the flows
+        # to the households (each individual has a 'HID' that links to their household). So
+        # we can assign them directly without having to produce a flow matrix.
+        home_name = "Home"
+        self.individuals, self.households = Microsim.add_home_flows(home_name, self.individuals, self.households)
+        self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households, flows=None)
 
         # Assign initial SEIR status
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
@@ -461,6 +467,40 @@ class Microsim:
         flow_matrix = pd.DataFrame(data=rows, columns=columns)
 
         return schools, flow_matrix
+
+    @classmethod
+    def add_home_flows(cls, flow_type: str, individuals: pd.DataFrame, households: pd.DataFrame) \
+            -> (pd.DataFrame, pd.DataFrame):
+        """
+        Analyse the individual and household data read earlier and create a dataframe of home locations that individuals
+        travel to. Unlike retail etc, each individual will have only one home location with 100% of flows there.
+        :param flow_type: The name for these flows (probably something like 'Home')
+        :param individuals: The dataframe of synthetic individuals
+        :param households:  The original dataframe of households
+        :return: A tuple of two dataframes. One conaining the new 'individuals' dataframe and another containing
+        a new dataframe for the households. Both will have some new columns
+        """
+        print("Assigning individual flows for schools ... ")
+        # Start by adding some required columns to the households data. Things like Danger, a standard ID column, etc
+        Microsim._add_location_columns(households, location_names=list(households.HID), location_ids=list(households.HID))
+        # Check the various ID columns are the same (Location name, HID, and ID)
+        assert False not in list(households.ID == households.HID)
+        assert False not in list(households.Location_Name == households.HID)
+
+        # Now tell the individuals about which house they go to
+
+        # Names for the new columns
+        venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
+        flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
+
+        # Create lists to hold the venues and flows for each individuals. Unlike other activities
+        # there is only one venue (their house) and all the flows go there.
+        individuals[venues_col] = individuals["HID"].apply(lambda x:  [x] ) # This is just converting HID to [HID]
+        individuals[flows_col] = [[1.0] for _ in range(len(individuals))] # Only one flow to the individual's household
+
+        return individuals, households
+
+
 
 
 
