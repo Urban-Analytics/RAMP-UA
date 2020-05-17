@@ -27,9 +27,13 @@ from microsim.microsim_analysis import MicrosimAnalysis
 class ColumnNames:
     """Used to record standard dataframe column names used throughout"""
 
-    DANGER = "Danger" # Danger associated with a location
-    LOCATION_NAME = "Location_Name" # Name of a location
-    LOCATION_ID = "ID" # Unique ID for each location
+    LOCATION_DANGER = "Danger"  # Danger associated with a location
+    LOCATION_NAME = "Location_Name"  # Name of a location
+    LOCATION_ID = "ID"  # Unique ID for each location
+
+    ACTIVITY_VENUES = "_Venues"  # Venues an individual may visit. Appended to activity type, e.g. 'Retail_Venues'
+    ACTIVITY_FLOWS = "_Flows"  # Flows to a venue for an individual. Appended to activity type, e.g. 'Retail_Flows'
+    ACTIVITY_TIME = "_Time"  # Amount of time an individual spends doing an activity. E.g. 'Retail_Time'
 
 
 class ActivityLocation():
@@ -45,7 +49,7 @@ class ActivityLocation():
         self._name = name
         # Check that the dataframe has all the standard columns needed
         if ColumnNames.LOCATION_ID not in locations.columns or \
-            ColumnNames.DANGER not in locations.columns or \
+            ColumnNames.LOCATION_DANGER not in locations.columns or \
             ColumnNames.LOCATION_NAME not in locations.columns:
             raise Exception(f"Activity '{name}' dataframe needs columns called 'ID' and 'Danger' and 'Location_Name'."
                             f"It only has: {locations.columns}")
@@ -63,7 +67,7 @@ class ActivityLocation():
     def get_dangers(self) -> List[float]:
         """Get the danger associated with each location as a list. These will be in the same order as the
         location IDs returned by `get_ids()`"""
-        return list(self._locations[ColumnNames.DANGER])
+        return list(self._locations[ColumnNames.LOCATION_DANGER])
 
     def get_name(self) -> str:
         """Get the name of this activity. This is used to label columns in the file of individuals"""
@@ -82,7 +86,7 @@ class ActivityLocation():
         if len(dangers) != len(self._locations):
             raise Exception(f"The number of danger scores ({len(dangers)}) is not the same as the number of"
                             f"activity locations ({len(self._locations)}).")
-        self._locations[ColumnNames.DANGER] = dangers
+        self._locations[ColumnNames.LOCATION_DANGER] = dangers
 
 
 
@@ -174,8 +178,6 @@ class Microsim:
         # will have been read in after the primary
         print("TEMPORARILY TRIMMING SCHOOLS FLOWS")
         schools_flows = schools_flows.iloc[0:len(self.study_msoas), :]
-
-
 
         # Workplaces etc.
         # self.workplaces = Microsim.read_workplace_data()
@@ -381,11 +383,10 @@ class Microsim:
 
         # Read the schools
         schools = pd.read_csv(os.path.join(dir, "exeter schools.csv"))
-        # Add some standard columns that we need
-        schools[ColumnNames.LOCATION_ID] = list(schools.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1
-        schools[ColumnNames.DANGER] = 0 # All schools have a disease danger associated with them, initialise it to 0
-        schools[ColumnNames.LOCATION_NAME] = schools.EstablishmentName # Name of the school
-        schools.set_index(ColumnNames.LOCATION_ID, inplace=True, drop=False)
+        # Add some standard columns that all locations need
+        schools_ids = list(schools.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
+        schools_names = schools.EstablishmentName # Standard name for the location
+        Microsim._add_location_columns(schools, location_names=schools_names, location_ids=schools_ids)
 
         # Read the flows
         rows = []  # Build up all the rows in the matrix gradually then add all at once
@@ -482,10 +483,10 @@ class Microsim:
         # Read the stores
         stores = pd.read_csv(os.path.join(dir, "devon smkt.csv"))
         # Add some standard columns that all locations need
-        stores[ColumnNames.LOCATION_ID] = list(stores.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1
-        stores[ColumnNames.DANGER] = 0 # All stores have a disease danger associated with them, initialise it to 0
-        stores[ColumnNames.LOCATION_NAME] = stores.store_name # Standard name for the location
-        stores.set_index(ColumnNames.LOCATION_ID, inplace=True, drop=False)
+        stores_ids = list(stores.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
+        store_names = stores.store_name # Standard name for the location
+        Microsim._add_location_columns(stores, location_names=store_names, location_ids=stores_ids)
+
 
         # Read the flows
         rows = []  # Build up all the rows in the matrix gradually then add all at once
@@ -506,7 +507,7 @@ class Microsim:
                 line_list = raw_line.strip().split()
                 if count == 1:  # OA and number of destinations
                     oa = int(line_list[0])
-                    if oa >= len(study_msoas):
+                    if oa > len(study_msoas):
                         msg = f"Attempting to read more output areas ({oa}) than are present in the study area {study_msoas}."
                         if cls.testing:
                             warnings.warn(msg)
@@ -579,6 +580,35 @@ class Microsim:
         return
 
     @classmethod
+    def _add_location_columns(cls, locations: pd.DataFrame, location_names: List[str], location_ids: List[int] = None):
+        """
+        Add some standard columns to DataFrame (in place) that contains information about locations.
+        :param locations: The dataframe of locations t
+        :param location_names:
+        :param location_ids:
+        :return: None; the columns are added to the input dataframe inplace.
+        """
+        if location_ids is None:
+            # No specific index provided, just use the index
+            locations[ColumnNames.LOCATION_ID] = locations.index
+        else:
+            # User has provided a specific list of indices to use
+            if len(location_ids) != len(locations):
+                raise Exception(f"When adding the standard columns to a locations dataframe, a list of specific",
+                                f"IDs has ben passed, but this list (length {len(location_ids)}) is not the same"
+                                f"length as the locations dataframe (length {len(locations)}. The list of ids passed"
+                                f"is: {location_ids}.")
+            locations[ColumnNames.LOCATION_ID] = location_ids
+        if len(location_names) != len(locations):
+            raise Exception(f"The list of location names is not the same as the number of locations in the dataframe",
+                            f"({len(location_names)} != {len(locations)}.")
+        locations[ColumnNames.LOCATION_NAME] = location_names # Standard name for the location
+        locations[ColumnNames.LOCATION_DANGER] = 0  # All locations have a disease danger of 0 initially
+        locations.set_index(ColumnNames.LOCATION_ID, inplace=True, drop=False)
+        return None  # Columns added in place so nothing to return
+
+
+    @classmethod
     def add_individual_flows(cls, flow_type: str, individuals: pd.DataFrame, flow_matrix: pd.DataFrame) -> pd.DataFrame:
         """
         Take a flow matrix from MSOAs to (e.g. retail) locations and assign flows to individuals.
@@ -599,8 +629,8 @@ class Microsim:
             raise Exception("There are duplicate area codes in the flow matrix: ", flow_matrix.Area_Code)
 
         # Names for the new columns
-        venues_col = f"{flow_type}_Venues"
-        flows_col = f"{flow_type}_Flows"
+        venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
+        flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
 
         # Create empty lists to hold the vanues and flows for each individuals
         individuals[venues_col] = [[] for _ in range(len(individuals))]
@@ -662,8 +692,8 @@ class Microsim:
         # Export individuals. Need to drop the flows columns because feather can't currently export those
         individuals = self.individuals.copy()
         for activity_name, activity in self.activity_locations.items():
-            individuals = individuals.drop(f"{activity_name}_Venues", 1)
-            individuals = individuals.drop(f"{activity_name}_Flows", 1)
+            individuals = individuals.drop(f"{activity_name}{ColumnNames.ACTIVITY_VENUES}", 1)
+            individuals = individuals.drop(f"{activity_name}{ColumnNames.ACTIVITY_FLOWS}", 1)
 
         feather.write_feather(individuals, "/Users/nick/Desktop/individuals.feather")
         # Export locations
@@ -700,8 +730,8 @@ class Microsim:
 
             # Now look up those venues in the table of individuals
 
-            venues_col = f"{name}_Venues" # The names of the venues and
-            flows_col = f"{name}_Flows"   # flows in the individuals DataFrame
+            venues_col = f"{name}{ColumnNames.ACTIVITY_VENUES}" # The names of the venues and
+            flows_col = f"{name}{ColumnNames.ACTIVITY_FLOWS}"   # flows in the individuals DataFrame
 
             # 2D lists, for each individual the venues they visit and the flows to the venue (i.e. how much they visit it)
             statuses = self.individuals.Disease_Status
@@ -733,9 +763,9 @@ class Microsim:
         for activity_name, activity in activity_locations.items():
             # Work through each activity, and find the total risk
             assert activity_name == activity.get_name()
-            venus = row[f"{activity_name}_Venues"]
-            flows = row[f"{activity_name}_Flows"]
-            venus + flows # Just to see how long this might take
+            venus = row[f"{activity_name}{ColumnNames.ACTIVITY_VENUES}"]
+            flows = row[f"{activity_name}{ColumnNames.ACTIVITY_FLOWS}"]
+            venus + flows  # Just to see how long this might take
             pass
         return row['Disease_Status'] # TEMP DON'T ACTUALLT DO ANYTHING
 
@@ -778,12 +808,14 @@ def run(iterations, data_dir):
     num_iter = iterations
 
     # Temporarily only want to use Devon MSOAs
-    #devon_msoas = pd.read_csv("./data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
-    #m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
+    devon_msoas = pd.read_csv("./data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
+    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
     # Temporily use dummy data for testing
-    data_dir="./dummy_data/"
-    m = Microsim(data_dir=data_dir, testing=True)
+    #data_dir="./dummy_data/"
+    #m = Microsim(data_dir=data_dir, testing=True)
+
+    # Step the model
     for i in range(num_iter):
         m.step()
     print("End of program")

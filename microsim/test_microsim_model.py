@@ -25,10 +25,9 @@ def test_microsim():
     # accurate, that they link to households correctly, that they have the right flows, etc.
 
     # Finished initialising the model. Pass it to other tests who need it.
-    yield m # (this could be 'return' but 'yield' means that any cleaning can be done here
+    yield m  # (this could be 'return' but 'yield' means that any cleaning can be done here
 
     print("Cleaning up .... (actually nothing to clean up at the moment)")
-
 
 
 def test_step(test_microsim):
@@ -40,6 +39,7 @@ def test_step(test_microsim):
         # TODO make sure the characteristics of the locations are as they should be. E.g the 'Danger' etc.
 
     print("End of test step")
+
 
 # ********************************************************
 # Other (unit) tests
@@ -148,3 +148,8 @@ def test_import_from_feather():
     # TODO write a test that checks the export_to_feather() and  import_to_feather() functions
     assert False
 
+
+def test__add_location_columns():
+    # TODO dest that the _add_location_columns function correctly adds the required standard columns
+    # to a locaitons dataframe, and does appropriate checks for correct lengths of input lists etc.
+    assert False
