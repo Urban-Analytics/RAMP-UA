@@ -551,8 +551,6 @@ class Microsim:
         # (Also, 'swifter' makes the apply quicker. Maybe worth using this throughout).
         individuals[venues_col] = individuals["HID"].swifter.progress_bar(enable=True, desc="Assigning individual flows for Homes ... ").\
             apply( lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
-        print(individuals)
-        print(individuals[venues_col])
         # (Old slow way)
         #individuals[venues_col] = individuals["HID"].apply(
         #    lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
