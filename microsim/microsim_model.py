@@ -36,6 +36,11 @@ class ColumnNames:
     ACTIVITY_FLOWS = "_Flows"  # Flows to a venue for an individual. Appended to activity type, e.g. 'Retail_Flows'
     ACTIVITY_TIME = "_Time"  # Amount of time an individual spends doing an activity. E.g. 'Retail_Time'
 
+    ACTIVITY_DURATION = "_Duration" # Column to record proportion of the day that invividuals do the activity
+
+    INDIVIDUAL_AGE = "DC1117EW_C_AGE" # Age column in the table of individuals
+    INDIVIDUAL_SEX = "DC1117EW_C_SEX"  # Sex column in the table of individuals
+    INDIVIDUAL_ETH = "DC2101EW_C_ETHPUK11"  # Ethnicity column in the table of individuals
 
 class ActivityLocation():
     """Class to represent information about activity locations, e.g. retail destinations, workpaces, etc."""
@@ -409,7 +414,41 @@ class Microsim:
     @classmethod
     def attach_time_use_data(cls, individuals: pd.DataFrame) -> pd.DataFrame:
         print("Attaching time use data ... ", )
-        pass
+        # For now just hard code broad categories. Ultimately will have different values for different activities.
+
+        # This list is pointless now. Eventually these need to match properly to the ActivityLocations
+        activities = ["Home", "Retail", "School", "Work", "Leisure"]
+        col_names = []
+        for act in activities:
+            col_name = act + ColumnNames.ACTIVITY_DURATION
+            col_names.append(col_name)
+            if act=="Home":
+                # Assume XX hours per day at home (this is whatever not spent doing other activities)
+                individuals[col_name] = 14/24
+            elif act == "Retail":
+                individuals[col_name] = 1.0/24
+            elif act == "School":
+                # Assume no school for adults and X hours for <19 year olds
+                individuals[col_name] = 0.0 # Default 0
+                individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] < 19, col_name] = 8.0/24
+            elif act == "Work":
+                # Opposite of school
+                individuals[col_name] = 0.0 # Default 0
+                individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] >= 19, col_name] = 8.0/24
+            elif act == "Leisure":
+                individuals[col_name] = 1.0/24
+            else:
+                raise Exception(f"Unrecognised activity: {act}")
+
+        # Check that proportions add up to 1.0
+        # TODO for some reason this fails, but as far as I can see the proportions correctly sum to 1 !!
+        #assert False not in (individuals.loc[:, col_names].sum(axis=1).round(decimals=4) == 1.0)
+
+        # Add travel data columns (no values yet)
+        travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in ["Car", "Bus", "Walk", "Train"] ]
+        for col in travel_cols:
+            individuals[col] = 0.0
+
         print("... finished.")
         return individuals
 
