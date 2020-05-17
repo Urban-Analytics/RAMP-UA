@@ -29,6 +29,7 @@ def test_microsim():
 
     print("Cleaning up .... (actually nothing to clean up at the moment)")
 
+
 # Test the home flows on the dummy data
 def test_add_home_flows(test_microsim):
     # Using dummy data I know that there should be 1 person in household 0:
@@ -37,6 +38,7 @@ def test_add_home_flows(test_microsim):
     assert len(test_microsim.individuals.loc[test_microsim.individuals.HID == 1, :]) == 2
     # And 4 in house 12
     assert len(test_microsim.individuals.loc[test_microsim.individuals.HID == 12, :]) == 4
+
 
 def test_step(test_microsim):
     """Test the step method."""
@@ -48,6 +50,10 @@ def test_step(test_microsim):
 
     print("End of test step")
 
+def test_update_venue_danger(test_microsim):
+    # TODO Check that danger values are updated appropriately. Especially check indexing works (where the
+    # venue ID is not the same as its place in the dataframe.
+    assert False
 
 # ********************************************************
 # Other (unit) tests
@@ -168,3 +174,5 @@ def test_add_home_flows():
     # TODO Check that home locations are created correctly (this is basically parsing the households and individuals
     # tables, adding the standard columns needed, and creating 'flows' from individuals to their households
     assert False
+
+

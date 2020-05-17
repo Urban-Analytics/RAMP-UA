@@ -21,6 +21,7 @@ from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
 import pyarrow.feather as feather # For reading and writing DataFrames to disk
+import swifter # For quick (multicore?) pd.apply operations
 
 from microsim.microsim_analysis import MicrosimAnalysis
 
@@ -54,10 +55,10 @@ class ActivityLocation():
             raise Exception(f"Activity '{name}' dataframe needs columns called 'ID' and 'Danger' and 'Location_Name'."
                             f"It only has: {locations.columns}")
         # Check that the DataFrame's ID column is also an index, this is to ensure that the IDs always
-        # refer to the same thing
-        if locations.index.name != ColumnNames.LOCATION_ID or False in (locations.index == locations[ColumnNames.LOCATION_ID]):
-            raise Exception(f"Activity '{name}' dataframe needs to have an index column called 'ID'"
-                            f"that is equal to the 'ID' columns.")
+        # refer to the same thing. NO LONGER DOING THIS, INDEX AND ID CAN BE DIFFERENT        #
+        #if locations.index.name != ColumnNames.LOCATION_ID or False in (locations.index == locations[ColumnNames.LOCATION_ID]):
+        #    raise Exception(f"Activity '{name}' dataframe needs to have an index column called 'ID'"
+        #                    f"that is equal to the 'ID' columns.")
         self._locations = locations
         self._flows = flows
 
@@ -73,9 +74,21 @@ class ActivityLocation():
         """Get the name of this activity. This is used to label columns in the file of individuals"""
         return self._name
 
+    def get_indices(self) -> List[int]:
+        """Retrn the index (row number) of each destination"""
+        return list(self._locations.index)
+
     def get_ids(self) -> List[int]:
-        """Retrn the IDs of each retail destination"""
+        """Retrn the IDs of each destination"""
         return list(self._locations[ColumnNames.LOCATION_ID])
+
+    #def get_location(self, id: int) -> pd.DataFrame:
+    #    """Get the location with the given id"""
+    #    loc = self._locations.loc[self._locations[ColumnNames.LOCATION_ID] == id, :]
+    #    if len(loc) != 1:
+    #        raise Exception(f"Location with ID {id} does not return exactly one row: {loc}")
+    #    return loc
+
 
     def update_dangers(self, dangers: List[float]):
         """
@@ -278,6 +291,16 @@ class Microsim:
         assert len(households["HID"].unique()) == len(households)
         assert len(individuals["PID"].unique()) == len(individuals)
 
+        # Some people aren't matched to households for some reason. Their HID == -1. Remove them
+        homeless = individuals.loc[individuals.HID==-1]
+        if len(homeless) > 0:
+            warnings.warn(f"There are {len(homeless)} individuals who were not matched to a house in the original "
+                          f"data. They will be removed.")
+        individuals = individuals.loc[individuals.HID != -1]
+        # Now everyone should have a household. This will raise an exception if not.
+        Microsim._check_no_homeless(individuals, households, warn=False)
+
+
         # THE FOLLOWING SHOULD BE DONE AS PART OF A TEST SUITE
         # TODO: check that correct numbers of rows have been read.
         # TODO: check that each individual has a household
@@ -293,6 +316,30 @@ class Microsim:
         # TODO Join individuls to households (create lookup columns in each)
 
         return (individuals, households)
+
+    @classmethod
+    def _check_no_homeless(cls, individuals, households, warn=True):
+        """
+        Check that each individual has a household
+
+        :param individuals:
+        :param households:
+        :param warn: Whether to warn (default, True) or raise an exception (False)
+        :return: True if there are no homeless, False otherwise (unless `warn==False` in which case an
+        exception is raised).
+        :raise: An exception if `warn==False` and there are individuals without a household
+        """
+        hids = frozenset(households.HID)
+        homeless = [pid for pid, hid in individuals.loc[:, ["PID", "HID"]].values if hid not in hids]
+        hids = frozenset(households.HID)
+        if len(homeless) > 0:
+            msg = f"There are {len(homeless)} individuals without an associated household (HID)."
+            if warn:
+                warnings.warn(msg)
+                return False
+            else:
+                raise Exception(msg)
+        return True
 
     @classmethod
     def extract_msoas_from_indiviuals(cls, individuals: pd.DataFrame) -> List[str]:
@@ -340,6 +387,9 @@ class Microsim:
         print(f"\tUsing a subset study area consisting of {len(study_msoas)} MSOAs.\n"
               f"\tBefore subsetting: {len(individuals)} individuals, {len(households)} househods.",
               f"\tAfter subsetting: {len(individuals_to_keep)} individuals, {len(households_to_keep)} househods.")
+
+        # Check no individuals without households have been introduced (raise an exception if so)
+        Microsim._check_no_homeless(individuals, households, warn=False)
 
         return (study_msoas, individuals_to_keep, households_to_keep)
 
@@ -480,7 +530,7 @@ class Microsim:
         :return: A tuple of two dataframes. One conaining the new 'individuals' dataframe and another containing
         a new dataframe for the households. Both will have some new columns
         """
-        print("Assigning individual flows for schools ... ")
+        #print("Assigning individual flows for homes ... ")
         # Start by adding some required columns to the households data. Things like Danger, a standard ID column, etc
         Microsim._add_location_columns(households, location_names=list(households.HID), location_ids=list(households.HID))
         # Check the various ID columns are the same (Location name, HID, and ID)
@@ -495,8 +545,19 @@ class Microsim:
 
         # Create lists to hold the venues and flows for each individuals. Unlike other activities
         # there is only one venue (their house) and all the flows go there.
-        individuals[venues_col] = individuals["HID"].apply(lambda x:  [x] ) # This is just converting HID to [HID]
-        individuals[flows_col] = [[1.0] for _ in range(len(individuals))] # Only one flow to the individual's household
+        # Find the row number (index) for the household with HID. It's annoyingly verbose. This gives the index
+        # of a house with HID=x: households.index[households["HID"]==x].values[0]. So that needs to be used
+        # in the apply() and also made into a 1-item list with outer square brackets
+        # (Also, 'swifter' makes the apply quicker. Maybe worth using this throughout).
+        individuals[venues_col] = individuals["HID"].swifter.progress_bar(enable=True, desc="Assigning individual flows for Homes ... ").\
+            apply( lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
+        print(individuals)
+        print(individuals[venues_col])
+        # (Old slow way)
+        #individuals[venues_col] = individuals["HID"].apply(
+        #    lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
+        # Only one flow to the individual's household
+        individuals[flows_col] = [[1.0] for _ in range(len(individuals))]
 
         return individuals, households
 
@@ -625,7 +686,9 @@ class Microsim:
         Add some standard columns to DataFrame (in place) that contains information about locations.
         :param locations: The dataframe of locations t
         :param location_names:
-        :param location_ids:
+        :param location_ids: Can optionally include a list of IDs. An ID column is always created, but if no specific
+        IDs are provided then the ID will be the same as the index (i.e. the row number). If ids are provided then
+        the ID column will be set to the given IDs, but the index will still be the row number.
         :return: None; the columns are added to the input dataframe inplace.
         """
         if location_ids is None:
@@ -644,7 +707,9 @@ class Microsim:
                             f"({len(location_names)} != {len(locations)}.")
         locations[ColumnNames.LOCATION_NAME] = location_names # Standard name for the location
         locations[ColumnNames.LOCATION_DANGER] = 0  # All locations have a disease danger of 0 initially
-        locations.set_index(ColumnNames.LOCATION_ID, inplace=True, drop=False)
+        # Make sure the index will always be the row number
+        locations.reset_index(inplace=True, drop=True)
+        #locations.set_index(ColumnNames.LOCATION_ID, inplace=True, drop=False)
         return None  # Columns added in place so nothing to return
 
 
@@ -680,7 +745,7 @@ class Microsim:
         # (not sure this makes much difference).
         individuals.set_index(["Area", "PID"], inplace=True, drop=False)
 
-        for area in tqdm(flow_matrix.values, desc=f"Assigning individual flows for {flow_type}"):  # Easier to operate over a 2D matrix rather than a dataframe
+        for area in tqdm(flow_matrix.values, desc=f"Assigning individual flows for {flow_type}"):  # Easier to operate over a 2D matrix rather than a dataframeN
             oa_num: int = area[0]
             oa_code: str = area[1]
             # Get rid of the area codes, so are now just left with flows to locations
@@ -760,20 +825,21 @@ class Microsim:
 
 
     def update_venue_danger(self):
+        """Update the danger score for each location, based on where the individuals who have the infection visit"""
         print("\tUpdating danger associated with visiting each venue")
         for name in tqdm(self.activity_locations, desc=f"Updating dangers for activity locations"):
             print(f"\tAnalysing {name} activity")
             # Get the details of the location activity
-            activity = self.activity_locations[name]
-            loc_ids = activity.get_ids() # Locations where the activity can take place
-            loc_dangers = activity.get_dangers() # Current dangers associated with each place
+            activity = self.activity_locations[name]  # Pointer to the ActivityLocation object
+            loc_ids = activity.get_ids()  # List of the IDs of the locations where the activity can take place
+            loc_idx = activity.get_indices() # List of the index (row  number) of the locations
+            loc_dangers = activity.get_dangers()  # List of the current dangers associated with each place
 
             # Now look up those venues in the table of individuals
-
             venues_col = f"{name}{ColumnNames.ACTIVITY_VENUES}" # The names of the venues and
             flows_col = f"{name}{ColumnNames.ACTIVITY_FLOWS}"   # flows in the individuals DataFrame
 
-            # 2D lists, for each individual the venues they visit and the flows to the venue (i.e. how much they visit it)
+            # 2D lists, for each individual: the venues they visit and the flows to the venue (i.e. how much they visit it)
             statuses = self.individuals.Disease_Status
             venues = self.individuals.loc[:, venues_col]
             flows = self.individuals.loc[:, flows_col]
@@ -781,9 +847,14 @@ class Microsim:
             for i, (v, f, s) in enumerate(zip(venues, flows, statuses)): # For each individual
                 if s == 1: # infected?
                     # v and f are lists of flows and venues for the individual. Go through each one
-                    for venue, flow in zip(v, f):
+                    for venue_idx, flow in zip(v, f):
+                        # Individual i goes to the venue with index (row number) "venue" and flow "flow"
+                        #print(i,v,f,s,venue_idx, flow)
+                        #if venue_idx==0:
+                        #    lkjasd=1
+                        #venue_index = loc_ids.index(venue_id)
                         # Increase the danger by the flow multiplied by some disease risk
-                        loc_dangers[venue] += ( flow * 0.1)
+                        loc_dangers[venue_idx] += (flow * 0.1)
 
             # Now we have the dangers associated with each location, apply these back to the main dataframe
             activity.update_dangers(loc_dangers)
@@ -800,13 +871,13 @@ class Microsim:
         :return: The new disease status for that individual
         """
         # Can access th individual's data using the 'row' variable like a dictionary.
-        for activity_name, activity in activity_locations.items():
-            # Work through each activity, and find the total risk
-            assert activity_name == activity.get_name()
-            venus = row[f"{activity_name}{ColumnNames.ACTIVITY_VENUES}"]
-            flows = row[f"{activity_name}{ColumnNames.ACTIVITY_FLOWS}"]
-            venus + flows  # Just to see how long this might take
-            pass
+        #for activity_name, activity in activity_locations.items():
+        #    # Work through each activity, and find the total risk
+        #    assert activity_name == activity.get_name()
+        #    venus = row[f"{activity_name}{ColumnNames.ACTIVITY_VENUES}"]
+        #    flows = row[f"{activity_name}{ColumnNames.ACTIVITY_FLOWS}"]
+        #    venus + flows  # Just to see how long this might take
+        #    pass
         return row['Disease_Status'] # TEMP DON'T ACTUALLT DO ANYTHING
 
     def step(self) -> None:
@@ -819,6 +890,8 @@ class Microsim:
         self.update_venue_danger()
 
         # Update the risks to individuals who visit those venues
+        # ACTUALLY THIS WONT BE DONE HERE. THE DATA WILL BE PASSED TO R AND DEALT WITH THERE, GETTING A NEW
+        # DISEASE STATUS COLUMN BACK
         # (need to pass activity locations as well becasue the calculate_new_disease_status needs to be class-level
         # rather than object level (otherwise I couldn't get the argument passing to work properly)
         tqdm.pandas(desc="Calculating new disease status") # means pd.apply() has a progress bar
