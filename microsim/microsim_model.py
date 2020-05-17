@@ -11,6 +11,7 @@ Created on Wed Apr 29 19:59:25 2020
 import pandas as pd
 import glob
 import os
+import sys
 import random
 import time
 import re  # For analysing file names
@@ -62,7 +63,6 @@ class ActivityLocation():
         # Check that the DataFrame's ID column is also an index, this is to ensure that the IDs always
         # refer to the same thing. NO LONGER DOING THIS, INDEX AND ID CAN BE DIFFERENT        #
         #if locations.index.name != ColumnNames.LOCATION_ID or False in (locations.index == locations[ColumnNames.LOCATION_ID]):
-        #    raise Exception(f"Activity '{name}' dataframe needs to have an index column called 'ID'"
         #                    f"that is equal to the 'ID' columns.")
         self._locations = locations
         self._flows = flows
@@ -929,18 +929,20 @@ class Microsim:
         # Update the risks to individuals who visit those venues
         # ACTUALLY THIS WONT BE DONE HERE. THE DATA WILL BE PASSED TO R AND DEALT WITH THERE, GETTING A NEW
         # DISEASE STATUS COLUMN BACK
+        print("Now should calculate new disease status")
         # (need to pass activity locations as well becasue the calculate_new_disease_status needs to be class-level
         # rather than object level (otherwise I couldn't get the argument passing to work properly)
-        tqdm.pandas(desc="Calculating new disease status") # means pd.apply() has a progress bar
+        # tqdm.pandas(desc="Calculating new disease status") # means pd.apply() has a progress bar
         #self.individuals["Disease_Status"] = self.individuals.progress_apply(
          #   func=Microsim.calculate_new_disease_status, axis=1, activity_locations=self.activity_locations)
+
 
         # Increase the number of days that each individual has had their current status
         self.individuals["Days_With_Status"] = self.individuals["Days_With_Status"].apply(
             lambda x: x + 1)
 
-
-        self.export_to_feather()
+        # Can export after every iteration if we want to
+        #self.export_to_feather()
 
         # Do some analysis
         fig = MicrosimAnalysis.population_distribution(self.individuals, ["DC1117EW_C_AGE"])
@@ -960,6 +962,10 @@ def run(iterations, data_dir):
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv("./data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
     m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
+
+    m.export_to_feather() # Write out the base population
+    print("Exitting. Not stepping for now")
+    sys.exit(0)
 
     # Temporily use dummy data for testing
     #data_dir="./dummy_data/"
