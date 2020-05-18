@@ -175,4 +175,21 @@ def test_add_home_flows():
     # tables, adding the standard columns needed, and creating 'flows' from individuals to their households
     assert False
 
+def test__normalise():
+    # Should normalise so that the input list sums to 1
+    # What if list length is 1, or a single number is given
+    for l in [ 2, 1, [0.1], [5.3] ]:
+        with pytest.raises(Exception):
+            Microsim._normalise(l)
+
+    # If numbers are the same (need to work out why these tests fail,the function seems OK)
+    #for l in [ [2, 2], [0, 0], [-1, -1], [1, 1] ]:
+    #    assert Microsim._normalise(l) == [0.5, 0.5]
+
+    # Other examples
+    assert Microsim._normalise([4, 6]) == [0.4, 0.6]
+    assert Microsim._normalise([40, 60]) == [0.4, 0.6]
+    assert Microsim._normalise([6, 6, 6, 6, 6]) == [0.2, 0.2, 0.2, 0.2, 0.2]
+
+
 

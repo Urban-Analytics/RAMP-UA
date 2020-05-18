@@ -9,6 +9,7 @@ Created on Wed Apr 29 19:59:25 2020
 """
 
 import pandas as pd
+import numpy as np
 import glob
 import os
 import sys
@@ -795,6 +796,9 @@ class Microsim:
                     dests.append(i)
                     flows.append(flow)
 
+            # Normalise the flows
+            flows = Microsim._normalise(flows)
+
             # Now assign individuals in those areas to those flows
             # This ridiculous 'apply' line is the only way I could get pandas to update the particular
             # rows required. Something like 'individuals.loc[ ...] = dests' (see below) didn't work becuase
@@ -824,6 +828,18 @@ class Microsim:
 
         return individuals
 
+    @classmethod
+    def _normalise(cls, l: List[float]) -> List[float]:
+        if len(l) < 2:
+            raise Exception("Can only work with lists length 2 or more")
+        l = np.array(l)  # Easier to work with numpy vectorised operators
+        total = l.sum()
+        l = l / total
+        ## Scale so all are between 0-1
+        ##l = (l - l.min()) / (l.max() - l.min())
+        ## Scale so sum to 1
+        ##l = l / l.sum()
+        return list(l)
 
     def export_to_feather(self, path="./export/"):
         """
