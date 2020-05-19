@@ -485,7 +485,7 @@ class Microsim:
         """
         # TODO Need to read full school flows, not just those of Devon
         print("Reading school flow data...", )
-        dir = os.path.join(cls.DATA_DIR, "temp-schools")
+        dir = os.path.join(cls.DATA_DIR, "devon-schools")
 
         # Read the schools (all of them)
         schools = pd.read_csv(os.path.join(dir, "exeter schools.csv"))
@@ -642,7 +642,7 @@ class Microsim:
         # working with Devon subset of flows
         print("WARNING: not currently subsetting retail flows")
         print("Reading retail flow data...", )
-        dir = os.path.join(cls.DATA_DIR, "temp-retail")
+        dir = os.path.join(cls.DATA_DIR, "devon-retail")
 
         # Read the stores
         stores = pd.read_csv(os.path.join(dir, "devon smkt.csv"))
