@@ -1,7 +1,8 @@
 import pytest
 import multiprocessing
 import pandas as pd
-from microsim.microsim_model import Microsim, ActivityLocation
+import numpy as np
+from microsim.microsim_model import Microsim, ActivityLocation, ColumnNames
 
 
 # ********************************************************
@@ -39,6 +40,38 @@ def test_add_home_flows(test_microsim):
     # And 4 in house 12
     assert len(test_microsim.individuals.loc[test_microsim.individuals.HID == 12, :]) == 4
 
+def test_read_school_flows_data(test_microsim):
+    """Check that flows to primary and secondary schools were read correctly """
+    # Check priary and seconary are actually the same dataframe (they're read together)
+    primary_schools = test_microsim.activity_locations["PrimarySchool"]._locations
+    secondary_schools = test_microsim.activity_locations["SecondarySchool"]._locations
+    assert primary_schools.equals(secondary_schools)
+    # Check that if we add a column in one, the other gets it too
+    primary_schools["TestCol"] = 0
+    assert "TestCol" in list(secondary_schools.columns)
+
+    schools = primary_schools  # Just refer to them with one name
+
+    # Check correct number of primary and secondary schools
+    # (these don't need to sum to total schools because there are a couple of nurseries in there
+    assert len(schools) == 350
+    primary_schools = schools.loc[schools.PhaseOfEducation_name == "Primary"]
+    secondary_schools = schools.loc[schools.PhaseOfEducation_name == "Secondary"]
+    len(primary_schools) == 309
+    len(secondary_schools) == 39
+
+    # Check all primary flows go to primary schools and secondary flows go to secondary schools
+    primary_flows = test_microsim.activity_locations["PrimarySchool"]._flows
+    secondary_flows = test_microsim.activity_locations["SecondarySchool"]._flows
+    # Following slice slice gives the total flow to each of the 350 schools (sum across rows for each colum and then
+    # drop the first two columns which are area ID and Code)
+    for school_no, flow in enumerate(primary_flows.sum(0)[2:]):
+        if flow > 0:
+            assert schools.iloc[school_no].PhaseOfEducation_name == "Primary"
+    for school_no, flow in enumerate(secondary_flows.sum(0)[2:]):
+        if flow > 0:
+            assert schools.iloc[school_no].PhaseOfEducation_name == "Secondary"
+
 
 def test_step(test_microsim):
     """Test the step method."""
@@ -49,6 +82,7 @@ def test_step(test_microsim):
         # TODO make sure the characteristics of the locations are as they should be. E.g the 'Danger' etc.
 
     print("End of test step")
+
 
 def test_update_venue_danger(test_microsim):
     # TODO Check that danger values are updated appropriately. Especially check indexing works (where the
@@ -164,10 +198,48 @@ def test_import_from_feather():
 
 
 def test__add_location_columns():
+    df = pd.DataFrame(data={"Name": ['a', 'b', 'c', 'd']})
+    with pytest.raises(Exception):  # Should fail if lists are wrong length
+        Microsim._add_location_columns(df, location_names=["a", "b"], location_ids=None)
+        Microsim._add_location_columns(df, location_names=df.Name, location_ids=[1, 2])
+    with pytest.raises(TypeError):  # Can't get the length of None
+        Microsim._add_location_columns(df, location_names=None)
+
+    # Call the function
+    x = Microsim._add_location_columns(df, location_names=df.Name)
+    assert x is None  # Function shouldn't return anything. Does things inplace
+    # Default behaviour is just add columns
+    assert False not in (df.columns.values == ["Name", "ID", "Location_Name", "Danger"])
+    assert False not in list(df.Location_Name == df.Name)
+    assert False not in list(df.ID == range(0, 4))
+    assert False not in list(df.index == range(0, 4))
+    # Adding columns again shouldn't change anything
+    Microsim._add_location_columns(df, location_names=df.Name)
+    assert False not in (df.columns.values == ["Name", "ID", "Location_Name", "Danger"])
+    assert False not in list(df.Location_Name == df.Name)
+    assert False not in list(df.ID == range(0, 4))
+    assert False not in list(df.index == range(0, 4))
+    # See what happens if we give it IDs
+    Microsim._add_location_columns(df, location_names=df.Name, location_ids=[5, 7, 10, -1])
+    assert False not in (df.columns.values == ["Name", "ID", "Location_Name", "Danger"])
+    assert False not in list(df.ID == [5, 7, 10, -1])
+    assert False not in list(df.index == range(0, 4))  # Index shouldn't change
+    # Shouldn't matter if IDs are Dataframes or Series
+    Microsim._add_location_columns(df, location_names=pd.Series(df.Name))
+    assert False not in list(df.Location_Name == df.Name)
+    assert False not in list(df.index == range(0, 4))  # Index shouldn't change
+    Microsim._add_location_columns(df, location_names=df.Name, location_ids=np.array([5, 7, 10, -1]))
+    assert False not in list(df.ID == [5, 7, 10, -1])
+    assert False not in list(df.index == range(0, 4))  # Index shouldn't change
+    # Set a weird index, the function should replace it with the row number
+    df = pd.DataFrame(data={"Name": ['a', 'b', 'c', 'd'], "Col2": [4, -6, 8, 1.4]}, )
+    df.set_index("Col2")
+    Microsim._add_location_columns(df, location_names=df.Name)
+    assert False not in list(df.ID == range(0, 4))
+    assert False not in list(df.index == range(0, 4))
+
     # TODO dest that the _add_location_columns function correctly adds the required standard columns
     # to a locaitons dataframe, and does appropriate checks for correct lengths of input lists etc.
-    # TODO what happens if you pass lists of IDs or Dataframes or Series? Does the function behave properly?
-    assert False
 
 
 def test_add_home_flows():
@@ -175,21 +247,25 @@ def test_add_home_flows():
     # tables, adding the standard columns needed, and creating 'flows' from individuals to their households
     assert False
 
+
 def test__normalise():
     # Should normalise so that the input list sums to 1
-    # What if list length is 1, or a single number is given
-    for l in [ 2, 1, [0.1], [5.3] ]:
+    # Fail if aa single number is given
+    for l in [2, 1]:
         with pytest.raises(Exception):
             Microsim._normalise(l)
 
+    # 1-item lists should return [1.0]
+    for l in [[0.1], [5.3]]:
+        assert Microsim._normalise(l) == [1.0]
+
     # If numbers are the same (need to work out why these tests fail,the function seems OK)
-    #for l in [ [2, 2], [0, 0], [-1, -1], [1, 1] ]:
+    # for l in [ [2, 2], [0, 0], [-1, -1], [1, 1] ]:
     #    assert Microsim._normalise(l) == [0.5, 0.5]
 
     # Other examples
     assert Microsim._normalise([4, 6]) == [0.4, 0.6]
     assert Microsim._normalise([40, 60]) == [0.4, 0.6]
     assert Microsim._normalise([6, 6, 6, 6, 6]) == [0.2, 0.2, 0.2, 0.2, 0.2]
-
 
 

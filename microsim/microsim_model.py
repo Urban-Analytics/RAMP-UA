@@ -19,6 +19,7 @@ import re  # For analysing file names
 import typing
 import warnings
 from enum import Enum  # For disease status
+from collections.abc import Iterable   # drop `.abc` with Python 2.7 or lower
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
@@ -188,14 +189,17 @@ class Microsim:
         stores, stores_flows = Microsim.read_retail_flows_data(self.study_msoas)  # (list of shops and a flow matrix)
         Microsim.check_sim_flows(stores, stores_flows)
 
-        # Read Schools
-        school_name = "School"
-        schools, schools_flows = Microsim.read_school_flows_data(self.study_msoas)  # (list of schools and a flow matrix)
-        Microsim.check_sim_flows(schools, schools_flows)
+        # Read Schools (primary and secondary)
+        primary_name = "PrimarySchool"
+        secondary_name = "SecondarySchool"
+        schools, primary_flows, secondary_flows = \
+            Microsim.read_school_flows_data(self.study_msoas)  # (list of schools and a flow matrix)
+        Microsim.check_sim_flows(schools, primary_flows)
+        Microsim.check_sim_flows(schools, secondary_flows)
         # At the moment we dont do primary and secondary, so trim off all the secondary schools (these
         # will have been read in after the primary
-        print("TEMPORARILY TRIMMING SCHOOLS FLOWS")
-        schools_flows = schools_flows.iloc[0:len(self.study_msoas), :]
+        #print("TEMPORARILY TRIMMING SCHOOLS FLOWS")
+        #schools_flows = schools_flows.iloc[0:len(self.study_msoas), :]
 
         # Workplaces etc.
         # self.workplaces = Microsim.read_workplace_data()
@@ -210,8 +214,10 @@ class Microsim:
         self.activity_locations[retail_name] = ActivityLocation(retail_name, stores, stores_flows)
 
         # Assign Schools
-        self.individuals = Microsim.add_individual_flows(school_name, self.individuals, schools_flows)
-        self.activity_locations[school_name] = ActivityLocation(school_name, schools, schools_flows)
+        self.individuals = Microsim.add_individual_flows(primary_name, self.individuals, primary_flows)
+        self.activity_locations[primary_name] = ActivityLocation(primary_name, schools, primary_flows)
+        self.individuals = Microsim.add_individual_flows(secondary_name, self.individuals, secondary_flows)
+        self.activity_locations[secondary_name] = ActivityLocation(secondary_name, schools, secondary_flows)
 
         # Assign households. This is slightly different to retail, schools, etc. because we already know the flows
         # to the households (each individual has a 'HID' that links to their household). So
@@ -418,7 +424,7 @@ class Microsim:
         # For now just hard code broad categories. Ultimately will have different values for different activities.
 
         # This list is pointless now. Eventually these need to match properly to the ActivityLocations
-        activities = ["Home", "Retail", "School", "Work", "Leisure"]
+        activities = ["Home", "Retail", "PrimarySchool", "SecondarySchool", "Work", "Leisure"]
         col_names = []
         for act in activities:
             col_name = act + ColumnNames.ACTIVITY_DURATION
@@ -428,10 +434,15 @@ class Microsim:
                 individuals[col_name] = 14/24
             elif act == "Retail":
                 individuals[col_name] = 1.0/24
-            elif act == "School":
-                # Assume no school for adults and X hours for <19 year olds
+            elif act == "PrimarySchool":
+                # Assume 8 hours per day for all under 12
                 individuals[col_name] = 0.0 # Default 0
-                individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] < 19, col_name] = 8.0/24
+                individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] < 12, col_name] = 8.0/24
+            elif act == "SecondarySchool":
+                # Assume 8 hours per day for 12 <= x < 19
+                individuals[col_name] = 0.0  # Default 0
+                individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] < 19, col_name] = 8.0 / 24
+                individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] < 12, col_name] = 0.0
             elif act == "Work":
                 # Opposite of school
                 individuals[col_name] = 0.0 # Default 0
@@ -462,32 +473,34 @@ class Microsim:
 
 
     @classmethod
-    def read_school_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
+    def read_school_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
         """
-        Read the flows between each MSOA and the most likely schools attended by pupils in this area
-        ??? We will not allocate a single school to a given pupil due to uncertainty in catchment area
-        Instead, like in the retail flow, each pupil will visit schools with a given likelihood ???
+        Read the flows between each MSOA and the most likely schools attended by pupils in this area.
+        All schools are initially read together, but flows are separated into primary and secondary
 
-        :type study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
-        :return: A tuple of two dataframes. One containing all of the flows and another
-        containing information about the schools themselves.
+        :param study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
+        :return: A tuple of three dataframes. All schools, then the flows to primary and secondary
+        (Schools, PrimaryFlows, SeconaryFlows). Although all the schools are one dataframe, no primary flows will flow
+        to secondary schools and vice versa).
         """
         # TODO Need to read full school flows, not just those of Devon
-        print("WARNING: not currently subsetting school flows")
-        print("Reading retail flow data...", )
+        print("Reading school flow data...", )
         dir = os.path.join(cls.DATA_DIR, "temp-schools")
 
-        # Read the schools
+        # Read the schools (all of them)
         schools = pd.read_csv(os.path.join(dir, "exeter schools.csv"))
         # Add some standard columns that all locations need
         schools_ids = list(schools.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
-        schools_names = schools.EstablishmentName # Standard name for the location
+        schools_names = schools.EstablishmentName  # Standard name for the location
         Microsim._add_location_columns(schools, location_names=schools_names, location_ids=schools_ids)
 
         # Read the flows
-        rows = []  # Build up all the rows in the matrix gradually then add all at once
+        primary_rows = []  # Build up all the rows in the matrix gradually then add all at once
+        secondary_rows = []
         with open(os.path.join(dir, "DJS002.TXT")) as f:
-            count = 1  # Mark's file comes in batches of 3 lines, each giving different data. However, some lines overrun and are read as several lines rather than 1 (hence use of dests_tmp and flows_tmp)
+            # Mark's file comes in batches of 3 lines, each giving different data. However, some lines overrun and are
+            # read as several lines rather than 1 (hence use of dests_tmp and flows_tmp)
+            count = 1
             oa = None
             oa_name = ""
             num_dests = None
@@ -500,6 +513,8 @@ class Microsim:
                 # print(f"{lineno}: '{raw_line}'")
                 line_list = raw_line.strip().split()
                 if count == 1:  # primary/secondary school, OA and number of schools
+                    sch_type = int(line_list[0])
+                    assert sch_type == 1 or sch_type == 2  # Primary schools are 1, secondary 2
                     oa = int(line_list[1])
                     oa_name = study_msoas[oa-1] # The OA names are stored in a separate file temporarily
                     num_dests = int(line_list[2])
@@ -538,7 +553,13 @@ class Microsim:
                         assert len([x for x in row if x > 0]) == num_dests  # There should only be N >0 flows
                         row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
 
-                        rows.append(row)
+                        # Luckily Mark's file does all primary schools first, then all secondary schools, so we
+                        # know that all schools in this area are one or the other
+                        if sch_type == 1:
+                            primary_rows.append(row)
+                        else:
+                            secondary_rows.append(row)
+                        #rows.append(row)
 
                         # Add the row to the matrix. As the OA numbers are incremental they should equal the number
                         # of rows
@@ -551,12 +572,16 @@ class Microsim:
 
                 count += 1
 
-        # Have finished reading the file, now create the matrix. MSOAs as rows, school locations as columns
+        # Have finished reading the file, now create the matrices. MSOAs as rows, school locations as columns
         columns = ["Area_ID", "Area_Code"]  # A number (ID) and full code for each MSOA
         columns += [f"Loc_{i}" for i in schools.index]  # Columns for each school
-        flow_matrix = pd.DataFrame(data=rows, columns=columns)
 
-        return schools, flow_matrix
+        primary_flow_matrix = pd.DataFrame(data=primary_rows, columns=columns)
+        secondary_flow_matrix = pd.DataFrame(data=secondary_rows, columns=columns)
+        #schools_flows = schools_flows.iloc[0:len(self.study_msoas), :]
+        print(f"... finished reading school flows.")
+
+        return schools, primary_flow_matrix, secondary_flow_matrix
 
     @classmethod
     def add_home_flows(cls, flow_type: str, individuals: pd.DataFrame, households: pd.DataFrame) \
@@ -722,13 +747,15 @@ class Microsim:
     def _add_location_columns(cls, locations: pd.DataFrame, location_names: List[str], location_ids: List[int] = None):
         """
         Add some standard columns to DataFrame (in place) that contains information about locations.
-        :param locations: The dataframe of locations t
-        :param location_names:
-        :param location_ids: Can optionally include a list of IDs. An ID column is always created, but if no specific
+        :param locations: The dataframe of locations that the columns will be added to
+        :param location_names: Names of the locations (e.g shop names)
+        :param location_ids: Can optionally include a list of IDs. An 'ID' column is always created, but if no specific
         IDs are provided then the ID will be the same as the index (i.e. the row number). If ids are provided then
         the ID column will be set to the given IDs, but the index will still be the row number.
         :return: None; the columns are added to the input dataframe inplace.
         """
+        # Make sure the index will always be the row number
+        locations.reset_index(inplace=True, drop=True)
         if location_ids is None:
             # No specific index provided, just use the index
             locations[ColumnNames.LOCATION_ID] = locations.index
@@ -745,8 +772,6 @@ class Microsim:
                             f"({len(location_names)} != {len(locations)}.")
         locations[ColumnNames.LOCATION_NAME] = location_names # Standard name for the location
         locations[ColumnNames.LOCATION_DANGER] = 0  # All locations have a disease danger of 0 initially
-        # Make sure the index will always be the row number
-        locations.reset_index(inplace=True, drop=True)
         #locations.set_index(ColumnNames.LOCATION_ID, inplace=True, drop=False)
         return None  # Columns added in place so nothing to return
 
@@ -783,7 +808,7 @@ class Microsim:
         # (not sure this makes much difference).
         individuals.set_index(["Area", "PID"], inplace=True, drop=False)
 
-        for area in tqdm(flow_matrix.values, desc=f"Assigning individual flows for {flow_type}"):  # Easier to operate over a 2D matrix rather than a dataframeN
+        for area in tqdm(flow_matrix.values, desc=f"Assigning individual flows for {flow_type}"):  # Easier to operate over a 2D matrix rather than a dataframe
             oa_num: int = area[0]
             oa_code: str = area[1]
             # Get rid of the area codes, so are now just left with flows to locations
@@ -830,8 +855,12 @@ class Microsim:
 
     @classmethod
     def _normalise(cls, l: List[float]) -> List[float]:
-        if len(l) < 2:
-            raise Exception("Can only work with lists length 2 or more")
+        """Normalise a list so that it sums to 1.0"""
+        if not isinstance(l, Iterable):
+            raise Exception("Can only work with iterables")
+        if len(l) == 1:  # Special case for 1-item iterables
+            return [1.0]
+
         l = np.array(l)  # Easier to work with numpy vectorised operators
         total = l.sum()
         l = l / total
@@ -847,6 +876,7 @@ class Microsim:
         :param path: Optional directory to write the files to (default '.')
         :return:
         """
+        # TODO finish this function properly, at the moment it writes to my desktop
         # Export individuals. Need to drop the flows columns because feather can't currently export those
         individuals = self.individuals.copy()
         for activity_name, activity in self.activity_locations.items():
@@ -854,6 +884,8 @@ class Microsim:
             individuals = individuals.drop(f"{activity_name}{ColumnNames.ACTIVITY_FLOWS}", 1)
 
         feather.write_feather(individuals, "/Users/nick/Desktop/individuals.feather")
+        # Include a CSV file to check
+        individuals.to_csv("/Users/nick/Desktop/individuals.csv")
         # Export locations
 
 
@@ -970,7 +1002,7 @@ class Microsim:
 # PROGRAM ENTRY POINT
 # Uses 'click' library so that it can be run from the command line
 @click.command()
-@click.option('--iterations', default=10, help='Number of model iterations')
+@click.option('--iterations', default=2, help='Number of model iterations')
 @click.option('--data_dir', default="./data/", help='Root directory to load data from')
 def run(iterations, data_dir):
     num_iter = iterations
@@ -980,8 +1012,8 @@ def run(iterations, data_dir):
     m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
     m.export_to_feather() # Write out the base population
-    print("Exitting. Not stepping for now")
-    sys.exit(0)
+    #print("Exitting. Not stepping for now")
+    #sys.exit(0)
 
     # Temporily use dummy data for testing
     #data_dir="./dummy_data/"
