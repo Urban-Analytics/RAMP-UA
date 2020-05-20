@@ -150,7 +150,7 @@ class Microsim:
 
     def __init__(self,
                  study_msoas: List[str] = [], random_seed: float = None, read_data: bool = True,
-                 data_dir = "./data/", testing=False
+                 data_dir = "data", testing=False
                  ):
         """
         Microsim constructor.
@@ -269,12 +269,12 @@ class Microsim:
         # Can't just read in all the files because the microsimulation restarts the house and index numbering with
         # each file, but we need the IDs to be consistent across the whole area. So read the files in one-by-one
         # and make sure houses and individual IDs are unique
-        household_files = glob.glob(msm_dir + '/ass_hh_*_OA11_2020.csv')
+        household_files = glob.glob(os.path.join(msm_dir, 'ass_hh_*_OA11_2020.csv') )
         if len(household_files) == 0:
             raise Exception(f"No household csv files found in {msm_dir}.",
                             f"Have you downloaded and extracted the necessary data? (see {cls.DATA_DIR} README).",
                             f"The directory has these files in it: {os.listdir(msm_dir)}")
-        individual_files = glob.glob(msm_dir + '/ass_*_MSOA11_2020.csv')
+        individual_files = glob.glob(os.path.join(msm_dir, '/ass_*_MSOA11_2020.csv'))
         if len(individual_files) == 0:
             raise Exception(f"No individual csv files found in {msm_dir}.",
                             f"Have you downloaded and extracted the necessary data? (see {cls.DATA_DIR} README)")
@@ -953,7 +953,7 @@ class Microsim:
         ##l = l / l.sum()
         return list(l)
 
-    def export_to_feather(self, path="./export/"):
+    def export_to_feather(self, path="export"):
         """
         Export the dataframes that represent the current model state. See also `import_from_feather`.
         :param path: Optional directory to write the files to (default '.')
@@ -972,7 +972,7 @@ class Microsim:
         # Export locations
 
 
-    def import_from_feather(self, path="./export/"):
+    def import_from_feather(self, path="export"):
         pass
 
     @classmethod
@@ -1087,12 +1087,12 @@ class Microsim:
 # Uses 'click' library so that it can be run from the command line
 @click.command()
 @click.option('--iterations', default=2, help='Number of model iterations')
-@click.option('--data_dir', default="./data/", help='Root directory to load data from')
+@click.option('--data_dir', default="data", help='Root directory to load data from')
 def run(iterations, data_dir):
     num_iter = iterations
 
     # Temporarily only want to use Devon MSOAs
-    devon_msoas = pd.read_csv("./data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
+    devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
     m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
     #m.export_to_feather() # Write out the base population
@@ -1100,7 +1100,7 @@ def run(iterations, data_dir):
     #sys.exit(0)
 
     # Temporily use dummy data for testing
-    #data_dir="./dummy_data/"
+    #data_dir="dummy_data"
     #m = Microsim(data_dir=data_dir, testing=True)
 
     # Step the model
