@@ -298,6 +298,23 @@ class Microsim:
             house_df = pd.read_csv(house_file)
             indiv_df = pd.read_csv(indiv_file)
 
+            # Add some useful columns
+
+            # The local authority
+            house_df["Local_Authority"] = area
+            indiv_df["Local_Authority"] = area
+
+            # Look up the OA of the house that each individual lives in (individuals are MSOA) and vice versa
+            indiv_df["House_OA"] = indiv_df.set_index("PID").merge(house_df.set_index("HRPID").rename(columns={"Area": "House_OA"}), how="left")["House_OA"]
+            house_df["HRP_MSOA"] = house_df.set_index("HRPID").merge(indiv_df.set_index("PID").rename(columns={"Area": "HRP_MSOA"}), how="left")["HRP_MSOA"]
+            # Check that the number of OAs in the household file is the same as those in the individuals file
+            # (there are some NA's where individuals weren't matched to households, this is OK and dealt with later)
+            if len(house_df.Area.unique()) > len(indiv_df.House_OA.dropna().unique()):
+                warnings.warn(f"When reading LA {area} there were {len(house_df.Area.unique()) - len(indiv_df.House_OA.dropna().unique())} "
+                              f"output areas that had households with no individuals living in them")
+            elif len(house_df.Area.unique()) < len(indiv_df.House_OA.dropna().unique()):
+                raise Exception("Individuals have been assigned to more House OAs than actually exist!")
+
             # Increment the counters
             #house_df["HID"] = house_df["HID"].apply(lambda x: x + HID_counter)
             #house_df["HRPID"] = house_df["HRPID"].apply(lambda x: x + PID_counter)  # Also increase the HRP
@@ -361,11 +378,13 @@ class Microsim:
         exception is raised).
         :raise: An exception if `warn==False` and there are individuals without a household
         """
-        # Households are uniquely identified by [Area,PID] combination. Individuals are identified by [Area,HID,PID]
+        # Households are uniquely identified by [Area,HID] combination. Individuals are identified by [Area,HID,PID]
+        # XXXX PROBLEM: 'ARea' in [Area, HID] is an OA, but 'Area' in [Area, HID, PID] is an MSOA !!
 
         # Make a new dataset with a unique index for households
         hids = households.set_index(["Area", "HID"])
         # Find individuals who do not have a related entry in the households dataset
+        # TODO redo the line below with an apply rather than for loop
         homeless = [(area, hid, pid) for area, hid, pid in individuals.loc[:, ["Area", "HID", "PID"]].values if (area, hid) not in hids.index]
         if len(homeless) > 0:
             msg = f"There are {len(homeless)} individuals without an associated household (HID)."

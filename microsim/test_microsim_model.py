@@ -79,9 +79,10 @@ def test_read_msm_data(test_microsim):
     assert len(test_microsim.households) == 8
     # Check correct number of 'homeless' (this is OK because of how I set up the data)
     with pytest.raises(Exception) as e:
-        assert Microsim._check_no_homeless(test_microsim)
+        Microsim._check_no_homeless(test_microsim.individuals, test_microsim.households, warn=False)
         # This should reaise an exception. Get the number of homeless. Should be 15
         num_homeless = [int(s)  for s in e.message.split() if s.isdigit()][0]
+        print(f"Correctly found homeless: {num_homeless}")
         assert num_homeless == 15
 
 
