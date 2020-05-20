@@ -966,7 +966,7 @@ class Microsim:
             individuals = individuals.drop(f"{activity_name}{ColumnNames.ACTIVITY_VENUES}", 1)
             individuals = individuals.drop(f"{activity_name}{ColumnNames.ACTIVITY_FLOWS}", 1)
 
-        feather.write_feather(individuals, "/Users/nick/Desktop/individuals.feather")
+        #feather.write_feather(individuals, "/Users/nick/Desktop/individuals.feather")
         # Include a CSV file to check
         individuals.to_csv("/Users/nick/Desktop/individuals.csv")
         # Export locations
@@ -1095,7 +1095,7 @@ def run(iterations, data_dir):
     devon_msoas = pd.read_csv("./data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
     m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
-    m.export_to_feather() # Write out the base population
+    #m.export_to_feather() # Write out the base population
     #print("Exitting. Not stepping for now")
     #sys.exit(0)
 
