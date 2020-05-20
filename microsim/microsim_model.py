@@ -47,13 +47,20 @@ class ColumnNames:
 
 class ActivityLocation():
     """Class to represent information about activity locations, e.g. retail destinations, workpaces, etc."""
-    def __init__(self, name: str, locations: pd.DataFrame, flows: pd.DataFrame):
+    def __init__(self, name: str, locations: pd.DataFrame, flows: pd.DataFrame,
+                 individuals: pd.DataFrame, duration_col: str):
         """
         Initialise an ActivityLocation
         :param name: A name to use to refer to this activity. Column names in the big DataFrame of individuals
         will be named according to this
         :param locations: A dataframe containing information about each loction
-        :param flows: A dataframe containing flows
+        :param flows: A dataframe containing the flows.
+        :param individuals: The dataframe containing the individual population. This is needed because a new
+        '*_DURATION' column will be added to that table to show how much time each individual spends doing
+        this activity. The new column is added inplace
+        :param duration_col: The column in the 'individuals' dataframe that gives the proportion of time
+        spend doing this activity. This needs to be renamed according to a standard format, e.g. for retail
+        the column needs to be called 'RETAIL_DURATION'.
         """
         self._name = name
         # Check that the dataframe has all the standard columns needed
@@ -68,6 +75,13 @@ class ActivityLocation():
         #                    f"that is equal to the 'ID' columns.")
         self._locations = locations
         self._flows = flows
+
+        # Check that the duration column exists and create a new column showing the duration of this activity
+        if duration_col not in individuals.columns:
+            raise Exception(f"The duration column '{duration_col}' is not one of the columns in the individuals"
+                            f"data frame: {individuals.columns}")
+        self.duration_column = self._name + ColumnNames.ACTIVITY_DURATION
+        individuals[self.duration_column] = individuals[duration_col]
 
     def __repr__(self):
         return f"<{self._name} ActivityLocation>"
@@ -174,7 +188,7 @@ class Microsim:
         self.individuals = Microsim.attach_labour_force_data(self.individuals)
 
         # Attach a load of transport attributes to each individual
-        self.individuals = Microsim.attach_time_use_data(self.individuals)
+        self.individuals = Microsim.attach_time_use_and_health_data(self.individuals)
 
         # Now we have the 'core population'. Keep a copy of this but continue to use the 'individuals' data frame
         self.core_population = self.individuals.copy()
@@ -205,26 +219,35 @@ class Microsim:
         # self.workplaces = Microsim.read_workplace_data()
         # self.schools = Microsim.read_school_data()
 
-        # Assign probabilities that each individual will go to each location (most of these will be 0!)
-        # Do this by adding two new columns, both storing lists. One lists ids of the locations that
-        # the individual may visit, the other has the probability of them visitting those places
+        # **** Create ActivityLocations ****
+
+        # Firstly, assign probabilities that each individual will go to each location (most of these will be 0!)
+        # Do this by adding two new columns in the individuals dataframe, both storing lists. One lists ids of the
+        # locations that the individual may visit, the other has the probability of them visitting those places.
+        # Then, create an ActivityLocation object to store information about the destinations (e.g. stores, schools,
+        # etc.) that are associated with each activity. These ActivityLocation objects will also add another column
+        # in to the individuals dataframe that records the amount of time they spend doing the activity
+        # (e.g. 'RETAIL_DURATION'). These raw numbers were attached earlier in `attach_time_use_and_health_data`.
 
         # Assign Retail
         self.individuals = Microsim.add_individual_flows(retail_name, self.individuals, stores_flows)
-        self.activity_locations[retail_name] = ActivityLocation(retail_name, stores, stores_flows)
+        self.activity_locations[retail_name] = \
+            ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
 
         # Assign Schools
         self.individuals = Microsim.add_individual_flows(primary_name, self.individuals, primary_flows)
-        self.activity_locations[primary_name] = ActivityLocation(primary_name, schools, primary_flows)
+        self.activity_locations[primary_name] = \
+            ActivityLocation(primary_name, schools, primary_flows, self.individuals, "pschool")
         self.individuals = Microsim.add_individual_flows(secondary_name, self.individuals, secondary_flows)
-        self.activity_locations[secondary_name] = ActivityLocation(secondary_name, schools, secondary_flows)
+        self.activity_locations[secondary_name] = \
+            ActivityLocation(secondary_name, schools, secondary_flows, self.individuals, "pschool")
 
         # Assign households. This is slightly different to retail, schools, etc. because we already know the flows
         # to the households (each individual has a 'HID' that links to their household). So
         # we can assign them directly without having to produce a flow matrix.
         home_name = "Home"
         self.individuals, self.households = Microsim.add_home_flows(home_name, self.individuals, self.households)
-        self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households, flows=None)
+        self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households, flows=None, individuals=self.individuals, duration_col="phome")
 
         # Assign initial SEIR status
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
@@ -295,13 +318,13 @@ class Microsim:
         # Should save a bit of memory because not duplicating area strings
         individuals["Area"] = individuals["Area"].astype('category')
 
-        # Set the index
-        households.set_index("HID", inplace=True, drop=False)
-        individuals.set_index("PID", inplace=True, drop=False)
-
         # Make sure HIDs and PIDs are unique
         assert len(households["HID"].unique()) == len(households)
         assert len(individuals["PID"].unique()) == len(individuals)
+
+        # Set the index
+        households.set_index("HID", inplace=True, drop=False)
+        individuals.set_index("PID", inplace=True, drop=False)
 
         # Some people aren't matched to households for some reason. Their HID == -1. Remove them
         homeless = individuals.loc[individuals.HID==-1]
@@ -315,7 +338,6 @@ class Microsim:
 
         # THE FOLLOWING SHOULD BE DONE AS PART OF A TEST SUITE
         # TODO: check that correct numbers of rows have been read.
-        # TODO: check that each individual has a household
         # TODO: check that individuals are correctly linked to households (I had to re-do the PID and HID indexing)
         # TODO: graph number of people per household just to sense check
 
@@ -419,50 +441,114 @@ class Microsim:
         return individuals
 
     @classmethod
-    def attach_time_use_data(cls, individuals: pd.DataFrame) -> pd.DataFrame:
-        print("Attaching time use data ... ", )
-        # For now just hard code broad categories. Ultimately will have different values for different activities.
+    def attach_time_use_and_health_data(cls, individuals: pd.DataFrame, hard_coded=False) -> pd.DataFrame:
+        """Attach time use data (proportions of time people spend doing the different activities and additional
+        health data.
 
-        # This list is pointless now. Eventually these need to match properly to the ActivityLocations
-        activities = ["Home", "Retail", "PrimarySchool", "SecondarySchool", "Work", "Leisure"]
-        col_names = []
-        for act in activities:
-            col_name = act + ColumnNames.ACTIVITY_DURATION
-            col_names.append(col_name)
-            if act=="Home":
-                # Assume XX hours per day at home (this is whatever not spent doing other activities)
-                individuals[col_name] = 14/24
-            elif act == "Retail":
-                individuals[col_name] = 1.0/24
-            elif act == "PrimarySchool":
-                # Assume 8 hours per day for all under 12
-                individuals[col_name] = 0.0 # Default 0
-                individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] < 12, col_name] = 8.0/24
-            elif act == "SecondarySchool":
-                # Assume 8 hours per day for 12 <= x < 19
-                individuals[col_name] = 0.0  # Default 0
-                individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] < 19, col_name] = 8.0 / 24
-                individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] < 12, col_name] = 0.0
-            elif act == "Work":
-                # Opposite of school
-                individuals[col_name] = 0.0 # Default 0
-                individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] >= 19, col_name] = 8.0/24
-            elif act == "Leisure":
-                individuals[col_name] = 1.0/24
-            else:
-                raise Exception(f"Unrecognised activity: {act}")
+        :param individuals: The dataframe of individuals that the new columns will be added to
+        :param hard_coded: Optionally use some national, arbitrary hard-coded time-use values (only good
+        for testing)
+        :return A new dataframe of individuals with the new information appended.
+        """
+        print("Attaching time use and health data for Devon... ", )
+        filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_health.txt")
+        tuh = pd.read_csv(filename)
+        if len(tuh.pid.unique()) != len(tuh):  # Check PIDs unique
+            # NEED TO FIX THIS. FOR NOW JUST RAISE A WARNING
+            warnings.warn("THIS NEEDS TO BE FIXED! Not all of the individual IDs (PID column) are unique")
+            #raise Exception("Not all of the individual IDs (PID column) are unique")
+
+        # Check sensible numbers of individuals in the time use health data
+        if len(tuh) < len(individuals):
+            raise Exception("There are fewer individuals in the time use data than there are in the raw"
+                            "synthetic population. ")
+        # What proportion are in the TUH data but not in the raw microsim
+        proprtion_missing = ((len(tuh) - len(individuals)) / len(individuals))
+        if proprtion_missing > 0.02:  # 2% chosen arbitrarily. It's just over 1% in the Devon data
+            warnings.warn(f"{len(tuh) - len(individuals)} individuals ({proprtion_missing*100}% in the time"
+                          f"use health data will not be matched to an individual in the raw data.")
+
+        # Attach all variables first, then can analyse them properly afterwards. Join them on the PID (person ID)
+        full_table = individuals.set_index("PID", drop=False).join(tuh.set_index("pid"), how="left")
+
+        # ERROR JOINING
+        warnings.warn("Individuals have been duplicated when joining to TUH data. Am removing duplicates"
+                      "temporily, but this needs to be fixed. Each PID should uniquely identify the same "
+                      "individual in both datasets.")
+        full_table.drop_duplicates(["PID"], keep="first", inplace=True)
+
+
+        assert len(full_table) == len(individuals)
+
+        # TODO: Check that the new HIDs and Areas are the same (confirms correct join)
+        #assert len(full_table.loc[full_table.HID == full_table.hid, :]) == len(full_table)
+        #assert len(full_table.loc[full_table.Area== full_table.area, :]) == len(full_table)
+
+        # Now convert time use for each activity.
+        ft = full_table  # For less typing
+        # Variables pnothome, phome add up to 100% of the day and
+        # pwork +pschool +pshop+ pleisure +pescort+ ptransport +pother = phome
+
+        # TODO include these checks once the TUH data are correct
+
+        ## Time at home and not home should sum to 1.0
+        #if False in list((full_table.phome + full_table.pnothome) == 1.0):
+        #    raise Exception("Time at home (phome) + time not at home (pnothome) does not always equal 1.0")
+        ## These columns should equal time at home
+        #if False in list( ft.loc[:,["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]].\
+        #                          sum(axis=1, skipna=True) == ft.phome ):
+        #    raise Exception("Times doing activities don't add up correctly")
+
+        # Temporarily (?) remove NAs from activity columns (I couldn't work out how to do this in 1 line like:
+        #ft.loc[:, ["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]].fillna(0, inplace=True)
+        for col in ["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]:
+            ft[col].fillna(0, inplace=True)
+
+        # Maybe other checks / analysis will come up as these values are assigned to activities
+
+
+
+        # OLD WAY OF HARD-CODING TIME USE CATEGORIES FOR EACH INDIVIDUAL
+        # For now just hard code broad categories. Ultimately will have different values for different activities.
+        #activities = ["Home", "Retail", "PrimarySchool", "SecondarySchool", "Work", "Leisure"]
+        #col_names = []
+        #for act in activities:
+        #    col_name = act + ColumnNames.ACTIVITY_DURATION
+        #    col_names.append(col_name)
+        #    if act=="Home":
+        #        # Assume XX hours per day at home (this is whatever not spent doing other activities)
+        #        individuals[col_name] = 14/24
+        #    elif act == "Retail":
+        #        individuals[col_name] = 1.0/24
+        #    elif act == "PrimarySchool":
+        #        # Assume 8 hours per day for all under 12
+        #        individuals[col_name] = 0.0 # Default 0
+        #        individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] < 12, col_name] = 8.0/24
+        #    elif act == "SecondarySchool":
+        #        # Assume 8 hours per day for 12 <= x < 19
+        #        individuals[col_name] = 0.0  # Default 0
+        #        individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] < 19, col_name] = 8.0 / 24
+        #        individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] < 12, col_name] = 0.0
+        #    elif act == "Work":
+        #        # Opposite of school
+        ##        individuals[col_name] = 0.0 # Default 0
+        #        individuals.loc[individuals[ColumnNames.INDIVIDUAL_AGE] >= 19, col_name] = 8.0/24
+        #    elif act == "Leisure":
+        #        individuals[col_name] = 1.0/24
+        #    else:
+        #        raise Exception(f"Unrecognised activity: {act}")
 
         # Check that proportions add up to 1.0
         # TODO for some reason this fails, but as far as I can see the proportions correctly sum to 1 !!
         #assert False not in (individuals.loc[:, col_names].sum(axis=1).round(decimals=4) == 1.0)
 
-        # Add travel data columns (no values yet)
-        travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in ["Car", "Bus", "Walk", "Train"] ]
-        for col in travel_cols:
-            individuals[col] = 0.0
+        ## Add travel data columns (no values yet)
+        #travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in ["Car", "Bus", "Walk", "Train"] ]
+        #for col in travel_cols:
+        #    individuals[col] = 0.0
 
         print("... finished.")
-        return individuals
+        return ft
 
     @classmethod
     def attach_labour_force_data(cls, individuals: pd.DataFrame) -> pd.DataFrame:
@@ -484,7 +570,7 @@ class Microsim:
         to secondary schools and vice versa).
         """
         # TODO Need to read full school flows, not just those of Devon
-        print("Reading school flow data...", )
+        print("Reading school flow data for Devon...", )
         dir = os.path.join(cls.DATA_DIR, "devon-schools")
 
         # Read the schools (all of them)
@@ -641,7 +727,7 @@ class Microsim:
         # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
         # working with Devon subset of flows
         print("WARNING: not currently subsetting retail flows")
-        print("Reading retail flow data...", )
+        print("Reading retail flow data for Devon...", )
         dir = os.path.join(cls.DATA_DIR, "devon-retail")
 
         # Read the stores
