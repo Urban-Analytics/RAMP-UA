@@ -385,7 +385,7 @@ class Microsim:
         hids = households.set_index(["Area", "HID"])
         # Find individuals who do not have a related entry in the households dataset
         # TODO redo the line below with an apply rather than for loop
-        homeless = [(area, hid, pid) for area, hid, pid in individuals.loc[:, ["Area", "HID", "PID"]].values if (area, hid) not in hids.index]
+        homeless = [(area, hid, pid) for area, hid, pid in individuals.loc[:, ["House_OA", "HID", "PID"]].values if (area, hid) not in hids.index]
         if len(homeless) > 0:
             msg = f"There are {len(homeless)} individuals without an associated household (HID)."
             if warn:
