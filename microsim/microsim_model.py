@@ -41,6 +41,12 @@ class ColumnNames:
 
     ACTIVITY_DURATION = "_Duration" # Column to record proportion of the day that invividuals do the activity
 
+    # Standard columns for time spent travelling in different modes
+    TRAVEL_CAR = "Car"
+    TRAVEL_BUS = "Bus"
+    TRAVEL_TRAIN = "Train"
+    TRAVEL_WALK = "Walk"
+
     INDIVIDUAL_AGE = "DC1117EW_C_AGE" # Age column in the table of individuals
     INDIVIDUAL_SEX = "DC1117EW_C_SEX"  # Sex column in the table of individuals
     INDIVIDUAL_ETH = "DC2101EW_C_ETHPUK11"  # Ethnicity column in the table of individuals
@@ -441,17 +447,16 @@ class Microsim:
         return individuals
 
     @classmethod
-    def attach_time_use_and_health_data(cls, individuals: pd.DataFrame, hard_coded=False) -> pd.DataFrame:
-        """Attach time use data (proportions of time people spend doing the different activities and additional
+    def attach_time_use_and_health_data(cls, individuals: pd.DataFrame) -> pd.DataFrame:
+        """Attach time use data (proportions of time people spend doing the different activities) and additional
         health data.
 
         :param individuals: The dataframe of individuals that the new columns will be added to
-        :param hard_coded: Optionally use some national, arbitrary hard-coded time-use values (only good
-        for testing)
         :return A new dataframe of individuals with the new information appended.
         """
         print("Attaching time use and health data for Devon... ", )
-        filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_health.txt")
+        #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_health.txt")
+        filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_keyworker.txt")
         tuh = pd.read_csv(filename)
         if len(tuh.pid.unique()) != len(tuh):  # Check PIDs unique
             # NEED TO FIX THIS. FOR NOW JUST RAISE A WARNING
@@ -504,8 +509,14 @@ class Microsim:
         for col in ["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]:
             ft[col].fillna(0, inplace=True)
 
-        # Maybe other checks / analysis will come up as these values are assigned to activities
+        # Assign time use for Travel (just do this arbitrarily for now, the correct columns aren't in the data).
+        travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in
+                         [ ColumnNames.TRAVEL_CAR, ColumnNames.TRAVEL_BUS, ColumnNames.TRAVEL_TRAIN, ColumnNames.TRAVEL_WALK ] ]
+        for col in travel_cols:
+            ft[col] = 0.0
+        x=1
 
+        # Now can return the dataframe. When the ActivityLocations are created later in the process they will
 
 
         # OLD WAY OF HARD-CODING TIME USE CATEGORIES FOR EACH INDIVIDUAL
@@ -987,8 +998,9 @@ class Microsim:
         :return: A new DataFrame for the individuals with the additional column
         """
         print("Assigning initial disease status ...",)
-        individuals["Disease_Status"] = [random.choice( range(0,4)) for _ in range(len(individuals))]
-        #individuals["Disease_Status"] = individuals["Disease_Status"].astype('category')
+        #individuals["Disease_Status"] = [random.choice( range(0,4)) for _ in range(len(individuals))]
+        # THIS WILL NEED TO BE DONE PROPERLY IN ANOTHER PROCESS (R?)
+        individuals["Disease_Status"] = 0
         individuals["Days_With_Status"] = 0 # Also keep the number of days that have elapsed with this status
         individuals["Current_Risk"] = 0 # This is the risk that people get when visiting locations.
         print(f"... finished assigning initial status for {len(individuals)} individuals.")
