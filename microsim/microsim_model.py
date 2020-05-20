@@ -442,7 +442,8 @@ class Microsim:
         """
         print("Attaching time use and health data for Devon... ", )
         #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_health.txt")
-        filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_keyworker.txt")
+        #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_keyworker.txt")
+        filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_Complete.txt")
         tuh = pd.read_csv(filename)
         if len(tuh.pid.unique()) != len(tuh):  # Check PIDs unique
             # NEED TO FIX THIS. FOR NOW JUST RAISE A WARNING
@@ -492,7 +493,7 @@ class Microsim:
 
         # Temporarily (?) remove NAs from activity columns (I couldn't work out how to do this in 1 line like:
         #ft.loc[:, ["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]].fillna(0, inplace=True)
-        for col in ["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]:
+        for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
             ft[col].fillna(0, inplace=True)
 
         # Assign time use for Travel (just do this arbitrarily for now, the correct columns aren't in the data).
@@ -1092,16 +1093,16 @@ def run(iterations, data_dir):
     num_iter = iterations
 
     # Temporarily only want to use Devon MSOAs
-    devon_msoas = pd.read_csv("./data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
-    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
+    #devon_msoas = pd.read_csv("./data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
+    #m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
     #m.export_to_feather() # Write out the base population
     #print("Exitting. Not stepping for now")
     #sys.exit(0)
 
     # Temporily use dummy data for testing
-    #data_dir="./dummy_data/"
-    #m = Microsim(data_dir=data_dir, testing=True)
+    data_dir="./dummy_data/"
+    m = Microsim(data_dir=data_dir, testing=True)
 
     # Step the model
     for i in range(num_iter):
