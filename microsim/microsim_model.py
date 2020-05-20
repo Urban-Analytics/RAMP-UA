@@ -272,7 +272,7 @@ class Microsim:
             raise Exception(f"No household csv files found in {msm_dir}.",
                             f"Have you downloaded and extracted the necessary data? (see {cls.DATA_DIR} README).",
                             f"The directory has these files in it: {os.listdir(msm_dir)}")
-        individual_files = glob.glob(os.path.join(msm_dir, '/ass_*_MSOA11_2020.csv'))
+        individual_files = glob.glob(os.path.join(msm_dir, 'ass_*_MSOA11_2020.csv'))
         if len(individual_files) == 0:
             raise Exception(f"No individual csv files found in {msm_dir}.",
                             f"Have you downloaded and extracted the necessary data? (see {cls.DATA_DIR} README)")
