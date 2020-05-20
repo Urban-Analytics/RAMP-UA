@@ -187,14 +187,11 @@ class Microsim:
         self.study_msoas, self.individuals, self.households = \
             Microsim.check_study_area(self.all_msoas, study_msoas, self.individuals, self.households)
 
-        # Attach a load of health attributes to each individual
-        self.individuals = Microsim.attach_health_data(self.individuals)
+        # Attach a load of transport attributes to each individual
+        self.individuals = Microsim.attach_time_use_and_health_data(self.individuals)
 
         # Attach the labour force data
         self.individuals = Microsim.attach_labour_force_data(self.individuals)
-
-        # Attach a load of transport attributes to each individual
-        self.individuals = Microsim.attach_time_use_and_health_data(self.individuals)
 
         # Now we have the 'core population'. Keep a copy of this but continue to use the 'individuals' data frame
         self.core_population = self.individuals.copy()
@@ -434,17 +431,6 @@ class Microsim:
         return (study_msoas, individuals_to_keep, households_to_keep)
 
 
-    @classmethod
-    def attach_health_data(cls, individuals: pd.DataFrame) -> pd.DataFrame:
-        """
-
-        :param individuals:
-        :return:
-        """
-        print("Attaching health data ... ", )
-        pass
-        print("... finished.")
-        return individuals
 
     @classmethod
     def attach_time_use_and_health_data(cls, individuals: pd.DataFrame) -> pd.DataFrame:
