@@ -73,6 +73,18 @@ def test_read_school_flows_data(test_microsim):
             assert schools.iloc[school_no].PhaseOfEducation_name == "Secondary"
 
 
+def test_read_msm_data(test_microsim):
+    """Checks the individual microsimulation data are read correctly"""
+    assert len(test_microsim.individuals) == 17
+    assert len(test_microsim.households) == 8
+    # Check correct number of 'homeless' (this is OK because of how I set up the data)
+    with pytest.raises(Exception) as e:
+        assert Microsim._check_no_homeless(test_microsim)
+        # This should reaise an exception. Get the number of homeless. Should be 15
+        num_homeless = [int(s)  for s in e.message.split() if s.isdigit()][0]
+        assert num_homeless == 15
+
+
 def test_step(test_microsim):
     """Test the step method."""
     for i in range(10):
