@@ -11,33 +11,56 @@ Created on Tue May 19 12:01:02 2020
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import geopandas as gpd
+#import geopandas as gpd
 import os
 import pickle
 
 
-os.chdir("C:\\Users\Toshiba\Google Drive\WORK\LIDA\RAMP\RAMP-UA\data")
+# To fix file path issues, use absolute/full path at all times
+# Pick either: get working directory (if user starts this script in place, or set working directory
+# Option A: copy current working directory:
+os.chdir("..") # assume microsim subdir so need to go up one level
+base_dir = os.getcwd()  # get current directory
+data_dir = os.path.join(base_dir, "data") # go to output dir
+# Option B: specific directory
+data_dir = 'C:\\Users\\Toshiba\\git_repos\\RAMP-UA\\dummy_data'
 
 # read in details about venues
-os.chdir("temp-schools")
-schools = pd.read_csv("exeter schools.csv")
-os.chdir("../temp-retail")
-retail = pd.read_csv("devon smkt.csv")
+data_file = os.path.join(data_dir, "devon-schools","exeter schools.csv")
+schools = pd.read_csv(data_file)
+data_file = os.path.join(data_dir, "devon-retail","devon smkt.csv")
+retail = pd.read_csv(data_file)
 
 # read in pickle files
-os.chdir("../output")
-pickle_in = open("School.pickle","rb")
-school_dangers = pickle.load(pickle_in)
-pickle_in.close()
-pickle_in = open("Retail.pickle","rb")
-retail_dangers = pickle.load(pickle_in)
-pickle_in.close()
-pickle_in = open("Individuals.pickle","rb")
+data_file = os.path.join(data_dir, "output","Individuals.pickle")
+pickle_in = open(data_file,"rb")
 individuals = pickle.load(pickle_in)
 pickle_in.close()
 
+data_file = os.path.join(data_dir, "output","PrimarySchool.pickle")
+pickle_in = open(data_file,"rb")
+primaryschool_dangers = pickle.load(pickle_in)
+pickle_in.close()
+
+data_file = os.path.join(data_dir, "output","SecondarySchool.pickle")
+pickle_in = open(data_file,"rb")
+secondaryschool_dangers = pickle.load(pickle_in)
+pickle_in.close()
+
+data_file = os.path.join(data_dir, "output","Retail.pickle")
+pickle_in = open(data_file,"rb")
+retail_dangers = pickle.load(pickle_in)
+pickle_in.close()
+
+data_file = os.path.join(data_dir, "output","Work.pickle")
+pickle_in = open(data_file,"rb")
+work_dangers = pickle.load(pickle_in)
+pickle_in.close()
+
+# just do schools and retail for now
 # merge
-schools = pd.merge(schools, school_dangers, left_index=True, right_index=True)
+primaryschools = pd.merge(schools, primaryschool_dangers, left_index=True, right_index=True)
+secondaryschools = pd.merge(schools, secondaryschool_dangers, left_index=True, right_index=True)
 retail = pd.merge(retail, retail_dangers, left_index=True, right_index=True)
 
 # how many days have we got
@@ -68,6 +91,10 @@ ax.legend()  # Add a legend.
 
 # total infections per area across time
 counts_tmp = individuals.groupby(['Area', 'DiseaseStatus0']).agg({'DiseaseStatus0': ['count']})
+
+
+
+# this breaks down if at least one category doesn't appear in counts_tmp
 ind_0 = [i for i in range(0, len(counts_tmp), 4)]
 ind_1 = [i for i in range(1, len(counts_tmp), 4)]
 ind_2 = [i for i in range(2, len(counts_tmp), 4)]

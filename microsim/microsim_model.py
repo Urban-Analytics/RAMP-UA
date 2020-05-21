@@ -27,8 +27,8 @@ import pyarrow.feather as feather # For reading and writing DataFrames to disk
 import swifter # For quick (multicore?) pd.apply operations
 import pickle # to save data
 
-#from microsim.microsim_analysis import MicrosimAnalysis
-from microsim_analysis import MicrosimAnalysis  # NN only?
+from microsim.microsim_analysis import MicrosimAnalysis
+#from microsim_analysis import MicrosimAnalysis  # NN only?
 
 class ColumnNames:
     """Used to record standard dataframe column names used throughout"""
