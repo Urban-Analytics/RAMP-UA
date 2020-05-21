@@ -40,6 +40,7 @@ def test_add_home_flows(test_microsim):
     # And 4 in house 12
     assert len(test_microsim.individuals.loc[test_microsim.individuals.HID == 12, :]) == 4
 
+
 def test_read_school_flows_data(test_microsim):
     """Check that flows to primary and secondary schools were read correctly """
     # Check priary and seconary are actually the same dataframe (they're read together)
@@ -81,9 +82,39 @@ def test_read_msm_data(test_microsim):
     with pytest.raises(Exception) as e:
         Microsim._check_no_homeless(test_microsim.individuals, test_microsim.households, warn=False)
         # This should reaise an exception. Get the number of homeless. Should be 15
-        num_homeless = [int(s)  for s in e.message.split() if s.isdigit()][0]
+        num_homeless = [int(s) for s in e.message.split() if s.isdigit()][0]
         print(f"Correctly found homeless: {num_homeless}")
         assert num_homeless == 15
+
+
+def test_update_disease_counts(test_microsim):
+    """Check that disease counts for MSOAs and households are updated properly"""
+    m = test_microsim  # less typing
+
+    m.individuals.loc[m.individuals.PID == 100799, "Disease_Status"] = 1
+    m.individuals.loc[m.individuals.PID == 23968, "Disease_Status"] = 1
+    m.individuals.loc[m.individuals.PID == 23434, "Disease_Status"] = 1
+    m.individuals.loc[m.individuals.PID == 90653, "Disease_Status"] = 1
+    #m.individuals.loc[:, ["PID", "HID", "Area", "Disease_Status", "MSOA_Cases", "HID_Cases"]]
+    m.update_disease_counts()
+    # This person has the disease and lives alone.
+    assert m.individuals.loc[m.individuals.PID == 100799, "MSOA_Cases"][0] == 1
+    assert m.individuals.loc[m.individuals.PID == 100799, "HID_Cases"][0] == 1
+    # In this house of 4, two people have the disease
+    assert m.individuals.loc[m.individuals.PID == 17942, "HID_Cases"].values[0] == 2
+    assert m.individuals.loc[m.individuals.PID == 22526, "HID_Cases"].values[0] == 2
+    assert m.individuals.loc[m.individuals.PID == 23434, "HID_Cases"].values[0] == 2
+    assert m.individuals.loc[m.individuals.PID == 23968, "HID_Cases"].values[0] == 2
+    # One person in this area has the disease
+    assert m.individuals.loc[m.individuals.PID == 90653, "MSOA_Cases"].values[0] == 1
+    # Note: Can't fully test MSOA cases because I don't have any examples of people from different
+    # households living in the same MSOA in the test data
+
+
+def test_update_current_risk(test_microsim):
+    """Check that the current risk is updated properly"""
+    #test_microsim.update_current_risk()
+    assert False
 
 
 def test_step(test_microsim):
@@ -101,6 +132,7 @@ def test_update_venue_danger(test_microsim):
     # TODO Check that danger values are updated appropriately. Especially check indexing works (where the
     # venue ID is not the same as its place in the dataframe.
     assert False
+
 
 # ********************************************************
 # Other (unit) tests
@@ -280,5 +312,4 @@ def test__normalise():
     assert Microsim._normalise([4, 6]) == [0.4, 0.6]
     assert Microsim._normalise([40, 60]) == [0.4, 0.6]
     assert Microsim._normalise([6, 6, 6, 6, 6]) == [0.2, 0.2, 0.2, 0.2, 0.2]
-
 

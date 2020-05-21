@@ -51,6 +51,13 @@ class ColumnNames:
     INDIVIDUAL_SEX = "DC1117EW_C_SEX"  # Sex column in the table of individuals
     INDIVIDUAL_ETH = "DC2101EW_C_ETHPUK11"  # Ethnicity column in the table of individuals
 
+    # Columns for information about the disease. These are needed for estimating the disease status
+    DISEASE_STATUS = "Disease_Status"
+    DAYS_WITH_STATUS = "Days_With_Status"  # The number of days that have elapsed with this status
+    CURRENT_RISK = "Current_Risk"  # This is the risk that people get when visiting locations.
+    MSOA_CASES = "MSOA_Cases"  # The number of cases per MSOA
+    HID_CASES = "HID_Cases"  # The number of cases in the individual's house
+
 class ActivityLocation():
     """Class to represent information about activity locations, e.g. retail destinations, workpaces, etc."""
     def __init__(self, name: str, locations: pd.DataFrame, flows: pd.DataFrame,
@@ -250,7 +257,8 @@ class Microsim:
         self.individuals, self.households = Microsim.add_home_flows(home_name, self.individuals, self.households)
         self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households, flows=None, individuals=self.individuals, duration_col="phome")
 
-        # Assign initial SEIR status
+        # Add some necessary columns for the disease and assign initial SEIR status
+        self.individuals = Microsim.add_disease_columns(self.individuals)
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
 
         return
@@ -350,9 +358,9 @@ class Microsim:
         assert len(households.loc[:, ["Area", "HID"]].drop_duplicates()) == len(households)
 
         # Some people aren't matched to households for some reason. Their HID == -1. Remove them
-        homeless = individuals.loc[individuals.HID==-1]
-        if len(homeless) > 0:
-            warnings.warn(f"There are {len(homeless)} individuals who were not matched to a house in the original "
+        no_hh = individuals.loc[individuals.HID==-1]
+        if len(no_hh) > 0:
+            warnings.warn(f"There are {len(no_hh)} individuals who were not matched to a house in the original "
                           f"data. They will be removed.")
         individuals = individuals.loc[individuals.HID != -1]
         # Now everyone should have a household. This will raise an exception if not. (unless testing)
@@ -384,8 +392,12 @@ class Microsim:
         # Make a new dataset with a unique index for households
         hids = households.set_index(["Area", "HID"])
         # Find individuals who do not have a related entry in the households dataset
-        # TODO redo the line below with an apply rather than for loop
         homeless = [(area, hid, pid) for area, hid, pid in individuals.loc[:, ["House_OA", "HID", "PID"]].values if (area, hid) not in hids.index]
+        # (version using apply isn't quicker)
+        #h2 = individuals.reset_index().loc[:, ["House_OA", "HID", "PID"]].swifter.apply(
+        #    lambda x: x[2] if (x[0], x[1]) in hids.index else None, axis=1)
+        # (Vectorised version doesn't quite work sadly)
+        #h2 = np.where(individuals.loc[:, ["House_OA", "HID", "PID"]].isin(hids.index), True, False)
         if len(homeless) > 0:
             msg = f"There are {len(homeless)} individuals without an associated household (HID)."
             if warn:
@@ -450,7 +462,7 @@ class Microsim:
 
 
     @classmethod
-    def attach_time_use_and_health_data(cls, individuals: pd.DataFrame, study_msoas: List[str]) -> pd.DataFrame:
+    def attach_time_use_and_health_data(cls, individuals: pd.DataFrame, study_msoas: List[str]=None) -> pd.DataFrame:
         """Attach time use data (proportions of time people spend doing the different activities) and additional
         health data.
 
@@ -459,6 +471,7 @@ class Microsim:
         means that households and invididuals are duplicated.
 
         :param individuals: The dataframe of individuals that the new columns will be added to
+        :param study_msoas: Optional study area to restrict by (all individuals not in these MSOAs will be removed)
         :return A new dataframe of individuals with the new information appended.
         """
         print("Attaching time use and health data for Devon... ", )
@@ -567,6 +580,8 @@ class Microsim:
         #    individuals[col] = 0.0
 
         print("... finished.")
+        # PID has ended up as the index. Remove it for now, once the code above is fixed then this shouldn't happen
+        ft.reset_index(drop=True, inplace=True)
         return ft
 
     @classmethod
@@ -942,8 +957,8 @@ class Microsim:
             # individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"] = \
             #    individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"].apply(lambda _: flows)
 
-        # Reset the index so that it's just PID
-        individuals.set_index("PID", inplace=True, drop=False)
+        # Reset the index so that it's not the PID
+        individuals.reset_index(inplace=True, drop=True)
 
         # Check everyone has some flows (all list lengths are >0)
         assert False not in (individuals.loc[:, venues_col].apply(lambda cell: len(cell)) > 0).values
@@ -991,6 +1006,16 @@ class Microsim:
         pass
 
     @classmethod
+    def add_disease_columns(cls, individuals: pd.DataFrame) -> pd.DataFrame:
+        """Adds columns required to estimate disease prevalence"""
+        individuals[ColumnNames.DISEASE_STATUS] = 0
+        individuals[ColumnNames.DAYS_WITH_STATUS] = 0  # Also keep the number of days that have elapsed with this status
+        individuals[ColumnNames.CURRENT_RISK] = 0  # This is the risk that people get when visiting locations.
+        individuals[ColumnNames.MSOA_CASES] = 0  # Useful to count cases per MSOA
+        individuals[ColumnNames.HID_CASES] = 0  # Ditto for the household
+        return individuals
+
+    @classmethod
     def assign_initial_disease_status(cls, individuals: pd.DataFrame) -> pd.DataFrame:
         """
         Create a new column to represent the initial disease status of the individuals and assign them
@@ -1001,9 +1026,6 @@ class Microsim:
         print("Assigning initial disease status ...",)
         #individuals["Disease_Status"] = [random.choice( range(0,4)) for _ in range(len(individuals))]
         # THIS WILL NEED TO BE DONE PROPERLY IN ANOTHER PROCESS (R?)
-        individuals["Disease_Status"] = 0
-        individuals["Days_With_Status"] = 0 # Also keep the number of days that have elapsed with this status
-        individuals["Current_Risk"] = 0 # This is the risk that people get when visiting locations.
         print(f"... finished assigning initial status for {len(individuals)} individuals.")
         return individuals
 
@@ -1045,6 +1067,33 @@ class Microsim:
 
         return
 
+    def update_current_risk(self):
+        """Individuals will be visitting locations which may have some danger if they were previously
+        visitted by infected) which is now assigned to others."""
+        pass
+
+    def update_disease_counts(self):
+        """Update some disease counters -- counts of diseases in MSOAs & households -- which are useful
+        in estimating the probability of contracting the disease"""
+        # Update the diseases per MSOA and household
+        # TODO replace Nan's with 0 (not a problem with MSOAs because they're a cateogry so the value_counts()
+        # returns all, including those with 0 counts, but with HID those with 0 count don't get returned
+        # Get rows with cases
+        cases = self.individuals.loc[(self.individuals.Disease_Status == 1) | (self.individuals.Disease_Status == 2), :]
+        # Count cases per area (convert to a dataframe)
+        case_counts = cases["Area"].value_counts()
+        case_counts = pd.DataFrame(data={"Area": case_counts.index, "Count": case_counts}).reset_index(drop=True)
+        # Link this back to the orignal data
+        self.individuals[ColumnNames.MSOA_CASES] = self.individuals.merge(case_counts, on="Area", how="left")["Count"]
+        self.individuals[ColumnNames.MSOA_CASES].fillna(0)
+
+        # Update HID cases
+        case_counts = cases["HID"].value_counts()
+        case_counts = pd.DataFrame(data={"HID": case_counts.index, "Count": case_counts}).reset_index(drop=True)
+        self.individuals[ColumnNames.HID_CASES] = self.individuals.merge(case_counts, on="HID", how="left")["Count"]
+        self.individuals[ColumnNames.HID_CASES].fillna(0)
+
+
     @classmethod
     def calculate_new_disease_status(cls, row: pd.Series, activity_locations: List[ActivityLocation]):
         """
@@ -1073,7 +1122,13 @@ class Microsim:
         # become more dangerous
         self.update_venue_danger()
 
-        # Update the risks to individuals who visit those venues
+        # Update the current risk for individuals who may be visitting those venues
+        self.update_current_risk()
+
+        # Update disease counters. E.g. count diseases in MSOAs & households
+        self.update_disease_counts()
+
+        # Calculate new disease status
         # ACTUALLY THIS WONT BE DONE HERE. THE DATA WILL BE PASSED TO R AND DEALT WITH THERE, GETTING A NEW
         # DISEASE STATUS COLUMN BACK
         print("Now should calculate new disease status")
@@ -1107,16 +1162,16 @@ def run(iterations, data_dir):
     num_iter = iterations
 
     # Temporarily only want to use Devon MSOAs
-    devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
-    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
+    #devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
+    #m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
     #m.export_to_feather() # Write out the base population
     #print("Exitting. Not stepping for now")
     #sys.exit(0)
 
     # Temporily use dummy data for testing
-    #data_dir="dummy_data"
-    #m = Microsim(data_dir=data_dir, testing=True)
+    data_dir="dummy_data"
+    m = Microsim(data_dir=data_dir, testing=True)
 
     # Step the model
     for i in range(num_iter):
