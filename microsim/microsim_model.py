@@ -1085,13 +1085,13 @@ class Microsim:
         case_counts = pd.DataFrame(data={"Area": case_counts.index, "Count": case_counts}).reset_index(drop=True)
         # Link this back to the orignal data
         self.individuals[ColumnNames.MSOA_CASES] = self.individuals.merge(case_counts, on="Area", how="left")["Count"]
-        self.individuals[ColumnNames.MSOA_CASES].fillna(0)
+        self.individuals[ColumnNames.MSOA_CASES].fillna(0, inplace=True)
 
         # Update HID cases
         case_counts = cases["HID"].value_counts()
         case_counts = pd.DataFrame(data={"HID": case_counts.index, "Count": case_counts}).reset_index(drop=True)
         self.individuals[ColumnNames.HID_CASES] = self.individuals.merge(case_counts, on="HID", how="left")["Count"]
-        self.individuals[ColumnNames.HID_CASES].fillna(0)
+        self.individuals[ColumnNames.HID_CASES].fillna(0, inplace=True)
 
 
     @classmethod

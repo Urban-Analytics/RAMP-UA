@@ -110,7 +110,10 @@ def test_update_disease_counts(test_microsim):
     assert m.individuals.loc[m.individuals.PID == 23968, "HID_Cases"].values[0] == 2
     # One person in this area has the disease
     assert m.individuals.loc[m.individuals.PID == 90653, "MSOA_Cases"].values[0] == 1
-    # TODO all other househoulds and MSOAs should have no cases
+    assert False not in (m.individuals.loc[(m.individuals.HID == 1) | (m.individuals.HID == 3) |
+                                           (m.individuals.HID == 6)]["HID_Cases"] == 0)
+    assert False not in (m.individuals.loc[(m.individuals.Area == "E02004147") | (m.individuals.Area == "E02004138") |
+                                           (m.individuals.Area == "E02004158")]["MSOA_Cases"] == 0)
 
     # Note: Can't fully test MSOA cases because I don't have any examples of people from different
     # households living in the same MSOA in the test data
