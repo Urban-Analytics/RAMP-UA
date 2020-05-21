@@ -91,26 +91,29 @@ def test_update_disease_counts(test_microsim):
     """Check that disease counts for MSOAs and households are updated properly"""
     m = test_microsim  # less typing
 
-    m.individuals.loc[m.individuals.PID == 100799, "Disease_Status"] = 1
-    m.individuals.loc[m.individuals.PID == 23968, "Disease_Status"] = 1
-    m.individuals.loc[m.individuals.PID == 23434, "Disease_Status"] = 1
-    m.individuals.loc[m.individuals.PID == 90653, "Disease_Status"] = 1
+    m.individuals.loc[m.individuals._PID == 100799, "Disease_Status"] = 1
+    m.individuals.loc[m.individuals._PID == 23968, "Disease_Status"] = 1
+    m.individuals.loc[m.individuals._PID == 23434, "Disease_Status"] = 1
+    m.individuals.loc[m.individuals._PID == 90653, "Disease_Status"] = 1
     #m.individuals.loc[:, ["PID", "HID", "Area", "Disease_Status", "MSOA_Cases", "HID_Cases"]]
     m.update_disease_counts()
     # This person has the disease
-    assert m.individuals.loc[m.individuals.PID == 100799, "MSOA_Cases"][0] == 1
-    assert m.individuals.loc[m.individuals.PID == 100799, "HID_Cases"][0] == 1
-    # These people live there too (but live in different msoas!)
-    assert m.individuals.loc[m.individuals.PID == 64788, "HID_Cases"].values[0] == 1
-    assert m.individuals.loc[m.individuals.PID == 69754, "HID_Cases"].values[0] == 1
+    assert m.individuals.loc[m.individuals._PID == 100799, "MSOA_Cases"].values[0] == 1
+    assert m.individuals.loc[m.individuals._PID == 100799, "HID_Cases"].values[0] == 1
+    # These people live there too (but live in different msoas, so it's OK the disease hasn't propogated there!)
+    assert m.individuals.loc[m.individuals._PID == 64788, "HID_Cases"].values[0] == 1
+    assert m.individuals.loc[m.individuals._PID == 69754, "HID_Cases"].values[0] == 1
     # In this house of 4, two people have the disease
-    assert m.individuals.loc[m.individuals.PID == 17942, "HID_Cases"].values[0] == 2
-    assert m.individuals.loc[m.individuals.PID == 22526, "HID_Cases"].values[0] == 2
-    assert m.individuals.loc[m.individuals.PID == 23434, "HID_Cases"].values[0] == 2
-    assert m.individuals.loc[m.individuals.PID == 23968, "HID_Cases"].values[0] == 2
+    assert m.individuals.loc[m.individuals._PID == 17942, "HID_Cases"].values[0] == 2
+    assert m.individuals.loc[m.individuals._PID == 22526, "HID_Cases"].values[0] == 2
+    assert m.individuals.loc[m.individuals._PID == 23434, "HID_Cases"].values[0] == 2
+    assert m.individuals.loc[m.individuals._PID == 23968, "HID_Cases"].values[0] == 2
     # One person in this area has the disease
-    assert m.individuals.loc[m.individuals.PID == 90653, "MSOA_Cases"].values[0] == 1
-    # TODO everyone else should have no cases
+    assert m.individuals.loc[m.individuals._PID == 90653, "MSOA_Cases"].values[0] == 1
+    assert False not in (m.individuals.loc[(m.individuals._HID == 1) | (m.individuals._HID == 3) |
+                                           (m.individuals._HID == 6)]["HID_Cases"] == 0)
+    assert False not in (m.individuals.loc[(m.individuals.Area == "E02004147") | (m.individuals.Area == "E02004138") |
+                                           (m.individuals.Area == "E02004158")]["MSOA_Cases"] == 0)
 
     # Note: Can't fully test MSOA cases because I don't have any examples of people from different
     # households living in the same MSOA in the test data
@@ -123,12 +126,65 @@ def test_update_current_risk(test_microsim):
 
 
 def test_step(test_microsim):
-    """Test the step method."""
-    for i in range(10):
-        test_microsim.step()
-        # TODO test the step method. Make sure all the characteristics of the individuals are as they should be
-        # (e.g. disease status, flows, etc.)
-        # TODO make sure the characteristics of the locations are as they should be. E.g the 'Danger' etc.
+    """Test the step method. This is the main test of the model. Simulate a deterministic run through and
+    make sure that the model runs as expected
+
+    :param test_microsim: This is a pointer to the initialised model. Dummy data will have been read in,
+    but no stepping has taken place yet."""
+    # TODO Big test of the whole model with dummy data
+    m = test_microsim  # Just for less typing
+
+    # Note: the following is a useul way to get relevant info about the individuals
+    #m.individuals.loc[:, ["ID", "PID", "HID", "Area", "Disease_Status", "MSOA_Cases", "HID_Cases"]]
+
+    # Step 0 (initialisation):
+    # Give some people a disease status manually. Maybe just 2 people so it's easy to track.
+    # E.g.: m.individuals.loc[m.individuals.ID==1234,"Disease_Status"] = 1
+
+    #  ******** Step 1: ********
+
+    # Update the danger associated with each venue
+    #m.update_venue_danger()
+
+    # Check that the venues have been updated properly. We know what people do and how long they
+    # spend doing it, so should be able to check the locations for all of their activities.
+    #m.activity_locations['Retail']._locations ....
+
+    # Update the current risk for individuals who may be visitting those venues
+    # m.update_current_risk()
+
+    # Check that people visiting those places have the correct risk
+
+    # Update disease counters. E.g. count diseases in MSOAs & households
+    #m.update_disease_counts()
+    # (maybe don't bother checking this because I've already written a separate unit test for it)
+
+    # Update disease status
+    # (Manually give some people with higher risk the disease. Or maybe don't this iteration. Whatever.
+    #m.individuals.loc[m.individuals.ID
+
+    #  ******** Step 2 ********
+
+    # Update the danger associated with each venue
+    # m.update_venue_danger()
+
+    # Check that the venues have been updated properly.
+    # m.activity_locations['Retail']._locations ....
+
+    # Update the current risk for individuals who may be visiting those venues
+    # m.update_current_risk()
+
+    # Check that people visiting those places have the correct risk
+
+    # Update disease counters. E.g. count diseases in MSOAs & households
+    #m.update_disease_counts()
+
+    # Update disease status
+    # xxxx
+
+    #  ******** Step 3 ********
+    # REPEAT !
+    # Probably put some of the above checks in separate functions as they will be called repeatedly
 
     print("End of test step")
 
