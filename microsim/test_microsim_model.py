@@ -97,9 +97,12 @@ def test_update_disease_counts(test_microsim):
     m.individuals.loc[m.individuals.PID == 90653, "Disease_Status"] = 1
     #m.individuals.loc[:, ["PID", "HID", "Area", "Disease_Status", "MSOA_Cases", "HID_Cases"]]
     m.update_disease_counts()
-    # This person has the disease and lives alone.
+    # This person has the disease
     assert m.individuals.loc[m.individuals.PID == 100799, "MSOA_Cases"][0] == 1
     assert m.individuals.loc[m.individuals.PID == 100799, "HID_Cases"][0] == 1
+    # These people live there too (but live in different msoas!)
+    assert m.individuals.loc[m.individuals.PID == 64788, "HID_Cases"].values[0] == 1
+    assert m.individuals.loc[m.individuals.PID == 69754, "HID_Cases"].values[0] == 1
     # In this house of 4, two people have the disease
     assert m.individuals.loc[m.individuals.PID == 17942, "HID_Cases"].values[0] == 2
     assert m.individuals.loc[m.individuals.PID == 22526, "HID_Cases"].values[0] == 2
@@ -107,6 +110,8 @@ def test_update_disease_counts(test_microsim):
     assert m.individuals.loc[m.individuals.PID == 23968, "HID_Cases"].values[0] == 2
     # One person in this area has the disease
     assert m.individuals.loc[m.individuals.PID == 90653, "MSOA_Cases"].values[0] == 1
+    # TODO everyone else should have no cases
+
     # Note: Can't fully test MSOA cases because I don't have any examples of people from different
     # households living in the same MSOA in the test data
 
