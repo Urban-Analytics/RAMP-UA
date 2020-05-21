@@ -53,6 +53,13 @@ class ColumnNames:
     INDIVIDUAL_SEX = "DC1117EW_C_SEX"  # Sex column in the table of individuals
     INDIVIDUAL_ETH = "DC2101EW_C_ETHPUK11"  # Ethnicity column in the table of individuals
 
+    # Columns for information about the disease. These are needed for estimating the disease status
+    DISEASE_STATUS = "Disease_Status"
+    DAYS_WITH_STATUS = "Days_With_Status"  # The number of days that have elapsed with this status
+    CURRENT_RISK = "Current_Risk"  # This is the risk that people get when visiting locations.
+    MSOA_CASES = "MSOA_Cases"  # The number of cases per MSOA
+    HID_CASES = "HID_Cases"  # The number of cases in the individual's house
+
 class ActivityLocation():
     """Class to represent information about activity locations, e.g. retail destinations, workpaces, etc."""
     def __init__(self, name: str, locations: pd.DataFrame, flows: pd.DataFrame,
@@ -152,8 +159,7 @@ class Microsim:
 
     def __init__(self,
                  study_msoas: List[str] = [], random_seed: float = None, read_data: bool = True,
-                 #data_dir = "./data/", testing=False
-                 data_dir = "../data/", testing=False # NN only
+                 data_dir = "data", testing=False
                  ):
         """
         Microsim constructor.
@@ -191,10 +197,8 @@ class Microsim:
             Microsim.check_study_area(self.all_msoas, study_msoas, self.individuals, self.households)
 
         # Attach a load of transport attributes to each individual
-        self.individuals = Microsim.attach_time_use_and_health_data(self.individuals)
-
-        # Attach the labour force data
-        self.individuals = Microsim.attach_labour_force_data(self.individuals)
+        # (actually this is more like attaching the previous microsim to these new data, see the function for details)
+        self.individuals = Microsim.attach_time_use_and_health_data(self.individuals, self.study_msoas)
 
         # Now we have the 'core population'. Keep a copy of this but continue to use the 'individuals' data frame
         self.core_population = self.individuals.copy()
@@ -270,7 +274,8 @@ class Microsim:
         
         
 
-        # Assign initial SEIR status
+        # Add some necessary columns for the disease and assign initial SEIR status
+        self.individuals = Microsim.add_disease_columns(self.individuals)
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
 
         return
@@ -288,12 +293,12 @@ class Microsim:
         # Can't just read in all the files because the microsimulation restarts the house and index numbering with
         # each file, but we need the IDs to be consistent across the whole area. So read the files in one-by-one
         # and make sure houses and individual IDs are unique
-        household_files = glob.glob(msm_dir + '/ass_hh_*_OA11_2020.csv')
+        household_files = glob.glob(os.path.join(msm_dir, 'ass_hh_*_OA11_2020.csv') )
         if len(household_files) == 0:
             raise Exception(f"No household csv files found in {msm_dir}.",
                             f"Have you downloaded and extracted the necessary data? (see {cls.DATA_DIR} README).",
                             f"The directory has these files in it: {os.listdir(msm_dir)}")
-        individual_files = glob.glob(msm_dir + '/ass_*_MSOA11_2020.csv')
+        individual_files = glob.glob(os.path.join(msm_dir, 'ass_*_MSOA11_2020.csv'))
         if len(individual_files) == 0:
             raise Exception(f"No individual csv files found in {msm_dir}.",
                             f"Have you downloaded and extracted the necessary data? (see {cls.DATA_DIR} README)")
@@ -306,8 +311,9 @@ class Microsim:
         indiv_dfs = []
 
         # Keep track of the house and person indices
-        PID_counter = 0
-        HID_counter = 0
+        # (No longer doing this; will create a new unique identifier from Area, HID, PID combination later.
+        #PID_counter = 0
+        #HID_counter = 0
         for i in tqdm(range(len(household_files)), desc="Reading raw microsim data"):
             house_file = household_files[i]
             indiv_file = individual_files[i]
@@ -318,15 +324,32 @@ class Microsim:
             house_df = pd.read_csv(house_file)
             indiv_df = pd.read_csv(indiv_file)
 
+            # Add some useful columns
+
+            # The local authority
+            house_df["Local_Authority"] = area
+            indiv_df["Local_Authority"] = area
+
+            # Look up the OA of the house that each individual lives in (individuals are MSOA) and vice versa
+            indiv_df["House_OA"] = indiv_df.set_index("PID").merge(house_df.set_index("HRPID").rename(columns={"Area": "House_OA"}), how="left")["House_OA"]
+            house_df["HRP_MSOA"] = house_df.set_index("HRPID").merge(indiv_df.set_index("PID").rename(columns={"Area": "HRP_MSOA"}), how="left")["HRP_MSOA"]
+            # Check that the number of OAs in the household file is the same as those in the individuals file
+            # (there are some NA's where individuals weren't matched to households, this is OK and dealt with later)
+            if len(house_df.Area.unique()) > len(indiv_df.House_OA.dropna().unique()):
+                warnings.warn(f"When reading LA {area} there were {len(house_df.Area.unique()) - len(indiv_df.House_OA.dropna().unique())} "
+                              f"output areas that had households with no individuals living in them")
+            elif len(house_df.Area.unique()) < len(indiv_df.House_OA.dropna().unique()):
+                raise Exception("Individuals have been assigned to more House OAs than actually exist!")
+
             # Increment the counters
-            house_df["HID"] = house_df["HID"].apply(lambda x: x + HID_counter)
-            house_df["HRPID"] = house_df["HRPID"].apply(lambda x: x + PID_counter)  # Also increase the HRP
+            #house_df["HID"] = house_df["HID"].apply(lambda x: x + HID_counter)
+            #house_df["HRPID"] = house_df["HRPID"].apply(lambda x: x + PID_counter)  # Also increase the HRP
 
-            indiv_df["PID"] = indiv_df["PID"].apply(lambda x: x + PID_counter)
-            indiv_df["HID"] = indiv_df["HID"].apply(lambda x: x + HID_counter)  # Also increase the link to HID
+            #indiv_df["PID"] = indiv_df["PID"].apply(lambda x: x + PID_counter)
+            #indiv_df["HID"] = indiv_df["HID"].apply(lambda x: x + HID_counter)  # Also increase the link to HID
 
-            HID_counter = max(house_df["HID"]) + 1  # Want next counter to start at one larger than current
-            PID_counter = max(indiv_df["PID"]) + 1
+            #HID_counter = max(house_df["HID"]) + 1  # Want next counter to start at one larger than current
+            #PID_counter = max(indiv_df["PID"]) + 1
 
             # Save the dataframes for concatination later
             house_dfs.append(house_df)
@@ -341,35 +364,31 @@ class Microsim:
         individuals["Area"] = individuals["Area"].astype('category')
 
         # Make sure HIDs and PIDs are unique
-        assert len(households["HID"].unique()) == len(households)
-        assert len(individuals["PID"].unique()) == len(individuals)
+        #assert len(households["HID"].unique()) == len(households)
+        #assert len(individuals["PID"].unique()) == len(individuals)
 
         # Set the index
-        households.set_index("HID", inplace=True, drop=False)
-        individuals.set_index("PID", inplace=True, drop=False)
+        #households.set_index("HID", inplace=True, drop=False)
+        #individuals.set_index("PID", inplace=True, drop=False)
+
+        # Make sure the combination of [Area, HID, PID] for individuals, and [Area, HID] for areas, are unique
+        assert len(individuals.loc[:, ["Area", "HID", "PID"]].drop_duplicates()) == len(individuals)
+        assert len(households.loc[:, ["Area", "HID"]].drop_duplicates()) == len(households)
 
         # Some people aren't matched to households for some reason. Their HID == -1. Remove them
-        homeless = individuals.loc[individuals.HID==-1]
-        if len(homeless) > 0:
-            warnings.warn(f"There are {len(homeless)} individuals who were not matched to a house in the original "
+        no_hh = individuals.loc[individuals.HID==-1]
+        if len(no_hh) > 0:
+            warnings.warn(f"There are {len(no_hh)} individuals who were not matched to a house in the original "
                           f"data. They will be removed.")
         individuals = individuals.loc[individuals.HID != -1]
-        # Now everyone should have a household. This will raise an exception if not.
-        Microsim._check_no_homeless(individuals, households, warn=False)
-
-
-        # THE FOLLOWING SHOULD BE DONE AS PART OF A TEST SUITE
-        # TODO: check that correct numbers of rows have been read.
-        # TODO: check that individuals are correctly linked to households (I had to re-do the PID and HID indexing)
-        # TODO: graph number of people per household just to sense check
+        # Now everyone should have a household. This will raise an exception if not. (unless testing)
+        Microsim._check_no_homeless(individuals, households, warn=True if Microsim.testing else False )
 
         print("Have read files:",
               f"\n\tHouseholds:  {len(house_dfs)} files with {len(households)}",
               f"households in {len(households.Area.unique())} areas",
               f"\n\tIndividuals: {len(indiv_dfs)} files with {len(individuals)}",
               f"individuals in {len(individuals.Area.unique())} areas")
-
-        # TODO Join individuls to households (create lookup columns in each)
 
         return (individuals, households)
 
@@ -385,9 +404,18 @@ class Microsim:
         exception is raised).
         :raise: An exception if `warn==False` and there are individuals without a household
         """
-        hids = frozenset(households.HID)
-        homeless = [pid for pid, hid in individuals.loc[:, ["PID", "HID"]].values if hid not in hids]
-        hids = frozenset(households.HID)
+        # Households are uniquely identified by [Area,HID] combination. Individuals are identified by [Area,HID,PID]
+        # XXXX PROBLEM: 'ARea' in [Area, HID] is an OA, but 'Area' in [Area, HID, PID] is an MSOA !!
+
+        # Make a new dataset with a unique index for households
+        hids = households.set_index(["Area", "HID"])
+        # Find individuals who do not have a related entry in the households dataset
+        homeless = [(area, hid, pid) for area, hid, pid in individuals.loc[:, ["House_OA", "HID", "PID"]].values if (area, hid) not in hids.index]
+        # (version using apply isn't quicker)
+        #h2 = individuals.reset_index().loc[:, ["House_OA", "HID", "PID"]].swifter.apply(
+        #    lambda x: x[2] if (x[0], x[1]) in hids.index else None, axis=1)
+        # (Vectorised version doesn't quite work sadly)
+        #h2 = np.where(individuals.loc[:, ["House_OA", "HID", "PID"]].isin(hids.index), True, False)
         if len(homeless) > 0:
             msg = f"There are {len(homeless)} individuals without an associated household (HID)."
             if warn:
@@ -452,17 +480,23 @@ class Microsim:
 
 
     @classmethod
-    def attach_time_use_and_health_data(cls, individuals: pd.DataFrame) -> pd.DataFrame:
+    def attach_time_use_and_health_data(cls, individuals: pd.DataFrame, study_msoas: List[str]=None) -> pd.DataFrame:
         """Attach time use data (proportions of time people spend doing the different activities) and additional
         health data.
 
+        Actually what happens is the time-use & health data are taken as the main population, and individuals
+        in the original data are linked in to this one. This is because the linking process (done elsewhere)
+        means that households and invididuals are duplicated.
+
         :param individuals: The dataframe of individuals that the new columns will be added to
+        :param study_msoas: Optional study area to restrict by (all individuals not in these MSOAs will be removed)
         :return A new dataframe of individuals with the new information appended.
         """
         print("Attaching time use and health data for Devon... ", )
         #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_health.txt")
-        filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_keyworker.txt")
-        filename = "../data/devon-tu_health/Devon_keyworker.txt" # NN only
+        #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_keyworker.txt")
+        filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_Complete.txt")
+
         tuh = pd.read_csv(filename)
         if len(tuh.pid.unique()) != len(tuh):  # Check PIDs unique
             # NEED TO FIX THIS. FOR NOW JUST RAISE A WARNING
@@ -512,7 +546,7 @@ class Microsim:
 
         # Temporarily (?) remove NAs from activity columns (I couldn't work out how to do this in 1 line like:
         #ft.loc[:, ["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]].fillna(0, inplace=True)
-        for col in ["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]:
+        for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
             ft[col].fillna(0, inplace=True)
 
         # Assign time use for Travel (just do this arbitrarily for now, the correct columns aren't in the data).
@@ -565,6 +599,8 @@ class Microsim:
         #    individuals[col] = 0.0
 
         print("... finished.")
+        # PID has ended up as the index. Remove it for now, once the code above is fixed then this shouldn't happen
+        ft.reset_index(drop=True, inplace=True)
         return ft
 
     @classmethod
@@ -954,6 +990,7 @@ class Microsim:
 
         # Use a hierarchical index on the Area to speed up finding all individuals in an area
         # (not sure this makes much difference).
+        warnings.warn("WARNING: PID COLUMN IS NO LONGER A UNIQUE IDENTIFYIER FOR THE PERSON, NEED TO USE SOMETHING ELSE")
         individuals.set_index(["Area", "PID"], inplace=True, drop=False)
 
         for area in tqdm(flow_matrix.values, desc=f"Assigning individual flows for {flow_type}"):  # Easier to operate over a 2D matrix rather than a dataframe
@@ -992,8 +1029,8 @@ class Microsim:
             # individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"] = \
             #    individuals.loc[individuals.Area=="E02004189", f"{flow_type}_Probabilities"].apply(lambda _: flows)
 
-        # Reset the index so that it's just PID
-        individuals.set_index("PID", inplace=True, drop=False)
+        # Reset the index so that it's not the PID
+        individuals.reset_index(inplace=True, drop=True)
 
         # Check everyone has some flows (all list lengths are >0)
         assert False not in (individuals.loc[:, venues_col].apply(lambda cell: len(cell)) > 0).values
@@ -1018,7 +1055,7 @@ class Microsim:
         ##l = l / l.sum()
         return list(l)
 
-    def export_to_feather(self, path="./export/"):
+    def export_to_feather(self, path="export"):
         """
         Export the dataframes that represent the current model state. See also `import_from_feather`.
         :param path: Optional directory to write the files to (default '.')
@@ -1037,8 +1074,18 @@ class Microsim:
         # Export locations
 
 
-    def import_from_feather(self, path="./export/"):
+    def import_from_feather(self, path="export"):
         pass
+
+    @classmethod
+    def add_disease_columns(cls, individuals: pd.DataFrame) -> pd.DataFrame:
+        """Adds columns required to estimate disease prevalence"""
+        individuals[ColumnNames.DISEASE_STATUS] = 0
+        individuals[ColumnNames.DAYS_WITH_STATUS] = 0  # Also keep the number of days that have elapsed with this status
+        individuals[ColumnNames.CURRENT_RISK] = 0  # This is the risk that people get when visiting locations.
+        individuals[ColumnNames.MSOA_CASES] = 0  # Useful to count cases per MSOA
+        individuals[ColumnNames.HID_CASES] = 0  # Ditto for the household
+        return individuals
 
     @classmethod
     def assign_initial_disease_status(cls, individuals: pd.DataFrame) -> pd.DataFrame:
@@ -1051,9 +1098,6 @@ class Microsim:
         print("Assigning initial disease status ...",)
         #individuals["Disease_Status"] = [random.choice( range(0,4)) for _ in range(len(individuals))]
         # THIS WILL NEED TO BE DONE PROPERLY IN ANOTHER PROCESS (R?)
-        individuals["Disease_Status"] = 0
-        individuals["Days_With_Status"] = 0 # Also keep the number of days that have elapsed with this status
-        individuals["Current_Risk"] = 0 # This is the risk that people get when visiting locations.
         print(f"... finished assigning initial status for {len(individuals)} individuals.")
         return individuals
 
@@ -1095,6 +1139,33 @@ class Microsim:
 
         return
 
+    def update_current_risk(self):
+        """Individuals will be visitting locations which may have some danger if they were previously
+        visitted by infected) which is now assigned to others."""
+        pass
+
+    def update_disease_counts(self):
+        """Update some disease counters -- counts of diseases in MSOAs & households -- which are useful
+        in estimating the probability of contracting the disease"""
+        # Update the diseases per MSOA and household
+        # TODO replace Nan's with 0 (not a problem with MSOAs because they're a cateogry so the value_counts()
+        # returns all, including those with 0 counts, but with HID those with 0 count don't get returned
+        # Get rows with cases
+        cases = self.individuals.loc[(self.individuals.Disease_Status == 1) | (self.individuals.Disease_Status == 2), :]
+        # Count cases per area (convert to a dataframe)
+        case_counts = cases["Area"].value_counts()
+        case_counts = pd.DataFrame(data={"Area": case_counts.index, "Count": case_counts}).reset_index(drop=True)
+        # Link this back to the orignal data
+        self.individuals[ColumnNames.MSOA_CASES] = self.individuals.merge(case_counts, on="Area", how="left")["Count"]
+        self.individuals[ColumnNames.MSOA_CASES].fillna(0)
+
+        # Update HID cases
+        case_counts = cases["HID"].value_counts()
+        case_counts = pd.DataFrame(data={"HID": case_counts.index, "Count": case_counts}).reset_index(drop=True)
+        self.individuals[ColumnNames.HID_CASES] = self.individuals.merge(case_counts, on="HID", how="left")["Count"]
+        self.individuals[ColumnNames.HID_CASES].fillna(0)
+
+
     @classmethod
     def calculate_new_disease_status(cls, row: pd.Series, activity_locations: List[ActivityLocation]):
         """
@@ -1123,7 +1194,13 @@ class Microsim:
         # become more dangerous
         self.update_venue_danger()
 
-        # Update the risks to individuals who visit those venues
+        # Update the current risk for individuals who may be visitting those venues
+        self.update_current_risk()
+
+        # Update disease counters. E.g. count diseases in MSOAs & households
+        self.update_disease_counts()
+
+        # Calculate new disease status
         # ACTUALLY THIS WONT BE DONE HERE. THE DATA WILL BE PASSED TO R AND DEALT WITH THERE, GETTING A NEW
         # DISEASE STATUS COLUMN BACK
         print("Now should calculate new disease status")
@@ -1152,14 +1229,18 @@ class Microsim:
 # Uses 'click' library so that it can be run from the command line
 @click.command()
 @click.option('--iterations', default=2, help='Number of model iterations')
-#@click.option('--data_dir', default="./data/", help='Root directory to load data from')
-@click.option('--data_dir', default="../data/", help='Root directory to load data from') # NN only
+@click.option('--data_dir', default="data", help='Root directory to load data from')
+
 def run(iterations, data_dir):
     num_iter = iterations
 
     # Temporarily only want to use Devon MSOAs
+
     #devon_msoas = pd.read_csv("./data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])
     devon_msoas = pd.read_csv("../data/devon_msoas.csv", header=None, names=["x", "y", "Num", "Code", "Desc"])  # NN only
+
+    #devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
+
     #m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
     #m.export_to_feather() # Write out the base population
@@ -1167,8 +1248,8 @@ def run(iterations, data_dir):
     #sys.exit(0)
 
     # Temporily use dummy data for testing
-    #data_dir="./dummy_data/"
-    data_dir="../dummy_data/" # NN only
+
+    data_dir="dummy_data"
     m = Microsim(data_dir=data_dir, testing=True)
     
     # save initial m
@@ -1192,6 +1273,7 @@ def run(iterations, data_dir):
             retail_to_pickle = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns =['ID', 'Danger0']) 
         elif loc_name == "School":
             school_to_pickle = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns =['ID', 'Danger0']) 
+
 
     # Step the model
     for i in range(num_iter):
