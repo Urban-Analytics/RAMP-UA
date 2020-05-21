@@ -25,8 +25,10 @@ from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
 import pyarrow.feather as feather # For reading and writing DataFrames to disk
 import swifter # For quick (multicore?) pd.apply operations
+import pickle # to save data
 
-from microsim.microsim_analysis import MicrosimAnalysis
+#from microsim.microsim_analysis import MicrosimAnalysis
+from microsim_analysis import MicrosimAnalysis  # NN only?
 
 class ColumnNames:
     """Used to record standard dataframe column names used throughout"""
@@ -256,6 +258,23 @@ class Microsim:
         home_name = "Home"
         self.individuals, self.households = Microsim.add_home_flows(home_name, self.individuals, self.households)
         self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households, flows=None, individuals=self.individuals, duration_col="phome")
+        
+        
+        
+        
+        # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
+        # Occupation is taken from column soc2010b in individuals df
+        possible_jobs = sorted(self.individuals.soc2010b.unique())  # list of possible jobs in alphabetical order
+        data = {'ID': range(0, 0+len(possible_jobs)), 'Location_Name':possible_jobs, 'Danger':[0] * len(possible_jobs)} 
+        workplaces = pd.DataFrame(data) # df with all possible 'virtual offices'
+        
+        work_name = "Work"
+        self.individuals = Microsim.add_work_flows(work_name, self.individuals,workplaces)
+        self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None, individuals=self.individuals, duration_col="pwork")
+        
+        
+        
+        
 
         # Add some necessary columns for the disease and assign initial SEIR status
         self.individuals = Microsim.add_disease_columns(self.individuals)
@@ -478,6 +497,7 @@ class Microsim:
         #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_health.txt")
         #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_keyworker.txt")
         filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_Complete.txt")
+
         tuh = pd.read_csv(filename)
         if len(tuh.pid.unique()) != len(tuh):  # Check PIDs unique
             # NEED TO FIX THIS. FOR NOW JUST RAISE A WARNING
@@ -735,6 +755,50 @@ class Microsim:
         individuals[flows_col] = [[1.0] for _ in range(len(individuals))]
 
         return individuals, households
+
+
+
+
+
+
+
+
+    @classmethod
+    def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame) \
+            -> (pd.DataFrame):
+        """
+        Create a dataframe of (virtual) work locations that individuals
+        travel to. Unlike retail etc, each individual will have only one work location with 100% of flows there.
+        :param flow_type: The name for these flows (probably something like 'Work')
+        :param individuals: The dataframe of synthetic individuals
+        :param workplaces:  The dataframe of workplaces (i.e. occupations)
+        :return: The new 'individuals' dataframe (with new columns)
+        """
+        # Later on, add a check to see if occupations in individuals df are same as those in workplaces df??
+        # Tell the individuals about which virtual workplace they go to
+        venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
+        flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
+
+        individuals[venues_col] = individuals["soc2010b"].apply(lambda job: [ workplaces.index[workplaces["Location_Name"] == job].values[0] ] )
+
+
+        # Create lists to hold the venues and flows for each individuals. Unlike other activities
+        # there is only one venue (their house) and all the flows go there.
+        # Find the row number (index) for the household with HID. It's annoyingly verbose. This gives the index
+        # of a house with HID=x: households.index[households["HID"]==x].values[0]. So that needs to be used
+        # in the apply() and also made into a 1-item list with outer square brackets
+        # (Also, 'swifter' makes the apply quicker. Maybe worth using this throughout).
+        # individuals[venues_col] = individuals["HID"].swifter.progress_bar(enable=True, desc="Assigning individual flows for Homes ... ").\
+        #     apply( lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
+        # (Old slow way)
+        #individuals[venues_col] = individuals["HID"].apply(
+        #    lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
+        # Only one flow to the individual's household
+        individuals[flows_col] = [[1.0] for _ in range(len(individuals))]
+        return individuals
+
+
+
 
 
 
@@ -1158,11 +1222,23 @@ class Microsim:
 @click.command()
 @click.option('--iterations', default=2, help='Number of model iterations')
 @click.option('--data_dir', default="data", help='Root directory to load data from')
+
 def run(iterations, data_dir):
     num_iter = iterations
+    
+    # To fix file path issues, use absolute/full path at all times
+    # Pick either: get working directory (if user starts this script in place, or set working directory
+    # Option A: copy current working directory:
+    os.chdir("..") # assume microsim subdir so need to go up one level
+    base_dir = os.getcwd()  # get current directory
+    # Option B: specific directory
+    #base_dir = 'C:\\Users\\Toshiba\\git_repos\\RAMP-UA'
+    # overwrite data_dir with full path
+    data_dir = os.path.join(base_dir, data_dir)
 
     # Temporarily only want to use Devon MSOAs
     #devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
+
     #m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
     #m.export_to_feather() # Write out the base population
@@ -1170,12 +1246,67 @@ def run(iterations, data_dir):
     #sys.exit(0)
 
     # Temporily use dummy data for testing
-    data_dir="dummy_data"
+    data_dir = os.path.join(base_dir, "dummy_data")
     m = Microsim(data_dir=data_dir, testing=True)
+    
+    # save initial m
+    output_dir = os.path.join(data_dir, "output")
+    pickle_out = open(os.path.join(output_dir, "m0.pickle"),"wb")
+    pickle.dump(m, pickle_out)
+    pickle_out.close()
+    
+    # collect disease status in new df (for analysis/visualisation)
+    individuals_to_pickle = m.individuals
+    individuals_to_pickle["DiseaseStatus0"] = m.individuals.Disease_Status
+    
+    # collect location dangers at time 0 in new df(for analysis/visualisation)
+    for name in tqdm(m.activity_locations):
+        # Get the details of the location activity
+        activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
+        loc_name = activity.get_name()  # retail, school etc
+        loc_ids = activity.get_ids()  # List of the IDs of the locations 
+        loc_dangers = activity.get_dangers()  # List of the current dangers
+
+        locals()[loc_name+'_to_pickle'] = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns =['ID', 'Danger0']) 
+
 
     # Step the model
     for i in range(num_iter):
         m.step()
+        
+        # add to items to pickle
+        individuals_to_pickle["DiseaseStatus"+str(i+1)] = m.individuals.Disease_Status
+        for name in tqdm(m.activity_locations):
+            # Get the details of the location activity
+            activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
+            loc_name = activity.get_name()  # retail, school etc
+            loc_ids = activity.get_ids()  # List of the IDs of the locations 
+            loc_dangers = activity.get_dangers()  # List of the current dangers
+
+            locals()[loc_name+'_to_pickle']["Danger"+str(i+1)] = loc_dangers
+
+    
+    # save individuals and danger dfs
+    pickle_out = open(os.path.join(output_dir, "Individuals.pickle"),"wb")
+    pickle.dump(individuals_to_pickle, pickle_out)
+    pickle_out.close()  
+    for name in tqdm(m.activity_locations):
+        # Get the details of the location activity
+        activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
+        loc_name = activity.get_name()  # retail, school etc
+               
+        pickle_out = open(os.path.join(output_dir, loc_name+".pickle"),"wb")
+        pickle.dump(locals()[loc_name+'_to_pickle'], pickle_out)
+        pickle_out.close() 
+       
+        
+    # Make some plots (save or show) - see seperate script for now
+    # fig = MicrosimAnalysis.heatmap(individuals, ["Danger"])
+    # fig.show()     
+    # fig = MicrosimAnalysis.geogif(individuals, ["Danger"])
+    # # save - can't display gif?   
+        
+        
     print("End of program")
 
 
