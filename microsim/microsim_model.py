@@ -27,7 +27,8 @@ import pyarrow.feather as feather # For reading and writing DataFrames to disk
 import swifter # For quick (multicore?) pd.apply operations
 import pickle # to save data
 
-from microsim.microsim_analysis import MicrosimAnalysis
+#from microsim.microsim_analysis import MicrosimAnalysis
+from microsim_analysis import MicrosimAnalysis
 
 class ColumnNames:
     """Used to record standard dataframe column names used throughout"""
@@ -404,6 +405,7 @@ class Microsim:
         exception is raised).
         :raise: An exception if `warn==False` and there are individuals without a household
         """
+        print("Checking no homeless (all individuals assigned to a household...",)
         # Households are uniquely identified by [Area,HID] combination. Individuals are identified by [Area,HID,PID]
         # XXXX PROBLEM: 'ARea' in [Area, HID] is an OA, but 'Area' in [Area, HID, PID] is an MSOA !!
 
@@ -423,6 +425,7 @@ class Microsim:
                 return False
             else:
                 raise Exception(msg)
+        print("... finished checking homeless")
         return True
 
     @classmethod
@@ -1237,12 +1240,7 @@ def run(iterations, data_dir):
 
     # Temporarily only want to use Devon MSOAs
     #devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
-
     #m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
-
-    #m.export_to_feather() # Write out the base population
-    #print("Exitting. Not stepping for now")
-    #sys.exit(0)
 
     # Temporily use dummy data for testing
     data_dir = os.path.join(base_dir, "dummy_data")
