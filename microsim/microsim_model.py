@@ -1287,6 +1287,9 @@ def run(iterations, data_dir):
 
     
     # save individuals and danger dfs
+    pickle_out = open(os.path.join(output_dir, "Individuals.pickle"),"wb")
+    pickle.dump(individuals_to_pickle, pickle_out)
+    pickle_out.close()  
     for name in tqdm(m.activity_locations):
         # Get the details of the location activity
         activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
