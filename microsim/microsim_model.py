@@ -27,8 +27,7 @@ import pyarrow.feather as feather # For reading and writing DataFrames to disk
 import swifter # For quick (multicore?) pd.apply operations
 import pickle # to save data
 
-#from microsim.microsim_analysis import MicrosimAnalysis
-from microsim_analysis import MicrosimAnalysis  # NN only?
+from microsim.microsim_analysis import MicrosimAnalysis
 
 class ColumnNames:
     """Used to record standard dataframe column names used throughout"""
@@ -1229,7 +1228,7 @@ def run(iterations, data_dir):
     # To fix file path issues, use absolute/full path at all times
     # Pick either: get working directory (if user starts this script in place, or set working directory
     # Option A: copy current working directory:
-    os.chdir("..") # assume microsim subdir so need to go up one level
+    ## COMMENTED BY NICK os.chdir("..") # assume microsim subdir so need to go up one level
     base_dir = os.getcwd()  # get current directory
     # Option B: specific directory
     #base_dir = 'C:\\Users\\Toshiba\\git_repos\\RAMP-UA'
@@ -1260,6 +1259,7 @@ def run(iterations, data_dir):
     individuals_to_pickle["DiseaseStatus0"] = m.individuals.Disease_Status
     
     # collect location dangers at time 0 in new df(for analysis/visualisation)
+    # TODO make a function for this so that it doesn't need to be repeated in the for loop below
     for name in tqdm(m.activity_locations):
         # Get the details of the location activity
         activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
