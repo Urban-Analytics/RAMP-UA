@@ -9,6 +9,8 @@ Created on Wed Apr 29 19:59:25 2020
 """
 
 import pandas as pd
+pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
+#pd.set_option('display.width', 0)  # Automatically find the best width
 import numpy as np
 import glob
 import os
@@ -29,6 +31,7 @@ import pickle # to save data
 
 #from microsim.microsim_analysis import MicrosimAnalysis
 from microsim_analysis import MicrosimAnalysis
+from utilities import Optimise
 
 class ColumnNames:
     """Used to record standard dataframe column names used throughout"""
@@ -191,6 +194,11 @@ class Microsim:
         # The individuals are at MSOA level, so use that file to construct a list of areas
         self.all_msoas = Microsim.extract_msoas_from_indiviuals(self.individuals)
 
+        # Now we have the 'core population'. Keep copies of this but continue to use the 'individuals' data frame
+        # Not saving as they're not needed and will take up some memory
+        self.core_individuals = self.individuals.copy()
+        self.core_households = self.households.copy()
+
         # See if we need to restrict by a study area (optional parameter passed by the user).
         # If so, then remove individuals and households not in the study area
         self.study_msoas, self.individuals, self.households = \
@@ -198,10 +206,10 @@ class Microsim:
 
         # Attach a load of transport attributes to each individual
         # (actually this is more like attaching the previous microsim to these new data, see the function for details)
+        #self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, self.study_msoas)
         self.individuals = Microsim.attach_time_use_and_health_data(self.individuals, self.study_msoas)
+        self.households["ID"] = self.households.HID # TEMP, Just while I get attach_time_use_Data working
 
-        # Now we have the 'core population'. Keep a copy of this but continue to use the 'individuals' data frame
-        self.core_population = self.individuals.copy()
 
         # Read the locations of schools, workplaces, etc.
         # For each type of activity (store, retail, etc), create ActivityLocation objects to keep all the
@@ -315,6 +323,7 @@ class Microsim:
         # (No longer doing this; will create a new unique identifier from Area, HID, PID combination later.
         #PID_counter = 0
         #HID_counter = 0
+        warns = [] # Save warnings until later otherwise it messes with the progress bar (not important)
         for i in tqdm(range(len(household_files)), desc="Reading raw microsim data"):
             house_file = household_files[i]
             indiv_file = individual_files[i]
@@ -337,7 +346,7 @@ class Microsim:
             # Check that the number of OAs in the household file is the same as those in the individuals file
             # (there are some NA's where individuals weren't matched to households, this is OK and dealt with later)
             if len(house_df.Area.unique()) > len(indiv_df.House_OA.dropna().unique()):
-                warnings.warn(f"When reading LA {area} there were {len(house_df.Area.unique()) - len(indiv_df.House_OA.dropna().unique())} "
+                warns.append(f"When reading LA {area} there were {len(house_df.Area.unique()) - len(indiv_df.House_OA.dropna().unique())} "
                               f"output areas that had households with no individuals living in them")
             elif len(house_df.Area.unique()) < len(indiv_df.House_OA.dropna().unique()):
                 raise Exception("Individuals have been assigned to more House OAs than actually exist!")
@@ -355,6 +364,10 @@ class Microsim:
             # Save the dataframes for concatination later
             house_dfs.append(house_df)
             indiv_dfs.append(indiv_df)
+
+        # Any warnings?
+        for w in warns:
+            warnings.warn(w)
 
         # Concatenate the files
         households = pd.concat(house_dfs)
@@ -396,7 +409,10 @@ class Microsim:
     @classmethod
     def _check_no_homeless(cls, individuals, households, warn=True):
         """
-        Check that each individual has a household
+        Check that each individual has a household. NOTE: this only works for the raw mirosimulation data.
+        Once the health data has been attached this wont work becuase the unique identifiers change.
+        If this function is still needed then it will need to take the specific IDs as arguments, but this is
+        a little complicated because some combination of [Area, HID, (PID)] is needed for unique identification.
 
         :param individuals:
         :param households:
@@ -405,12 +421,13 @@ class Microsim:
         exception is raised).
         :raise: An exception if `warn==False` and there are individuals without a household
         """
-        print("Checking no homeless (all individuals assigned to a household...",)
-        # Households are uniquely identified by [Area,HID] combination. Individuals are identified by [Area,HID,PID]
-        # XXXX PROBLEM: 'ARea' in [Area, HID] is an OA, but 'Area' in [Area, HID, PID] is an MSOA !!
-
-        # Make a new dataset with a unique index for households
-        hids = households.set_index(["Area", "HID"])
+        print("Checking no homeless (all individuals assigned to a household) ...",)
+        # This will fail if used on anything other than the raw msm data because once I read in the
+        # health data the PID and HID columns are renamed to prevent them being accidentally used.
+        assert "PID" in individuals.columns and "HID" in households.columns
+        # Households in the msm are uniquely identified by [Area,HID] combination.
+        # Individuals are identified by [House_OA,HID,PID]
+        hids = households.set_index(["Area", "HID"]) # Make a new dataset with a unique index for households
         # Find individuals who do not have a related entry in the households dataset
         homeless = [(area, hid, pid) for area, hid, pid in individuals.loc[:, ["House_OA", "HID", "PID"]].values if (area, hid) not in hids.index]
         # (version using apply isn't quicker)
@@ -491,9 +508,12 @@ class Microsim:
         in the original data are linked in to this one. This is because the linking process (done elsewhere)
         means that households and invididuals are duplicated.
 
+        Note that we can't link this file back to the original households, so just create a new households
+        dataframe.
+
         :param individuals: The dataframe of individuals that the new columns will be added to
         :param study_msoas: Optional study area to restrict by (all individuals not in these MSOAs will be removed)
-        :return A new dataframe of individuals with the new information appended.
+        :return A tuple with new dataframes of individuals and households
         """
         print("Attaching time use and health data for Devon... ", )
         #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_health.txt")
@@ -501,39 +521,83 @@ class Microsim:
         filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_Complete.txt")
 
         tuh = pd.read_csv(filename)
-        if len(tuh.pid.unique()) != len(tuh):  # Check PIDs unique
-            # NEED TO FIX THIS. FOR NOW JUST RAISE A WARNING
-            warnings.warn("THIS NEEDS TO BE FIXED! Not all of the individual IDs (PID column) are unique")
-            #raise Exception("Not all of the individual IDs (PID column) are unique")
+        tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.
+
+        # Firstly, indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
+        # identify indivuals / households in this health data and be specif about what 'Area' means
+        tuh = tuh.rename(columns={'hid': '_hid', 'pid': '_pid'})
+        individuals = individuals.rename(columns={"PID": "_PID", "HID": "_HID"})
+        # Not sure why HID and PID are ints
+        individuals["_HID"] = individuals["_HID"].apply(int)
+        individuals["_PID"] = individuals["_PID"].apply(int)
+
+        # Remove any individuals not in the study area
+        original_count = len(tuh)
+        tuh = tuh.loc[tuh.area.isin(study_msoas), :]
+        print(f"{original_count-len(tuh)} individuals removed from the time use & health data")
+        # Now should have nearly the same number of people (maybe not exactly due to how individuals are
+        # allocated to areas in the component set matching
+        diff = (len(tuh) - len(individuals)) / len(tuh)
+        if diff > 0.02:  # More than 2% (arbitrary)
+            raise Exception(f"The number of individuals in the raw msm ({len(individuals)}) and the time use & health "
+                            f"data ({len(tuh)}) are very different ({diff*100}%). This may be an error.")
+
+        # Make a new, unique id for each individual (PIDs have been replicated so no longer uniquely idenfity individuals}
+        assert len(tuh.index) == len(tuh)  # Index should have been set to row number when tuh was read in
+        tuh.insert(0, "ID", tuh.index, allow_duplicates=False)  # Insert into first position
+
+        # Link to original individual data from the raw microsim. [MSOA, HID, PID] can link them.
+        # We want these columns from the individual dataset (but for convenience also get an extra _PID column
+        # So that they don't have to be hard coded:
+        #["DC1117EW_C_SEX", "DC1117EW_C_AGE", "DC2101EW_C_ETHPUK11", "_HID", "Local_Authority", "House_OA"]
+        #tuh_temp = tuh.set_index(["msoa", "_hid", "_pid"])
+        #indiv_temp = individuals.set_index(["msoa", "_HID", "_PID"])
+        #a = tuh_temp.merge(indiv_temp , left_index=True, right_index=True)
+        tuh = tuh.merge(individuals, how="left", left_on = ["area", "_hid", "_pid"],
+                           right_on = ["Area", "_HID", "_PID"], validate="many_to_one")
+        tuh = Optimise.optimize(tuh)  # Now that new columns have been added
+
+        #assert tuh.loc[:,["msoa", "_hid", "_pid"]].equals(tuh.loc[:, ["msoa", "_HID", "_PID"]])
+
+
+
+
+        # TODO Create households dataframe
+
+        # For now just rename the columns so that it works
+        tuh["House_ID"] = tuh["_HID"]
+
+        # A couple of sanity checks
+
+        #if len(tuh.pid.unique()) != len(tuh):  # Check PIDs unique
+        #    # NEED TO FIX THIS. FOR NOW JUST RAISE A WARNING
+        #    warnings.warn("THIS NEEDS TO BE FIXED! Not all of the individual IDs (PID column) are unique")
+        #    #raise Exception("Not all of the individual IDs (PID column) are unique")
 
         # Check sensible numbers of individuals in the time use health data
-        if len(tuh) < len(individuals):
-            raise Exception("There are fewer individuals in the time use data than there are in the raw"
-                            "synthetic population. ")
+        #if len(tuh) < len(individuals):
+        #    raise Exception("There are fewer individuals in the time use data than there are in the raw"
+        #                    "synthetic population. ")
         # What proportion are in the TUH data but not in the raw microsim
-        proprtion_missing = ((len(tuh) - len(individuals)) / len(individuals))
-        if proprtion_missing > 0.02:  # 2% chosen arbitrarily. It's just over 1% in the Devon data
-            warnings.warn(f"{len(tuh) - len(individuals)} individuals ({proprtion_missing*100}% in the time"
-                          f"use health data will not be matched to an individual in the raw data.")
+        #proprtion_missing = ((len(tuh) - len(individuals)) / len(individuals))
+        #if proprtion_missing > 0.02:  # 2% chosen arbitrarily. It's just over 1% in the Devon data
+        #    warnings.warn(f"{len(tuh) - len(individuals)} individuals ({proprtion_missing*100}% in the time"
+        #                  f"use health data will not be matched to an individual in the raw data.")
 
         # Attach all variables first, then can analyse them properly afterwards. Join them on the PID (person ID)
-        full_table = individuals.set_index("PID", drop=False).join(tuh.set_index("pid"), how="left")
+        #full_table = individuals.set_index("PID", drop=False).join(tuh.set_index("pid"), how="left")
 
         # ERROR JOINING
-        warnings.warn("Individuals have been duplicated when joining to TUH data. Am removing duplicates"
-                      "temporily, but this needs to be fixed. Each PID should uniquely identify the same "
-                      "individual in both datasets.")
-        full_table.drop_duplicates(["PID"], keep="first", inplace=True)
+        #warnings.warn("Individuals have been duplicated when joining to TUH data. Am removing duplicates"
+        #              "temporily, but this needs to be fixed. Each PID should uniquely identify the same "
+        #              "individual in both datasets.")
+        #full_table.drop_duplicates(["PID"], keep="first", inplace=True)
 
 
-        assert len(full_table) == len(individuals)
-
-        # TODO: Check that the new HIDs and Areas are the same (confirms correct join)
+        # Check that the new HIDs and Areas are the same (confirms correct join)
         #assert len(full_table.loc[full_table.HID == full_table.hid, :]) == len(full_table)
         #assert len(full_table.loc[full_table.Area== full_table.area, :]) == len(full_table)
 
-        # Now convert time use for each activity.
-        ft = full_table  # For less typing
         # Variables pnothome, phome add up to 100% of the day and
         # pwork +pschool +pshop+ pleisure +pescort+ ptransport +pother = phome
 
@@ -549,15 +613,15 @@ class Microsim:
 
         # Temporarily (?) remove NAs from activity columns (I couldn't work out how to do this in 1 line like:
         #ft.loc[:, ["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]].fillna(0, inplace=True)
-        for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
-            ft[col].fillna(0, inplace=True)
+        #for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
+        #    ft[col].fillna(0, inplace=True)
 
         # Assign time use for Travel (just do this arbitrarily for now, the correct columns aren't in the data).
-        travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in
-                         [ ColumnNames.TRAVEL_CAR, ColumnNames.TRAVEL_BUS, ColumnNames.TRAVEL_TRAIN, ColumnNames.TRAVEL_WALK ] ]
-        for col in travel_cols:
-            ft[col] = 0.0
-        x=1
+        #travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in
+        #                 [ ColumnNames.TRAVEL_CAR, ColumnNames.TRAVEL_BUS, ColumnNames.TRAVEL_TRAIN, ColumnNames.TRAVEL_WALK ] ]
+        #for col in travel_cols:
+        #    ft[col] = 0.0
+        #x=1
 
         # Now can return the dataframe. When the ActivityLocations are created later in the process they will
 
@@ -602,9 +666,8 @@ class Microsim:
         #    individuals[col] = 0.0
 
         print("... finished.")
-        # PID has ended up as the index. Remove it for now, once the code above is fixed then this shouldn't happen
-        ft.reset_index(drop=True, inplace=True)
-        return ft
+        # TODO return households (this is the original, WRONG, households file)
+        return tuh
 
     @classmethod
     def read_school_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
@@ -748,8 +811,8 @@ class Microsim:
         # of a house with HID=x: households.index[households["HID"]==x].values[0]. So that needs to be used
         # in the apply() and also made into a 1-item list with outer square brackets
         # (Also, 'swifter' makes the apply quicker. Maybe worth using this throughout).
-        individuals[venues_col] = individuals["HID"].swifter.progress_bar(enable=True, desc="Assigning individual flows for Homes ... ").\
-            apply( lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
+        individuals[venues_col] = individuals["House_ID"].swifter.progress_bar(enable=True, desc="Assigning individual flows for Homes ... ").\
+            apply( lambda hid: [ households.index[households["ID"] == hid].values[0] ] )
         # (Old slow way)
         #individuals[venues_col] = individuals["HID"].apply(
         #    lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
@@ -984,8 +1047,7 @@ class Microsim:
 
         # Use a hierarchical index on the Area to speed up finding all individuals in an area
         # (not sure this makes much difference).
-        warnings.warn("WARNING: PID COLUMN IS NO LONGER A UNIQUE IDENTIFYIER FOR THE PERSON, NEED TO USE SOMETHING ELSE")
-        individuals.set_index(["Area", "PID"], inplace=True, drop=False)
+        individuals.set_index(["Area", "ID"], inplace=True, drop=False)
 
         for area in tqdm(flow_matrix.values, desc=f"Assigning individual flows for {flow_type}"):  # Easier to operate over a 2D matrix rather than a dataframe
             oa_num: int = area[0]
@@ -1154,9 +1216,9 @@ class Microsim:
         self.individuals[ColumnNames.MSOA_CASES].fillna(0, inplace=True)
 
         # Update HID cases
-        case_counts = cases["HID"].value_counts()
-        case_counts = pd.DataFrame(data={"HID": case_counts.index, "Count": case_counts}).reset_index(drop=True)
-        self.individuals[ColumnNames.HID_CASES] = self.individuals.merge(case_counts, on="HID", how="left")["Count"]
+        case_counts = cases["House_ID"].value_counts()
+        case_counts = pd.DataFrame(data={"House_ID": case_counts.index, "Count": case_counts}).reset_index(drop=True)
+        self.individuals[ColumnNames.HID_CASES] = self.individuals.merge(case_counts, on="House_ID", how="left")["Count"]
         self.individuals[ColumnNames.HID_CASES].fillna(0, inplace=True)
 
 
@@ -1251,7 +1313,7 @@ def run(iterations, data_dir):
     pickle_out = open(os.path.join(output_dir, "m0.pickle"),"wb")
     pickle.dump(m, pickle_out)
     pickle_out.close()
-    
+
     # collect disease status in new df (for analysis/visualisation)
     individuals_to_pickle = m.individuals
     individuals_to_pickle["DiseaseStatus0"] = m.individuals.Disease_Status

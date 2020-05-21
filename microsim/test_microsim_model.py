@@ -91,27 +91,27 @@ def test_update_disease_counts(test_microsim):
     """Check that disease counts for MSOAs and households are updated properly"""
     m = test_microsim  # less typing
 
-    m.individuals.loc[m.individuals.PID == 100799, "Disease_Status"] = 1
-    m.individuals.loc[m.individuals.PID == 23968, "Disease_Status"] = 1
-    m.individuals.loc[m.individuals.PID == 23434, "Disease_Status"] = 1
-    m.individuals.loc[m.individuals.PID == 90653, "Disease_Status"] = 1
+    m.individuals.loc[m.individuals._PID == 100799, "Disease_Status"] = 1
+    m.individuals.loc[m.individuals._PID == 23968, "Disease_Status"] = 1
+    m.individuals.loc[m.individuals._PID == 23434, "Disease_Status"] = 1
+    m.individuals.loc[m.individuals._PID == 90653, "Disease_Status"] = 1
     #m.individuals.loc[:, ["PID", "HID", "Area", "Disease_Status", "MSOA_Cases", "HID_Cases"]]
     m.update_disease_counts()
     # This person has the disease
-    assert m.individuals.loc[m.individuals.PID == 100799, "MSOA_Cases"][0] == 1
-    assert m.individuals.loc[m.individuals.PID == 100799, "HID_Cases"][0] == 1
+    assert m.individuals.loc[m.individuals._PID == 100799, "MSOA_Cases"].values[0] == 1
+    assert m.individuals.loc[m.individuals._PID == 100799, "HID_Cases"].values[0] == 1
     # These people live there too (but live in different msoas, so it's OK the disease hasn't propogated there!)
-    assert m.individuals.loc[m.individuals.PID == 64788, "HID_Cases"].values[0] == 1
-    assert m.individuals.loc[m.individuals.PID == 69754, "HID_Cases"].values[0] == 1
+    assert m.individuals.loc[m.individuals._PID == 64788, "HID_Cases"].values[0] == 1
+    assert m.individuals.loc[m.individuals._PID == 69754, "HID_Cases"].values[0] == 1
     # In this house of 4, two people have the disease
-    assert m.individuals.loc[m.individuals.PID == 17942, "HID_Cases"].values[0] == 2
-    assert m.individuals.loc[m.individuals.PID == 22526, "HID_Cases"].values[0] == 2
-    assert m.individuals.loc[m.individuals.PID == 23434, "HID_Cases"].values[0] == 2
-    assert m.individuals.loc[m.individuals.PID == 23968, "HID_Cases"].values[0] == 2
+    assert m.individuals.loc[m.individuals._PID == 17942, "HID_Cases"].values[0] == 2
+    assert m.individuals.loc[m.individuals._PID == 22526, "HID_Cases"].values[0] == 2
+    assert m.individuals.loc[m.individuals._PID == 23434, "HID_Cases"].values[0] == 2
+    assert m.individuals.loc[m.individuals._PID == 23968, "HID_Cases"].values[0] == 2
     # One person in this area has the disease
-    assert m.individuals.loc[m.individuals.PID == 90653, "MSOA_Cases"].values[0] == 1
-    assert False not in (m.individuals.loc[(m.individuals.HID == 1) | (m.individuals.HID == 3) |
-                                           (m.individuals.HID == 6)]["HID_Cases"] == 0)
+    assert m.individuals.loc[m.individuals._PID == 90653, "MSOA_Cases"].values[0] == 1
+    assert False not in (m.individuals.loc[(m.individuals._HID == 1) | (m.individuals._HID == 3) |
+                                           (m.individuals._HID == 6)]["HID_Cases"] == 0)
     assert False not in (m.individuals.loc[(m.individuals.Area == "E02004147") | (m.individuals.Area == "E02004138") |
                                            (m.individuals.Area == "E02004158")]["MSOA_Cases"] == 0)
 
