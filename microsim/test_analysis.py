@@ -11,7 +11,7 @@ Created on Tue May 19 12:01:02 2020
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-#import geopandas as gpd
+import geopandas as gpd
 import os
 import pickle
 
@@ -90,31 +90,30 @@ ax.set_title("Infections over time")  # Add a title to the axes.
 ax.legend()  # Add a legend.   
 
 # total infections per area across time
-counts_tmp = individuals.groupby(['Area', 'DiseaseStatus0']).agg({'DiseaseStatus0': ['count']})
+msoas = sorted(individuals.area.unique())
+msoa_counts_S = pd.DataFrame(index=msoas)
+msoa_counts_E = pd.DataFrame(index=msoas)
+msoa_counts_I = pd.DataFrame(index=msoas)
+msoa_counts_R = pd.DataFrame(index=msoas)
 
+for d in range(0, nr_days):
+    # counts_tmp = individuals.groupby(['Area', individuals.columns[d+73]]).agg({individuals.columns[d+6]: ['count']})  
+    msoa_count_temp = individuals[individuals.iloc[:, 73+d] == 0].groupby(['Area']).agg({individuals.columns[73+d]: ['count']})  
+    msoa_counts_S = pd.merge(msoa_counts_S,msoa_count_temp,left_index = True, right_index=True)
+    msoa_counts_S.rename(columns={ msoa_counts_S.columns[d]: 'Day'+str(d) }, inplace = True)
+    
+    msoa_count_temp = individuals[individuals.iloc[:, 73+d] == 1].groupby(['Area']).agg({individuals.columns[73+d]: ['count']})  
+    msoa_counts_E = pd.merge(msoa_counts_E,msoa_count_temp,left_index = True, right_index=True)
+    msoa_counts_E.rename(columns={ msoa_counts_E.columns[d]: 'Day'+str(d) }, inplace = True)
+    
+    msoa_count_temp = individuals[individuals.iloc[:, 73+d] == 2].groupby(['Area']).agg({individuals.columns[73+d]: ['count']})  
+    msoa_counts_I = pd.merge(msoa_counts_I,msoa_count_temp,left_index = True, right_index=True)
+    msoa_counts_I.rename(columns={ msoa_counts_I.columns[d]: 'Day'+str(d) }, inplace = True)
+    
+    msoa_count_temp = individuals[individuals.iloc[:, 73+d] == 3].groupby(['Area']).agg({individuals.columns[73+d]: ['count']})  
+    msoa_counts_R = pd.merge(msoa_counts_R,msoa_count_temp,left_index = True, right_index=True)
+    msoa_counts_R.rename(columns={ msoa_counts_R.columns[d]: 'Day'+str(d) }, inplace = True)
 
-
-# this breaks down if at least one category doesn't appear in counts_tmp
-ind_0 = [i for i in range(0, len(counts_tmp), 4)]
-ind_1 = [i for i in range(1, len(counts_tmp), 4)]
-ind_2 = [i for i in range(2, len(counts_tmp), 4)]
-ind_3 = [i for i in range(3, len(counts_tmp), 4)]
-counts_1 = counts_tmp.iloc[ind_1, 0]
-counts_2 = counts_tmp.iloc[ind_2, 0]
-counts_3 = counts_tmp.iloc[ind_3, 0]
-
-# loop around remaining days
-for d in range(1, nr_days):
-    counts_tmp = individuals.groupby(['Area', individuals.columns[d+24]]).agg({individuals.columns[d+24]: ['count']})  # first column = day 0 = index 23 - we already have this one, so start from column 24
-    ind_1 = [i for i in range(1, len(counts_tmp), 4)]
-    ind_2 = [i for i in range(2, len(counts_tmp), 4)]
-    ind_3 = [i for i in range(3, len(counts_tmp), 4)]
-    counts_1_tmp = counts_tmp.iloc[ind_1, 0]
-    counts_1 = pd. concat([counts_1, counts_1_tmp], axis=1) 
-    counts_2_tmp = counts_tmp.iloc[ind_2, 0]
-    counts_2 = pd. concat([counts_2, counts_2_tmp], axis=1) 
-    counts_3_tmp = counts_tmp.iloc[ind_3, 0]
-    counts_3 = pd. concat([counts_3, counts_3_tmp], axis=1) 
     
 # heatmap
 xticklabels=days
@@ -124,7 +123,7 @@ xticks = [x +1 - 0.5 for x in xticks] # to get the tick in the centre of a heatm
 #cmap = sns.color_palette("coolwarm", 128)  
 cmap = 'RdYlGn_r'  
 plt.figure(figsize=(30, 10))
-ax1 = sns.heatmap(counts_1, annot=False, cmap=cmap, xticklabels=xticklabels)
+ax1 = sns.heatmap(msoa_counts_S, annot=False, cmap=cmap, xticklabels=xticklabels)
 ax1.set_xticks(xticks)
 plt.title("NR exposed")
 plt.ylabel("MSOA")
@@ -134,12 +133,12 @@ plt.show()
 # plot of infections per MSOA at a given day
 # ask user to pick a day
 day2plot = int(input("Please type the number of the day you want to plot (0 to "+str(nr_days-1)+"): "))
-msoas = [i for i in range(0,len(counts_1))]
+msoas_nr = [i for i in range(0,len(msoas))]
 
 fig, ax = plt.subplots()  # Create a figure and an axes.
-ax.plot(msoas, counts_1.iloc[:,day2plot].tolist(), label='Exposed')  
-ax.plot(msoas, counts_2.iloc[:,day2plot].tolist(), label='Infectious')
-ax.plot(msoas, counts_3.iloc[:,day2plot].tolist(), label='Recovered')
+ax.plot(msoas_nr, msoa_counts_E.iloc[:,day2plot].tolist(), label='Exposed')  
+ax.plot(msoas_nr, msoa_counts_I.iloc[:,day2plot].tolist(), label='Infectious')
+ax.plot(msoas_nr, msoa_counts_R.iloc[:,day2plot].tolist(), label='Recovered')
 ax.set_xlabel('MSOA')  # Add an x-label to the axes.
 ax.set_ylabel('Number of people')  # Add a y-label to the axes.
 ax.set_title("Infections across MSOAs, day "+str(day2plot))  # Add a title to the axes.
@@ -147,53 +146,26 @@ ax.legend()  # Add a legend.
 
 
 
+# geographical plots
 
 
-
-
-
-
-
-
-
-# !!!! Adapt to work with real data from here on instead of reading var4plottest.csv
+# choropleth
 
 # load in a shapefile
-fp = 'MSOAS_shp/bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp'
-map_df = gpd.read_file(fp)
+sh_file = os.path.join(data_dir, "MSOAS_shp","bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp")
+map_df = gpd.read_file(sh_file)
 # check
 #map_df.plot()
 # rename
 map_df.rename(index=str, columns={'msoa11cd': 'Area'},inplace=True)
 
-# load in the data to plot
-individuals = pd.read_csv('var4plottest.csv', header=0)
-
-
-# total infections per area across time
-# loop around days
-counts_E_days = pd.DataFrame() 
-for d in range(0, 30):
-    counts_tmp = individuals.groupby(['Area', individuals.columns[d+6]]).agg({individuals.columns[d+6]: ['count']})  
-    ind_1 = [i for i in range(1, len(counts_tmp), 4)]
-    counts_1 = counts_tmp.iloc[ind_1, 0]
-    if d == 0:
-        counts_E_days = counts_1
-        counts_E_days.rename("Day1",inplace = True)
-    else:
-        counts_E_days = pd.concat([counts_E_days, counts_1], axis=1) 
-        counts_E_days.rename(columns={ counts_E_days.columns[d]: 'Day'+str(d+1) }, inplace = True)
-    
-# bit sloppy but works for now, could try stuff like obj = obj._drop_axis(labels, axis, level=level, errors=errors)
-counts_E_days.reset_index(level=1, drop=True, inplace=True)
-counts_E_days.reset_index(inplace=True)
-    
-# merge spatial and data
-merged_data = pd.merge(map_df,counts_E_days,on='Area')
+# merge spatial data and counts (created above)
+msoa_counts_I['Area'] = msoa_counts_I.index
+merged_data = pd.merge(map_df,msoa_counts_I,on='Area')
 
 # set the range for the choropleth
 vmin = 0
-vmax = counts_E_days.iloc[:,1:31].max().max()  # find max to scale (or set max number eg if using %)
+vmax = msoa_counts_I.iloc[:,0:nr_days].max().max()  # find max to scale (or set max number eg if using %)
 
 
 # option 1
@@ -209,7 +181,7 @@ for d in range(0, 30):
     # remove the axis
     ax.axis('off')
     # add a title
-    ax.set_title('Exposed cases day'+str(d+1), fontdict={'fontsize': '25', 'fontweight' : '3'})
+    ax.set_title('Infected cases day'+str(d+1), fontdict={'fontsize': '25', 'fontweight' : '3'})
     # Create colorbar as a legend
     sm = plt.cm.ScalarMappable(cmap='Blues', norm=plt.Normalize(vmin=vmin, vmax=vmax))
     # empty array for the data range
@@ -226,3 +198,5 @@ with imageio.get_writer('map_movie.gif', mode='I', duration=0.5) as writer:
         filename = "map_day"+str(d+1)+".png"
         image = imageio.imread(filename)
         writer.append_data(image)
+        
+# dots on map
