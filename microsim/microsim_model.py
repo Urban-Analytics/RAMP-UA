@@ -214,7 +214,9 @@ class Microsim:
         #self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, self.study_msoas)
         home_name = "Home"  # How to describe flows to people's houses
         self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, home_name, self.study_msoas)
-        self.activity_locations["home_name"] = ActivityLocation(name=home_name, locations=self.households,
+        # Create 'activity locations' for the activity ofbeing at home. (This is done for other activities,
+        # like retail etc, when those data are read in later.
+        self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households,
                                                                 flows=None, individuals=self.individuals,
                                                                 duration_col="phome")
 
