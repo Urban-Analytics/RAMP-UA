@@ -263,7 +263,8 @@ class Microsim:
         # Assign households. This is slightly different to retail, schools, etc. because we already know the flows
         # to the households (each individual has a 'HID' that links to their household). So
         # we can assign them directly without having to produce a flow matrix.
-        home_name = "Home"
+        # TODO This can now be done in the read_tuh_data function
+        home_name = "HomeH"
         self.individuals, self.households = Microsim.add_home_flows(home_name, self.individuals, self.households)
         self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households, flows=None, individuals=self.individuals, duration_col="phome")
         
@@ -375,7 +376,9 @@ class Microsim:
 
         # Manually set some column types
         # Should save a bit of memory because not duplicating area strings
-        individuals["Area"] = individuals["Area"].astype('category')
+        # (No longer doing this beacuse it makes comparisons annoying when we have 2 'area' columns
+        # after reading time use & health data. Can work round that if we really need the memory).
+        # individuals["Area"] = individuals["Area"].astype('category')
 
         # Make sure HIDs and PIDs are unique
         #assert len(households["HID"].unique()) == len(households)
@@ -523,11 +526,18 @@ class Microsim:
         tuh = pd.read_csv(filename)
         tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.
 
-        # Firstly, indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
+        # Drop people that weren't matched to a household originally
+        nohh = len(tuh.loc[tuh.hid == -1])
+        if nohh > 0:
+            warnings.warn(f"{nohh} / {len(tuh)} individuals in the TUH data had not originally been matched "
+                          f"to a household. They're being removed")
+        tuh = tuh.loc[tuh.hid != -1]
+
+        # Indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
         # identify indivuals / households in this health data and be specif about what 'Area' means
         tuh = tuh.rename(columns={'hid': '_hid', 'pid': '_pid'})
         individuals = individuals.rename(columns={"PID": "_PID", "HID": "_HID"})
-        # Not sure why HID and PID are ints
+        # Not sure why HID and PID aren't ints
         individuals["_HID"] = individuals["_HID"].apply(int)
         individuals["_PID"] = individuals["_PID"].apply(int)
 
@@ -548,83 +558,134 @@ class Microsim:
 
         # Link to original individual data from the raw microsim. [MSOA, HID, PID] can link them.
         # We want these columns from the individual dataset (but for convenience also get an extra _PID column
-        # So that they don't have to be hard coded:
+        # So that they don't have to be hard coded)
         #["DC1117EW_C_SEX", "DC1117EW_C_AGE", "DC2101EW_C_ETHPUK11", "_HID", "Local_Authority", "House_OA"]
-        #tuh_temp = tuh.set_index(["msoa", "_hid", "_pid"])
-        #indiv_temp = individuals.set_index(["msoa", "_HID", "_PID"])
-        #a = tuh_temp.merge(indiv_temp , left_index=True, right_index=True)
         tuh = tuh.merge(individuals, how="left", left_on = ["area", "_hid", "_pid"],
                            right_on = ["Area", "_HID", "_PID"], validate="many_to_one")
+
+        # To check that the join worked we can't have categories, otherwise we can't compare areas easily
+        # (surely it's possibel to compare columns with different categories but I can't work it out).
+        # (The other 'Area' column, that came from the individuals dataframe is already a string
+        tuh['area'] = tuh.area.astype(str)
+
+        # Check the join has worked: (if it fails, can use the following to find the rows that are different)
+        assert len(tuh) == \
+          len(tuh.loc[(tuh["area"] == tuh["Area"]) & (tuh["_hid"] == tuh["_HID"]) & (tuh["_pid"] == tuh["_PID"]), :])
+
+        # Should have no nas in the columns that were just merged in
+        assert len(tuh.loc[tuh.House_OA.isna(), :]) == 0
+        assert len(tuh.loc[tuh.DC2101EW_C_ETHPUK11.isna(), :]) == 0
+
         tuh = Optimise.optimize(tuh)  # Now that new columns have been added
 
-        #assert tuh.loc[:,["msoa", "_hid", "_pid"]].equals(tuh.loc[:, ["msoa", "_HID", "_PID"]])
-
-
-
-
-        # TODO Create households dataframe
-
-        # For now just rename the columns so that it works
-        tuh["House_ID"] = tuh["_HID"]
-
-        # A couple of sanity checks
-
-        #if len(tuh.pid.unique()) != len(tuh):  # Check PIDs unique
-        #    # NEED TO FIX THIS. FOR NOW JUST RAISE A WARNING
-        #    warnings.warn("THIS NEEDS TO BE FIXED! Not all of the individual IDs (PID column) are unique")
-        #    #raise Exception("Not all of the individual IDs (PID column) are unique")
-
-        # Check sensible numbers of individuals in the time use health data
-        #if len(tuh) < len(individuals):
-        #    raise Exception("There are fewer individuals in the time use data than there are in the raw"
-        #                    "synthetic population. ")
-        # What proportion are in the TUH data but not in the raw microsim
-        #proprtion_missing = ((len(tuh) - len(individuals)) / len(individuals))
-        #if proprtion_missing > 0.02:  # 2% chosen arbitrarily. It's just over 1% in the Devon data
-        #    warnings.warn(f"{len(tuh) - len(individuals)} individuals ({proprtion_missing*100}% in the time"
-        #                  f"use health data will not be matched to an individual in the raw data.")
-
-        # Attach all variables first, then can analyse them properly afterwards. Join them on the PID (person ID)
-        #full_table = individuals.set_index("PID", drop=False).join(tuh.set_index("pid"), how="left")
-
-        # ERROR JOINING
-        #warnings.warn("Individuals have been duplicated when joining to TUH data. Am removing duplicates"
-        #              "temporily, but this needs to be fixed. Each PID should uniquely identify the same "
-        #              "individual in both datasets.")
-        #full_table.drop_duplicates(["PID"], keep="first", inplace=True)
-
-
-        # Check that the new HIDs and Areas are the same (confirms correct join)
-        #assert len(full_table.loc[full_table.HID == full_table.hid, :]) == len(full_table)
-        #assert len(full_table.loc[full_table.Area== full_table.area, :]) == len(full_table)
-
+        # Some sanity checks for the time use data
         # Variables pnothome, phome add up to 100% of the day and
         # pwork +pschool +pshop+ pleisure +pescort+ ptransport +pother = phome
 
-        # TODO include these checks once the TUH data are correct
-
-        ## Time at home and not home should sum to 1.0
-        #if False in list((full_table.phome + full_table.pnothome) == 1.0):
-        #    raise Exception("Time at home (phome) + time not at home (pnothome) does not always equal 1.0")
-        ## These columns should equal time at home
-        #if False in list( ft.loc[:,["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]].\
-        #                          sum(axis=1, skipna=True) == ft.phome ):
+        # TODO go through some of these with Karyn, they don't all pass
+        # Time at home and not home should sum to 1.0
+        if False in list((tuh.phome + tuh.pnothome) == 1.0):
+            raise Exception("Time at home (phome) + time not at home (pnothome) does not always equal 1.0")
+        # These columns should equal time not at home
+        #if False in list(tuh.loc[:, ["pwork", "pschool", "pshop", "pleisure",  "ptransport", "pother"]]. \
+        #                         sum(axis=1, skipna=True) == tuh.pnothome):
         #    raise Exception("Times doing activities don't add up correctly")
 
         # Temporarily (?) remove NAs from activity columns (I couldn't work out how to do this in 1 line like:
-        #ft.loc[:, ["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]].fillna(0, inplace=True)
-        #for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
-        #    ft[col].fillna(0, inplace=True)
+        for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
+            tuh[col].fillna(0, inplace=True)
 
+        # TODO assign activities properly. Need to map from columns in the dataframe to standard names
         # Assign time use for Travel (just do this arbitrarily for now, the correct columns aren't in the data).
-        #travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in
+        # travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in
         #                 [ ColumnNames.TRAVEL_CAR, ColumnNames.TRAVEL_BUS, ColumnNames.TRAVEL_TRAIN, ColumnNames.TRAVEL_WALK ] ]
-        #for col in travel_cols:
-        #    ft[col] = 0.0
-        #x=1
+        # for col in travel_cols:
+        #    tuh[col] = 0.0
 
-        # Now can return the dataframe. When the ActivityLocations are created later in the process they will
+        # Create households dataframe. This replaces the original one in the msm data
+        # as we can no longer link back to that one.
 
+        # Go through each individual. House members can be identified because they have the same [Area, HID]
+        # combination.
+        # Maintain a dictionary of (Area, HID) -> House_ID that records a new ID for each house
+        # Each time a new [Area, HID] combination is found, create a new entry in the households dictionary for that
+        # household, generate a House_ID, and record that in the dictionary.
+        # When existing (Area, HID) combinations are found, look up the ID in the dataframe and record it for that
+        # individual
+        # Also, maintain a list of house_ids in the same order as individuals in the tuh data which can be used later
+        # when we link from the individuls in the TUH data to their house id
+
+        # This is the main dictionary. It maps (Area, HID) to house id numbers, along with some more information:
+        house_ids_dict = {}  # (Area, HID) -> [HouseIDNumber, NumPeople, area, hid]
+
+        house_ids_list = []  # ID of each house for each individual
+        house_id_counter = 0  # Counter to generate new HouseIDNumbers
+        unique_individuals = []  # Also store all [Area, HID, PID] combinations to check they're are unique later
+
+        # Maybe quicker to loop over 3 lists simultaneously than through a DataFrame
+        _areas = list(tuh["area"])
+        _hids = list(tuh["_hid"])
+        _pids = list(tuh["_pid"])
+
+        for i, (area, hid, pid) in enumerate(zip(_areas, _hids, _pids)):
+            #print(i, area, hid, pid)
+            unique_individuals.append((area, hid, pid))
+            house_key = (area, hid)  # Uniqely identifies a household
+            house_id_number = -1
+            try:  # If this lookup works then we've seen this house before. Get it's ID number and increase num people in it
+                house_info = house_ids_dict[house_key]
+                # Check the area and hid are the same as the one previously stored in the dictionary
+                assert area == house_info[2] and hid == house_info[3]
+                # Also check that the house key (Area, HID) matches the area and HID
+                assert house_key[0] == house_info[2] and house_key[1] == house_info[3]
+                # We need the ID number to tell the individual which their house is
+                house_id_number = house_info[0]
+                # Increse the number of people in the house and create a new list of info for this house
+                people_per_house = house_info[1] + 1
+                house_ids_dict[house_key] = [house_id_number, people_per_house, area, hid ]
+            except KeyError:  # If the lookup failed then this is the first time we've seen this house. Make a new ID.
+                house_id_number = house_id_counter
+                house_ids_dict[house_key] = [ house_id_number, 1, area, hid]  # (1 is beacuse 1 person so far in the hosue)
+                house_id_counter += 1
+            assert house_id_number > -1
+            house_ids_list.append(house_id_number)  # Remember the house for this individual
+
+        assert len(unique_individuals) == len(tuh)
+        assert len(house_ids_list) == len(tuh)
+        assert len(house_ids_dict) == house_id_counter
+
+        # While we're here, may as well also check that [Area, HID, PID] is a unique identifier of individuals
+        # TODO FIND OUT FROM KARYN WHY THESE LEGTHS ARE DIFFERENT
+        #assert len(tuh) == len(set(unique_individuals))
+
+        # Done! Now can create the households dataframe
+        households_df = pd.DataFrame(house_ids_dict.values(), columns=['House_ID', 'Num_People', 'area', '_hid'])
+        households_df = Optimise.optimize(households_df)
+
+        # And tell the individuals which house they live in
+        tuh["House_ID"] = house_ids_list  # Assign each individuals to their household
+
+        # Check all house IDs are unique and have same number as in TUH data
+        assert len(frozenset(households_df.House_ID.unique())) == len(households_df)
+        assert len(tuh.area.unique()) == len(tuh.area.unique())
+        # Check that the area that the invidiual lives in is the same as the area their house is in
+        temp_merge = tuh.merge(households_df, how="left", on = ["House_ID"], validate="many_to_one")
+        assert len(temp_merge) == len(tuh)
+        assert False not in list(temp_merge['area_x']==temp_merge['area_y'])
+
+        # Add some required columns
+        Microsim._add_location_columns(households_df, location_names=list(households_df.House_ID),
+                                       location_ids=households_df.House_ID )
+        # The new ID column should be the same as the House_ID
+        assert False not in list(households_df.House_ID == households_df[ColumnNames.LOCATION_ID])
+
+        # Add flows for each individual (this is easy, it's just converting their House_ID into a one-value list)
+        # Names for the new columns
+        venues_col = f"Home{ColumnNames.ACTIVITY_VENUES}"
+        flows_col = f"Home{ColumnNames.ACTIVITY_FLOWS}"
+
+        tuh[venues_col] = tuh["House_ID"].apply(lambda x: [x])
+        tuh[flows_col] = [ [1.0] for _ in range(len(tuh))]
 
         # OLD WAY OF HARD-CODING TIME USE CATEGORIES FOR EACH INDIVIDUAL
         # For now just hard code broad categories. Ultimately will have different values for different activities.
@@ -657,7 +718,7 @@ class Microsim:
         #        raise Exception(f"Unrecognised activity: {act}")
 
         # Check that proportions add up to 1.0
-        # TODO for some reason this fails, but as far as I can see the proportions correctly sum to 1 !!
+        # For some reason this fails, but as far as I can see the proportions correctly sum to 1 !!
         #assert False not in (individuals.loc[:, col_names].sum(axis=1).round(decimals=4) == 1.0)
 
         ## Add travel data columns (no values yet)
@@ -666,8 +727,8 @@ class Microsim:
         #    individuals[col] = 0.0
 
         print("... finished.")
-        # TODO return households (this is the original, WRONG, households file)
-        return tuh
+
+        return tuh, households_df
 
     @classmethod
     def read_school_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
@@ -801,9 +862,7 @@ class Microsim:
 
         # Now tell the individuals about which house they go to
 
-        # Names for the new columns
-        venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
-        flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
+
 
         # Create lists to hold the venues and flows for each individuals. Unlike other activities
         # there is only one venue (their house) and all the flows go there.
@@ -1301,12 +1360,12 @@ def run(iterations, data_dir):
     data_dir = os.path.join(base_dir, data_dir)
 
     # Temporarily only want to use Devon MSOAs
-    #devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
-    #m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
+    devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
+    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
     # Temporily use dummy data for testing
-    data_dir = os.path.join(base_dir, "dummy_data")
-    m = Microsim(data_dir=data_dir, testing=True)
+    #data_dir = os.path.join(base_dir, "dummy_data")
+    #m = Microsim(data_dir=data_dir, testing=True)
     
     # save initial m
     output_dir = os.path.join(data_dir, "output")
