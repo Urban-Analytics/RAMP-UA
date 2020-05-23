@@ -210,13 +210,16 @@ class Microsim:
 
         # Attach a load of transport attributes to each individual
         # (actually this is more like attaching the previous microsim to these new data, see the function for details)
+        # This also creates flows and venues columns for the journeys of individuals to households
         #self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, self.study_msoas)
-        home_name = "Home" # How to describe flows to people's houses
+        home_name = "Home"  # How to describe flows to people's houses
         self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, home_name, self.study_msoas)
         self.activity_locations["home_name"] = ActivityLocation(name=home_name, locations=self.households,
                                                                 flows=None, individuals=self.individuals,
                                                                 duration_col="phome")
 
+        # Generate travel time columns and assign travel modes to some kind of risky activity (not doing this yet)
+        #self.individuals = Microsim.generate_travel_time_colums(self.individuals)
 
 
         # Read the locations of schools, workplaces, etc.
@@ -264,17 +267,7 @@ class Microsim:
         self.activity_locations[secondary_name] = \
             ActivityLocation(secondary_name, schools, secondary_flows, self.individuals, "pschool")
 
-        # Assign households. This is slightly different to retail, schools, etc. because we already know the flows
-        # to the households (each individual has a 'HID' that links to their household). So
-        # we can assign them directly without having to produce a flow matrix.
-        # TODO This can now be done in the read_tuh_data function
-        home_name = "Home"
-        self.individuals, self.households = Microsim.add_home_flows(home_name, self.individuals, self.households)
-        self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households, flows=None, individuals=self.individuals, duration_col="phome")
-        
-        
-        
-        
+
         # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
         # Occupation is taken from column soc2010b in individuals df
         possible_jobs = sorted(self.individuals.soc2010b.unique())  # list of possible jobs in alphabetical order
@@ -583,32 +576,13 @@ class Microsim:
 
         tuh = Optimise.optimize(tuh)  # Now that new columns have been added
 
-        # Some sanity checks for the time use data
-        # Variables pnothome, phome add up to 100% of the day and
-        # pwork +pschool +pshop+ pleisure +pescort+ ptransport +pother = phome
 
-        # TODO go through some of these with Karyn, they don't all pass
-        # Time at home and not home should sum to 1.0
-        if False in list((tuh.phome + tuh.pnothome) == 1.0):
-            raise Exception("Time at home (phome) + time not at home (pnothome) does not always equal 1.0")
-        # These columns should equal time not at home
-        #if False in list(tuh.loc[:, ["pwork", "pschool", "pshop", "pleisure",  "ptransport", "pother"]]. \
-        #                         sum(axis=1, skipna=True) == tuh.pnothome):
-        #    raise Exception("Times doing activities don't add up correctly")
 
-        # Temporarily (?) remove NAs from activity columns (I couldn't work out how to do this in 1 line like:
-        for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
-            tuh[col].fillna(0, inplace=True)
 
-        # TODO assign activities properly. Need to map from columns in the dataframe to standard names
-        # Assign time use for Travel (just do this arbitrarily for now, the correct columns aren't in the data).
-        # travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in
-        #                 [ ColumnNames.TRAVEL_CAR, ColumnNames.TRAVEL_BUS, ColumnNames.TRAVEL_TRAIN, ColumnNames.TRAVEL_WALK ] ]
-        # for col in travel_cols:
-        #    tuh[col] = 0.0
 
-        # Create households dataframe. This replaces the original one in the msm data
-        # as we can no longer link back to that one.
+        # ********** Create households dataframe *************
+        # This replaces the original one in the msm data as we can no longer link back to that one.
+
 
         # Go through each individual. House members can be identified because they have the same [Area, HID]
         # combination.
@@ -692,11 +666,48 @@ class Microsim:
         tuh[venues_col] = tuh["House_ID"].apply(lambda x: [x])
         tuh[flows_col] = [ [1.0] for _ in range(len(tuh))]
 
+        print("... finished.")
+
+        return tuh, households_df
+
+
+    @classmethod
+    def generate_travel_time_colums(cls, individuals: pd.DataFrame) -> pd.DataFrame:
+        """
+        TODO Read the raw travel time columns and create standard ones to show how long individuals
+        spend travelling on different modes. Ultimately these will be turned into activities
+        :param individuals:
+        :return:
+        """
+
+        # Some sanity checks for the time use data
+        # Variables pnothome, phome add up to 100% of the day and
+        # pwork +pschool +pshop+ pleisure +pescort+ ptransport +pother = phome
+
+        # TODO go through some of these with Karyn, they don't all pass
+        # Time at home and not home should sum to 1.0
+        if False in list((individuals.phome + individuals.pnothome) == 1.0):
+            raise Exception("Time at home (phome) + time not at home (pnothome) does not always equal 1.0")
+        # These columns should equal time not at home
+        # if False in list(tuh.loc[:, ["pwork", "pschool", "pshop", "pleisure",  "ptransport", "pother"]]. \
+        #                         sum(axis=1, skipna=True) == tuh.pnothome):
+        #    raise Exception("Times doing activities don't add up correctly")
+
+        # Temporarily (?) remove NAs from activity columns (I couldn't work out how to do this in 1 line like:
+        for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
+            individuals[col].fillna(0, inplace=True)
+
+        # TODO assign activities properly. Need to map from columns in the dataframe to standard names
+        # Assign time use for Travel (just do this arbitrarily for now, the correct columns aren't in the data).
+        # travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in
+        #                 [ ColumnNames.TRAVEL_CAR, ColumnNames.TRAVEL_BUS, ColumnNames.TRAVEL_TRAIN, ColumnNames.TRAVEL_WALK ] ]
+        # for col in travel_cols:
+        #    tuh[col] = 0.0
         # OLD WAY OF HARD-CODING TIME USE CATEGORIES FOR EACH INDIVIDUAL
         # For now just hard code broad categories. Ultimately will have different values for different activities.
-        #activities = ["Home", "Retail", "PrimarySchool", "SecondarySchool", "Work", "Leisure"]
-        #col_names = []
-        #for act in activities:
+        # activities = ["Home", "Retail", "PrimarySchool", "SecondarySchool", "Work", "Leisure"]
+        # col_names = []
+        # for act in activities:
         #    col_name = act + ColumnNames.ACTIVITY_DURATION
         #    col_names.append(col_name)
         #    if act=="Home":
@@ -724,16 +735,14 @@ class Microsim:
 
         # Check that proportions add up to 1.0
         # For some reason this fails, but as far as I can see the proportions correctly sum to 1 !!
-        #assert False not in (individuals.loc[:, col_names].sum(axis=1).round(decimals=4) == 1.0)
+        # assert False not in (individuals.loc[:, col_names].sum(axis=1).round(decimals=4) == 1.0)
 
         ## Add travel data columns (no values yet)
-        #travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in ["Car", "Bus", "Walk", "Train"] ]
-        #for col in travel_cols:
+        # travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in ["Car", "Bus", "Walk", "Train"] ]
+        # for col in travel_cols:
         #    individuals[col] = 0.0
+        return individuals
 
-        print("... finished.")
-
-        return tuh, households_df
 
     @classmethod
     def read_school_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
