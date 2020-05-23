@@ -204,18 +204,22 @@ class Microsim:
         self.study_msoas, self.individuals, self.households = \
             Microsim.check_study_area(self.all_msoas, study_msoas, self.individuals, self.households)
 
-        # Attach a load of transport attributes to each individual
-        # (actually this is more like attaching the previous microsim to these new data, see the function for details)
-        #self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, self.study_msoas)
-        self.individuals = Microsim.attach_time_use_and_health_data(self.individuals, self.study_msoas)
-        self.households["ID"] = self.households.HID # TEMP, Just while I get attach_time_use_Data working
-
-
-        # Read the locations of schools, workplaces, etc.
         # For each type of activity (store, retail, etc), create ActivityLocation objects to keep all the
         # required information together.
         self.activity_locations: Dict[str, ActivityLocation] = {}
 
+        # Attach a load of transport attributes to each individual
+        # (actually this is more like attaching the previous microsim to these new data, see the function for details)
+        #self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, self.study_msoas)
+        home_name = "Home" # How to describe flows to people's houses
+        self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, home_name, self.study_msoas)
+        self.activity_locations["home_name"] = ActivityLocation(name=home_name, locations=self.households,
+                                                                flows=None, individuals=self.individuals,
+                                                                duration_col="phome")
+
+
+
+        # Read the locations of schools, workplaces, etc.
         # Read Retail
         retail_name = "Retail" # How to refer to this in data frame columns etc.
         stores, stores_flows = Microsim.read_retail_flows_data(self.study_msoas)  # (list of shops and a flow matrix)
@@ -264,7 +268,7 @@ class Microsim:
         # to the households (each individual has a 'HID' that links to their household). So
         # we can assign them directly without having to produce a flow matrix.
         # TODO This can now be done in the read_tuh_data function
-        home_name = "HomeH"
+        home_name = "Home"
         self.individuals, self.households = Microsim.add_home_flows(home_name, self.individuals, self.households)
         self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households, flows=None, individuals=self.individuals, duration_col="phome")
         
@@ -503,7 +507,7 @@ class Microsim:
 
 
     @classmethod
-    def attach_time_use_and_health_data(cls, individuals: pd.DataFrame, study_msoas: List[str]=None) -> pd.DataFrame:
+    def attach_time_use_and_health_data(cls, individuals: pd.DataFrame, home_name: str, study_msoas: List[str]=None) -> pd.DataFrame:
         """Attach time use data (proportions of time people spend doing the different activities) and additional
         health data.
 
@@ -515,6 +519,7 @@ class Microsim:
         dataframe.
 
         :param individuals: The dataframe of individuals that the new columns will be added to
+        :param home_name: A string to describe flows to people's homes (probably 'Home')
         :param study_msoas: Optional study area to restrict by (all individuals not in these MSOAs will be removed)
         :return A tuple with new dataframes of individuals and households
         """
@@ -681,8 +686,8 @@ class Microsim:
 
         # Add flows for each individual (this is easy, it's just converting their House_ID into a one-value list)
         # Names for the new columns
-        venues_col = f"Home{ColumnNames.ACTIVITY_VENUES}"
-        flows_col = f"Home{ColumnNames.ACTIVITY_FLOWS}"
+        venues_col = f"{home_name}{ColumnNames.ACTIVITY_VENUES}"
+        flows_col = f"{home_name}{ColumnNames.ACTIVITY_FLOWS}"
 
         tuh[venues_col] = tuh["House_ID"].apply(lambda x: [x])
         tuh[flows_col] = [ [1.0] for _ in range(len(tuh))]
