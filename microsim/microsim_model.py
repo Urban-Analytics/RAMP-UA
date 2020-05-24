@@ -9,136 +9,28 @@ Created on Wed Apr 29 19:59:25 2020
 """
 
 import pandas as pd
+
+from activity_location import ActivityLocation
+#from microsim.microsim_analysis import MicrosimAnalysis
+from microsim_analysis import MicrosimAnalysis
+from column_names import ColumnNames
+from utilities import Optimise
+
+
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
 #pd.set_option('display.width', 0)  # Automatically find the best width
 import numpy as np
 import glob
 import os
-import sys
 import random
 import time
 import re  # For analysing file names
-import typing
 import warnings
-from enum import Enum  # For disease status
 from collections.abc import Iterable   # drop `.abc` with Python 2.7 or lower
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
-import pyarrow.feather as feather # For reading and writing DataFrames to disk
-import swifter # For quick (multicore?) pd.apply operations
 import pickle # to save data
-
-#from microsim.microsim_analysis import MicrosimAnalysis
-from microsim_analysis import MicrosimAnalysis
-from utilities import Optimise
-
-class ColumnNames:
-    """Used to record standard dataframe column names used throughout"""
-
-    LOCATION_DANGER = "Danger"  # Danger associated with a location
-    LOCATION_NAME = "Location_Name"  # Name of a location
-    LOCATION_ID = "ID"  # Unique ID for each location
-
-    ACTIVITY_VENUES = "_Venues"  # Venues an individual may visit. Appended to activity type, e.g. 'Retail_Venues'
-    ACTIVITY_FLOWS = "_Flows"  # Flows to a venue for an individual. Appended to activity type, e.g. 'Retail_Flows'
-    ACTIVITY_TIME = "_Time"  # Amount of time an individual spends doing an activity. E.g. 'Retail_Time'
-
-    ACTIVITY_DURATION = "_Duration" # Column to record proportion of the day that invividuals do the activity
-
-    # Standard columns for time spent travelling in different modes
-    TRAVEL_CAR = "Car"
-    TRAVEL_BUS = "Bus"
-    TRAVEL_TRAIN = "Train"
-    TRAVEL_WALK = "Walk"
-
-    INDIVIDUAL_AGE = "DC1117EW_C_AGE" # Age column in the table of individuals
-    INDIVIDUAL_SEX = "DC1117EW_C_SEX"  # Sex column in the table of individuals
-    INDIVIDUAL_ETH = "DC2101EW_C_ETHPUK11"  # Ethnicity column in the table of individuals
-
-    # Columns for information about the disease. These are needed for estimating the disease status
-    DISEASE_STATUS = "Disease_Status"
-    DAYS_WITH_STATUS = "Days_With_Status"  # The number of days that have elapsed with this status
-    CURRENT_RISK = "Current_Risk"  # This is the risk that people get when visiting locations.
-    MSOA_CASES = "MSOA_Cases"  # The number of cases per MSOA
-    HID_CASES = "HID_Cases"  # The number of cases in the individual's house
-
-class ActivityLocation():
-    """Class to represent information about activity locations, e.g. retail destinations, workpaces, etc."""
-    def __init__(self, name: str, locations: pd.DataFrame, flows: pd.DataFrame,
-                 individuals: pd.DataFrame, duration_col: str):
-        """
-        Initialise an ActivityLocation
-        :param name: A name to use to refer to this activity. Column names in the big DataFrame of individuals
-        will be named according to this
-        :param locations: A dataframe containing information about each loction
-        :param flows: A dataframe containing the flows.
-        :param individuals: The dataframe containing the individual population. This is needed because a new
-        '*_DURATION' column will be added to that table to show how much time each individual spends doing
-        this activity. The new column is added inplace
-        :param duration_col: The column in the 'individuals' dataframe that gives the proportion of time
-        spend doing this activity. This needs to be renamed according to a standard format, e.g. for retail
-        the column needs to be called 'RETAIL_DURATION'.
-        """
-        self._name = name
-        # Check that the dataframe has all the standard columns needed
-        if ColumnNames.LOCATION_ID not in locations.columns or \
-            ColumnNames.LOCATION_DANGER not in locations.columns or \
-            ColumnNames.LOCATION_NAME not in locations.columns:
-            raise Exception(f"Activity '{name}' dataframe needs columns called 'ID' and 'Danger' and 'Location_Name'."
-                            f"It only has: {locations.columns}")
-        # Check that the DataFrame's ID column is also an index, this is to ensure that the IDs always
-        # refer to the same thing. NO LONGER DOING THIS, INDEX AND ID CAN BE DIFFERENT        #
-        #if locations.index.name != ColumnNames.LOCATION_ID or False in (locations.index == locations[ColumnNames.LOCATION_ID]):
-        #                    f"that is equal to the 'ID' columns.")
-        self._locations = locations
-        self._flows = flows
-
-        # Check that the duration column exists and create a new column showing the duration of this activity
-        if duration_col not in individuals.columns:
-            raise Exception(f"The duration column '{duration_col}' is not one of the columns in the individuals"
-                            f"data frame: {individuals.columns}")
-        self.duration_column = self._name + ColumnNames.ACTIVITY_DURATION
-        individuals[self.duration_column] = individuals[duration_col]
-
-    def __repr__(self):
-        return f"<{self._name} ActivityLocation>"
-
-    def get_dangers(self) -> List[float]:
-        """Get the danger associated with each location as a list. These will be in the same order as the
-        location IDs returned by `get_ids()`"""
-        return list(self._locations[ColumnNames.LOCATION_DANGER])
-
-    def get_name(self) -> str:
-        """Get the name of this activity. This is used to label columns in the file of individuals"""
-        return self._name
-
-    def get_indices(self) -> List[int]:
-        """Retrn the index (row number) of each destination"""
-        return list(self._locations.index)
-
-    def get_ids(self) -> List[int]:
-        """Retrn the IDs of each destination"""
-        return list(self._locations[ColumnNames.LOCATION_ID])
-
-    #def get_location(self, id: int) -> pd.DataFrame:
-    #    """Get the location with the given id"""
-    #    loc = self._locations.loc[self._locations[ColumnNames.LOCATION_ID] == id, :]
-    #    if len(loc) != 1:
-    #        raise Exception(f"Location with ID {id} does not return exactly one row: {loc}")
-    #    return loc
-
-
-    def update_dangers(self, dangers: List[float]):
-        """
-        Update the danger associated with each location
-        :param dangers: A list of dangers for each location. Must be in the same order as the locations as
-        returned by `get_ids`.
-        """
-        if len(dangers) != len(self._locations):
-            raise Exception(f"The number of danger scores ({len(dangers)}) is not the same as the number of"
-                            f"activity locations ({len(self._locations)}).")
-        self._locations[ColumnNames.LOCATION_DANGER] = dangers
 
 
 class Microsim:
@@ -217,8 +109,8 @@ class Microsim:
         # Create 'activity locations' for the activity of being at home. (This is done for other activities,
         # like retail etc, when those data are read in later.
         self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households,
-                                                                flows=None, individuals=self.individuals,
-                                                                duration_col="phome")
+                                                              flows=None, individuals=self.individuals,
+                                                              duration_col="phome")
 
         # Generate travel time columns and assign travel modes to some kind of risky activity (not doing this yet)
         #self.individuals = Microsim.generate_travel_time_colums(self.individuals)
@@ -890,13 +782,6 @@ class Microsim:
         # Only one flow to the individual's household
         individuals[flows_col] = [[1.0] for _ in range(len(individuals))]
         return individuals
-
-
-
-
-
-
-
 
     @classmethod
     def read_retail_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):

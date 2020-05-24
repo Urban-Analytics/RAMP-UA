@@ -2,7 +2,9 @@ import pytest
 import multiprocessing
 import pandas as pd
 import numpy as np
-from microsim.microsim_model import Microsim, ActivityLocation, ColumnNames
+from microsim.microsim_model import Microsim
+from microsim.column_names import ColumnNames
+from microsim.activity_location import ActivityLocation
 
 
 # ********************************************************
