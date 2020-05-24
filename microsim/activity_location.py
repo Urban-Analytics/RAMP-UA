@@ -1,6 +1,7 @@
 from typing import List
 
 import pandas as pd
+from deprecated import deprecated
 
 from column_names import ColumnNames
 
@@ -10,10 +11,15 @@ class ActivityLocation():
     def __init__(self, name: str, locations: pd.DataFrame, flows: pd.DataFrame,
                  individuals: pd.DataFrame, duration_col: str):
         """
-        Initialise an ActivityLocation
+        Initialise an ActivityLocation.
+
+        IMPORTANT: the locations dataframe must be in the same order as columns in the flow matrix. For example,
+        the first (e.g.) shop in the locations dataframe must have its flows stored in the first column in the
+        matrix.
+
         :param name: A name to use to refer to this activity. Column names in the big DataFrame of individuals
         will be named according to this
-        :param locations: A dataframe containing information about each loction
+        :param locations: A dataframe containing information about each loction.
         :param flows: A dataframe containing the flows.
         :param individuals: The dataframe containing the individual population. This is needed because a new
         '*_DURATION' column will be added to that table to show how much time each individual spends doing
@@ -55,12 +61,18 @@ class ActivityLocation():
         """Get the name of this activity. This is used to label columns in the file of individuals"""
         return self._name
 
+    @deprecated()
     def get_indices(self) -> List[int]:
-        """Retrn the index (row number) of each destination"""
+        """Return the index (row number) of each destination
+        Shouldn't need to know these. Use get_dangers or update_dangers instead
+        """
+
         return list(self._locations.index)
 
+    @deprecated()
     def get_ids(self) -> List[int]:
-        """Retrn the IDs of each destination"""
+        """Retrn the IDs of each destination.
+        Shouldn't need to know these. Use get_dangers or update_dangers instead"""
         return list(self._locations[ColumnNames.LOCATION_ID])
 
     #def get_location(self, id: int) -> pd.DataFrame:

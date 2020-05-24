@@ -479,9 +479,12 @@ class Microsim:
 
         tuh = Optimise.optimize(tuh)  # Now that new columns have been added
 
+        #
         # ********** Create households dataframe *************
-        # This replaces the original one in the msm data as we can no longer link back to that one.
+        #
 
+        # This replaces the original households dataframe that we read from the msm data as we can no longer link back
+        # to that one.
 
         # Go through each individual. House members can be identified because they have the same [Area, HID]
         # combination.
@@ -932,6 +935,13 @@ class Microsim:
     def add_individual_flows(cls, flow_type: str, individuals: pd.DataFrame, flow_matrix: pd.DataFrame) -> pd.DataFrame:
         """
         Take a flow matrix from MSOAs to (e.g. retail) locations and assign flows to individuals.
+
+        It a assigns the id of the destination of the flow according to its column in the matrix. So the first column
+        that has flows for a destination is given index 0, the second is index 1, etc. This is probably not the same as
+        the ID of the venue that they point to (e.g. the first store probably has ID 1, but will be given the index 0)
+        so it is important that when the activity_locations are created, they are created in the same order as the
+        columns that appear in the matix. The first column in the matrix must also be the first row in the locations
+        data.
         :param flow_type: What type of flows are these. This will be appended to the column names. E.g. "Retail".
         :param individuals: The DataFrame contining information about all individuals
         :param flow_matrix: The flow matrix, created by (e.g.) read_retail_flows_data()
@@ -1072,9 +1082,20 @@ class Microsim:
     def update_venue_danger_and_risks(self):
         """
         Update the danger score for each location, based on where the individuals who have the infection visit.
-        Then look through the individuals again, assigning some of that danger back to them as 'current risk'."""
+        Then look through the individuals again, assigning some of that danger back to them as 'current risk'.
+        """
         print("\tUpdating danger associated with visiting each venue")
-        for name in tqdm(self.activity_locations, desc=f"Updating dangers for activity locations"):
+
+        # Make a new list to keep the new risk for each individual (better than repeatedly accessing the dataframe)
+        # Make this 0 initiall as the risk is not cumulative; it gets reset each day
+        current_risk = [0] * len(self.individuals)
+
+        for name in tqdm(self.activity_locations, desc=f"Updating dangers and risks for activity locations"):
+
+            #
+            # ***** 1 - update dangers of each venue (infected people visitting places)
+            #
+
             print(f"\tAnalysing {name} activity")
             # Get the details of the location activity
             activity_location = self.activity_locations[name]  # Pointer to the ActivityLocation object
@@ -1105,6 +1126,25 @@ class Microsim:
 
             # Now we have the dangers associated with each location, apply these back to the main dataframe
             activity_location.update_dangers(loc_dangers)
+
+            #
+            # ***** 2 - risks for individuals who visit dangerous venues
+            #
+
+            for i, (v, f, s) in enumerate(zip(venues, flows, statuses)):  # For each individual
+                # v and f are lists of flows and venues for the individual. Go through each one
+                for venue_idx, flow in zip(v, f):
+                    #  Danger associated with the location (we just created these updated dangers in the previous loop)
+                    danger = loc_dangers[venue_idx]
+                    current_risk[i] += danger * flow
+
+        # Sanity check
+        assert len(current_risk) == len(individuals)
+        assert min(current_risk) >= 0  # Should not be risk less than 0
+        # Risks should not have gone down
+        assert False not in [ a >= b for a, b in zip(current_risk, list(self.individuals[ColumnNames.CURRENT_RISK]) ) ]
+
+        self.individuals[ColumnNames.CURRENT_RISK] = current_risk
 
         return
 
