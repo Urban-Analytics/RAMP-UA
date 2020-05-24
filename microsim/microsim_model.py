@@ -214,7 +214,7 @@ class Microsim:
         #self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, self.study_msoas)
         home_name = "Home"  # How to describe flows to people's houses
         self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, home_name, self.study_msoas)
-        # Create 'activity locations' for the activity ofbeing at home. (This is done for other activities,
+        # Create 'activity locations' for the activity of being at home. (This is done for other activities,
         # like retail etc, when those data are read in later.
         self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households,
                                                                 flows=None, individuals=self.individuals,
@@ -856,52 +856,6 @@ class Microsim:
         print(f"... finished reading school flows.")
 
         return schools, primary_flow_matrix, secondary_flow_matrix
-
-    @classmethod
-    def add_home_flows(cls, flow_type: str, individuals: pd.DataFrame, households: pd.DataFrame) \
-            -> (pd.DataFrame, pd.DataFrame):
-        """
-        Analyse the individual and household data read earlier and create a dataframe of home locations that individuals
-        travel to. Unlike retail etc, each individual will have only one home location with 100% of flows there.
-        :param flow_type: The name for these flows (probably something like 'Home')
-        :param individuals: The dataframe of synthetic individuals
-        :param households:  The original dataframe of households
-        :return: A tuple of two dataframes. One conaining the new 'individuals' dataframe and another containing
-        a new dataframe for the households. Both will have some new columns
-        """
-        #print("Assigning individual flows for homes ... ")
-        # Start by adding some required columns to the households data. Things like Danger, a standard ID column, etc
-        Microsim._add_location_columns(households, location_names=list(households.HID), location_ids=list(households.HID))
-        # Check the various ID columns are the same (Location name, HID, and ID)
-        assert False not in list(households.ID == households.HID)
-        assert False not in list(households.Location_Name == households.HID)
-
-        # Now tell the individuals about which house they go to
-
-
-
-        # Create lists to hold the venues and flows for each individuals. Unlike other activities
-        # there is only one venue (their house) and all the flows go there.
-        # Find the row number (index) for the household with HID. It's annoyingly verbose. This gives the index
-        # of a house with HID=x: households.index[households["HID"]==x].values[0]. So that needs to be used
-        # in the apply() and also made into a 1-item list with outer square brackets
-        # (Also, 'swifter' makes the apply quicker. Maybe worth using this throughout).
-        individuals[venues_col] = individuals["House_ID"].swifter.progress_bar(enable=True, desc="Assigning individual flows for Homes ... ").\
-            apply( lambda hid: [ households.index[households["ID"] == hid].values[0] ] )
-        # (Old slow way)
-        #individuals[venues_col] = individuals["HID"].apply(
-        #    lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
-        # Only one flow to the individual's household
-        individuals[flows_col] = [[1.0] for _ in range(len(individuals))]
-
-        return individuals, households
-
-
-
-
-
-
-
 
     @classmethod
     def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame) \
