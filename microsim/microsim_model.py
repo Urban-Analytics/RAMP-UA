@@ -290,7 +290,10 @@ class Microsim:
                           f"data. They will be removed.")
         individuals = individuals.loc[individuals.HID != -1]
         # Now everyone should have a household. This will raise an exception if not. (unless testing)
-        Microsim._check_no_homeless(individuals, households, warn=True if Microsim.testing else False )
+        # TODO uncomment below to check that no people without households have been introduced
+        # (commented while developing beause it is very slow
+        warnings.warn("Not checking that no homeless were introduced, uncomment when running properly")
+        #Microsim._check_no_homeless(individuals, households, warn=True if Microsim.testing else False )
 
         print("Have read files:",
               f"\n\tHouseholds:  {len(house_dfs)} files with {len(households)}",
@@ -387,7 +390,10 @@ class Microsim:
               f"\tAfter subsetting: {len(individuals_to_keep)} individuals, {len(households_to_keep)} househods.")
 
         # Check no individuals without households have been introduced (raise an exception if so)
-        Microsim._check_no_homeless(individuals, households, warn=False)
+        # TODO uncomment below to check that no people without households have been introduced
+        # (commented while developing beause it is very slow
+        warnings.warn("Not checking that no homeless were introduced, uncomment when running properly")
+        #Microsim._check_no_homeless(individuals, households, warn=False)
 
         return (study_msoas, individuals_to_keep, households_to_keep)
 
@@ -436,7 +442,7 @@ class Microsim:
         # Remove any individuals not in the study area
         original_count = len(tuh)
         tuh = tuh.loc[tuh.area.isin(study_msoas), :]
-        print(f"{original_count-len(tuh)} individuals removed from the time use & health data")
+        print(f"\tWhen setting the study area, {original_count-len(tuh)} individuals removed from the time use & health data")
         # Now should have nearly the same number of people (maybe not exactly due to how individuals are
         # allocated to areas in the component set matching
         diff = (len(tuh) - len(individuals)) / len(tuh)
@@ -560,7 +566,7 @@ class Microsim:
         tuh[venues_col] = tuh["House_ID"].apply(lambda x: [x])
         tuh[flows_col] = [ [1.0] for _ in range(len(tuh))]
 
-        print("... finished.")
+        print("... finished reading TU&H data.")
 
         return tuh, households_df
 
@@ -795,7 +801,6 @@ class Microsim:
         # TODO Need to read full retail flows, not just those of Devon (temporarily created by Mark).
         # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
         # working with Devon subset of flows
-        print("WARNING: not currently subsetting retail flows")
         print("Reading retail flow data for Devon...", )
         dir = os.path.join(cls.DATA_DIR, "devon-retail")
 
@@ -1246,6 +1251,7 @@ def run(iterations, data_dir):
 
     # Step the model
     for i in range(num_iter):
+        x=1
         m.step()
         
         # add to items to pickle
