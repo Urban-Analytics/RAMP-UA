@@ -1069,8 +1069,10 @@ class Microsim:
         return individuals
 
 
-    def update_venue_danger(self):
-        """Update the danger score for each location, based on where the individuals who have the infection visit"""
+    def update_venue_danger_and_risks(self):
+        """
+        Update the danger score for each location, based on where the individuals who have the infection visit.
+        Then look through the individuals again, assigning some of that danger back to them as 'current risk'."""
         print("\tUpdating danger associated with visiting each venue")
         for name in tqdm(self.activity_locations, desc=f"Updating dangers for activity locations"):
             print(f"\tAnalysing {name} activity")
@@ -1165,11 +1167,8 @@ class Microsim:
         print(f"\nIteration: {self.iteration}\n")
 
         # Update the danger associated with each venue (i.e. the as people with the disease visit them they
-        # become more dangerous
-        self.update_venue_danger()
-
-        # Update the current risk for individuals who may be visitting those venues
-        self.update_current_risk()
+        # become more dangerous) then update the risk to each individual of going to those venues.
+        self.update_venue_danger_and_risks()
 
         # Update disease counters. E.g. count diseases in MSOAs & households
         self.update_disease_counts()
