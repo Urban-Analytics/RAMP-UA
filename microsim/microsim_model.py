@@ -114,6 +114,9 @@ class Microsim:
 
         # Generate travel time columns and assign travel modes to some kind of risky activity (not doing this yet)
         #self.individuals = Microsim.generate_travel_time_colums(self.individuals)
+        # One thing we do need to do (this would be done in the function) is replace NaNs in the time use data with 0
+        for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
+            self.individuals[col].fillna(0, inplace=True)
 
 
         # Read the locations of schools, workplaces, etc.
@@ -154,6 +157,11 @@ class Microsim:
             ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
 
         # Assign Schools
+        # TODO: need to separate primary and secondary school duration. At the moment everyone is given the same
+        # duration, 'pschool', which means that children will be assigned a PrimarySchool duration *and* a
+        # seconary school duration, regardless of their age. I think the only way round this is to
+        # make two new columns - 'pschool_primary' and 'pschool_seconary', and set these to either 'pschool'
+        # or 0 depending on the age of the child.
         self.individuals = Microsim.add_individual_flows(primary_name, self.individuals, primary_flows)
         self.activity_locations[primary_name] = \
             ActivityLocation(primary_name, schools, primary_flows, self.individuals, "pschool")
@@ -161,21 +169,16 @@ class Microsim:
         self.activity_locations[secondary_name] = \
             ActivityLocation(secondary_name, schools, secondary_flows, self.individuals, "pschool")
 
-
-        # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
+        # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go
+        # to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
         # Occupation is taken from column soc2010b in individuals df
         possible_jobs = sorted(self.individuals.soc2010b.unique())  # list of possible jobs in alphabetical order
-        data = {'ID': range(0, 0+len(possible_jobs)), 'Location_Name':possible_jobs, 'Danger':[0] * len(possible_jobs)} 
-        workplaces = pd.DataFrame(data) # df with all possible 'virtual offices'
-        
+        workplaces = pd.DataFrame({'ID': range(0, 0+len(possible_jobs))}) # df with all possible 'virtual offices'
+        Microsim._add_location_columns(workplaces, location_names=possible_jobs)
         work_name = "Work"
         self.individuals = Microsim.add_work_flows(work_name, self.individuals,workplaces)
         self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None, individuals=self.individuals, duration_col="pwork")
         
-        
-        
-        
-
         # Add some necessary columns for the disease and assign initial SEIR status
         self.individuals = Microsim.add_disease_columns(self.individuals)
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
@@ -476,10 +479,6 @@ class Microsim:
 
         tuh = Optimise.optimize(tuh)  # Now that new columns have been added
 
-
-
-
-
         # ********** Create households dataframe *************
         # This replaces the original one in the msm data as we can no longer link back to that one.
 
@@ -771,22 +770,15 @@ class Microsim:
         venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
         flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
 
-        individuals[venues_col] = individuals["soc2010b"].apply(lambda job: [ workplaces.index[workplaces["Location_Name"] == job].values[0] ] )
-
-
-        # Create lists to hold the venues and flows for each individuals. Unlike other activities
-        # there is only one venue (their house) and all the flows go there.
-        # Find the row number (index) for the household with HID. It's annoyingly verbose. This gives the index
-        # of a house with HID=x: households.index[households["HID"]==x].values[0]. So that needs to be used
-        # in the apply() and also made into a 1-item list with outer square brackets
-        # (Also, 'swifter' makes the apply quicker. Maybe worth using this throughout).
-        # individuals[venues_col] = individuals["HID"].swifter.progress_bar(enable=True, desc="Assigning individual flows for Homes ... ").\
-        #     apply( lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
-        # (Old slow way)
-        #individuals[venues_col] = individuals["HID"].apply(
-        #    lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
-        # Only one flow to the individual's household
-        individuals[flows_col] = [[1.0] for _ in range(len(individuals))]
+        # Lists showing where individuals go, and what proption (here only 1 flow as only 1 workplace)
+        # (Commented version assumes index is same as ID, which is probably fine, but second version does not)
+        #individuals[venues_col] = individuals["soc2010b"].apply(lambda job: [ workplaces.index[workplaces["Location_Name"] == job].values[0] ] )
+        # Need to do the flows in venues in 2 stages: first just add the venue, then turn that venu into a single-element
+        # list (pandas complains if you try to make the single-item lists directly in the apply
+        individuals[venues_col] = list(individuals["soc2010b"].apply(
+            lambda job: workplaces[workplaces["Location_Name"] == job]["ID"].values[0] ) )
+        individuals[venues_col] = individuals[venues_col].apply(lambda x: [x])
+        individuals[flows_col] = [[1.0] for _ in range(len(individuals))] # Flows are easy, [1.0] to the single work venue
         return individuals
 
     @classmethod
@@ -1083,10 +1075,10 @@ class Microsim:
         for name in tqdm(self.activity_locations, desc=f"Updating dangers for activity locations"):
             print(f"\tAnalysing {name} activity")
             # Get the details of the location activity
-            activity = self.activity_locations[name]  # Pointer to the ActivityLocation object
-            loc_ids = activity.get_ids()  # List of the IDs of the locations where the activity can take place
-            loc_idx = activity.get_indices() # List of the index (row  number) of the locations
-            loc_dangers = activity.get_dangers()  # List of the current dangers associated with each place
+            activity_location = self.activity_locations[name]  # Pointer to the ActivityLocation object
+            #loc_ids = activity_location.get_ids()  # List of the IDs of the locations where the activity can take place
+            #loc_idx = activity_location.get_indices()  # List of the index (row  number) of the locations
+            loc_dangers = activity_location.get_dangers()  # List of the current dangers associated with each place
 
             # Now look up those venues in the table of individuals
             venues_col = f"{name}{ColumnNames.ACTIVITY_VENUES}" # The names of the venues and
@@ -1098,7 +1090,7 @@ class Microsim:
             flows = self.individuals.loc[:, flows_col]
             assert len(venues) == len(flows) and len(venues) == len(statuses)
             for i, (v, f, s) in enumerate(zip(venues, flows, statuses)): # For each individual
-                if s == 1: # infected?
+                if s == 1 or s == 2 or s == 3: # Exposed (1), pre-symptomatic (2), symptomatic (3)
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue_idx, flow in zip(v, f):
                         # Individual i goes to the venue with index (row number) "venue" and flow "flow"
@@ -1110,13 +1102,18 @@ class Microsim:
                         loc_dangers[venue_idx] += (flow * 0.1)
 
             # Now we have the dangers associated with each location, apply these back to the main dataframe
-            activity.update_dangers(loc_dangers)
+            activity_location.update_dangers(loc_dangers)
 
         return
 
     def update_current_risk(self):
         """Individuals will be visitting locations which may have some danger if they were previously
         visitted by infected) which is now assigned to others."""
+
+
+
+
+
         pass
 
     def update_disease_counts(self):
@@ -1126,7 +1123,9 @@ class Microsim:
         # TODO replace Nan's with 0 (not a problem with MSOAs because they're a cateogry so the value_counts()
         # returns all, including those with 0 counts, but with HID those with 0 count don't get returned
         # Get rows with cases
-        cases = self.individuals.loc[(self.individuals.Disease_Status == 1) | (self.individuals.Disease_Status == 2), :]
+        cases = self.individuals.loc[(self.individuals.Disease_Status == 1) |
+                                     (self.individuals.Disease_Status == 2) |
+                                     (self.individuals.Disease_Status == 3), :]
         # Count cases per area (convert to a dataframe)
         case_counts = cases["Area"].value_counts()
         case_counts = pd.DataFrame(data={"Area": case_counts.index, "Count": case_counts}).reset_index(drop=True)
@@ -1251,7 +1250,6 @@ def run(iterations, data_dir):
 
     # Step the model
     for i in range(num_iter):
-        x=1
         m.step()
         
         # add to items to pickle

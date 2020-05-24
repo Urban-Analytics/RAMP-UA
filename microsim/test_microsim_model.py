@@ -25,7 +25,8 @@ def test_microsim():
     m = Microsim(data_dir="./dummy_data", testing=True)
 
     # TODO check that the dummy data have been read in correctly. E.g. check the number of individuals is
-    # accurate, that they link to households correctly, that they have the right flows, etc.
+    # accurate, that they link to households correctly, that they have the right *flows* to the right
+    # *destinations* and the right *durations* etc.
 
     # Finished initialising the model. Pass it to other tests who need it.
     yield m  # (this could be 'return' but 'yield' means that any cleaning can be done here
@@ -274,7 +275,7 @@ def test_add_individual_flows():
 
 
 def test_read_retail_flows_data():
-    # TODO write test to Microsim.read_retail_flows_data()
+    # TODO write test to Microsim.read_retail_flows_data(). Can be similar to the schools one
     assert False
 
 
