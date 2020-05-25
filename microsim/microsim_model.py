@@ -1091,7 +1091,9 @@ class Microsim:
         # Make this 0 initiall as the risk is not cumulative; it gets reset each day
         current_risk = [0] * len(self.individuals)
 
-        for name in tqdm(self.activity_locations, desc=f"Updating dangers and risks for activity locations"):
+        #for name in tqdm(self.activity_locations, desc=f"Updating dangers and risks for activity locations"):
+        print("Updating dangers and risks for activity locations")
+        for name in self.activity_locations:
 
             #
             # ***** 1 - update dangers of each venue (infected people visitting places)
@@ -1140,7 +1142,7 @@ class Microsim:
                     current_risk[i] += danger * flow
 
         # Sanity check
-        assert len(current_risk) == len(individuals)
+        assert len(current_risk) == len(self.individuals)
         assert min(current_risk) >= 0  # Should not be risk less than 0
         # Risks should not have gone down
         assert False not in [ a >= b for a, b in zip(current_risk, list(self.individuals[ColumnNames.CURRENT_RISK]) ) ]
@@ -1278,14 +1280,14 @@ def run(iterations, data_dir):
     
     # collect location dangers at time 0 in new df(for analysis/visualisation)
     # TODO make a function for this so that it doesn't need to be repeated in the for loop below
-    for name in tqdm(m.activity_locations):
+    for name in m.activity_locations:
         # Get the details of the location activity
         activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
         loc_name = activity.get_name()  # retail, school etc
         loc_ids = activity.get_ids()  # List of the IDs of the locations 
         loc_dangers = activity.get_dangers()  # List of the current dangers
 
-        locals()[loc_name+'_to_pickle'] = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns =['ID', 'Danger0']) 
+        locals()[loc_name+'_to_pickle'] = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
 
 
     # Step the model
@@ -1294,7 +1296,7 @@ def run(iterations, data_dir):
         
         # add to items to pickle
         individuals_to_pickle["DiseaseStatus"+str(i+1)] = m.individuals.Disease_Status
-        for name in tqdm(m.activity_locations):
+        for name in m.activity_locations:
             # Get the details of the location activity
             activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
             loc_name = activity.get_name()  # retail, school etc
@@ -1308,7 +1310,7 @@ def run(iterations, data_dir):
     pickle_out = open(os.path.join(output_dir, "Individuals.pickle"),"wb")
     pickle.dump(individuals_to_pickle, pickle_out)
     pickle_out.close()  
-    for name in tqdm(m.activity_locations):
+    for name in m.activity_locations:
         # Get the details of the location activity
         activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
         loc_name = activity.get_name()  # retail, school etc
