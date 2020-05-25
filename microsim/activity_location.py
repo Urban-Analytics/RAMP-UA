@@ -1,7 +1,6 @@
 from typing import List
 
 import pandas as pd
-from deprecated import deprecated
 
 from column_names import ColumnNames
 
@@ -61,19 +60,16 @@ class ActivityLocation():
         """Get the name of this activity. This is used to label columns in the file of individuals"""
         return self._name
 
-    @deprecated()
-    def get_indices(self) -> List[int]:
-        """Return the index (row number) of each destination
-        Shouldn't need to know these. Use get_dangers or update_dangers instead
-        """
+    #def get_indices(self) -> List[int]:
+    #    """Return the index (row number) of each destination
+    #    Shouldn't need to know these. Use get_dangers or update_dangers instead
+    #    """
+    #    return list(self._locations.index)
 
-        return list(self._locations.index)
-
-    @deprecated()
-    def get_ids(self) -> List[int]:
-        """Retrn the IDs of each destination.
-        Shouldn't need to know these. Use get_dangers or update_dangers instead"""
-        return list(self._locations[ColumnNames.LOCATION_ID])
+    #def get_ids(self) -> List[int]:
+    #    """Retrn the IDs of each destination.
+    #    Shouldn't need to know these. Use get_dangers or update_dangers instead"""
+    #    return list(self._locations[ColumnNames.LOCATION_ID])
 
     #def get_location(self, id: int) -> pd.DataFrame:
     #    """Get the location with the given id"""

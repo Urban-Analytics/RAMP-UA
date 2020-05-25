@@ -173,11 +173,12 @@ class Microsim:
         # to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
         # Occupation is taken from column soc2010b in individuals df
         possible_jobs = sorted(self.individuals.soc2010b.unique())  # list of possible jobs in alphabetical order
-        workplaces = pd.DataFrame({'ID': range(0, 0+len(possible_jobs))}) # df with all possible 'virtual offices'
+        workplaces = pd.DataFrame({'ID': range(0, 0+len(possible_jobs))})  # df with all possible 'virtual offices'
         Microsim._add_location_columns(workplaces, location_names=possible_jobs)
         work_name = "Work"
-        self.individuals = Microsim.add_work_flows(work_name, self.individuals,workplaces)
-        self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None, individuals=self.individuals, duration_col="pwork")
+        self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces)
+        self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
+                                                              individuals=self.individuals, duration_col="pwork")
         
         # Add some necessary columns for the disease and assign initial SEIR status
         self.individuals = Microsim.add_disease_columns(self.individuals)
@@ -774,13 +775,13 @@ class Microsim:
         flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
 
         # Lists showing where individuals go, and what proption (here only 1 flow as only 1 workplace)
-        # (Commented version assumes index is same as ID, which is probably fine, but second version does not)
-        #individuals[venues_col] = individuals["soc2010b"].apply(lambda job: [ workplaces.index[workplaces["Location_Name"] == job].values[0] ] )
         # Need to do the flows in venues in 2 stages: first just add the venue, then turn that venu into a single-element
-        # list (pandas complains if you try to make the single-item lists directly in the apply
-        individuals[venues_col] = list(individuals["soc2010b"].apply(
-            lambda job: workplaces[workplaces["Location_Name"] == job]["ID"].values[0] ) )
-        individuals[venues_col] = individuals[venues_col].apply(lambda x: [x])
+        # list (pandas complains about 'TypeError: unhashable type: 'list'' if you try to make the single-item lists
+        # directly in the apply
+        venues = list(individuals["soc2010b"].apply(
+            lambda job: workplaces.index[workplaces["Location_Name"] == job].values[0] ) )
+        venues = [ [x] for x in venues]
+        individuals[venues_col] = venues
         individuals[flows_col] = [[1.0] for _ in range(len(individuals))] # Flows are easy, [1.0] to the single work venue
         return individuals
 
