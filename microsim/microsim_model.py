@@ -57,7 +57,7 @@ class Microsim:
                  data_dir = "data", testing=False
                  ):
         """
-        Microsim constructor.
+        Microsim constructor. This reads all of the necessary data to run the microsimulation.
         ----------
         :param study_msoas: An optional list of MSOA codes to restrict the model to
         :param random_seed: A optional random seed to use when creating the class instance. If None then
@@ -76,9 +76,10 @@ class Microsim:
         if self.testing:
             warnings.warn("Running in testing mode. Some exceptions will be disabled.")
 
-        # Now the main chunk of initialisation is to read the input data.
         if not read_data:  # Optionally can not do this, usually for debugging
             return
+
+        # Now the main chunk of initialisation is to read the input data.
 
         # This is the main population of individuals and their households
         self.individuals, self.households = Microsim.read_msm_data()
@@ -100,10 +101,48 @@ class Microsim:
         # required information together.
         self.activity_locations: Dict[str, ActivityLocation] = {}
 
-        # Attach a load of transport attributes to each individual
+        #
+        # ********** How to assign activities for the population **********
+        #
+        # For each 'activity' (e.g shopping), we need to store the following things:
+        #
+        # 1. A data frame of the places where the activities take place (e.g. a list of shops). Refered to as
+        # the 'locations' dataframe. Importantly this will have a 'Danger' column which records whether infected
+        # people have visited the location.
+        #
+        # 2. Columns in the individuals data frame that says which locations each individual is likely to do that
+        # activity (a list of 'venues'), how likely they are to do to the activity (a list of 'flows'), and the
+        # duration spent doing the activity.
+        #
+        # For most activities, there are a number of different possible locations that the individual
+        # could visit. The 'venues' column stores a list of indexes to the locations dataframe. E.g. one individual
+        # might have venues=[2,54,19]. Those numbers refer to the *row numbers* of locations in the locations
+        # dataframe. So venue '2' is the third venue in the list of all the locaitons associated with that activity.
+        # Flows are also a list, e.g. for that individual the flows might be flows=[0.8,0.1,0.1] which means they
+        # are most likely to go to venue with index 2, and less likely to go to the other two.
+        #
+        # For some activities, e.g. 'being at home', each individual has only a single location and one flow, so their
+        # venues and flows columns will only be single-element lists.
+        #
+        # For multi-venue activities, the process is as follows (easiest to see the retail or shopping example):
+        # 1. Create a dataframe of individual locations and use a spatial interation model to estimate flows to those
+        # locations, creating a flow matrix. E.g. the `read_retail_flows_data()` function
+        # 2. Run through the flow matrix, assigning all individuals in each MSOA the appropriate flows. E.g. the
+        # `add_individual_flows()` function.
+        # 3. Create an `ActivityLocation` object to store information about these locations in a standard way.
+        # When they are created, these `ActivityLocation` objects will also add another column
+        # to the individuals dataframe that records the amount of time they spend doing the activity
+        # (e.g. 'RETAIL_DURATION'). These raw numbers were attached earlier in `attach_time_use_and_health_data`.
+        # (Again see the retail example below).
+        # These ActivityLocation objects are stored in a dictionary (see `activity_locations` created above). This makes
+        # it possible to run through all activities and calculate risks and dangers using the same code.
+        #
+
+        # Begin by attach a load of transport attributes to each individual. This includes essential information on
+        # the durations that people spend doing activities.
         # (actually this is more like attaching the previous microsim to these new data, see the function for details)
-        # This also creates flows and venues columns for the journeys of individuals to households
-        #self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, self.study_msoas)
+        # This also creates flows and venues columns for the journeys of individuals to households, and makes a new
+        # households dataset to replace the one we read in above.
         home_name = "Home"  # How to describe flows to people's houses
         self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, home_name, self.study_msoas)
         # Create 'activity locations' for the activity of being at home. (This is done for other activities,
@@ -118,12 +157,14 @@ class Microsim:
         for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
             self.individuals[col].fillna(0, inplace=True)
 
-
-        # Read the locations of schools, workplaces, etc.
-        # Read Retail
+        # Read Retail flows data
         retail_name = "Retail" # How to refer to this in data frame columns etc.
         stores, stores_flows = Microsim.read_retail_flows_data(self.study_msoas)  # (list of shops and a flow matrix)
         Microsim.check_sim_flows(stores, stores_flows)
+        # Assign Retail flows data to the individuals
+        self.individuals = Microsim.add_individual_flows(retail_name, self.individuals, stores_flows)
+        self.activity_locations[retail_name] = \
+            ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
 
         # Read Schools (primary and secondary)
         primary_name = "PrimarySchool"
@@ -132,30 +173,6 @@ class Microsim:
             Microsim.read_school_flows_data(self.study_msoas)  # (list of schools and a flow matrix)
         Microsim.check_sim_flows(schools, primary_flows)
         Microsim.check_sim_flows(schools, secondary_flows)
-        # At the moment we dont do primary and secondary, so trim off all the secondary schools (these
-        # will have been read in after the primary
-        #print("TEMPORARILY TRIMMING SCHOOLS FLOWS")
-        #schools_flows = schools_flows.iloc[0:len(self.study_msoas), :]
-
-        # Workplaces etc.
-        # self.workplaces = Microsim.read_workplace_data()
-        # self.schools = Microsim.read_school_data()
-
-        # **** Create ActivityLocations ****
-
-        # Firstly, assign probabilities that each individual will go to each location (most of these will be 0!)
-        # Do this by adding two new columns in the individuals dataframe, both storing lists. One lists ids of the
-        # locations that the individual may visit, the other has the probability of them visitting those places.
-        # Then, create an ActivityLocation object to store information about the destinations (e.g. stores, schools,
-        # etc.) that are associated with each activity. These ActivityLocation objects will also add another column
-        # in to the individuals dataframe that records the amount of time they spend doing the activity
-        # (e.g. 'RETAIL_DURATION'). These raw numbers were attached earlier in `attach_time_use_and_health_data`.
-
-        # Assign Retail
-        self.individuals = Microsim.add_individual_flows(retail_name, self.individuals, stores_flows)
-        self.activity_locations[retail_name] = \
-            ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
-
         # Assign Schools
         # TODO: need to separate primary and secondary school duration. At the moment everyone is given the same
         # duration, 'pschool', which means that children will be assigned a PrimarySchool duration *and* a
@@ -179,7 +196,7 @@ class Microsim:
         self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces)
         self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
                                                               individuals=self.individuals, duration_col="pwork")
-        
+
         # Add some necessary columns for the disease and assign initial SEIR status
         self.individuals = Microsim.add_disease_columns(self.individuals)
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
