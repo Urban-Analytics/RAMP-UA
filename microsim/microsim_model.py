@@ -8,15 +8,16 @@ Created on Wed Apr 29 19:59:25 2020
 @author: nick
 """
 
-import pandas as pd
 
+import sys
+sys.path.append("microsim") # This is only needed when testing. I'm so confused about the imports
 from activity_location import ActivityLocation
 #from microsim.microsim_analysis import MicrosimAnalysis
 from microsim_analysis import MicrosimAnalysis
 from column_names import ColumnNames
 from utilities import Optimise
 
-
+import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
 #pd.set_option('display.width', 0)  # Automatically find the best width
 import numpy as np
@@ -1109,14 +1110,13 @@ class Microsim:
         current_risk = [0] * len(self.individuals)
 
         #for name in tqdm(self.activity_locations, desc=f"Updating dangers and risks for activity locations"):
-        print("Updating dangers and risks for activity locations")
         for name in self.activity_locations:
 
             #
             # ***** 1 - update dangers of each venue (infected people visitting places)
             #
 
-            print(f"\tAnalysing {name} activity")
+            print(f"\t\t{name} activity")
             # Get the details of the location activity
             activity_location = self.activity_locations[name]  # Pointer to the ActivityLocation object
             #loc_ids = activity_location.get_ids()  # List of the IDs of the locations where the activity can take place

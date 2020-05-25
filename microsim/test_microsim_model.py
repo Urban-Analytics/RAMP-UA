@@ -24,9 +24,93 @@ def test_microsim():
 
     m = Microsim(data_dir="./dummy_data", testing=True)
 
-    # TODO check that the dummy data have been read in correctly. E.g. check the number of individuals is
+    # Check that the dummy data have been read in correctly. E.g. check the number of individuals is
     # accurate, that they link to households correctly, that they have the right *flows* to the right
     # *destinations* and the right *durations* etc.
+
+    assert len(m.individuals) == 17
+
+    # Households
+    # (The households df should be the same as the one in the corresponding activity location)
+    assert m.activity_locations['Home']._locations.equals(m.households)
+    # All flows should be to one location (single element [1.0])
+    for flow in m.individuals[f"Home{ColumnNames.ACTIVITY_FLOWS}"]:
+        assert flow == [1.0]
+    # First two people live together in first household
+    assert list(m.individuals.loc[0:1,:][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) ==[[0], [0]]
+    # This one lives on their own in the fourth house
+    assert list(m.individuals.loc[9:9,:][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) ==[[3]]
+    # These three live together in the last house
+    assert list(m.individuals.loc[13:15,:][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) ==[[6], [6], [6]]
+
+    # Workplaces
+    # All flows should be to one location (single element [1.0])
+    for flow in m.individuals[f"Work{ColumnNames.ACTIVITY_FLOWS}"]:
+        assert flow == [1.0]
+    # First person is the only one who does that job
+    assert len(list(m.individuals.loc[0:0, ][f"Work{ColumnNames.ACTIVITY_VENUES}"]))
+    job_index = list(m.individuals.loc[0:0, ][f"Work{ColumnNames.ACTIVITY_VENUES}"])[0][0]
+    for work_id in m.individuals.loc[1:len(m.individuals), f"Work{ColumnNames.ACTIVITY_VENUES}"]:
+        assert work_id[0] != job_index
+    # Three people do the same job as second person
+    job_index = list(m.individuals.loc[1:1, ][f"Work{ColumnNames.ACTIVITY_VENUES}"])[0]
+    assert list(m.individuals.loc[4:4, f"Work{ColumnNames.ACTIVITY_VENUES}"])[0] == job_index
+    assert list(m.individuals.loc[13:13, f"Work{ColumnNames.ACTIVITY_VENUES}"])[0] == job_index
+    # Not this person:
+    assert list(m.individuals.loc[15:15, f"Work{ColumnNames.ACTIVITY_VENUES}"])[0] != job_index
+
+    # Test Shops
+    shop_locs = m.activity_locations['Retail']._locations
+    assert len(shop_locs) == 248
+    # First person has these flows and venues
+    venue_ids = list(m.individuals.loc[0:0, f"Retail{ColumnNames.ACTIVITY_VENUES}"])[0]
+    #flows = list(m.individuals.loc[0:0, f"Retail{ColumnNames.ACTIVITY_FLOWS}"])[0]
+    # These are the venues in the filename:
+    raw_venues = sorted([24,  23, 22, 21, 19, 12, 13, 25, 20, 17])
+    # Mark counts from 1, so these should be 1 greater than the ids
+    assert [ x-1 for x in raw_venues ] == venue_ids
+    # Check the indexes point correctly
+    assert shop_locs.loc[0:0, ColumnNames.LOCATION_NAME].values[0] == "Co-op Lyme Regis"
+    assert shop_locs.loc[18:18, ColumnNames.LOCATION_NAME].values[0] == "Aldi Honiton"
+
+    # Test Schools (similar to house/work above) (need to do for primary and secondary)
+    primary_locs = m.activity_locations['PrimarySchool']._locations
+    secondary_locs = m.activity_locations['SecondarySchool']._locations
+    # All schools are read in from one file, both primary and secondary
+    assert len(primary_locs) == 350
+    assert len(secondary_locs) == 350
+    assert primary_locs.equals(secondary_locs)
+    # Check primary and secondary indexes point to primary and secondary schools respectively
+    for indexes in m.individuals.loc[:,f"PrimarySchool{ColumnNames.ACTIVITY_VENUES}"]:
+        for index in indexes:
+            assert primary_locs.loc[index,"PhaseOfEducation_name"]=="Primary"
+    for indexes in m.individuals.loc[:,f"SecondarySchool{ColumnNames.ACTIVITY_VENUES}"]:
+        for index in indexes:
+            assert secondary_locs.loc[index,"PhaseOfEducation_name"]=="Secondary"
+
+    # First person has these flows and venues to primary school
+    # (we know this because, by coincidence, the first person lives in the area that has the
+    # first area name if they were ordered alphabetically)
+    list(m.individuals.loc[0:0, "Area"])[0] == "E00101308"
+    venue_ids = list(m.individuals.loc[0:0, f"PrimarySchool{ColumnNames.ACTIVITY_VENUES}"])[0]
+    raw_venues = sorted([12, 110, 118, 151, 163, 180, 220, 249, 280] )
+    # Mark counts from 1, so these should be 1 greater than the ids
+    assert [ x-1 for x in raw_venues ] == venue_ids
+    # Check the indexes point correctly
+    assert primary_locs.loc[12:12, ColumnNames.LOCATION_NAME].values[0] == "Axminster Community Primary Academy"
+    assert primary_locs.loc[163:163, ColumnNames.LOCATION_NAME].values[0] == "Milton Abbot School"
+
+    # Second to last person lives in 'E02004138' which will be the last area recorded in Mark's file
+    assert list(m.individuals.loc[9:9, "Area"])[0] == "E02004159"
+    venue_ids = list(m.individuals.loc[9:9, f"SecondarySchool{ColumnNames.ACTIVITY_VENUES}"])[0]
+    raw_venues = sorted([335, 346])
+    # Mark counts from 1, so these should be 1 greater than the ids
+    assert [ x-1 for x in raw_venues ] == venue_ids
+    # Check these are both secondary schools
+    for idx in venue_ids:
+        assert secondary_locs.loc[idx,"PhaseOfEducation_name"] == "Secondary"
+    # Check the indexes point correctly
+    assert secondary_locs.loc[335:335, ColumnNames.LOCATION_NAME].values[0] == "South Dartmoor Community College"
 
     # Finished initialising the model. Pass it to other tests who need it.
     yield m  # (this could be 'return' but 'yield' means that any cleaning can be done here
@@ -122,7 +206,7 @@ def test_update_disease_counts(test_microsim):
     # households living in the same MSOA in the test data
 
 
-def test_update_current_risk(test_microsim):
+def test_update_venue_danger_and_risks(test_microsim):
     """Check that the current risk is updated properly"""
     #test_microsim.update_current_risk()
     assert False
@@ -143,6 +227,7 @@ def test_step(test_microsim):
     # Step 0 (initialisation):
     # Give some people a disease status manually. Maybe just 2 people so it's easy to track.
     # E.g.: m.individuals.loc[m.individuals.ID==1234,"Disease_Status"] = 1
+
 
     #  ******** Step 1: ********
 
@@ -191,11 +276,6 @@ def test_step(test_microsim):
 
     print("End of test step")
 
-
-def test_update_venue_danger(test_microsim):
-    # TODO Check that danger values are updated appropriately. Especially check indexing works (where the
-    # venue ID is not the same as its place in the dataframe.
-    assert False
 
 
 # ********************************************************
@@ -269,43 +349,6 @@ def test_check_study_area():
     assert list(x[2].HID.unique()) == [2, 3]  # List of households
 
 
-def test_add_individual_flows():
-    # TODO write test for Microsim.add_individual_flows()
-    assert False
-
-
-def test_read_retail_flows_data():
-    # TODO write test to Microsim.read_retail_flows_data(). Can be similar to the schools one
-    assert False
-
-
-def test_ActivityLocation():
-    # TODO write tests to check that ActivtyLocaiton objects are created properly
-    assert False
-
-
-def test_get_danger_and_ids():
-    # TODO write tests to make sure that the ActivityLocation.get_danger and get_ids functions
-    # return the correct values and are indexed properly (each ID should refer to a specific object and danger)
-    a = ActivityLocation(XXXX)
-    assert False
-
-
-def test_update_dangers():
-    # TODO write a test that updates the Danger score for an ActivityLocation
-    assert False
-
-
-def test_export_to_feather():
-    # TODO write a test that checks the export_to_feather() and  import_to_feather() functions
-    assert False
-
-
-def test_import_from_feather():
-    # TODO write a test that checks the export_to_feather() and  import_to_feather() functions
-    assert False
-
-
 def test__add_location_columns():
     df = pd.DataFrame(data={"Name": ['a', 'b', 'c', 'd']})
     with pytest.raises(Exception):  # Should fail if lists are wrong length
@@ -349,12 +392,6 @@ def test__add_location_columns():
 
     # TODO dest that the _add_location_columns function correctly adds the required standard columns
     # to a locaitons dataframe, and does appropriate checks for correct lengths of input lists etc.
-
-
-def test_add_home_flows():
-    # TODO Check that home locations are created correctly (this is basically parsing the households and individuals
-    # tables, adding the standard columns needed, and creating 'flows' from individuals to their households
-    assert False
 
 
 def test__normalise():
