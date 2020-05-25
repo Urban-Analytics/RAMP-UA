@@ -54,13 +54,19 @@ class Microsim:
 
 
     def __init__(self,
-                 study_msoas: List[str] = [], random_seed: float = None, read_data: bool = True,
+                 study_msoas: List[str] = [],
+                 danger_multiplier = 1.0, risk_multiplier = 1.0,
+                 random_seed: float = None, read_data: bool = True,
                  data_dir = "data", testing=False
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
         ----------
         :param study_msoas: An optional list of MSOA codes to restrict the model to
+        :param danger_multiplier: Danger assigned to a place if an infected individual visits it
+        is calcuated as duration * flow * danger_multiplier.
+        :param risk_multiplier: Risk that individuals get from a location is calculatd as
+        duration * flow * * danger * risk_multiplier
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
@@ -71,6 +77,8 @@ class Microsim:
 
         # Administrative variables that need to be defined
         self.iteration = 0
+        self.danger_multiplier = danger_multiplier
+        self.risk_multiplier = risk_multiplier
         self.random = random.Random(time.time() if random_seed is None else random_seed)
         Microsim.DATA_DIR = data_dir
         Microsim.testing = testing
@@ -180,12 +188,16 @@ class Microsim:
         # seconary school duration, regardless of their age. I think the only way round this is to
         # make two new columns - 'pschool_primary' and 'pschool_seconary', and set these to either 'pschool'
         # or 0 depending on the age of the child.
+        # Also all schools are in the same dataframe, we need to make copies of the dataframe. Otherwise at the start
+        # of each iteration when the secondary school dangers are set to 0 (danger is not cumulative) it will override
+        # the primary school dangers that were calculated first.
         self.individuals = Microsim.add_individual_flows(primary_name, self.individuals, primary_flows)
         self.activity_locations[primary_name] = \
-            ActivityLocation(primary_name, schools, primary_flows, self.individuals, "pschool")
+            ActivityLocation(primary_name, schools.copy(), primary_flows, self.individuals, "pschool")
         self.individuals = Microsim.add_individual_flows(secondary_name, self.individuals, secondary_flows)
         self.activity_locations[secondary_name] = \
-            ActivityLocation(secondary_name, schools, secondary_flows, self.individuals, "pschool")
+            ActivityLocation(secondary_name, schools.copy(), secondary_flows, self.individuals, "pschool")
+        del schools  # No longer needed as we gave copies to the ActivityLocation
 
         # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go
         # to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
@@ -1102,11 +1114,13 @@ class Microsim:
         """
         Update the danger score for each location, based on where the individuals who have the infection visit.
         Then look through the individuals again, assigning some of that danger back to them as 'current risk'.
+
+        :param risk_multiplier: Risk is calcuated as duration * flow * risk_multiplier.
         """
         print("\tUpdating danger associated with visiting each venue")
 
         # Make a new list to keep the new risk for each individual (better than repeatedly accessing the dataframe)
-        # Make this 0 initiall as the risk is not cumulative; it gets reset each day
+        # Make this 0 initialy as the risk is not cumulative; it gets reset each day
         current_risk = [0] * len(self.individuals)
 
         #for name in tqdm(self.activity_locations, desc=f"Updating dangers and risks for activity locations"):
@@ -1117,32 +1131,40 @@ class Microsim:
             #
 
             print(f"\t\t{name} activity")
+            if name=="PrimarySchool" and i==16:
+                x=1
             # Get the details of the location activity
             activity_location = self.activity_locations[name]  # Pointer to the ActivityLocation object
-            #loc_ids = activity_location.get_ids()  # List of the IDs of the locations where the activity can take place
-            #loc_idx = activity_location.get_indices()  # List of the index (row  number) of the locations
-            loc_dangers = activity_location.get_dangers()  # List of the current dangers associated with each place
+            # Create a list to store the dangers associated with each location for this activity.
+            # Assume 0 initially, it should be reset each day
+            loc_dangers = [0] * len(activity_location.get_dangers())
+            #loc_dangers = activity_location.get_dangers()  # List of the current dangers associated with each place
+
 
             # Now look up those venues in the table of individuals
             venues_col = f"{name}{ColumnNames.ACTIVITY_VENUES}" # The names of the venues and
             flows_col = f"{name}{ColumnNames.ACTIVITY_FLOWS}"   # flows in the individuals DataFrame
+            durations_col = f"{name}{ColumnNames.ACTIVITY_DURATION}"   # flows in the individuals DataFrame
 
-            # 2D lists, for each individual: the venues they visit and the flows to the venue (i.e. how much they visit it)
+            # 2D lists, for each individual: the venues they visit, the flows to the venue (i.e. how much they visit it)
+            # and the durations (how long they spend doing it)
             statuses = self.individuals.Disease_Status
             venues = self.individuals.loc[:, venues_col]
             flows = self.individuals.loc[:, flows_col]
+            durations = self.individuals.loc[:, durations_col]
             assert len(venues) == len(flows) and len(venues) == len(statuses)
-            for i, (v, f, s) in enumerate(zip(venues, flows, statuses)): # For each individual
+            for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)): # For each individual
                 if s == 1 or s == 2 or s == 3: # Exposed (1), pre-symptomatic (2), symptomatic (3)
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue_idx, flow in zip(v, f):
+                        #print(i, venue_idx, flow, duration)
                         # Individual i goes to the venue with index (row number) "venue" and flow "flow"
                         #print(i,v,f,s,venue_idx, flow)
                         #if venue_idx==0:
                         #    lkjasd=1
                         #venue_index = loc_ids.index(venue_id)
                         # Increase the danger by the flow multiplied by some disease risk
-                        loc_dangers[venue_idx] += (flow * 0.1)
+                        loc_dangers[venue_idx] += (flow * duration * self.risk_multiplier)
 
             # Now we have the dangers associated with each location, apply these back to the main dataframe
             activity_location.update_dangers(loc_dangers)
@@ -1151,18 +1173,16 @@ class Microsim:
             # ***** 2 - risks for individuals who visit dangerous venues
             #
 
-            for i, (v, f, s) in enumerate(zip(venues, flows, statuses)):  # For each individual
+            for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)):  # For each individual
                 # v and f are lists of flows and venues for the individual. Go through each one
                 for venue_idx, flow in zip(v, f):
                     #  Danger associated with the location (we just created these updated dangers in the previous loop)
                     danger = loc_dangers[venue_idx]
-                    current_risk[i] += danger * flow
+                    current_risk[i] += (flow * danger * duration * self.danger_multiplier)
 
         # Sanity check
         assert len(current_risk) == len(self.individuals)
         assert min(current_risk) >= 0  # Should not be risk less than 0
-        # Risks should not have gone down
-        assert False not in [ a >= b for a, b in zip(current_risk, list(self.individuals[ColumnNames.CURRENT_RISK]) ) ]
 
         self.individuals[ColumnNames.CURRENT_RISK] = current_risk
 
@@ -1222,13 +1242,23 @@ class Microsim:
         return row['Disease_Status'] # TEMP DON'T ACTUALLT DO ANYTHING
 
     def step(self) -> None:
-        """Step (iterate) the model"""
+        """
+        Step (iterate) the model
+
+        :param danger_multiplier: Danger assigned to a place if an infected individual visits it
+        is calcuated as duration * flow * danger_multiplier.
+        :param risk_multiplier: Risk that individuals get from a location is calculatd as
+        duration * flow * risk_multiplier
+
+        :return:
+        """
         self.iteration += 1
         print(f"\nIteration: {self.iteration}\n")
 
         # Update the danger associated with each venue (i.e. the as people with the disease visit them they
         # become more dangerous) then update the risk to each individual of going to those venues.
         self.update_venue_danger_and_risks()
+
 
         # Update disease counters. E.g. count diseases in MSOAs & households
         self.update_disease_counts()
@@ -1241,7 +1271,7 @@ class Microsim:
         # rather than object level (otherwise I couldn't get the argument passing to work properly)
         # tqdm.pandas(desc="Calculating new disease status") # means pd.apply() has a progress bar
         #self.individuals["Disease_Status"] = self.individuals.progress_apply(
-         #   func=Microsim.calculate_new_disease_status, axis=1, activity_locations=self.activity_locations)
+        #   func=Microsim.calculate_new_disease_status, axis=1, activity_locations=self.activity_locations)
 
 
         # Increase the number of days that each individual has had their current status

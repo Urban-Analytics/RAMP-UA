@@ -208,71 +208,115 @@ def test_update_disease_counts(test_microsim):
 
 def test_update_venue_danger_and_risks(test_microsim):
     """Check that the current risk is updated properly"""
-    #test_microsim.update_current_risk()
-    assert False
+    # This is actually tested as part of test_step
+    assert True
 
 
 def test_step(test_microsim):
-    """Test the step method. This is the main test of the model. Simulate a deterministic run through and
-    make sure that the model runs as expected
+    """
+    Test the step method. This is the main test of the model. Simulate a deterministic run through and
+    make sure that the model runs as expected.
+
+    Only thing it doesn't do is check for retail, shopping, etc., that danger and risk increase by the correct
+    amount. It just checks they go above 0 (or not). It does do that more precise checks for home activities though.
 
     :param test_microsim: This is a pointer to the initialised model. Dummy data will have been read in,
     but no stepping has taken place yet."""
-    # TODO Big test of the whole model with dummy data
-    m = test_microsim  # Just for less typing
+    m = test_microsim  # For less typing and so as not to interfere with other functions use test_microsim
 
     # Note: the following is a useul way to get relevant info about the individuals
     #m.individuals.loc[:, ["ID", "PID", "HID", "Area", "Disease_Status", "MSOA_Cases", "HID_Cases"]]
 
     # Step 0 (initialisation):
-    # Give some people a disease status manually. Maybe just 2 people so it's easy to track.
-    # E.g.: m.individuals.loc[m.individuals.ID==1234,"Disease_Status"] = 1
+
+    # Everyone should start without the disease (they will have been assigned a status as part of initialisation)
+    m.individuals["Disease_Status"] = 0
+
+    # Set understandable multipliers
+    m.risk_multiplier = 1.0
+    m.danger_multiplier = 1.0
+
+    #
+    # Person 1: lives with one other person (p2). Both people spend all their time at home doing nothing else
+    #
+    p1 = 0
+    p2 = 1
+
+    m.individuals.loc[p1, "Disease_Status"] = 1  # Give them the disease
+    for p in [p1, p2]: # Set their activity durations to 0
+        for name, activity in m.activity_locations.items():
+            m.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
+        m.individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] = 1.0  # Spend all their time at home
+
+    m.step()
+
+    # Check the disease has spread to the house but nowhere else
+    for p in [p1, p2]:
+        assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 1.0
+    for p in range(2,len(m.individuals)):
+        assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
+    m.households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
+    for h in range(1, len(m.households)):
+        m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+
+    m.step()
+
+    # Risk and danger stay the same (it does not cumulate over days)
+    for p in [p1, p2]:
+        assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 1.0
+    for p in range(2,len(m.individuals)):
+        assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
+    m.households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
+    for h in range(1, len(m.households)):
+        m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+
+    # If the infected person doesn't go home (in this test they do absolutely nothing) then danger and risks should go
+    # back to 0
+    m.individuals.at[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] = 0.0
+    m.step()
+    for p in [p1, p2]:
+        assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
+    for h in range(0, len(m.households)):
+        m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
 
-    #  ******** Step 1: ********
+    # But if they both get sick then they should be 2.0 (double danger and risk)
+    m.individuals.loc[p1:p2, "Disease_Status"] = 1  # Give them the disease
+    m.individuals.at[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] = 1.0 # Make the duration normal again
+    m.step()
+    for p in [p1, p2]:
+        assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 2.0
+    for h in range(0, len(m.households)):
+        m.households.at[h, ColumnNames.LOCATION_DANGER] == 2.0
 
-    # Update the danger associated with each venue
-    #m.update_venue_danger()
+    #
+    # Now see what happens when one person gets the disease and spreads it to schools, shops and work
+    #
+    del p1, p2
+    p1 = 4 # The infected person is index 1
+    # Make everyone better except for that one person
+    m.individuals["Disease_Status"] = 0
+    m.individuals.loc[p1, "Disease_Status"] = 1
+    # Assign everyone equal time doing all activities
+    for name, activity in m.activity_locations.items():
+        m.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 1.0/len(m.activity_locations)
 
-    # Check that the venues have been updated properly. We know what people do and how long they
-    # spend doing it, so should be able to check the locations for all of their activities.
-    #m.activity_locations['Retail']._locations ....
+    m.step()
 
-    # Update the current risk for individuals who may be visitting those venues
-    # m.update_current_risk()
-
-    # Check that people visiting those places have the correct risk
-
-    # Update disease counters. E.g. count diseases in MSOAs & households
-    #m.update_disease_counts()
-    # (maybe don't bother checking this because I've already written a separate unit test for it)
-
-    # Update disease status
-    # (Manually give some people with higher risk the disease. Or maybe don't this iteration. Whatever.
-    #m.individuals.loc[m.individuals.ID
-
-    #  ******** Step 2 ********
-
-    # Update the danger associated with each venue
-    # m.update_venue_danger()
-
-    # Check that the venues have been updated properly.
-    # m.activity_locations['Retail']._locations ....
-
-    # Update the current risk for individuals who may be visiting those venues
-    # m.update_current_risk()
-
-    # Check that people visiting those places have the correct risk
-
-    # Update disease counters. E.g. count diseases in MSOAs & households
-    #m.update_disease_counts()
-
-    # Update disease status
-    # xxxx
-
-    #  ******** Step 3 ********
-    # REPEAT !
-    # Probably put some of the above checks in separate functions as they will be called repeatedly
+    # Now check that the danger has propagated to locations and risk to people
+    for name, activity in m.activity_locations.items():
+        # Indices of the locations where this person visited
+        visited_idx = m.individuals.at[p1, f"{name}{ColumnNames.ACTIVITY_VENUES}"]
+        not_visited_idx = list(set(range(len(activity._locations)))-set(visited_idx))
+        # Dangers should be >0.0 (or not if the person didn't visit there)
+        assert False not in list(activity._locations.loc[visited_idx, "Danger"].values > 0 )
+        assert False not in list(activity._locations.loc[not_visited_idx, "Danger"].values == 0 )
+        # Individuals should have an associated risk
+        for index, row in m.individuals.iterrows():
+            for idx in visited_idx:
+                if idx in row[f"{name}{ColumnNames.ACTIVITY_VENUES}"]:
+                    assert row[ColumnNames.CURRENT_RISK] > 0
+                    # Note: can't check if risk is equal to 0 becuase it might come from another activity
 
     print("End of test step")
 
