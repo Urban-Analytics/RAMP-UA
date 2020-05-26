@@ -130,13 +130,13 @@ def test_add_home_flows(test_microsim):
 
 def test_read_school_flows_data(test_microsim):
     """Check that flows to primary and secondary schools were read correctly """
-    # Check priary and seconary are actually the same dataframe (they're read together)
+    # Check priary and seconary have the same data (they're read together)
     primary_schools = test_microsim.activity_locations["PrimarySchool"]._locations
     secondary_schools = test_microsim.activity_locations["SecondarySchool"]._locations
     assert primary_schools.equals(secondary_schools)
-    # Check that if we add a column in one, the other gets it too
+    # But they don't point to the same dataframe
     primary_schools["TestCol"] = 0
-    assert "TestCol" in list(secondary_schools.columns)
+    assert "TestCol" not in list(secondary_schools.columns)
 
     schools = primary_schools  # Just refer to them with one name
 
