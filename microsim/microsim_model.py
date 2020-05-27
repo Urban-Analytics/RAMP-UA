@@ -8,138 +8,31 @@ Created on Wed Apr 29 19:59:25 2020
 @author: nick
 """
 
+
+import sys
+sys.path.append("microsim") # This is only needed when testing. I'm so confused about the imports
+from activity_location import ActivityLocation
+#from microsim.microsim_analysis import MicrosimAnalysis
+from microsim_analysis import MicrosimAnalysis
+from column_names import ColumnNames
+from utilities import Optimise
+
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
 #pd.set_option('display.width', 0)  # Automatically find the best width
 import numpy as np
 import glob
 import os
-import sys
 import random
 import time
 import re  # For analysing file names
-import typing
 import warnings
-from enum import Enum  # For disease status
 from collections.abc import Iterable   # drop `.abc` with Python 2.7 or lower
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
-import pyarrow.feather as feather # For reading and writing DataFrames to disk
-import swifter # For quick (multicore?) pd.apply operations
 import pickle # to save data
 
-
-#from microsim.microsim_analysis import MicrosimAnalysis
-from microsim_analysis import MicrosimAnalysis
-from utilities import Optimise
-
-class ColumnNames:
-    """Used to record standard dataframe column names used throughout"""
-
-    LOCATION_DANGER = "Danger"  # Danger associated with a location
-    LOCATION_NAME = "Location_Name"  # Name of a location
-    LOCATION_ID = "ID"  # Unique ID for each location
-
-    ACTIVITY_VENUES = "_Venues"  # Venues an individual may visit. Appended to activity type, e.g. 'Retail_Venues'
-    ACTIVITY_FLOWS = "_Flows"  # Flows to a venue for an individual. Appended to activity type, e.g. 'Retail_Flows'
-    ACTIVITY_TIME = "_Time"  # Amount of time an individual spends doing an activity. E.g. 'Retail_Time'
-
-    ACTIVITY_DURATION = "_Duration" # Column to record proportion of the day that invividuals do the activity
-
-    # Standard columns for time spent travelling in different modes
-    TRAVEL_CAR = "Car"
-    TRAVEL_BUS = "Bus"
-    TRAVEL_TRAIN = "Train"
-    TRAVEL_WALK = "Walk"
-
-    INDIVIDUAL_AGE = "DC1117EW_C_AGE" # Age column in the table of individuals
-    INDIVIDUAL_SEX = "DC1117EW_C_SEX"  # Sex column in the table of individuals
-    INDIVIDUAL_ETH = "DC2101EW_C_ETHPUK11"  # Ethnicity column in the table of individuals
-
-    # Columns for information about the disease. These are needed for estimating the disease status
-    DISEASE_STATUS = "Disease_Status"
-    DAYS_WITH_STATUS = "Days_With_Status"  # The number of days that have elapsed with this status
-    CURRENT_RISK = "Current_Risk"  # This is the risk that people get when visiting locations.
-    MSOA_CASES = "MSOA_Cases"  # The number of cases per MSOA
-    HID_CASES = "HID_Cases"  # The number of cases in the individual's house
-
-class ActivityLocation():
-    """Class to represent information about activity locations, e.g. retail destinations, workpaces, etc."""
-    def __init__(self, name: str, locations: pd.DataFrame, flows: pd.DataFrame,
-                 individuals: pd.DataFrame, duration_col: str):
-        """
-        Initialise an ActivityLocation
-        :param name: A name to use to refer to this activity. Column names in the big DataFrame of individuals
-        will be named according to this
-        :param locations: A dataframe containing information about each loction
-        :param flows: A dataframe containing the flows.
-        :param individuals: The dataframe containing the individual population. This is needed because a new
-        '*_DURATION' column will be added to that table to show how much time each individual spends doing
-        this activity. The new column is added inplace
-        :param duration_col: The column in the 'individuals' dataframe that gives the proportion of time
-        spend doing this activity. This needs to be renamed according to a standard format, e.g. for retail
-        the column needs to be called 'RETAIL_DURATION'.
-        """
-        self._name = name
-        # Check that the dataframe has all the standard columns needed
-        if ColumnNames.LOCATION_ID not in locations.columns or \
-            ColumnNames.LOCATION_DANGER not in locations.columns or \
-            ColumnNames.LOCATION_NAME not in locations.columns:
-            raise Exception(f"Activity '{name}' dataframe needs columns called 'ID' and 'Danger' and 'Location_Name'."
-                            f"It only has: {locations.columns}")
-        # Check that the DataFrame's ID column is also an index, this is to ensure that the IDs always
-        # refer to the same thing. NO LONGER DOING THIS, INDEX AND ID CAN BE DIFFERENT        #
-        #if locations.index.name != ColumnNames.LOCATION_ID or False in (locations.index == locations[ColumnNames.LOCATION_ID]):
-        #                    f"that is equal to the 'ID' columns.")
-        self._locations = locations
-        self._flows = flows
-
-        # Check that the duration column exists and create a new column showing the duration of this activity
-        if duration_col not in individuals.columns:
-            raise Exception(f"The duration column '{duration_col}' is not one of the columns in the individuals"
-                            f"data frame: {individuals.columns}")
-        self.duration_column = self._name + ColumnNames.ACTIVITY_DURATION
-        individuals[self.duration_column] = individuals[duration_col]
-
-    def __repr__(self):
-        return f"<{self._name} ActivityLocation>"
-
-    def get_dangers(self) -> List[float]:
-        """Get the danger associated with each location as a list. These will be in the same order as the
-        location IDs returned by `get_ids()`"""
-        return list(self._locations[ColumnNames.LOCATION_DANGER])
-
-    def get_name(self) -> str:
-        """Get the name of this activity. This is used to label columns in the file of individuals"""
-        return self._name
-
-    def get_indices(self) -> List[int]:
-        """Retrn the index (row number) of each destination"""
-        return list(self._locations.index)
-
-    def get_ids(self) -> List[int]:
-        """Retrn the IDs of each destination"""
-        return list(self._locations[ColumnNames.LOCATION_ID])
-
-    #def get_location(self, id: int) -> pd.DataFrame:
-    #    """Get the location with the given id"""
-    #    loc = self._locations.loc[self._locations[ColumnNames.LOCATION_ID] == id, :]
-    #    if len(loc) != 1:
-    #        raise Exception(f"Location with ID {id} does not return exactly one row: {loc}")
-    #    return loc
-
-
-    def update_dangers(self, dangers: List[float]):
-        """
-        Update the danger associated with each location
-        :param dangers: A list of dangers for each location. Must be in the same order as the locations as
-        returned by `get_ids`.
-        """
-        if len(dangers) != len(self._locations):
-            raise Exception(f"The number of danger scores ({len(dangers)}) is not the same as the number of"
-                            f"activity locations ({len(self._locations)}).")
-        self._locations[ColumnNames.LOCATION_DANGER] = dangers
 
 
 class Microsim:
@@ -162,13 +55,19 @@ class Microsim:
 
 
     def __init__(self,
-                 study_msoas: List[str] = [], random_seed: float = None, read_data: bool = True,
+                 study_msoas: List[str] = [],
+                 danger_multiplier = 1.0, risk_multiplier = 1.0,
+                 random_seed: float = None, read_data: bool = True,
                  data_dir = "data", testing=False
                  ):
         """
-        Microsim constructor.
+        Microsim constructor. This reads all of the necessary data to run the microsimulation.
         ----------
         :param study_msoas: An optional list of MSOA codes to restrict the model to
+        :param danger_multiplier: Danger assigned to a place if an infected individual visits it
+        is calcuated as duration * flow * danger_multiplier.
+        :param risk_multiplier: Risk that individuals get from a location is calculatd as
+        duration * flow * * danger * risk_multiplier
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
@@ -179,15 +78,18 @@ class Microsim:
 
         # Administrative variables that need to be defined
         self.iteration = 0
+        self.danger_multiplier = danger_multiplier
+        self.risk_multiplier = risk_multiplier
         self.random = random.Random(time.time() if random_seed is None else random_seed)
         Microsim.DATA_DIR = data_dir
         Microsim.testing = testing
         if self.testing:
             warnings.warn("Running in testing mode. Some exceptions will be disabled.")
 
-        # Now the main chunk of initialisation is to read the input data.
         if not read_data:  # Optionally can not do this, usually for debugging
             return
+
+        # Now the main chunk of initialisation is to read the input data.
 
         # This is the main population of individuals and their households
         self.individuals, self.households = Microsim.read_msm_data()
@@ -205,22 +107,74 @@ class Microsim:
         self.study_msoas, self.individuals, self.households = \
             Microsim.check_study_area(self.all_msoas, study_msoas, self.individuals, self.households)
 
-        # Attach a load of transport attributes to each individual
-        # (actually this is more like attaching the previous microsim to these new data, see the function for details)
-        #self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, self.study_msoas)
-        self.individuals = Microsim.attach_time_use_and_health_data(self.individuals, self.study_msoas)
-        self.households["ID"] = self.households.HID # TEMP, Just while I get attach_time_use_Data working
-
-
-        # Read the locations of schools, workplaces, etc.
         # For each type of activity (store, retail, etc), create ActivityLocation objects to keep all the
         # required information together.
         self.activity_locations: Dict[str, ActivityLocation] = {}
 
-        # Read Retail
+        #
+        # ********** How to assign activities for the population **********
+        #
+        # For each 'activity' (e.g shopping), we need to store the following things:
+        #
+        # 1. A data frame of the places where the activities take place (e.g. a list of shops). Refered to as
+        # the 'locations' dataframe. Importantly this will have a 'Danger' column which records whether infected
+        # people have visited the location.
+        #
+        # 2. Columns in the individuals data frame that says which locations each individual is likely to do that
+        # activity (a list of 'venues'), how likely they are to do to the activity (a list of 'flows'), and the
+        # duration spent doing the activity.
+        #
+        # For most activities, there are a number of different possible locations that the individual
+        # could visit. The 'venues' column stores a list of indexes to the locations dataframe. E.g. one individual
+        # might have venues=[2,54,19]. Those numbers refer to the *row numbers* of locations in the locations
+        # dataframe. So venue '2' is the third venue in the list of all the locaitons associated with that activity.
+        # Flows are also a list, e.g. for that individual the flows might be flows=[0.8,0.1,0.1] which means they
+        # are most likely to go to venue with index 2, and less likely to go to the other two.
+        #
+        # For some activities, e.g. 'being at home', each individual has only a single location and one flow, so their
+        # venues and flows columns will only be single-element lists.
+        #
+        # For multi-venue activities, the process is as follows (easiest to see the retail or shopping example):
+        # 1. Create a dataframe of individual locations and use a spatial interation model to estimate flows to those
+        # locations, creating a flow matrix. E.g. the `read_retail_flows_data()` function
+        # 2. Run through the flow matrix, assigning all individuals in each MSOA the appropriate flows. E.g. the
+        # `add_individual_flows()` function.
+        # 3. Create an `ActivityLocation` object to store information about these locations in a standard way.
+        # When they are created, these `ActivityLocation` objects will also add another column
+        # to the individuals dataframe that records the amount of time they spend doing the activity
+        # (e.g. 'RETAIL_DURATION'). These raw numbers were attached earlier in `attach_time_use_and_health_data`.
+        # (Again see the retail example below).
+        # These ActivityLocation objects are stored in a dictionary (see `activity_locations` created above). This makes
+        # it possible to run through all activities and calculate risks and dangers using the same code.
+        #
+
+        # Begin by attach a load of transport attributes to each individual. This includes essential information on
+        # the durations that people spend doing activities.
+        # (actually this is more like attaching the previous microsim to these new data, see the function for details)
+        # This also creates flows and venues columns for the journeys of individuals to households, and makes a new
+        # households dataset to replace the one we read in above.
+        home_name = "Home"  # How to describe flows to people's houses
+        self.individuals, self.households = Microsim.attach_time_use_and_health_data(self.individuals, home_name, self.study_msoas)
+        # Create 'activity locations' for the activity of being at home. (This is done for other activities,
+        # like retail etc, when those data are read in later.
+        self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households,
+                                                              flows=None, individuals=self.individuals,
+                                                              duration_col="phome")
+
+        # Generate travel time columns and assign travel modes to some kind of risky activity (not doing this yet)
+        #self.individuals = Microsim.generate_travel_time_colums(self.individuals)
+        # One thing we do need to do (this would be done in the function) is replace NaNs in the time use data with 0
+        for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
+            self.individuals[col].fillna(0, inplace=True)
+
+        # Read Retail flows data
         retail_name = "Retail" # How to refer to this in data frame columns etc.
         stores, stores_flows = Microsim.read_retail_flows_data(self.study_msoas)  # (list of shops and a flow matrix)
         Microsim.check_sim_flows(stores, stores_flows)
+        # Assign Retail flows data to the individuals
+        self.individuals = Microsim.add_individual_flows(retail_name, self.individuals, stores_flows)
+        self.activity_locations[retail_name] = \
+            ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
 
         # Read Schools (primary and secondary)
         primary_name = "PrimarySchool"
@@ -229,61 +183,33 @@ class Microsim:
             Microsim.read_school_flows_data(self.study_msoas)  # (list of schools and a flow matrix)
         Microsim.check_sim_flows(schools, primary_flows)
         Microsim.check_sim_flows(schools, secondary_flows)
-        # At the moment we dont do primary and secondary, so trim off all the secondary schools (these
-        # will have been read in after the primary
-        #print("TEMPORARILY TRIMMING SCHOOLS FLOWS")
-        #schools_flows = schools_flows.iloc[0:len(self.study_msoas), :]
-
-        # Workplaces etc.
-        # self.workplaces = Microsim.read_workplace_data()
-        # self.schools = Microsim.read_school_data()
-
-        # **** Create ActivityLocations ****
-
-        # Firstly, assign probabilities that each individual will go to each location (most of these will be 0!)
-        # Do this by adding two new columns in the individuals dataframe, both storing lists. One lists ids of the
-        # locations that the individual may visit, the other has the probability of them visitting those places.
-        # Then, create an ActivityLocation object to store information about the destinations (e.g. stores, schools,
-        # etc.) that are associated with each activity. These ActivityLocation objects will also add another column
-        # in to the individuals dataframe that records the amount of time they spend doing the activity
-        # (e.g. 'RETAIL_DURATION'). These raw numbers were attached earlier in `attach_time_use_and_health_data`.
-
-        # Assign Retail
-        self.individuals = Microsim.add_individual_flows(retail_name, self.individuals, stores_flows)
-        self.activity_locations[retail_name] = \
-            ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
-
         # Assign Schools
+        # TODO: need to separate primary and secondary school duration. At the moment everyone is given the same
+        # duration, 'pschool', which means that children will be assigned a PrimarySchool duration *and* a
+        # seconary school duration, regardless of their age. I think the only way round this is to
+        # make two new columns - 'pschool_primary' and 'pschool_seconary', and set these to either 'pschool'
+        # or 0 depending on the age of the child.
+        # Also all schools are in the same dataframe, we need to make copies of the dataframe. Otherwise at the start
+        # of each iteration when the secondary school dangers are set to 0 (danger is not cumulative) it will override
+        # the primary school dangers that were calculated first.
         self.individuals = Microsim.add_individual_flows(primary_name, self.individuals, primary_flows)
         self.activity_locations[primary_name] = \
-            ActivityLocation(primary_name, schools, primary_flows, self.individuals, "pschool")
+            ActivityLocation(primary_name, schools.copy(), primary_flows, self.individuals, "pschool")
         self.individuals = Microsim.add_individual_flows(secondary_name, self.individuals, secondary_flows)
         self.activity_locations[secondary_name] = \
-            ActivityLocation(secondary_name, schools, secondary_flows, self.individuals, "pschool")
+            ActivityLocation(secondary_name, schools.copy(), secondary_flows, self.individuals, "pschool")
+        del schools  # No longer needed as we gave copies to the ActivityLocation
 
-        # Assign households. This is slightly different to retail, schools, etc. because we already know the flows
-        # to the households (each individual has a 'HID' that links to their household). So
-        # we can assign them directly without having to produce a flow matrix.
-        home_name = "Home"
-        self.individuals, self.households = Microsim.add_home_flows(home_name, self.individuals, self.households)
-        self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households, flows=None, individuals=self.individuals, duration_col="phome")
-        
-        
-        
-        
-        # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
+        # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go
+        # to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
         # Occupation is taken from column soc2010b in individuals df
         possible_jobs = sorted(self.individuals.soc2010b.unique())  # list of possible jobs in alphabetical order
-        data = {'ID': range(0, 0+len(possible_jobs)), 'Location_Name':possible_jobs, 'Danger':[0] * len(possible_jobs)} 
-        workplaces = pd.DataFrame(data) # df with all possible 'virtual offices'
-        
+        workplaces = pd.DataFrame({'ID': range(0, 0+len(possible_jobs))})  # df with all possible 'virtual offices'
+        Microsim._add_location_columns(workplaces, location_names=possible_jobs)
         work_name = "Work"
-        self.individuals = Microsim.add_work_flows(work_name, self.individuals,workplaces)
-        self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None, individuals=self.individuals, duration_col="pwork")
-        
-        
-        
-        
+        self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces)
+        self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
+                                                              individuals=self.individuals, duration_col="pwork")
 
         # Add some necessary columns for the disease and assign initial SEIR status
         self.individuals = Microsim.add_disease_columns(self.individuals)
@@ -376,7 +302,9 @@ class Microsim:
 
         # Manually set some column types
         # Should save a bit of memory because not duplicating area strings
-        individuals["Area"] = individuals["Area"].astype('category')
+        # (No longer doing this beacuse it makes comparisons annoying when we have 2 'area' columns
+        # after reading time use & health data. Can work round that if we really need the memory).
+        # individuals["Area"] = individuals["Area"].astype('category')
 
         # Make sure HIDs and PIDs are unique
         #assert len(households["HID"].unique()) == len(households)
@@ -397,7 +325,10 @@ class Microsim:
                           f"data. They will be removed.")
         individuals = individuals.loc[individuals.HID != -1]
         # Now everyone should have a household. This will raise an exception if not. (unless testing)
-        Microsim._check_no_homeless(individuals, households, warn=True if Microsim.testing else False )
+        # TODO uncomment below to check that no people without households have been introduced
+        # (commented while developing beause it is very slow
+        warnings.warn("Not checking that no homeless were introduced, uncomment when running properly")
+        #Microsim._check_no_homeless(individuals, households, warn=True if Microsim.testing else False )
 
         print("Have read files:",
               f"\n\tHouseholds:  {len(house_dfs)} files with {len(households)}",
@@ -494,14 +425,17 @@ class Microsim:
               f"\tAfter subsetting: {len(individuals_to_keep)} individuals, {len(households_to_keep)} househods.")
 
         # Check no individuals without households have been introduced (raise an exception if so)
-        Microsim._check_no_homeless(individuals, households, warn=False)
+        # TODO uncomment below to check that no people without households have been introduced
+        # (commented while developing beause it is very slow
+        warnings.warn("Not checking that no homeless were introduced, uncomment when running properly")
+        #Microsim._check_no_homeless(individuals, households, warn=False)
 
         return (study_msoas, individuals_to_keep, households_to_keep)
 
 
 
     @classmethod
-    def attach_time_use_and_health_data(cls, individuals: pd.DataFrame, study_msoas: List[str]=None) -> pd.DataFrame:
+    def attach_time_use_and_health_data(cls, individuals: pd.DataFrame, home_name: str, study_msoas: List[str]=None) -> pd.DataFrame:
         """Attach time use data (proportions of time people spend doing the different activities) and additional
         health data.
 
@@ -513,6 +447,7 @@ class Microsim:
         dataframe.
 
         :param individuals: The dataframe of individuals that the new columns will be added to
+        :param home_name: A string to describe flows to people's homes (probably 'Home')
         :param study_msoas: Optional study area to restrict by (all individuals not in these MSOAs will be removed)
         :return A tuple with new dataframes of individuals and households
         """
@@ -524,18 +459,25 @@ class Microsim:
         tuh = pd.read_csv(filename)
         tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.
 
-        # Firstly, indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
+        # Drop people that weren't matched to a household originally
+        nohh = len(tuh.loc[tuh.hid == -1])
+        if nohh > 0:
+            warnings.warn(f"{nohh} / {len(tuh)} individuals in the TUH data had not originally been matched "
+                          f"to a household. They're being removed")
+        tuh = tuh.loc[tuh.hid != -1]
+
+        # Indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
         # identify indivuals / households in this health data and be specif about what 'Area' means
         tuh = tuh.rename(columns={'hid': '_hid', 'pid': '_pid'})
         individuals = individuals.rename(columns={"PID": "_PID", "HID": "_HID"})
-        # Not sure why HID and PID are ints
+        # Not sure why HID and PID aren't ints
         individuals["_HID"] = individuals["_HID"].apply(int)
         individuals["_PID"] = individuals["_PID"].apply(int)
 
         # Remove any individuals not in the study area
         original_count = len(tuh)
         tuh = tuh.loc[tuh.area.isin(study_msoas), :]
-        print(f"{original_count-len(tuh)} individuals removed from the time use & health data")
+        print(f"\tWhen setting the study area, {original_count-len(tuh)} individuals removed from the time use & health data")
         # Now should have nearly the same number of people (maybe not exactly due to how individuals are
         # allocated to areas in the component set matching
         diff = (len(tuh) - len(individuals)) / len(tuh)
@@ -549,89 +491,157 @@ class Microsim:
 
         # Link to original individual data from the raw microsim. [MSOA, HID, PID] can link them.
         # We want these columns from the individual dataset (but for convenience also get an extra _PID column
-        # So that they don't have to be hard coded:
+        # So that they don't have to be hard coded)
         #["DC1117EW_C_SEX", "DC1117EW_C_AGE", "DC2101EW_C_ETHPUK11", "_HID", "Local_Authority", "House_OA"]
-        #tuh_temp = tuh.set_index(["msoa", "_hid", "_pid"])
-        #indiv_temp = individuals.set_index(["msoa", "_HID", "_PID"])
-        #a = tuh_temp.merge(indiv_temp , left_index=True, right_index=True)
         tuh = tuh.merge(individuals, how="left", left_on = ["area", "_hid", "_pid"],
                            right_on = ["Area", "_HID", "_PID"], validate="many_to_one")
+
+        # To check that the join worked we can't have categories, otherwise we can't compare areas easily
+        # (surely it's possibel to compare columns with different categories but I can't work it out).
+        # (The other 'Area' column, that came from the individuals dataframe is already a string
+        tuh['area'] = tuh.area.astype(str)
+
+        # Check the join has worked: (if it fails, can use the following to find the rows that are different)
+        assert len(tuh) == \
+          len(tuh.loc[(tuh["area"] == tuh["Area"]) & (tuh["_hid"] == tuh["_HID"]) & (tuh["_pid"] == tuh["_PID"]), :])
+
+        # Should have no nas in the columns that were just merged in
+        assert len(tuh.loc[tuh.House_OA.isna(), :]) == 0
+        assert len(tuh.loc[tuh.DC2101EW_C_ETHPUK11.isna(), :]) == 0
+
         tuh = Optimise.optimize(tuh)  # Now that new columns have been added
 
-        #assert tuh.loc[:,["msoa", "_hid", "_pid"]].equals(tuh.loc[:, ["msoa", "_HID", "_PID"]])
+        #
+        # ********** Create households dataframe *************
+        #
+
+        # This replaces the original households dataframe that we read from the msm data as we can no longer link back
+        # to that one.
+
+        # Go through each individual. House members can be identified because they have the same [Area, HID]
+        # combination.
+        # Maintain a dictionary of (Area, HID) -> House_ID that records a new ID for each house
+        # Each time a new [Area, HID] combination is found, create a new entry in the households dictionary for that
+        # household, generate a House_ID, and record that in the dictionary.
+        # When existing (Area, HID) combinations are found, look up the ID in the dataframe and record it for that
+        # individual
+        # Also, maintain a list of house_ids in the same order as individuals in the tuh data which can be used later
+        # when we link from the individuls in the TUH data to their house id
+
+        # This is the main dictionary. It maps (Area, HID) to house id numbers, along with some more information:
+        house_ids_dict = {}  # (Area, HID) -> [HouseIDNumber, NumPeople, area, hid]
+
+        house_ids_list = []  # ID of each house for each individual
+        house_id_counter = 0  # Counter to generate new HouseIDNumbers
+        unique_individuals = []  # Also store all [Area, HID, PID] combinations to check they're are unique later
+
+        # Maybe quicker to loop over 3 lists simultaneously than through a DataFrame
+        _areas = list(tuh["area"])
+        _hids = list(tuh["_hid"])
+        _pids = list(tuh["_pid"])
+
+        for i, (area, hid, pid) in enumerate(zip(_areas, _hids, _pids)):
+            #print(i, area, hid, pid)
+            unique_individuals.append((area, hid, pid))
+            house_key = (area, hid)  # Uniqely identifies a household
+            house_id_number = -1
+            try:  # If this lookup works then we've seen this house before. Get it's ID number and increase num people in it
+                house_info = house_ids_dict[house_key]
+                # Check the area and hid are the same as the one previously stored in the dictionary
+                assert area == house_info[2] and hid == house_info[3]
+                # Also check that the house key (Area, HID) matches the area and HID
+                assert house_key[0] == house_info[2] and house_key[1] == house_info[3]
+                # We need the ID number to tell the individual which their house is
+                house_id_number = house_info[0]
+                # Increse the number of people in the house and create a new list of info for this house
+                people_per_house = house_info[1] + 1
+                house_ids_dict[house_key] = [house_id_number, people_per_house, area, hid ]
+            except KeyError:  # If the lookup failed then this is the first time we've seen this house. Make a new ID.
+                house_id_number = house_id_counter
+                house_ids_dict[house_key] = [ house_id_number, 1, area, hid]  # (1 is beacuse 1 person so far in the hosue)
+                house_id_counter += 1
+            assert house_id_number > -1
+            house_ids_list.append(house_id_number)  # Remember the house for this individual
+
+        assert len(unique_individuals) == len(tuh)
+        assert len(house_ids_list) == len(tuh)
+        assert len(house_ids_dict) == house_id_counter
+
+        # While we're here, may as well also check that [Area, HID, PID] is a unique identifier of individuals
+        # TODO FIND OUT FROM KARYN WHY THESE LEGTHS ARE DIFFERENT
+        #assert len(tuh) == len(set(unique_individuals))
+
+        # Done! Now can create the households dataframe
+        households_df = pd.DataFrame(house_ids_dict.values(), columns=['House_ID', 'Num_People', 'area', '_hid'])
+        households_df = Optimise.optimize(households_df)
+
+        # And tell the individuals which house they live in
+        tuh["House_ID"] = house_ids_list  # Assign each individuals to their household
+
+        # Check all house IDs are unique and have same number as in TUH data
+        assert len(frozenset(households_df.House_ID.unique())) == len(households_df)
+        assert len(tuh.area.unique()) == len(tuh.area.unique())
+        # Check that the area that the invidiual lives in is the same as the area their house is in
+        temp_merge = tuh.merge(households_df, how="left", on = ["House_ID"], validate="many_to_one")
+        assert len(temp_merge) == len(tuh)
+        assert False not in list(temp_merge['area_x']==temp_merge['area_y'])
+
+        # Add some required columns
+        Microsim._add_location_columns(households_df, location_names=list(households_df.House_ID),
+                                       location_ids=households_df.House_ID )
+        # The new ID column should be the same as the House_ID
+        assert False not in list(households_df.House_ID == households_df[ColumnNames.LOCATION_ID])
+
+        # Add flows for each individual (this is easy, it's just converting their House_ID into a one-value list)
+        # Names for the new columns
+        venues_col = f"{home_name}{ColumnNames.ACTIVITY_VENUES}"
+        flows_col = f"{home_name}{ColumnNames.ACTIVITY_FLOWS}"
+
+        tuh[venues_col] = tuh["House_ID"].apply(lambda x: [x])
+        tuh[flows_col] = [ [1.0] for _ in range(len(tuh))]
+
+        print("... finished reading TU&H data.")
+
+        return tuh, households_df
 
 
+    @classmethod
+    def generate_travel_time_colums(cls, individuals: pd.DataFrame) -> pd.DataFrame:
+        """
+        TODO Read the raw travel time columns and create standard ones to show how long individuals
+        spend travelling on different modes. Ultimately these will be turned into activities
+        :param individuals:
+        :return:
+        """
 
-
-        # TODO Create households dataframe
-
-        # For now just rename the columns so that it works
-        tuh["House_ID"] = tuh["_HID"]
-
-        # A couple of sanity checks
-
-        #if len(tuh.pid.unique()) != len(tuh):  # Check PIDs unique
-        #    # NEED TO FIX THIS. FOR NOW JUST RAISE A WARNING
-        #    warnings.warn("THIS NEEDS TO BE FIXED! Not all of the individual IDs (PID column) are unique")
-        #    #raise Exception("Not all of the individual IDs (PID column) are unique")
-
-        # Check sensible numbers of individuals in the time use health data
-        #if len(tuh) < len(individuals):
-        #    raise Exception("There are fewer individuals in the time use data than there are in the raw"
-        #                    "synthetic population. ")
-        # What proportion are in the TUH data but not in the raw microsim
-        #proprtion_missing = ((len(tuh) - len(individuals)) / len(individuals))
-        #if proprtion_missing > 0.02:  # 2% chosen arbitrarily. It's just over 1% in the Devon data
-        #    warnings.warn(f"{len(tuh) - len(individuals)} individuals ({proprtion_missing*100}% in the time"
-        #                  f"use health data will not be matched to an individual in the raw data.")
-
-        # Attach all variables first, then can analyse them properly afterwards. Join them on the PID (person ID)
-        #full_table = individuals.set_index("PID", drop=False).join(tuh.set_index("pid"), how="left")
-
-        # ERROR JOINING
-        #warnings.warn("Individuals have been duplicated when joining to TUH data. Am removing duplicates"
-        #              "temporily, but this needs to be fixed. Each PID should uniquely identify the same "
-        #              "individual in both datasets.")
-        #full_table.drop_duplicates(["PID"], keep="first", inplace=True)
-
-
-        # Check that the new HIDs and Areas are the same (confirms correct join)
-        #assert len(full_table.loc[full_table.HID == full_table.hid, :]) == len(full_table)
-        #assert len(full_table.loc[full_table.Area== full_table.area, :]) == len(full_table)
-
+        # Some sanity checks for the time use data
         # Variables pnothome, phome add up to 100% of the day and
         # pwork +pschool +pshop+ pleisure +pescort+ ptransport +pother = phome
 
-        # TODO include these checks once the TUH data are correct
-
-        ## Time at home and not home should sum to 1.0
-        #if False in list((full_table.phome + full_table.pnothome) == 1.0):
-        #    raise Exception("Time at home (phome) + time not at home (pnothome) does not always equal 1.0")
-        ## These columns should equal time at home
-        #if False in list( ft.loc[:,["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]].\
-        #                          sum(axis=1, skipna=True) == ft.phome ):
+        # TODO go through some of these with Karyn, they don't all pass
+        # Time at home and not home should sum to 1.0
+        if False in list((individuals.phome + individuals.pnothome) == 1.0):
+            raise Exception("Time at home (phome) + time not at home (pnothome) does not always equal 1.0")
+        # These columns should equal time not at home
+        # if False in list(tuh.loc[:, ["pwork", "pschool", "pshop", "pleisure",  "ptransport", "pother"]]. \
+        #                         sum(axis=1, skipna=True) == tuh.pnothome):
         #    raise Exception("Times doing activities don't add up correctly")
 
         # Temporarily (?) remove NAs from activity columns (I couldn't work out how to do this in 1 line like:
-        #ft.loc[:, ["pwork", "pschool", "pshop", "pleisure", "pescort", "ptransport", "pother"]].fillna(0, inplace=True)
-        #for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
-        #    ft[col].fillna(0, inplace=True)
+        for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
+            individuals[col].fillna(0, inplace=True)
 
+        # TODO assign activities properly. Need to map from columns in the dataframe to standard names
         # Assign time use for Travel (just do this arbitrarily for now, the correct columns aren't in the data).
-        #travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in
+        # travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in
         #                 [ ColumnNames.TRAVEL_CAR, ColumnNames.TRAVEL_BUS, ColumnNames.TRAVEL_TRAIN, ColumnNames.TRAVEL_WALK ] ]
-        #for col in travel_cols:
-        #    ft[col] = 0.0
-        #x=1
-
-        # Now can return the dataframe. When the ActivityLocations are created later in the process they will
-
-
+        # for col in travel_cols:
+        #    tuh[col] = 0.0
         # OLD WAY OF HARD-CODING TIME USE CATEGORIES FOR EACH INDIVIDUAL
         # For now just hard code broad categories. Ultimately will have different values for different activities.
-        #activities = ["Home", "Retail", "PrimarySchool", "SecondarySchool", "Work", "Leisure"]
-        #col_names = []
-        #for act in activities:
+        # activities = ["Home", "Retail", "PrimarySchool", "SecondarySchool", "Work", "Leisure"]
+        # col_names = []
+        # for act in activities:
         #    col_name = act + ColumnNames.ACTIVITY_DURATION
         #    col_names.append(col_name)
         #    if act=="Home":
@@ -658,17 +668,15 @@ class Microsim:
         #        raise Exception(f"Unrecognised activity: {act}")
 
         # Check that proportions add up to 1.0
-        # TODO for some reason this fails, but as far as I can see the proportions correctly sum to 1 !!
-        #assert False not in (individuals.loc[:, col_names].sum(axis=1).round(decimals=4) == 1.0)
+        # For some reason this fails, but as far as I can see the proportions correctly sum to 1 !!
+        # assert False not in (individuals.loc[:, col_names].sum(axis=1).round(decimals=4) == 1.0)
 
         ## Add travel data columns (no values yet)
-        #travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in ["Car", "Bus", "Walk", "Train"] ]
-        #for col in travel_cols:
+        # travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in ["Car", "Bus", "Walk", "Train"] ]
+        # for col in travel_cols:
         #    individuals[col] = 0.0
+        return individuals
 
-        print("... finished.")
-        # TODO return households (this is the original, WRONG, households file)
-        return tuh
 
     @classmethod
     def read_school_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
@@ -782,54 +790,6 @@ class Microsim:
         return schools, primary_flow_matrix, secondary_flow_matrix
 
     @classmethod
-    def add_home_flows(cls, flow_type: str, individuals: pd.DataFrame, households: pd.DataFrame) \
-            -> (pd.DataFrame, pd.DataFrame):
-        """
-        Analyse the individual and household data read earlier and create a dataframe of home locations that individuals
-        travel to. Unlike retail etc, each individual will have only one home location with 100% of flows there.
-        :param flow_type: The name for these flows (probably something like 'Home')
-        :param individuals: The dataframe of synthetic individuals
-        :param households:  The original dataframe of households
-        :return: A tuple of two dataframes. One conaining the new 'individuals' dataframe and another containing
-        a new dataframe for the households. Both will have some new columns
-        """
-        #print("Assigning individual flows for homes ... ")
-        # Start by adding some required columns to the households data. Things like Danger, a standard ID column, etc
-        Microsim._add_location_columns(households, location_names=list(households.HID), location_ids=list(households.HID))
-        # Check the various ID columns are the same (Location name, HID, and ID)
-        assert False not in list(households.ID == households.HID)
-        assert False not in list(households.Location_Name == households.HID)
-
-        # Now tell the individuals about which house they go to
-
-        # Names for the new columns
-        venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
-        flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
-
-        # Create lists to hold the venues and flows for each individuals. Unlike other activities
-        # there is only one venue (their house) and all the flows go there.
-        # Find the row number (index) for the household with HID. It's annoyingly verbose. This gives the index
-        # of a house with HID=x: households.index[households["HID"]==x].values[0]. So that needs to be used
-        # in the apply() and also made into a 1-item list with outer square brackets
-        # (Also, 'swifter' makes the apply quicker. Maybe worth using this throughout).
-        individuals[venues_col] = individuals["House_ID"].swifter.progress_bar(enable=True, desc="Assigning individual flows for Homes ... ").\
-            apply( lambda hid: [ households.index[households["ID"] == hid].values[0] ] )
-        # (Old slow way)
-        #individuals[venues_col] = individuals["HID"].apply(
-        #    lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
-        # Only one flow to the individual's household
-        individuals[flows_col] = [[1.0] for _ in range(len(individuals))]
-
-        return individuals, households
-
-
-
-
-
-
-
-
-    @classmethod
     def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame) \
             -> (pd.DataFrame):
         """
@@ -845,30 +805,16 @@ class Microsim:
         venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
         flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
 
-        individuals[venues_col] = individuals["soc2010b"].apply(lambda job: [ workplaces.index[workplaces["Location_Name"] == job].values[0] ] )
-
-
-        # Create lists to hold the venues and flows for each individuals. Unlike other activities
-        # there is only one venue (their house) and all the flows go there.
-        # Find the row number (index) for the household with HID. It's annoyingly verbose. This gives the index
-        # of a house with HID=x: households.index[households["HID"]==x].values[0]. So that needs to be used
-        # in the apply() and also made into a 1-item list with outer square brackets
-        # (Also, 'swifter' makes the apply quicker. Maybe worth using this throughout).
-        # individuals[venues_col] = individuals["HID"].swifter.progress_bar(enable=True, desc="Assigning individual flows for Homes ... ").\
-        #     apply( lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
-        # (Old slow way)
-        #individuals[venues_col] = individuals["HID"].apply(
-        #    lambda hid: [ households.index[households["HID"] == hid].values[0] ] )
-        # Only one flow to the individual's household
-        individuals[flows_col] = [[1.0] for _ in range(len(individuals))]
+        # Lists showing where individuals go, and what proption (here only 1 flow as only 1 workplace)
+        # Need to do the flows in venues in 2 stages: first just add the venue, then turn that venu into a single-element
+        # list (pandas complains about 'TypeError: unhashable type: 'list'' if you try to make the single-item lists
+        # directly in the apply
+        venues = list(individuals["soc2010b"].apply(
+            lambda job: workplaces.index[workplaces["Location_Name"] == job].values[0] ) )
+        venues = [ [x] for x in venues]
+        individuals[venues_col] = venues
+        individuals[flows_col] = [[1.0] for _ in range(len(individuals))] # Flows are easy, [1.0] to the single work venue
         return individuals
-
-
-
-
-
-
-
 
     @classmethod
     def read_retail_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
@@ -882,7 +828,6 @@ class Microsim:
         # TODO Need to read full retail flows, not just those of Devon (temporarily created by Mark).
         # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
         # working with Devon subset of flows
-        print("WARNING: not currently subsetting retail flows")
         print("Reading retail flow data for Devon...", )
         dir = os.path.join(cls.DATA_DIR, "devon-retail")
 
@@ -1022,6 +967,13 @@ class Microsim:
     def add_individual_flows(cls, flow_type: str, individuals: pd.DataFrame, flow_matrix: pd.DataFrame) -> pd.DataFrame:
         """
         Take a flow matrix from MSOAs to (e.g. retail) locations and assign flows to individuals.
+
+        It a assigns the id of the destination of the flow according to its column in the matrix. So the first column
+        that has flows for a destination is given index 0, the second is index 1, etc. This is probably not the same as
+        the ID of the venue that they point to (e.g. the first store probably has ID 1, but will be given the index 0)
+        so it is important that when the activity_locations are created, they are created in the same order as the
+        columns that appear in the matix. The first column in the matrix must also be the first row in the locations
+        data.
         :param flow_type: What type of flows are these. This will be appended to the column names. E.g. "Retail".
         :param individuals: The DataFrame contining information about all individuals
         :param flow_matrix: The flow matrix, created by (e.g.) read_retail_flows_data()
@@ -1159,46 +1111,92 @@ class Microsim:
         return individuals
 
 
-    def update_venue_danger(self):
-        """Update the danger score for each location, based on where the individuals who have the infection visit"""
+    def update_venue_danger_and_risks(self):
+        """
+        Update the danger score for each location, based on where the individuals who have the infection visit.
+        Then look through the individuals again, assigning some of that danger back to them as 'current risk'.
+
+        :param risk_multiplier: Risk is calcuated as duration * flow * risk_multiplier.
+        """
         print("\tUpdating danger associated with visiting each venue")
-        for name in tqdm(self.activity_locations, desc=f"Updating dangers for activity locations"):
-            print(f"\tAnalysing {name} activity")
+
+        # Make a new list to keep the new risk for each individual (better than repeatedly accessing the dataframe)
+        # Make this 0 initialy as the risk is not cumulative; it gets reset each day
+        current_risk = [0] * len(self.individuals)
+
+        #for name in tqdm(self.activity_locations, desc=f"Updating dangers and risks for activity locations"):
+        for name in self.activity_locations:
+
+            #
+            # ***** 1 - update dangers of each venue (infected people visitting places)
+            #
+
+            print(f"\t\t{name} activity")
+            if name=="PrimarySchool" and i==16:
+                x=1
             # Get the details of the location activity
-            activity = self.activity_locations[name]  # Pointer to the ActivityLocation object
-            loc_ids = activity.get_ids()  # List of the IDs of the locations where the activity can take place
-            loc_idx = activity.get_indices() # List of the index (row  number) of the locations
-            loc_dangers = activity.get_dangers()  # List of the current dangers associated with each place
+            activity_location = self.activity_locations[name]  # Pointer to the ActivityLocation object
+            # Create a list to store the dangers associated with each location for this activity.
+            # Assume 0 initially, it should be reset each day
+            loc_dangers = [0] * len(activity_location.get_dangers())
+            #loc_dangers = activity_location.get_dangers()  # List of the current dangers associated with each place
+
 
             # Now look up those venues in the table of individuals
             venues_col = f"{name}{ColumnNames.ACTIVITY_VENUES}" # The names of the venues and
             flows_col = f"{name}{ColumnNames.ACTIVITY_FLOWS}"   # flows in the individuals DataFrame
+            durations_col = f"{name}{ColumnNames.ACTIVITY_DURATION}"   # flows in the individuals DataFrame
 
-            # 2D lists, for each individual: the venues they visit and the flows to the venue (i.e. how much they visit it)
+            # 2D lists, for each individual: the venues they visit, the flows to the venue (i.e. how much they visit it)
+            # and the durations (how long they spend doing it)
             statuses = self.individuals.Disease_Status
             venues = self.individuals.loc[:, venues_col]
             flows = self.individuals.loc[:, flows_col]
+            durations = self.individuals.loc[:, durations_col]
             assert len(venues) == len(flows) and len(venues) == len(statuses)
-            for i, (v, f, s) in enumerate(zip(venues, flows, statuses)): # For each individual
-                if s == 1: # infected?
+            for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)): # For each individual
+                if s == 1 or s == 2 or s == 3: # Exposed (1), pre-symptomatic (2), symptomatic (3)
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue_idx, flow in zip(v, f):
+                        #print(i, venue_idx, flow, duration)
                         # Individual i goes to the venue with index (row number) "venue" and flow "flow"
                         #print(i,v,f,s,venue_idx, flow)
                         #if venue_idx==0:
                         #    lkjasd=1
                         #venue_index = loc_ids.index(venue_id)
                         # Increase the danger by the flow multiplied by some disease risk
-                        loc_dangers[venue_idx] += (flow * 0.1)
+                        loc_dangers[venue_idx] += (flow * duration * self.risk_multiplier)
 
             # Now we have the dangers associated with each location, apply these back to the main dataframe
-            activity.update_dangers(loc_dangers)
+            activity_location.update_dangers(loc_dangers)
+
+            #
+            # ***** 2 - risks for individuals who visit dangerous venues
+            #
+
+            for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)):  # For each individual
+                # v and f are lists of flows and venues for the individual. Go through each one
+                for venue_idx, flow in zip(v, f):
+                    #  Danger associated with the location (we just created these updated dangers in the previous loop)
+                    danger = loc_dangers[venue_idx]
+                    current_risk[i] += (flow * danger * duration * self.danger_multiplier)
+
+        # Sanity check
+        assert len(current_risk) == len(self.individuals)
+        assert min(current_risk) >= 0  # Should not be risk less than 0
+
+        self.individuals[ColumnNames.CURRENT_RISK] = current_risk
 
         return
 
     def update_current_risk(self):
         """Individuals will be visitting locations which may have some danger if they were previously
         visitted by infected) which is now assigned to others."""
+
+
+
+
+
         pass
 
     def update_disease_counts(self):
@@ -1208,7 +1206,9 @@ class Microsim:
         # TODO replace Nan's with 0 (not a problem with MSOAs because they're a cateogry so the value_counts()
         # returns all, including those with 0 counts, but with HID those with 0 count don't get returned
         # Get rows with cases
-        cases = self.individuals.loc[(self.individuals.Disease_Status == 1) | (self.individuals.Disease_Status == 2), :]
+        cases = self.individuals.loc[(self.individuals.Disease_Status == 1) |
+                                     (self.individuals.Disease_Status == 2) |
+                                     (self.individuals.Disease_Status == 3), :]
         # Count cases per area (convert to a dataframe)
         case_counts = cases["Area"].value_counts()
         case_counts = pd.DataFrame(data={"Area": case_counts.index, "Count": case_counts}).reset_index(drop=True)
@@ -1243,16 +1243,23 @@ class Microsim:
         return row['Disease_Status'] # TEMP DON'T ACTUALLT DO ANYTHING
 
     def step(self) -> None:
-        """Step (iterate) the model"""
+        """
+        Step (iterate) the model
+
+        :param danger_multiplier: Danger assigned to a place if an infected individual visits it
+        is calcuated as duration * flow * danger_multiplier.
+        :param risk_multiplier: Risk that individuals get from a location is calculatd as
+        duration * flow * risk_multiplier
+
+        :return:
+        """
         self.iteration += 1
         print(f"\nIteration: {self.iteration}\n")
 
         # Update the danger associated with each venue (i.e. the as people with the disease visit them they
-        # become more dangerous
-        self.update_venue_danger()
+        # become more dangerous) then update the risk to each individual of going to those venues.
+        self.update_venue_danger_and_risks()
 
-        # Update the current risk for individuals who may be visitting those venues
-        self.update_current_risk()
 
         # Update disease counters. E.g. count diseases in MSOAs & households
         self.update_disease_counts()
@@ -1265,7 +1272,7 @@ class Microsim:
         # rather than object level (otherwise I couldn't get the argument passing to work properly)
         # tqdm.pandas(desc="Calculating new disease status") # means pd.apply() has a progress bar
         #self.individuals["Disease_Status"] = self.individuals.progress_apply(
-         #   func=Microsim.calculate_new_disease_status, axis=1, activity_locations=self.activity_locations)
+        #   func=Microsim.calculate_new_disease_status, axis=1, activity_locations=self.activity_locations)
 
 
         # Increase the number of days that each individual has had their current status
@@ -1302,12 +1309,12 @@ def run(iterations, data_dir):
     data_dir = os.path.join(base_dir, data_dir)
 
     # Temporarily only want to use Devon MSOAs
-    #devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
-    #m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
+    devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
+    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
     # Temporily use dummy data for testing
-    data_dir = os.path.join(base_dir, "dummy_data")
-    m = Microsim(data_dir=data_dir, testing=True)
+    #data_dir = os.path.join(base_dir, "dummy_data")
+    #m = Microsim(data_dir=data_dir, testing=True)
     
     # save initial m
     output_dir = os.path.join(data_dir, "output")
@@ -1321,14 +1328,14 @@ def run(iterations, data_dir):
     
     # collect location dangers at time 0 in new df(for analysis/visualisation)
     # TODO make a function for this so that it doesn't need to be repeated in the for loop below
-    for name in tqdm(m.activity_locations):
+    for name in m.activity_locations:
         # Get the details of the location activity
         activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
         loc_name = activity.get_name()  # retail, school etc
         loc_ids = activity.get_ids()  # List of the IDs of the locations 
         loc_dangers = activity.get_dangers()  # List of the current dangers
 
-        locals()[loc_name+'_to_pickle'] = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns =['ID', 'Danger0']) 
+        locals()[loc_name+'_to_pickle'] = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
 
 
     # Step the model
@@ -1337,7 +1344,7 @@ def run(iterations, data_dir):
         
         # add to items to pickle
         individuals_to_pickle["DiseaseStatus"+str(i+1)] = m.individuals.Disease_Status
-        for name in tqdm(m.activity_locations):
+        for name in m.activity_locations:
             # Get the details of the location activity
             activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
             loc_name = activity.get_name()  # retail, school etc
@@ -1351,7 +1358,7 @@ def run(iterations, data_dir):
     pickle_out = open(os.path.join(output_dir, "Individuals.pickle"),"wb")
     pickle.dump(individuals_to_pickle, pickle_out)
     pickle_out.close()  
-    for name in tqdm(m.activity_locations):
+    for name in m.activity_locations:
         # Get the details of the location activity
         activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
         loc_name = activity.get_name()  # retail, school etc
