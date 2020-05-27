@@ -200,3 +200,18 @@ with imageio.get_writer('map_movie.gif', mode='I', duration=0.5) as writer:
         writer.append_data(image)
         
 # dots on map
+merged_data.crs # get coordinate system from underlay (here MSOAs)
+
+ Converting a Pandas object (Dataframe) to a GeoPandas object (Dataframe)
+
+projection = {'init': 'epsg:27700'}
+
+gdf_retail = gpd.GeoDataFrame(gdf_retail, crs = projection, geometry = 'geometry')
+
+
+from shapely.geometry import Point
+retail_test = retail
+geometry = [Point(xy) for xy in zip(retail_test.bng_e, retail_test.bng_n)]
+retail_test = retail_test.drop(['bng_e', 'bng_n'], axis=1)
+crs = {'init': 'epsg:27700'}
+gdf = gpd.GeoDataFrame(retail_test, crs=crs, geometry=geometry)
