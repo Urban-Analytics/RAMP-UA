@@ -36,6 +36,10 @@ def test_microsim():
     # All flows should be to one location (single element [1.0])
     for flow in m.individuals[f"Home{ColumnNames.ACTIVITY_FLOWS}"]:
         assert flow == [1.0]
+
+    # House IDs are the same as the row index
+    assert False not in list(m.households.index == m.households.ID)
+
     # First two people live together in first household
     assert list(m.individuals.loc[0:1,:][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) ==[[0], [0]]
     # This one lives on their own in the fourth house
@@ -120,12 +124,13 @@ def test_microsim():
 
 # Test the home flows on the dummy data
 def test_add_home_flows(test_microsim):
-    # Using dummy data I know that there should be 1 person in household 0:
-    assert len(test_microsim.individuals.loc[test_microsim.individuals.HID == 0, :]) == 1
-    # And two people in house 1
-    assert len(test_microsim.individuals.loc[test_microsim.individuals.HID == 1, :]) == 2
-    # And 4 in house 12
-    assert len(test_microsim.individuals.loc[test_microsim.individuals.HID == 12, :]) == 4
+    ind = test_microsim.individuals  # save typine
+    # Using dummy data I know that there should be 2 person in household ID 0:
+    assert len(ind.loc[ind.House_ID == 0, :]) == 2
+    # And 4 people in house ID 2
+    assert len(ind.loc[ind.House_ID == 1, :]) == 3
+    # And 1 in house ID 7
+    assert len(ind.loc[ind.House_ID == 7, :]) == 1
 
 
 def test_read_school_flows_data(test_microsim):
@@ -177,30 +182,27 @@ def test_read_msm_data(test_microsim):
 def test_update_disease_counts(test_microsim):
     """Check that disease counts for MSOAs and households are updated properly"""
     m = test_microsim  # less typing
-
-    m.individuals.loc[m.individuals._PID == 100799, "Disease_Status"] = 1
-    m.individuals.loc[m.individuals._PID == 23968, "Disease_Status"] = 1
-    m.individuals.loc[m.individuals._PID == 23434, "Disease_Status"] = 1
-    m.individuals.loc[m.individuals._PID == 90653, "Disease_Status"] = 1
+    # Make sure no one has the disease to start with
+    m.individuals["Disease_Status"] = 0
+    # (Shouldn't use _PID any more, this is a hangover to old version, but works OK with dummy data)
+    m.individuals.loc[9, "Disease_Status"] = 1  # lives alone
+    m.individuals.loc[13, "Disease_Status"] = 1  # Lives with 3 people
+    m.individuals.loc[11, "Disease_Status"] = 1  # | Live
+    m.individuals.loc[12, "Disease_Status"] = 1  # | Together
     #m.individuals.loc[:, ["PID", "HID", "Area", "Disease_Status", "MSOA_Cases", "HID_Cases"]]
     m.update_disease_counts()
     # This person has the disease
-    assert m.individuals.loc[m.individuals._PID == 100799, "MSOA_Cases"].values[0] == 1
-    assert m.individuals.loc[m.individuals._PID == 100799, "HID_Cases"].values[0] == 1
-    # These people live there too (but live in different msoas, so it's OK the disease hasn't propogated there!)
-    assert m.individuals.loc[m.individuals._PID == 64788, "HID_Cases"].values[0] == 1
-    assert m.individuals.loc[m.individuals._PID == 69754, "HID_Cases"].values[0] == 1
-    # In this house of 4, two people have the disease
-    assert m.individuals.loc[m.individuals._PID == 17942, "HID_Cases"].values[0] == 2
-    assert m.individuals.loc[m.individuals._PID == 22526, "HID_Cases"].values[0] == 2
-    assert m.individuals.loc[m.individuals._PID == 23434, "HID_Cases"].values[0] == 2
-    assert m.individuals.loc[m.individuals._PID == 23968, "HID_Cases"].values[0] == 2
-    # One person in this area has the disease
-    assert m.individuals.loc[m.individuals._PID == 90653, "MSOA_Cases"].values[0] == 1
-    assert False not in (m.individuals.loc[(m.individuals._HID == 1) | (m.individuals._HID == 3) |
-                                           (m.individuals._HID == 6)]["HID_Cases"] == 0)
-    assert False not in (m.individuals.loc[(m.individuals.Area == "E02004147") | (m.individuals.Area == "E02004138") |
-                                           (m.individuals.Area == "E02004158")]["MSOA_Cases"] == 0)
+    assert m.individuals.at[9, "MSOA_Cases"] == 1
+    assert m.individuals.at[9, "HID_Cases"] == 1
+    # These people live with someone who has the disease
+    for p in [13, 14, 15]:
+        assert m.individuals.at[p, "MSOA_Cases"] == 1
+        assert m.individuals.at[p, "HID_Cases"] == 1
+    # Two people in this house have the disease
+    for p in [11, 12]:
+        assert m.individuals.at[p, "MSOA_Cases"] == 2
+        assert m.individuals.at[p, "HID_Cases"] == 2
+
 
     # Note: Can't fully test MSOA cases because I don't have any examples of people from different
     # households living in the same MSOA in the test data
@@ -339,9 +341,9 @@ def test_random():
     Checks that random classes are produce different (or the same!) numbers when they should do
     :return:
     """
-    m1 = microsim.Microsim(read_data=False)
-    m2 = microsim.Microsim(random_seed=2.0, read_data=False)
-    m3 = microsim.Microsim(random_seed=2.0, read_data=False)
+    m1 = Microsim(read_data=False)
+    m2 = Microsim(random_seed=2.0, read_data=False)
+    m3 = Microsim(random_seed=2.0, read_data=False)
 
     # Genrate a random number from each model. The second two numbers should be the same
     r1, r2, r3 = [_get_rand(x) for x in [m1, m2, m3]]
@@ -352,7 +354,7 @@ def test_random():
     # Check that this still happens even if they are executed in pools.
     # Create a large number of microsims and check that all random numbers are unique
     pool = multiprocessing.Pool()
-    m = [microsim.Microsim(read_data=False) for _ in range(10000)]
+    m = [Microsim(read_data=False) for _ in range(10000)]
     r = pool.map(_get_rand, m)
     assert len(r) == len(set(r))
 
