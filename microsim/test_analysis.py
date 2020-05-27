@@ -14,6 +14,7 @@ import seaborn as sns
 import geopandas as gpd
 import os
 import pickle
+from shapely.geometry import Point
 
 
 # To fix file path issues, use absolute/full path at all times
@@ -200,18 +201,27 @@ with imageio.get_writer('map_movie.gif', mode='I', duration=0.5) as writer:
         writer.append_data(image)
         
 # dots on map
-merged_data.crs # get coordinate system from underlay (here MSOAs)
+#merged_data.crs # check coordinate system from underlay (here MSOAs - epsg:27700)
 
- Converting a Pandas object (Dataframe) to a GeoPandas object (Dataframe)
-
-projection = {'init': 'epsg:27700'}
-
-gdf_retail = gpd.GeoDataFrame(gdf_retail, crs = projection, geometry = 'geometry')
+#Converting a Pandas object (Dataframe) to a GeoPandas object (Dataframe)
 
 
-from shapely.geometry import Point
 retail_test = retail
 geometry = [Point(xy) for xy in zip(retail_test.bng_e, retail_test.bng_n)]
 retail_test = retail_test.drop(['bng_e', 'bng_n'], axis=1)
 crs = {'init': 'epsg:27700'}
-gdf = gpd.GeoDataFrame(retail_test, crs=crs, geometry=geometry)
+gdf_retail = gpd.GeoDataFrame(retail_test, crs=crs, geometry=geometry)
+
+# plot all retail locations
+base = map_df.plot(color='white', edgecolor='black')
+gdf_retail.plot(ax=base, marker='o', color='red', markersize=5)
+
+# plot only those with certain level of danger
+base = map_df.plot(color='white', edgecolor='black')
+gdf_retail[gdf_retail.Danger0 > 0].plot(ax=base, marker='o', color='red', markersize=5)
+
+
+
+
+
+
