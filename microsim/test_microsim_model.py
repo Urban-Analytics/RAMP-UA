@@ -255,9 +255,9 @@ def test_step(test_microsim):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 1.0
     for p in range(2,len(m.individuals)):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
-    m.households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
-    for h in range(1, len(m.households)):
-        m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+    assert m.households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
+    for h in range(1, len(m.households)):  # all others are 0
+        assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     m.step()
 
@@ -268,16 +268,16 @@ def test_step(test_microsim):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
     m.households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
     for h in range(1, len(m.households)):
-        m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+        assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     # If the infected person doesn't go home (in this test they do absolutely nothing) then danger and risks should go
     # back to 0
     m.individuals.at[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] = 0.0
     m.step()
-    for p in [p1, p2]:
+    for p in range(len(m.individuals)):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
     for h in range(0, len(m.households)):
-        m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+        assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
 
     # But if they both get sick then they should be 2.0 (double danger and risk)
@@ -286,8 +286,9 @@ def test_step(test_microsim):
     m.step()
     for p in [p1, p2]:
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 2.0
-    for h in range(0, len(m.households)):
-        m.households.at[h, ColumnNames.LOCATION_DANGER] == 2.0
+    assert m.households.at[0, ColumnNames.LOCATION_DANGER] == 2.0
+    for h in range(1, len(m.households)): # All other houses are danger free
+        m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     #
     # Now see what happens when one person gets the disease and spreads it to schools, shops and work
