@@ -18,7 +18,7 @@ from microsim_model import Microsim
 
 
 
-class MicrosimInit():
+class MicrosimInit(Microsim):
     """
     Create some preliminary data that are needed to estimate coefficients for the disease estimates.
 
@@ -34,8 +34,9 @@ class MicrosimInit():
     Also repeat the above process M times.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self,  *args, **kwargs):
+        """Just passes everything to the Microsim constructor"""
+        super(MicrosimInit, self).__init__(*args, **kwargs)
 
 
 
@@ -61,7 +62,7 @@ def run(repetitions, data_dir, init_dir):
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None,
                               names=["x", "y", "Num", "Code", "Desc"])
-    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
+    m = MicrosimInit(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
     # TODO Start looping for number of repetitions
 
