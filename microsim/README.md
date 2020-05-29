@@ -14,6 +14,14 @@ The code is written in python. Most of the libraries used are fairly standard so
 conda env create -f environment.yml
 ```
 
+Once you have your environment configured correctly, you can run the code by first returning to the main [RAMP-UA](..) directory and then running with:
+
+```
+python microsim/microsim_model.py
+```
+
+Outputs are written to the [data/outputs](./data/outputs) directory.
+
 ## Process overview
 
 The process that the model runs is as follows:
