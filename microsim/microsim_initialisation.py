@@ -62,6 +62,8 @@ def run(repetitions, data_dir, init_dir):
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None,
                               names=["x", "y", "Num", "Code", "Desc"])
+
+    # Initialise the model (MirosimInit init is a child of Microsim)
     m = MicrosimInit(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
     # TODO Start looping for number of repetitions
