@@ -91,6 +91,7 @@ class MicrosimInit(Microsim):
 
             #  Randomly assign cases to individuals
             cases = row['new_cases']
+            random.seed()  # Sometimes different Processes can be given the same generator and seed
             infected_individuals = random.sample(list(m.high_risk_individuals), cases)
             assert len(infected_individuals) == cases
             m.individuals.loc[infected_individuals,ColumnNames.DISEASE_STATUS] = 1
@@ -117,6 +118,12 @@ class MicrosimInit(Microsim):
             activity_df.to_csv(os.path.join(results_subdirectory, f"{name}.csv"))
 
         return individual_risks
+
+    @staticmethod
+    def make_a_copy(m: Microsim):
+        """When copying a microsim object, reset the seed"""
+        m.random.seed()
+        return copy.deepcopy(m)
 
 
 # PROGRAM ENTRY POINT
@@ -176,10 +183,11 @@ def run_script(repetitions, data_dir, init_dir, multiprocess):
             subdir = os.path.join(results_subdir, str(j))
             # Run it, writing out data, and returing the risks per day.
             # Copy the model initialisation instance each time (although maybe this not strictly necessary
-            individual_risks.append(MicrosimInit.run(copy.deepcopy(m), subdir))
+            individual_risks.append(
+                MicrosimInit.run(MicrosimInit.make_a_copy(m), subdir))
     else:  # Run as multiprocess
         subdirs = [ os.path.join(results_subdir, str(j)) for j in range(repetitions) ]
-        models = (copy.deepcopy(m) for _ in range(repetitions))  # Generator so dont need to do all copies at once
+        models = (MicrosimInit.make_a_copy(m) for _ in range(repetitions))  # Generator so dont need to do all copies at once
         with multiprocessing.Pool(processes=int(os.cpu_count()/2.0)) as pool:
             try:
                 #individual_risks = pool.map(MicrosimInit.run, zip(models, subdirs))
@@ -188,7 +196,6 @@ def run_script(repetitions, data_dir, init_dir, multiprocess):
                 pool.close()
 
     print("End of initialisation")
-
 
 if __name__ == "__main__":
     run_script()

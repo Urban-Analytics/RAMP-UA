@@ -307,6 +307,7 @@ def test_step(test_microsim):
     m.step()
 
     # Now check that the danger has propagated to locations and risk to people
+    # TODO Also check that the total risks and danger scores sum correctly
     for name, activity in m.activity_locations.items():
         # Indices of the locations where this person visited
         visited_idx = m.individuals.at[p1, f"{name}{ColumnNames.ACTIVITY_VENUES}"]
