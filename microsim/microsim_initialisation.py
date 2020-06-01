@@ -90,7 +90,7 @@ class MicrosimInit(Microsim):
             m.individuals.loc[:,ColumnNames.DISEASE_STATUS] = 0
 
             # Manually change people's activity durations after lockdown
-            if True: # After day 10
+            if False: #  Can set this to set activity proportions etc. after i days
                 total_duration = 0.0
                 for colum_name in ['Retail', 'PrimarySchool', 'SecondarySchool', 'Work']:
                     new_duration = m.individuals.loc[:, colum_name+ ColumnNames.ACTIVITY_DURATION] * 0.5
@@ -108,6 +108,10 @@ class MicrosimInit(Microsim):
 
             #  Randomly assign cases to individuals
             cases = row['new_cases']
+            if len(cases) > 100:
+                raise Exception("Internal error. If there are more than 100 days of cases then the format"
+                                "line below which is used to create a new column for each day as a two-digit "
+                                "number, will need to be adapted to make 3-digit numbers.")
             random.seed()  # Sometimes different Processes can be given the same generator and seed
             infected_individuals = random.sample(list(m.high_risk_individuals), cases)
             assert len(infected_individuals) == cases
@@ -146,7 +150,7 @@ class MicrosimInit(Microsim):
 # PROGRAM ENTRY POINT
 # Uses 'click' library so that it can be run from the command line
 @click.command()
-@click.option('--repetitions', default=10, help='Number of times to repeat the initialisation process')
+@click.option('--repetitions', default=5, help='Number of times to repeat the initialisation process')
 @click.option('--data_dir', default="data", help='Root directory to load main model data from')
 @click.option('--init_dir', default="init_data", help="Directory that stores initialisation data, and where outputs are written")
 @click.option('--multiprocess', default=False, help="Whether to run multiprocess or not")
@@ -164,7 +168,7 @@ def run_script(repetitions, data_dir, init_dir, multiprocess):
     # Read the initialisation data
     cases = pd.read_csv(os.path.join(init_dir, "devon_cases_fn.csv"))
     # Cut off cases after 10
-    cases = cases.loc[0:10, :]
+    #cases = cases.loc[0:10, :]
     msoa_danger = pd.read_csv(os.path.join(init_dir, "msoa_danger_fn.csv"))
 
     # Sense check: all MSOAs in Devon should have a danger score
