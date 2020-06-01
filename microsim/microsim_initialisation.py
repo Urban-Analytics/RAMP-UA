@@ -89,6 +89,23 @@ class MicrosimInit(Microsim):
             # Reset everyone's disease status
             m.individuals.loc[:,ColumnNames.DISEASE_STATUS] = 0
 
+            # Manually change people's activity durations after lockdown
+            if True: # After day 10
+                total_duration = 0.0
+                for colum_name in ['Retail', 'PrimarySchool', 'SecondarySchool', 'Work']:
+                    new_duration = m.individuals.loc[:, colum_name+ ColumnNames.ACTIVITY_DURATION] * 0.5
+                    total_duration += new_duration
+                    m.individuals.loc[:, colum_name + ColumnNames.ACTIVITY_DURATION] = new_duration
+
+                # Now set home
+                m.individuals.loc[:, 'Home'+ ColumnNames.ACTIVITY_DURATION] = (1 - total_duration)
+
+                # If you want to loop over all activities this is how you do it:
+                #for name, activity_location in m.activity_locations.items():
+                    # Reduce the duration of all activites by 0.9:
+                    #m.individuals.loc[ : , name+ColumnNames.ACTIVITY_DURATION  ]  =
+                        #m.individuals.loc[ : , name+ColumnNames.ACTIVITY_DURATION  ] * 0.9
+
             #  Randomly assign cases to individuals
             cases = row['new_cases']
             random.seed()  # Sometimes different Processes can be given the same generator and seed
@@ -146,8 +163,8 @@ def run_script(repetitions, data_dir, init_dir, multiprocess):
 
     # Read the initialisation data
     cases = pd.read_csv(os.path.join(init_dir, "devon_cases_fn.csv"))
-    # Temporarily only do the first few days
-    cases = cases.loc[0:10,:]
+    # Cut off cases after 10
+    cases = cases.loc[0:10, :]
     msoa_danger = pd.read_csv(os.path.join(init_dir, "msoa_danger_fn.csv"))
 
     # Sense check: all MSOAs in Devon should have a danger score
@@ -188,7 +205,7 @@ def run_script(repetitions, data_dir, init_dir, multiprocess):
     else:  # Run as multiprocess
         subdirs = [ os.path.join(results_subdir, str(j)) for j in range(repetitions) ]
         models = (MicrosimInit.make_a_copy(m) for _ in range(repetitions))  # Generator so dont need to do all copies at once
-        with multiprocessing.Pool(processes=int(os.cpu_count()/2.0)) as pool:
+        with multiprocessing.Pool(processes=int(os.cpu_count()) ) as pool:
             try:
                 #individual_risks = pool.map(MicrosimInit.run, zip(models, subdirs))
                 individual_risks = pool.starmap(MicrosimInit.run, zip(models, subdirs))
