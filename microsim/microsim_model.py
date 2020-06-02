@@ -1292,7 +1292,7 @@ class Microsim:
 # PROGRAM ENTRY POINT
 # Uses 'click' library so that it can be run from the command line
 @click.command()
-@click.option('--iterations', default=2, help='Number of model iterations')
+@click.option('--iterations', default=19, help='Number of model iterations')
 @click.option('--data_dir', default="data", help='Root directory to load data from')
 
 def run(iterations, data_dir):
