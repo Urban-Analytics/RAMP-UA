@@ -1292,11 +1292,15 @@ class Microsim:
 # PROGRAM ENTRY POINT
 # Uses 'click' library so that it can be run from the command line
 @click.command()
-@click.option('--iterations', default=19, help='Number of model iterations')
-@click.option('--data_dir', default="data", help='Root directory to load data from')
+@click.option('--iterations', default=2, help='Number of model iterations. 0 means just run the initialisation')
 
+@click.option('--data_dir', default="data", help='Root directory to load data from')
 def run(iterations, data_dir):
     num_iter = iterations
+    if num_iter==0:
+        print("Iterations = 0. Not stepping model, just assigning the initial risks.")
+    else:
+        print("Running model for", num_iter, "iterations.")
     
     # To fix file path issues, use absolute/full path at all times
     # Pick either: get working directory (if user starts this script in place, or set working directory
