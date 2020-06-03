@@ -1131,8 +1131,6 @@ class Microsim:
             #
 
             print(f"\t\t{name} activity")
-            if name=="PrimarySchool" and i==16:
-                x=1
             # Get the details of the location activity
             activity_location = self.activity_locations[name]  # Pointer to the ActivityLocation object
             # Create a list to store the dangers associated with each location for this activity.
@@ -1188,15 +1186,6 @@ class Microsim:
 
         return
 
-    def update_current_risk(self):
-        """Individuals will be visitting locations which may have some danger if they were previously
-        visitted by infected) which is now assigned to others."""
-
-
-
-
-
-        pass
 
     def update_disease_counts(self):
         """Update some disease counters -- counts of diseases in MSOAs & households -- which are useful
