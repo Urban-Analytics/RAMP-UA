@@ -1047,8 +1047,12 @@ class Microsim:
         return individuals
 
     @classmethod
-    def _normalise(cls, l: List[float]) -> List[float]:
-        """Normalise a list so that it sums to 1.0"""
+    def _normalise(cls, l: List[float], decimals=3) -> List[float]:
+        """
+        Normalise a list so that it sums to almost 1.0. Rounding might cause it not to add exactly to 1
+
+        :param decimals: Optionally round to the number of decimal places. Default 3. If 'None' the do no rounding.
+        """
         if not isinstance(l, Iterable):
             raise Exception("Can only work with iterables")
         if len(l) == 1:  # Special case for 1-item iterables
@@ -1057,11 +1061,9 @@ class Microsim:
         l = np.array(l)  # Easier to work with numpy vectorised operators
         total = l.sum()
         l = l / total
-        ## Scale so all are between 0-1
-        ##l = (l - l.min()) / (l.max() - l.min())
-        ## Scale so sum to 1
-        ##l = l / l.sum()
-        return list(l)
+        if decimals is None:
+            return list(l)
+        return [round(x, decimals) for x in l]
 
     def export_to_feather(self, path="export"):
         """
