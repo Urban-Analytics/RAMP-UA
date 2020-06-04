@@ -20,12 +20,16 @@ run_status <- function(pop_df) {
   
   # the stuff below here should be loaded only once in python i guess and
   # passed as columns in the dataframe
-  pop_dens <- read_csv("~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Population_Data_Devon/msoa_population_density.csv")
+  # ive removed them for now because im not sure if we want to keep
+  # msoa and population density in here since it might be accounted for
+  # in nics code. for now we are just including age, sex, and nics "risk"
   
-  connectivity <- janitor::clean_names(read_csv("~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Transport_Data/msoa_connectedness_closest_three.csv")) %>% 
-    filter(!is.na(msoa_sum_connected_ann))
-  colnames(connectivity)[3:4] <- c("connectedness", "log_connectedness") 
-  connectivity$connectivity_index <- normalizer(connectivity$log_connectedness, 0.01, 1, min(connectivity$log_connectedness), max(connectivity$log_connectedness))
+  #pop_dens <- read_csv("~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Population_Data_Devon/msoa_population_density.csv")
+  
+  #connectivity <- janitor::clean_names(read_csv("~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Transport_Data/msoa_connectedness_closest_three.csv")) %>% 
+  #  filter(!is.na(msoa_sum_connected_ann))
+  #colnames(connectivity)[3:4] <- c("connectedness", "log_connectedness") 
+  #connectivity$connectivity_index <- normalizer(connectivity$log_connectedness, 0.01, 1, min(connectivity$log_connectedness), max(connectivity$log_connectedness))
   
   population_in$cases_per_area <- 0
   
@@ -43,13 +47,12 @@ run_status <- function(pop_df) {
   df_cr_in <-create_input(micro_sim_pop  = population_in,
                           num_sample = num_sample,
                           pnothome_multiplier = 0.6,   # 0.1 = a 60% reduction in time people not home
-                          fixed_vars = c(area,   # must match columns in the population data.frame
-                                         hid,
-                                         pid,
-                                         age,
-                                         sex,
-                                         "msoa_area",
-                                         "connectivity_index"))
+                          vars = c(area,   # must match columns in the population data.frame
+                                   hid,
+                                   pid,
+                                   age,
+                                   sex,
+                                   "risk"))
   
   df_in <- as_betas_devon(population_sample = df_cr_in, 
                           pid = pid,
@@ -81,30 +84,31 @@ run_status <- function(pop_df) {
   df_msoa <- df_in
   df_risk <- list()
   
-  df_prob <- covid_prob(df = df_msoa, betas = other_betas,timestep=i)
-  df_ass <- case_assign(df = df_prob, timestep=i, with_optimiser = FALSE)
+  df_prob <- covid_prob(df = df_msoa, betas = other_betas)
+  df_ass <- case_assign(df = df_prob, with_optimiser = FALSE)
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
                              presymp_mean = 6.4,
                              presymp_sd = 2.3,
                              infection_dist = "normal",
                              infection_mean =  14,
-                             infection_sd = 2,
-                             timestep=i)
-  df_rec <- removed(df = df_inf, chance_recovery = 0.95,timestep=i)
-  df_msoa <- area_cov(df = df_rec, timestep = i, area = area, hid = hid)
+                             infection_sd = 2)
+  df_rec <- removed(df = df_inf, chance_recovery = 0.95)
+  df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
   
   #colSums(df_msoa$had_covid)
   #colMeans(df_msoa$cases_per_area)
   
-  df_out <- data.frame(pid=df_msoa$pid,
-                       status=df_msoa$status,
-                       infected_time=df_msoa$infected_time,
-                       infected_time=df_msoa$infected_time)
+  df_out <- data.frame(area=df_msoa$area,
+                       pid=df_msoa$pid,
+                       hid=df_msoa$hid,
+                       disease_status=df_msoa$new_status,
+                       presymp_days=df_msoa$presymp_days,
+                       symp_days=df_msoa$symp_days)
   
   print("new disease status calculated")
   
-  return(tmp)
+  return(df_out)
 }
 
 
