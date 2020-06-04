@@ -443,6 +443,7 @@ def test__add_location_columns():
 
 
 def test__normalise():
+    # TODO test the 'decimals' argument too.
     # Should normalise so that the input list sums to 1
     # Fail if aa single number is given
     for l in [2, 1]:

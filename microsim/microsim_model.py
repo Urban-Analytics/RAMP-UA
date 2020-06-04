@@ -32,6 +32,7 @@ from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
 import pickle # to save data
+import swifter
 
 
 class Microsim:
@@ -209,6 +210,14 @@ class Microsim:
         self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces)
         self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
                                                               individuals=self.individuals, duration_col="pwork")
+
+        # Some flows will be very complicated numbers. Reduce the numbers of decimal places across the board.
+        # This makes it easier to write out the files
+        for name in tqdm(self.activity_locations.keys(), desc="Rounding all flows"):
+            self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = \
+                self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"].swifter.progress_bar(False).apply(
+                    lambda flows: [round(flow, 5) for flow in flows])
+
 
         # Add some necessary columns for the disease and assign initial SEIR status
         self.individuals = Microsim.add_disease_columns(self.individuals)
@@ -1112,12 +1121,14 @@ class Microsim:
         return individuals
 
 
-    def update_venue_danger_and_risks(self):
+    def update_venue_danger_and_risks(self, decimals=10):
         """
         Update the danger score for each location, based on where the individuals who have the infection visit.
         Then look through the individuals again, assigning some of that danger back to them as 'current risk'.
 
         :param risk_multiplier: Risk is calcuated as duration * flow * risk_multiplier.
+        :param decimals: Number of decimals to round the indivdiual risks and dangers to (defult 10). If 'None'
+                        then do no rounding
         """
         print("\tUpdating danger associated with visiting each venue")
 
@@ -1158,16 +1169,9 @@ class Microsim:
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue_idx, flow in zip(v, f):
                         #print(i, venue_idx, flow, duration)
-                        # Individual i goes to the venue with index (row number) "venue" and flow "flow"
-                        #print(i,v,f,s,venue_idx, flow)
-                        #if venue_idx==0:
-                        #    lkjasd=1
-                        #venue_index = loc_ids.index(venue_id)
                         # Increase the danger by the flow multiplied by some disease risk
                         loc_dangers[venue_idx] += (flow * duration * self.risk_multiplier)
 
-            # Now we have the dangers associated with each location, apply these back to the main dataframe
-            activity_location.update_dangers(loc_dangers)
 
             #
             # ***** 2 - risks for individuals who visit dangerous venues
@@ -1180,9 +1184,18 @@ class Microsim:
                     danger = loc_dangers[venue_idx]
                     current_risk[i] += (flow * danger * duration * self.danger_multiplier)
 
+            # Now we have the dangers associated with each location, apply these back to the main dataframe
+            if decimals is not None: # Round the dangers?
+                loc_dangers = [round(x, decimals) for x in loc_dangers]
+            activity_location.update_dangers(loc_dangers)
+
         # Sanity check
         assert len(current_risk) == len(self.individuals)
         assert min(current_risk) >= 0  # Should not be risk less than 0
+
+        # Round the current risks?
+        if decimals is not None:
+            current_risk = [round(x, decimals) for x in current_risk]
 
         self.individuals[ColumnNames.CURRENT_RISK] = current_risk
 
