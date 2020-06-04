@@ -1165,7 +1165,7 @@ class Microsim:
             durations = self.individuals.loc[:, durations_col]
             assert len(venues) == len(flows) and len(venues) == len(statuses)
             for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)): # For each individual
-                if s == 1 or s == 2 or s == 3: # Exposed (1), pre-symptomatic (2), symptomatic (3)
+                if s == 1 or s == 2:  #  pre-symptomatic (1), symptomatic (2)
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue_idx, flow in zip(v, f):
                         #print(i, venue_idx, flow, duration)
@@ -1243,6 +1243,9 @@ class Microsim:
         #    flows = row[f"{activity_name}{ColumnNames.ACTIVITY_FLOWS}"]
         #    venus + flows  # Just to see how long this might take
         #    pass
+
+        # Also update  ColumnNames.DAYS_WITH_STATUS
+
         return row['Disease_Status'] # TEMP DON'T ACTUALLT DO ANYTHING
 
     def step(self) -> None:
@@ -1276,11 +1279,6 @@ class Microsim:
         # tqdm.pandas(desc="Calculating new disease status") # means pd.apply() has a progress bar
         #self.individuals["Disease_Status"] = self.individuals.progress_apply(
         #   func=Microsim.calculate_new_disease_status, axis=1, activity_locations=self.activity_locations)
-
-
-        # Increase the number of days that each individual has had their current status
-        self.individuals["Days_With_Status"] = self.individuals["Days_With_Status"].apply(
-            lambda x: x + 1)
 
         # Can export after every iteration if we want to
         #self.export_to_feather()

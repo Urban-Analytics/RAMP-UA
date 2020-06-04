@@ -83,17 +83,28 @@ class MicrosimInit(Microsim):
         for name, activity_location in m.activity_locations.items():
             activity_dangers[name] = activity_location._locations.copy()
 
+        if len(m.cases) > 100:
+            raise Exception("Internal error. If there are more than 100 days of cases then the format"
+                            "line below which is used to create a new column for each day as a two-digit "
+                            "number, will need to be adapted to make 3-digit numbers.")
+
         # Loop for every iteration (get this from cases)
         for i, row in m.cases.iterrows():
             print(i, row['date'], row['new_cases'])
             # Reset everyone's disease status
             m.individuals.loc[:,ColumnNames.DISEASE_STATUS] = 0
 
+            if i == 80: # FOR  A BREAK POINT. Now can add a breakpoint into m.update_venue_danger_and_risks and see how the risks and dangers are calculated
+                x=1
+                #individual_risks.loc[:, :].groupby('Area').sum().sort_values(by="Current_Risk35", ascending=False)
+
             # Manually change people's activity durations after lockdown
             if i > 39:  # After day 39 - March 23RD in new cases
                 total_duration = 0.0
                 for colum_name in ['Retail', 'PrimarySchool', 'SecondarySchool', 'Work']:
                     new_duration = m.individuals.loc[:, colum_name+ ColumnNames.ACTIVITY_DURATION] * 0.33
+                    # Round the new duration to prevent tiny numbers
+                    new_duration = round(new_duration, 10)
                     total_duration += new_duration
                     m.individuals.loc[:, colum_name + ColumnNames.ACTIVITY_DURATION] = new_duration
 
@@ -107,18 +118,14 @@ class MicrosimInit(Microsim):
                         #m.individuals.loc[ : , name+ColumnNames.ACTIVITY_DURATION  ] * 0.9
 
             #  Randomly assign cases to individuals
-            cases = row['new_cases']
-            if len(cases) > 100:
-                raise Exception("Internal error. If there are more than 100 days of cases then the format"
-                                "line below which is used to create a new column for each day as a two-digit "
-                                "number, will need to be adapted to make 3-digit numbers.")
+            num_cases = row['new_cases']
             random.seed()  # Sometimes different Processes can be given the same generator and seed
-            infected_individuals = random.sample(list(m.high_risk_individuals), cases)
-            assert len(infected_individuals) == cases
-            m.individuals.loc[infected_individuals,ColumnNames.DISEASE_STATUS] = 1
-            assert len(m.individuals.loc[m.individuals[ColumnNames.DISEASE_STATUS] == 1]) == cases
+            infected_individuals = random.sample(list(m.high_risk_individuals), num_cases)
+            assert len(infected_individuals) == num_cases
+            m.individuals.loc[infected_individuals, ColumnNames.DISEASE_STATUS] = 1
+            assert len(m.individuals.loc[m.individuals[ColumnNames.DISEASE_STATUS] == 1]) == num_cases
             # Aggregate and count the cases per area and check they are the correct numbers of cases
-            assert m.individuals.loc[m.individuals.Disease_Status > 0, :]["Area"].value_counts().sum() == cases
+            assert m.individuals.loc[m.individuals.Disease_Status > 0, :]["Area"].value_counts().sum() == num_cases
 
             # Step the model
             m.step()
