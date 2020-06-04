@@ -90,10 +90,10 @@ class MicrosimInit(Microsim):
             m.individuals.loc[:,ColumnNames.DISEASE_STATUS] = 0
 
             # Manually change people's activity durations after lockdown
-            if False: #  Can set this to set activity proportions etc. after i days
+            if i > 39:  # After day 39 - March 23RD in new cases
                 total_duration = 0.0
                 for colum_name in ['Retail', 'PrimarySchool', 'SecondarySchool', 'Work']:
-                    new_duration = m.individuals.loc[:, colum_name+ ColumnNames.ACTIVITY_DURATION] * 0.5
+                    new_duration = m.individuals.loc[:, colum_name+ ColumnNames.ACTIVITY_DURATION] * 0.33
                     total_duration += new_duration
                     m.individuals.loc[:, colum_name + ColumnNames.ACTIVITY_DURATION] = new_duration
 
@@ -117,6 +117,8 @@ class MicrosimInit(Microsim):
             assert len(infected_individuals) == cases
             m.individuals.loc[infected_individuals,ColumnNames.DISEASE_STATUS] = 1
             assert len(m.individuals.loc[m.individuals[ColumnNames.DISEASE_STATUS] == 1]) == cases
+            # Aggregate and count the cases per area and check they are the correct numbers of cases
+            assert m.individuals.loc[m.individuals.Disease_Status > 0, :]["Area"].value_counts().sum() == cases
 
             # Step the model
             m.step()
