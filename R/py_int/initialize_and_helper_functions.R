@@ -6,7 +6,7 @@
 ##################################
 
 
-create_input <- function(fixed_vars = NULL, dynamic_vars = NULL, lockdown_date = NULL,  pnothome_multiplier = 1){
+create_input <- function(micro_sim_pop, num_sample, num_sample,fixed_vars = NULL, dynamic_vars = NULL, lockdown_date = NULL,  pnothome_multiplier = 1){
   
   if(!all(fixed_vars %in% colnames(population_sample))){
     print(paste0(fixed_vars[!fixed_vars %in% colnames(population_sample)], " not in population column names"))
@@ -32,21 +32,17 @@ create_input <- function(fixed_vars = NULL, dynamic_vars = NULL, lockdown_date =
   }
   
   constant_list <- list(
-    beta0 = matrix(0, nrow = num_sample, ncol = num_days),
-    betaxs = matrix(0, nrow = num_sample, ncol = num_days),
-    new_beta0 = matrix(0, nrow = num_sample, ncol = num_days),
-    hid_presymp = matrix(0, nrow = num_sample, ncol = num_days),
-    hid_symp = matrix(0, nrow = num_sample, ncol = num_days),
-    hid_infected = matrix(0, nrow = num_sample, ncol = num_days),
-    msoa_presymp = matrix(0, nrow = num_sample, ncol = num_days),
-    msoa_symp = matrix(0, nrow = num_sample, ncol = num_days),
-    msoa_infected = matrix(0, nrow = num_sample, ncol = num_days),
-    msoa_index = matrix(0, nrow = num_sample, ncol = num_days),
+    beta0 = rep(0, num_sample),
+    betaxs = rep(0, num_sample),
+    new_beta0 = rep(0, num_sample),
+    hid_status = rep(0, num_sample),
+    msoa_status = rep(0, num_sample),
+    msoa_index = rep(0, num_sample),
     presymp_days = rep(0, num_sample),
     symp_days = rep(0, num_sample),
-    probability = matrix(0, nrow = num_sample, ncol = num_days),
-    optim_probability = matrix(0, nrow = num_sample, ncol = num_days),
-    status = matrix(0, nrow = num_sample, ncol = num_days)
+    probability = rep(0, nnum_sample),
+    #optim_probability = matrix(0, nrow = num_sample),
+    status = matrix(0, num_sample)
   )
   
   df <- c(fixed_list, dynamic_list, constant_list)

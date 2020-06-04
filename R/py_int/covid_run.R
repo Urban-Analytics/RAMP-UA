@@ -16,6 +16,8 @@ run_status <- function(pop_df) {
   
   population <- clean_names(pop)
   
+  num_sample <- nrow(population)
+  
   # the stuff below here should be loaded only once in python i guess and
   # passed as columns in the dataframe
   pop_dens <- read_csv("~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Population_Data_Devon/msoa_population_density.csv")
@@ -39,6 +41,7 @@ run_status <- function(pop_df) {
     mutate(log_pop_dens = log10(pop_dens_km2)) 
   
   df_cr_in <-create_input(micro_sim_pop  = population_in,
+                          num_sample = num_sample,
                           pnothome_multiplier = 0.6,   # 0.1 = a 60% reduction in time people not home
                           fixed_vars = c(area,   # must match columns in the population data.frame
                                          hid,
