@@ -1251,7 +1251,7 @@ class Microsim:
 
         return row['Disease_Status'] # TEMP DON'T ACTUALLT DO ANYTHING
 
-    def step(self, do_visualisations) -> None:
+    def step(self) -> None:
         """
         Step (iterate) the model
 
