@@ -36,20 +36,25 @@ covid_prob <- function(df, betas, interaction_terms = NULL) {
   
   beta_names <- beta_names[beta_names %in% names(df)]
   
-  beta_out <- lapply(X = beta_names, FUN = beta_make, timestep = timestep-1, betas=betas,df=df)
-  beta_out <- do.call(cbind, beta_out)
-  colnames(beta_out) <- beta_names
-  
-  if (length(interaction_terms > 0 )){
-    lpsi <- df$beta0 + df$as_risk + rowSums(beta_out) + apply(beta_out[,interaction_terms], 1, prod)
+  if (length(beta_names) > 0 ){
+    beta_out <- lapply(X = beta_names, FUN = beta_make, timestep = timestep-1, betas=betas,df=df)
+    beta_out <- do.call(cbind, beta_out)
+    colnames(beta_out) <- beta_names
+    beta_out_sums <- rowSums(beta_out)
   } else{
-    lpsi <- df$beta0 + df$as_risk + rowSums(beta_out)
+    beta_out_sums <- 0
+  }
+  
+  if (length(interaction_terms) > 0 ){
+    lpsi <- df$beta0 + df$as_risk + beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
+  } else{
+    lpsi <- df$beta0 + df$as_risk + beta_out_sums
   }
  
   psi <- exp(lpsi) / (exp(lpsi) + 1)
-  psi[df$status %ni% c(3,4)] <- 0 # if they are not susceptible then their probability is 0 of getting it 
+  psi[df$status %in% c(3,4)] <- 0 # if they are not susceptible then their probability is 0 of getting it 
   psi[df$status %in% c(1,2)] <- 1 # this makes keeping track of who has it easier
-  df$betaxs <- df$as_risk + rowSums(beta_out)
+  df$betaxs <- df$as_risk + beta_out_sums
   df$probability <- psi
   
   return(df)
@@ -113,7 +118,7 @@ removed <- function(df, chance_recovery = 0.95){
                                              prob = (1-chance_recovery))
  
   df$symp_days[removed_cases] <- 0
-  df$presymp_days[df$presymp_days>0] <- df$presymp_days[df$presymp_days>0] - 1
+  df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] <- df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] - 1
   df$symp_days[df$new_status == 2 & df$symp_days > 0] <- df$symp_days[df$status == 2 & df$symp_days>0] - 1
   
   return(df)
