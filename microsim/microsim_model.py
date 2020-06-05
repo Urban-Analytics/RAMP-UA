@@ -16,6 +16,7 @@ from activity_location import ActivityLocation
 from microsim_analysis import MicrosimAnalysis
 from column_names import ColumnNames
 from utilities import Optimise
+from multiprocessing import Pool
 
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
@@ -215,11 +216,21 @@ class Microsim:
                                                               individuals=self.individuals, duration_col="pwork")
 
         # Some flows will be very complicated numbers. Reduce the numbers of decimal places across the board.
-        # This makes it easier to write out the files
-        for name in tqdm(self.activity_locations.keys(), desc="Rounding all flows"):
-            self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = \
-                self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"].swifter.progress_bar(False).apply(
-                    lambda flows: [round(flow, 5) for flow in flows])
+        # This makes it easier to write out the files.
+        print("Rounding all flows ... ")
+        pool = Pool()  # Use multiprocessing because swifter doesn't work properly for some reason
+        try:
+            #for name in self.activity_locations.keys():
+            for name in tqdm(self.activity_locations.keys(), desc="Rounding all flows"):
+                rounded_flows = pool.map( Microsim._round_flows, list(self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"]))
+                self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = rounded_flows
+            # Use swifter, but for some reason it wont paralelise the problem. Not sure why.
+            #self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = \
+            #        self.individuals.loc[:,f"{name}{ColumnNames.ACTIVITY_FLOWS}"].\
+            #            swifter.allow_dask_on_strings(enable=True).progress_bar(True, desc=name).\
+            #            apply(lambda flows: [round(flow, 5) for flow in flows])
+        finally:
+            pool.close()  # Make sure the child processes are killed even if there is an exception
 
 
         # Add some necessary columns for the disease and assign initial SEIR status
@@ -227,6 +238,10 @@ class Microsim:
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
 
         return
+
+    @staticmethod
+    def _round_flows(flows):
+        return [round(flow, 5) for flow in flows]
 
     @classmethod
     def read_msm_data(cls) -> (pd.DataFrame, pd.DataFrame):
