@@ -6,7 +6,7 @@
 ##################################
 
 
-create_input <- function(micro_sim_pop, num_sample, num_sample,vars = NULL, lockdown_date = NULL,  pnothome_multiplier = 1){
+create_input <- function(micro_sim_pop, num_sample,vars = NULL, lockdown_date = NULL,  pnothome_multiplier = 1){
   
   if(!all(vars %in% colnames(population_sample))){
     print(paste0(vars[!vars %in% colnames(population_sample)], " not in population column names"))
