@@ -14,13 +14,14 @@ setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 source("R/py_int/covid_status_functions.R")
 source("R/py_int/initialize_and_helper_functions.R")
 
-reticulate::source_python("microsim/microsim_model_JESSE.py")
+#reticulate::source_python("microsim/microsim_model_JESSE.py")
 
-pull_pop <- function(data_dir="data") {
-  population <- pop_init(data_dir)
-  return(population)
-}
+#pull_pop <- function(data_dir="data") {
+#  population <- pop_init(data_dir)
+#  return(population)
+#}
 
+#pop <- pull_pop()
 
 run_status <- function(pop_df) {
   
@@ -41,18 +42,18 @@ run_status <- function(pop_df) {
   #colnames(connectivity)[3:4] <- c("connectedness", "log_connectedness") 
   #connectivity$connectivity_index <- normalizer(connectivity$log_connectedness, 0.01, 1, min(connectivity$log_connectedness), max(connectivity$log_connectedness))
   
-  population_in$cases_per_area <- 0
-  
   area <- "area"
   hid <- "hid"
   pid <- "pid"
   age <- "age1"
   sex <- "sex"
   
-  population_in <- population %>% 
-    left_join(., pop_dens, by =  c("area" = "msoa_area_codes")) %>% 
-    dplyr::left_join(.,connectivity, by = c("area" = "msoa11cd")) %>% 
-    mutate(log_pop_dens = log10(pop_dens_km2)) 
+  population_in <- population #%>% 
+    #left_join(., pop_dens, by =  c("area" = "msoa_area_codes")) %>% 
+    #dplyr::left_join(.,connectivity, by = c("area" = "msoa11cd")) %>% 
+    #mutate(log_pop_dens = log10(pop_dens_km2)) 
+  
+  population_in$cases_per_area <- 0
   
   df_cr_in <-create_input(micro_sim_pop  = population_in,
                           num_sample = num_sample,
@@ -62,7 +63,7 @@ run_status <- function(pop_df) {
                                    pid,
                                    age,
                                    sex,
-                                   "risk"))
+                                   "current_risk"))
   
   df_in <- as_betas_devon(population_sample = df_cr_in, 
                           pid = pid,
@@ -122,5 +123,5 @@ run_status <- function(pop_df) {
 }
 
 
-
+#out <- run_status(pop)
 
