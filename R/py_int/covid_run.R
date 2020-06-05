@@ -14,14 +14,14 @@ setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 source("R/py_int/covid_status_functions.R")
 source("R/py_int/initialize_and_helper_functions.R")
 
-reticulate::source_python("microsim/microsim_model_JESSE.py")
+#reticulate::source_python("microsim/microsim_model_JESSE.py")
 
-pull_pop <- function(data_dir="data") {
-  population <- pop_init(data_dir)
-  return(population)
-}
+#pull_pop <- function(data_dir="data") {
+#  population <- pop_init(data_dir)
+#  return(population)
+#}
 
-pop <- pull_pop()
+#pop <- pull_pop()
 
 run_status <- function(pop_df) {
   
@@ -123,5 +123,5 @@ run_status <- function(pop_df) {
 }
 
 
-out <- run_status(pop)
+#out <- run_status(pop)
 
