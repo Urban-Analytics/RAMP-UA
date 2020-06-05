@@ -94,10 +94,6 @@ class MicrosimInit(Microsim):
             # Reset everyone's disease status
             m.individuals.loc[:,ColumnNames.DISEASE_STATUS] = 0
 
-            if i == 80: # FOR  A BREAK POINT. Now can add a breakpoint into m.update_venue_danger_and_risks and see how the risks and dangers are calculated
-                x=1
-                #individual_risks.loc[:, :].groupby('Area').sum().sort_values(by="Current_Risk35", ascending=False)
-
             # Manually change people's activity durations after lockdown
             if i > 39:  # After day 39 - March 23RD in new cases
                 total_duration = 0.0
@@ -188,7 +184,7 @@ def run_script(repetitions, data_dir, init_dir, multiprocess):
 
     # Initialise a model (MirosimInit init is a child of Microsim)
     m = MicrosimInit(msoa_danger=msoa_danger, cases=cases, results_dir=results_dir,
-                     study_msoas=list(devon_msoas.Code), data_dir=data_dir)  # These are for the parent Microsim object
+                     study_msoas=list(devon_msoas.Code), data_dir=data_dir, do_visualisations=False)  # These are for the parent Microsim object
 
     # Find a new directory for this initialisation (may have old ones)
     i = 0

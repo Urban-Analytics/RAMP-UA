@@ -58,7 +58,8 @@ class Microsim:
                  study_msoas: List[str] = [],
                  danger_multiplier = 1.0, risk_multiplier = 1.0,
                  random_seed: float = None, read_data: bool = True,
-                 data_dir = "data", testing=False
+                 data_dir = "data", testing=False,
+                 do_visualisations=True,
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
@@ -74,6 +75,7 @@ class Microsim:
             in debugging).
         :param data_dir: Optionally provide a root data directory
         :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!)
+        :param do_visualisations: Whether to visualise the results (default True)
         """
 
         # Administrative variables that need to be defined
@@ -81,6 +83,7 @@ class Microsim:
         self.danger_multiplier = danger_multiplier
         self.risk_multiplier = risk_multiplier
         self.random = random.Random(time.time() if random_seed is None else random_seed)
+        self.do_visualisations = do_visualisations
         Microsim.DATA_DIR = data_dir
         Microsim.testing = testing
         if self.testing:
@@ -1248,7 +1251,7 @@ class Microsim:
 
         return row['Disease_Status'] # TEMP DON'T ACTUALLT DO ANYTHING
 
-    def step(self) -> None:
+    def step(self, do_visualisations) -> None:
         """
         Step (iterate) the model
 
@@ -1283,10 +1286,11 @@ class Microsim:
         # Can export after every iteration if we want to
         #self.export_to_feather()
 
-        # Do some analysis
-        fig = MicrosimAnalysis.population_distribution(self.individuals, ["DC1117EW_C_AGE"])
-        fig.show()
-        #MicrosimAnalysis.location_danger_distribution(self.activity_locatons['Retail'], ["Danger"])
+        # Do some analysis / visualisations
+        if self.do_visualisations:
+            fig = MicrosimAnalysis.population_distribution(self.individuals, ["DC1117EW_C_AGE"])
+            fig.show()
+            #MicrosimAnalysis.location_danger_distribution(self.activity_locatons['Retail'], ["Danger"])
 
 
 
@@ -1295,7 +1299,8 @@ class Microsim:
 @click.command()
 @click.option('--iterations', default=2, help='Number of model iterations. 0 means just run the initialisation')
 @click.option('--data_dir', default="data", help='Root directory to load data from')
-def run(iterations, data_dir):
+@click.option('--do_visualisations', default=True, help='Whether to generate plots and associated data (default True)')
+def run(iterations, data_dir, do_visualisations):
     num_iter = iterations
     if num_iter==0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
@@ -1314,62 +1319,64 @@ def run(iterations, data_dir):
 
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
-    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
+    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir, do_visualisations=do_visualisations)
 
     # Temporily use dummy data for testing
     #data_dir = os.path.join(base_dir, "dummy_data")
-    #m = Microsim(data_dir=data_dir, testing=True)
-    
-    # save initial m
-    output_dir = os.path.join(data_dir, "output")
-    pickle_out = open(os.path.join(output_dir, "m0.pickle"),"wb")
-    pickle.dump(m, pickle_out)
-    pickle_out.close()
+    #m = Microsim(data_dir=data_dir, testing=True, do_visualisations=do_visualisations)
 
-    # collect disease status in new df (for analysis/visualisation)
-    individuals_to_pickle = m.individuals
-    individuals_to_pickle["DiseaseStatus0"] = m.individuals.Disease_Status
-    
-    # collect location dangers at time 0 in new df(for analysis/visualisation)
-    # TODO make a function for this so that it doesn't need to be repeated in the for loop below
-    for name in m.activity_locations:
-        # Get the details of the location activity
-        activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
-        loc_name = activity.get_name()  # retail, school etc
-        loc_ids = activity.get_ids()  # List of the IDs of the locations 
-        loc_dangers = activity.get_dangers()  # List of the current dangers
+    # Store some information for use in the visualisations
+    if do_visualisations:
+        # save initial model
+        output_dir = os.path.join(data_dir, "output")
+        pickle_out = open(os.path.join(output_dir, "m0.pickle"),"wb")
+        pickle.dump(m, pickle_out)
+        pickle_out.close()
 
-        locals()[loc_name+'_to_pickle'] = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
+        # collect disease status in new df (for analysis/visualisation)
+        individuals_to_pickle = m.individuals
+        individuals_to_pickle["DiseaseStatus0"] = m.individuals.Disease_Status
+
+        # collect location dangers at time 0 in new df(for analysis/visualisation)
+        # TODO make a function for this so that it doesn't need to be repeated in the for loop below
+        for name in m.activity_locations:
+            # Get the details of the location activity
+            activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
+            loc_name = activity.get_name()  # retail, school etc
+            loc_ids = activity.get_ids()  # List of the IDs of the locations
+            loc_dangers = activity.get_dangers()  # List of the current dangers
+
+            locals()[loc_name+'_to_pickle'] = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
 
 
     # Step the model
     for i in range(num_iter):
         m.step()
         
-        # add to items to pickle
-        individuals_to_pickle["DiseaseStatus"+str(i+1)] = m.individuals.Disease_Status
+        # add to items to pickle for visualisations
+        if do_visualisations:
+            individuals_to_pickle["DiseaseStatus"+str(i+1)] = m.individuals.Disease_Status
+            for name in m.activity_locations:
+                # Get the details of the location activity
+                activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
+                loc_name = activity.get_name()  # retail, school etc
+                loc_ids = activity.get_ids()  # List of the IDs of the locations
+                loc_dangers = activity.get_dangers()  # List of the current dangers
+
+                locals()[loc_name+'_to_pickle']["Danger"+str(i+1)] = loc_dangers
+
+        # save individuals and danger dfs
+        pickle_out = open(os.path.join(output_dir, "Individuals.pickle"),"wb")
+        pickle.dump(individuals_to_pickle, pickle_out)
+        pickle_out.close()
         for name in m.activity_locations:
             # Get the details of the location activity
             activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
             loc_name = activity.get_name()  # retail, school etc
-            loc_ids = activity.get_ids()  # List of the IDs of the locations 
-            loc_dangers = activity.get_dangers()  # List of the current dangers
 
-            locals()[loc_name+'_to_pickle']["Danger"+str(i+1)] = loc_dangers
-
-    
-    # save individuals and danger dfs
-    pickle_out = open(os.path.join(output_dir, "Individuals.pickle"),"wb")
-    pickle.dump(individuals_to_pickle, pickle_out)
-    pickle_out.close()  
-    for name in m.activity_locations:
-        # Get the details of the location activity
-        activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
-        loc_name = activity.get_name()  # retail, school etc
-               
-        pickle_out = open(os.path.join(output_dir, loc_name+".pickle"),"wb")
-        pickle.dump(locals()[loc_name+'_to_pickle'], pickle_out)
-        pickle_out.close() 
+            pickle_out = open(os.path.join(output_dir, loc_name+".pickle"),"wb")
+            pickle.dump(locals()[loc_name+'_to_pickle'], pickle_out)
+            pickle_out.close()
        
         
     # Make some plots (save or show) - see seperate script for now
