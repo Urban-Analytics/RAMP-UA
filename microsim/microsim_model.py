@@ -478,7 +478,7 @@ class Microsim:
         tuh = tuh.loc[tuh.hid != -1]
 
         # Indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
-        # identify indivuals / households in this health data and be specif about what 'Area' means
+        # identify indivuals / households in this health data and be specifc about what 'Area' means
         tuh = tuh.rename(columns={'hid': '_hid', 'pid': '_pid'})
         individuals = individuals.rename(columns={"PID": "_PID", "HID": "_HID"})
         # Not sure why HID and PID aren't ints
@@ -579,7 +579,7 @@ class Microsim:
         assert len(house_ids_dict) == house_id_counter
 
         # While we're here, may as well also check that [Area, HID, PID] is a unique identifier of individuals
-        # TODO FIND OUT FROM KARYN WHY THESE LEGTHS ARE DIFFERENT
+        # TODO FIND OUT FROM KARYN WHY THERE ARE ~20,000 NON-UNIQUE PEOPLE
         #assert len(tuh) == len(set(unique_individuals))
 
         # Done! Now can create the households dataframe
@@ -603,13 +603,30 @@ class Microsim:
         # The new ID column should be the same as the House_ID
         assert False not in list(households_df.House_ID == households_df[ColumnNames.LOCATION_ID])
 
-        # Add flows for each individual (this is easy, it's just converting their House_ID into a one-value list)
-        # Names for the new columns
-        venues_col = f"{home_name}{ColumnNames.ACTIVITY_VENUES}"
-        flows_col = f"{home_name}{ColumnNames.ACTIVITY_FLOWS}"
+        # For some reason, we get some *very* large households. Can demonstrate this with:
+        # households_df.Num_People.hist()
+        # This needs to be resolved, but in the meantime just remove all households that have more than 10 people
+        large_house_idx = frozenset(households_df.index[households_df.Num_People > 10]) # Indexes of large houses
+        # For each person, get a house_id, or -1 if the house is very large
+        large_people_idx = tuh["House_ID"].apply(lambda x: -1 if x in large_house_idx else x)
+        warnings.warn(f"There are {len(large_house_idx)} households with more than 10 people in them. This covers "
+                      f"{len(large_people_idx[large_people_idx==-1])} people. These households are being removed.")
+        assert len(large_people_idx[large_people_idx==-1])
+        tuh["TEMP_HOUSE_ID"] = large_people_idx  # Use this colum to remove people (all people with HOUSE_ID == -1)
+        # Check the numbers add up (normal house len + large house len = original len)
+        assert ( len(tuh.loc[tuh.TEMP_HOUSE_ID != -1]) + len(large_people_idx[large_people_idx == -1]) ) == len(tuh)
+        assert ( len(households_df.loc[households_df.Num_People <= 10]) + len(large_house_idx) ) == len(households_df)
+        # Remove people and households
+        tuh = tuh[tuh.TEMP_HOUSE_ID!=1]
+        households_df = households_df.loc[households_df.Num_People <= 10]
+        del tuh["TEMP_HOUSE_ID"]
 
+        # Add flows for each individual (this is easy, it's just converting their House_ID and flow (1.0) into a
+        # one-value lists).
+        venues_col = f"{home_name}{ColumnNames.ACTIVITY_VENUES}" # Names for the new columns
+        flows_col = f"{home_name}{ColumnNames.ACTIVITY_FLOWS}"
         tuh[venues_col] = tuh["House_ID"].apply(lambda x: [x])
-        tuh[flows_col] = [ [1.0] for _ in range(len(tuh))]
+        tuh[flows_col] = [[1.0]] * len(tuh)
 
         print("... finished reading TU&H data.")
 
