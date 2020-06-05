@@ -16,6 +16,7 @@ from activity_location import ActivityLocation
 from microsim_analysis import MicrosimAnalysis
 from column_names import ColumnNames
 from utilities import Optimise
+from multiprocessing import Pool
 
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
@@ -56,10 +57,11 @@ class Microsim:
 
     def __init__(self,
                  study_msoas: List[str] = [],
-                 danger_multiplier = 1.0, risk_multiplier = 1.0,
+                 danger_multiplier=1.0, risk_multiplier=1.0,
                  random_seed: float = None, read_data: bool = True,
-                 data_dir = "data", testing=False,
+                 data_dir="data", testing=False,
                  do_visualisations=True,
+                 debug=False
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
@@ -76,6 +78,7 @@ class Microsim:
         :param data_dir: Optionally provide a root data directory
         :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!)
         :param do_visualisations: Whether to visualise the results (default True)
+        :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
         """
 
         # Administrative variables that need to be defined
@@ -84,6 +87,7 @@ class Microsim:
         self.risk_multiplier = risk_multiplier
         self.random = random.Random(time.time() if random_seed is None else random_seed)
         self.do_visualisations = do_visualisations
+        Microsim.debug = debug
         Microsim.DATA_DIR = data_dir
         Microsim.testing = testing
         if self.testing:
@@ -215,11 +219,21 @@ class Microsim:
                                                               individuals=self.individuals, duration_col="pwork")
 
         # Some flows will be very complicated numbers. Reduce the numbers of decimal places across the board.
-        # This makes it easier to write out the files
-        for name in tqdm(self.activity_locations.keys(), desc="Rounding all flows"):
-            self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = \
-                self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"].swifter.progress_bar(False).apply(
-                    lambda flows: [round(flow, 5) for flow in flows])
+        # This makes it easier to write out the files.
+        # TODO Check whether rounding flows is necessary. As they are rounded in _normalise() I actually think this is unnecessary
+        pool = Pool()  # Use multiprocessing because swifter doesn't work properly for some reason
+        try:
+            #for name in self.activity_locations.keys():
+            for name in tqdm(self.activity_locations.keys(), desc="Rounding all flows"):
+                rounded_flows = pool.map( Microsim._round_flows, list(self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"]))
+                self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = rounded_flows
+            # Use swifter, but for some reason it wont paralelise the problem. Not sure why.
+            #self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = \
+            #        self.individuals.loc[:,f"{name}{ColumnNames.ACTIVITY_FLOWS}"].\
+            #            swifter.allow_dask_on_strings(enable=True).progress_bar(True, desc=name).\
+            #            apply(lambda flows: [round(flow, 5) for flow in flows])
+        finally:
+            pool.close()  # Make sure the child processes are killed even if there is an exception
 
 
         # Add some necessary columns for the disease and assign initial SEIR status
@@ -227,6 +241,10 @@ class Microsim:
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
 
         return
+
+    @staticmethod
+    def _round_flows(flows):
+        return [round(flow, 5) for flow in flows]
 
     @classmethod
     def read_msm_data(cls) -> (pd.DataFrame, pd.DataFrame):
@@ -336,10 +354,8 @@ class Microsim:
                           f"data. They will be removed.")
         individuals = individuals.loc[individuals.HID != -1]
         # Now everyone should have a household. This will raise an exception if not. (unless testing)
-        # TODO uncomment below to check that no people without households have been introduced
-        # (commented while developing beause it is very slow
-        warnings.warn("Not checking that no homeless were introduced, uncomment when running properly")
-        #Microsim._check_no_homeless(individuals, households, warn=True if Microsim.testing else False )
+        if Microsim.debug:
+            Microsim._check_no_homeless(individuals, households, warn=True if Microsim.testing else False )
 
         print("Have read files:",
               f"\n\tHouseholds:  {len(house_dfs)} files with {len(households)}",
@@ -478,7 +494,7 @@ class Microsim:
         tuh = tuh.loc[tuh.hid != -1]
 
         # Indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
-        # identify indivuals / households in this health data and be specif about what 'Area' means
+        # identify indivuals / households in this health data and be specifc about what 'Area' means
         tuh = tuh.rename(columns={'hid': '_hid', 'pid': '_pid'})
         individuals = individuals.rename(columns={"PID": "_PID", "HID": "_HID"})
         # Not sure why HID and PID aren't ints
@@ -579,7 +595,7 @@ class Microsim:
         assert len(house_ids_dict) == house_id_counter
 
         # While we're here, may as well also check that [Area, HID, PID] is a unique identifier of individuals
-        # TODO FIND OUT FROM KARYN WHY THESE LEGTHS ARE DIFFERENT
+        # TODO FIND OUT FROM KARYN WHY THERE ARE ~20,000 NON-UNIQUE PEOPLE
         #assert len(tuh) == len(set(unique_individuals))
 
         # Done! Now can create the households dataframe
@@ -597,19 +613,43 @@ class Microsim:
         assert len(temp_merge) == len(tuh)
         assert False not in list(temp_merge['area_x']==temp_merge['area_y'])
 
+        # Check that NumPople in the house dataframe is the same as number of people in the indivdiuals dataframe
+        # with this house id
+        if Microsim.debug:
+            for house_id, num_people in tqdm(zip(households_df.House_ID, households_df.Num_People),
+                   desc="Checking household sizes match"): # I know you shouldn't loop, but I can't work out the apply way (and this only happens once)
+                num_people2 = len(tuh.loc[tuh.House_ID==house_id])  # Number of individuals who link to this house
+                assert num_people == num_people2, f"House {house_id} doesn't match: {num_people} / {num_people2}"
+
         # Add some required columns
         Microsim._add_location_columns(households_df, location_names=list(households_df.House_ID),
                                        location_ids=households_df.House_ID )
         # The new ID column should be the same as the House_ID
         assert False not in list(households_df.House_ID == households_df[ColumnNames.LOCATION_ID])
 
-        # Add flows for each individual (this is easy, it's just converting their House_ID into a one-value list)
-        # Names for the new columns
-        venues_col = f"{home_name}{ColumnNames.ACTIVITY_VENUES}"
-        flows_col = f"{home_name}{ColumnNames.ACTIVITY_FLOWS}"
+        # For some reason, we get some *very* large households. Can demonstrate this with:
+        # households_df.Num_People.hist()
+        # This needs to be resolved, but in the meantime just remove all households that have more than 10 people
+        large_house_idx = frozenset(households_df.index[households_df.Num_People > 10]) # Indexes of large houses
+        # For each person, get a house_id, or -1 if the house is very large
+        large_people_idx = tuh["House_ID"].apply(lambda x: -1 if x in large_house_idx else x)
+        warnings.warn(f"There are {len(large_house_idx)} households with more than 10 people in them. This covers "
+                      f"{len(large_people_idx[large_people_idx==-1])} people. These households are being removed.")
+        tuh["TEMP_HOUSE_ID"] = large_people_idx  # Use this colum to remove people (all people with HOUSE_ID == -1)
+        # Check the numbers add up (normal house len + large house len = original len)
+        assert ( len(tuh.loc[tuh.TEMP_HOUSE_ID != -1]) + len(large_people_idx[large_people_idx == -1]) ) == len(tuh)
+        assert ( len(households_df.loc[households_df.Num_People <= 10]) + len(large_house_idx) ) == len(households_df)
+        # Remove people, but leave the households (no one will live there so they wont affect anything)
+        tuh = tuh[tuh.TEMP_HOUSE_ID != -1]
+        #households_df = households_df.loc[households_df.Num_People <= 10]
+        del tuh["TEMP_HOUSE_ID"]
 
+        # Add flows for each individual (this is easy, it's just converting their House_ID and flow (1.0) into a
+        # one-value lists).
+        venues_col = f"{home_name}{ColumnNames.ACTIVITY_VENUES}" # Names for the new columns
+        flows_col = f"{home_name}{ColumnNames.ACTIVITY_FLOWS}"
         tuh[venues_col] = tuh["House_ID"].apply(lambda x: [x])
-        tuh[flows_col] = [ [1.0] for _ in range(len(tuh))]
+        tuh[flows_col] = [[1.0]] * len(tuh)
 
         print("... finished reading TU&H data.")
 
@@ -1039,7 +1079,6 @@ class Microsim:
             #
             # A quicker way to do this is probably to create N subsets of individuals (one table for
             # each area) and then concatenate them at the end.
-
             individuals.loc[oa_code, venues_col] = \
                 individuals.loc[oa_code, venues_col].apply(lambda _: dests).values
             individuals.loc[oa_code, flows_col] = \
@@ -1300,7 +1339,8 @@ class Microsim:
 @click.option('--iterations', default=2, help='Number of model iterations. 0 means just run the initialisation')
 @click.option('--data_dir', default="data", help='Root directory to load data from')
 @click.option('--do_visualisations', default=True, help='Whether to generate plots and associated data (default True)')
-def run(iterations, data_dir, do_visualisations):
+@click.option('--debug', default=False, help="Whether to run some more expensive checks (default False)")
+def run(iterations, data_dir, do_visualisations, debug):
     num_iter = iterations
     if num_iter==0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
@@ -1319,7 +1359,7 @@ def run(iterations, data_dir, do_visualisations):
 
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
-    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir, do_visualisations=do_visualisations)
+    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir, do_visualisations=do_visualisations, debug=debug)
 
     # Temporily use dummy data for testing
     #data_dir = os.path.join(base_dir, "dummy_data")
