@@ -184,7 +184,7 @@ def run_script(repetitions, data_dir, init_dir, multiprocess):
 
     # Initialise a model (MirosimInit init is a child of Microsim)
     m = MicrosimInit(msoa_danger=msoa_danger, cases=cases, results_dir=results_dir,
-                     study_msoas=list(devon_msoas.Code), data_dir=data_dir, do_visualisations=False)  # These are for the parent Microsim object
+                     study_msoas=list(devon_msoas.Code), data_dir=data_dir, do_visualisations=False, debug=True)  # These are for the parent Microsim object
 
     # Find a new directory for this initialisation (may have old ones)
     i = 0
