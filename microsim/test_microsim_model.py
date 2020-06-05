@@ -22,7 +22,7 @@ def test_microsim():
         # This should fail because the directory doesn't exist
         m = Microsim(data_dir="./bad_directory")
 
-    m = Microsim(data_dir="./dummy_data", testing=True)
+    m = Microsim(data_dir="./dummy_data", testing=True, debug=True)
 
     # Check that the dummy data have been read in correctly. E.g. check the number of individuals is
     # accurate, that they link to households correctly, that they have the right *flows* to the right
