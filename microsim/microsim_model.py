@@ -612,6 +612,9 @@ class Microsim:
         assert len(temp_merge) == len(tuh)
         assert False not in list(temp_merge['area_x']==temp_merge['area_y'])
 
+        # TODO Check that the NumPeople column for each house has the correct number of people in it (this checks that the
+        # allocation of people to houses is correct
+
         # Add some required columns
         Microsim._add_location_columns(households_df, location_names=list(households_df.House_ID),
                                        location_ids=households_df.House_ID )
@@ -626,14 +629,13 @@ class Microsim:
         large_people_idx = tuh["House_ID"].apply(lambda x: -1 if x in large_house_idx else x)
         warnings.warn(f"There are {len(large_house_idx)} households with more than 10 people in them. This covers "
                       f"{len(large_people_idx[large_people_idx==-1])} people. These households are being removed.")
-        assert len(large_people_idx[large_people_idx==-1])
         tuh["TEMP_HOUSE_ID"] = large_people_idx  # Use this colum to remove people (all people with HOUSE_ID == -1)
         # Check the numbers add up (normal house len + large house len = original len)
         assert ( len(tuh.loc[tuh.TEMP_HOUSE_ID != -1]) + len(large_people_idx[large_people_idx == -1]) ) == len(tuh)
         assert ( len(households_df.loc[households_df.Num_People <= 10]) + len(large_house_idx) ) == len(households_df)
-        # Remove people and households
-        tuh = tuh[tuh.TEMP_HOUSE_ID!=1]
-        households_df = households_df.loc[households_df.Num_People <= 10]
+        # Remove people, but leave the households (no one will live there so they wont affect anything)
+        tuh = tuh[tuh.TEMP_HOUSE_ID != 1]
+        #households_df = households_df.loc[households_df.Num_People <= 10]
         del tuh["TEMP_HOUSE_ID"]
 
         # Add flows for each individual (this is easy, it's just converting their House_ID and flow (1.0) into a
