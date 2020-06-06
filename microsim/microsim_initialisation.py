@@ -159,7 +159,8 @@ class MicrosimInit(Microsim):
 @click.option('--data_dir', default="data", help='Root directory to load main model data from')
 @click.option('--init_dir', default="init_data", help="Directory that stores initialisation data, and where outputs are written")
 @click.option('--multiprocess', default=False, help="Whether to run multiprocess or not")
-def run_script(repetitions, data_dir, init_dir, multiprocess):
+@click.option('--debug', default=False, help="Whether to run some more expensive checks (default True)")
+def run_script(repetitions, data_dir, init_dir, multiprocess, debug):
     # To fix file path issues, use absolute/full path at all times
     base_dir = os.getcwd()  # get current directory
     data_dir = os.path.join(base_dir, data_dir)
@@ -184,7 +185,7 @@ def run_script(repetitions, data_dir, init_dir, multiprocess):
 
     # Initialise a model (MirosimInit init is a child of Microsim)
     m = MicrosimInit(msoa_danger=msoa_danger, cases=cases, results_dir=results_dir,
-                     study_msoas=list(devon_msoas.Code), data_dir=data_dir, do_visualisations=False, debug=True)  # These are for the parent Microsim object
+                     study_msoas=list(devon_msoas.Code), data_dir=data_dir, do_visualisations=False, debug=debug)  # These are for the parent Microsim object
 
     # Find a new directory for this initialisation (may have old ones)
     i = 0
