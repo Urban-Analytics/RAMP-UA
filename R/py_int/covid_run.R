@@ -11,7 +11,8 @@ library(mixdist)
 #install.packages(c("dplyr", "ggplot2", "tidyr", "janitor", "readr", "sf", "mixdist", "viridisLite"))
 "arrow"
 
-setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
+# set wd is done by parent python class
+#setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 
 # Working directory set automatically by python
 #setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
