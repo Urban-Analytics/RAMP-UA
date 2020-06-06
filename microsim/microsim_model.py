@@ -12,6 +12,7 @@ Created on Wed Apr 29 19:59:25 2020
 import sys
 sys.path.append("microsim") # This is only needed when testing. I'm so confused about the imports
 from activity_location import ActivityLocation
+from r_interface import RInterface
 #from microsim.microsim_analysis import MicrosimAnalysis
 from microsim_analysis import MicrosimAnalysis
 from column_names import ColumnNames
@@ -32,8 +33,10 @@ from collections.abc import Iterable   # drop `.abc` with Python 2.7 or lower
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
-import pickle # to save data
-import swifter
+import pickle  # to save data
+import swifter  # For speeding up apply functions (e.g. df.swifter.apply)
+import rpy2.robjects as ro  # For calling R scripts
+#import pandas.rpy.common as com
 
 
 class Microsim:
@@ -56,16 +59,19 @@ class Microsim:
 
 
     def __init__(self,
+                 data_dir="./data/", r_script_dir="./R/py_int/",
                  study_msoas: List[str] = [],
                  danger_multiplier=1.0, risk_multiplier=1.0,
                  random_seed: float = None, read_data: bool = True,
-                 data_dir="data", testing=False,
+                 testing=False,
                  do_visualisations=True,
                  debug=False
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
         ----------
+        :param data_dir: A data directory from which to read the source data
+        :param r_script_dir: A directory with the required R scripts in (these are used to estimate disease status)
         :param study_msoas: An optional list of MSOA codes to restrict the model to
         :param danger_multiplier: Danger assigned to a place if an infected individual visits it
         is calcuated as duration * flow * danger_multiplier.
@@ -75,26 +81,28 @@ class Microsim:
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
             in debugging).
-        :param data_dir: Optionally provide a root data directory
         :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!)
         :param do_visualisations: Whether to visualise the results (default True)
         :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
         """
 
         # Administrative variables that need to be defined
+        Microsim.DATA_DIR = data_dir
         self.iteration = 0
         self.danger_multiplier = danger_multiplier
         self.risk_multiplier = risk_multiplier
         self.random = random.Random(time.time() if random_seed is None else random_seed)
         self.do_visualisations = do_visualisations
         Microsim.debug = debug
-        Microsim.DATA_DIR = data_dir
         Microsim.testing = testing
         if self.testing:
             warnings.warn("Running in testing mode. Some exceptions will be disabled.")
 
         if not read_data:  # Optionally can not do this, usually for debugging
             return
+
+        # Create the interface to R now as this will be needed later anyway
+        self.r_int = RInterface(r_script_dir)
 
         # Now the main chunk of initialisation is to read the input data.
 
@@ -452,10 +460,8 @@ class Microsim:
               f"\tAfter subsetting: {len(individuals_to_keep)} individuals, {len(households_to_keep)} househods.")
 
         # Check no individuals without households have been introduced (raise an exception if so)
-        # TODO uncomment below to check that no people without households have been introduced
-        # (commented while developing beause it is very slow
-        warnings.warn("Not checking that no homeless were introduced, uncomment when running properly")
-        #Microsim._check_no_homeless(individuals, households, warn=False)
+        if Microsim.debug:
+            Microsim._check_no_homeless(individuals, households, warn=False)
 
         return (study_msoas, individuals_to_keep, households_to_keep)
 
@@ -494,7 +500,7 @@ class Microsim:
         tuh = tuh.loc[tuh.hid != -1]
 
         # Indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
-        # identify indivuals / households in this health data and be specifc about what 'Area' means
+        # identify indivuals / households in this health data
         tuh = tuh.rename(columns={'hid': '_hid', 'pid': '_pid'})
         individuals = individuals.rename(columns={"PID": "_PID", "HID": "_HID"})
         # Not sure why HID and PID aren't ints
@@ -638,9 +644,11 @@ class Microsim:
         tuh["TEMP_HOUSE_ID"] = large_people_idx  # Use this colum to remove people (all people with HOUSE_ID == -1)
         # Check the numbers add up (normal house len + large house len = original len)
         assert ( len(tuh.loc[tuh.TEMP_HOUSE_ID != -1]) + len(large_people_idx[large_people_idx == -1]) ) == len(tuh)
-        assert ( len(households_df.loc[households_df.Num_People <= 10]) + len(large_house_idx) ) == len(households_df)
+        assert ( len(households_df.loc[~households_df.House_ID.isin(large_house_idx)]) + len(large_house_idx) ) == len(households_df)
         # Remove people, but leave the households (no one will live there so they wont affect anything)
         tuh = tuh[tuh.TEMP_HOUSE_ID != -1]
+        # TODO Work out why removing households kills the model later.
+        #households_df = households_df.loc[~households_df.House_ID.isin(large_house_idx)]
         #households_df = households_df.loc[households_df.Num_People <= 10]
         del tuh["TEMP_HOUSE_ID"]
 
@@ -1268,14 +1276,11 @@ class Microsim:
         self.individuals[ColumnNames.HID_CASES].fillna(0, inplace=True)
 
 
-    @classmethod
-    def calculate_new_disease_status(cls, row: pd.Series, activity_locations: List[ActivityLocation]):
+    def calculate_new_disease_status(self) -> None:
         """
-        Given a row of the DataFrame of individuals (as pd.Series object) calculate their
-        disease status
-        :param row: The row (a Series) with the information about an individual
-        :param activity_locations: The activity locations that people currently visit
-        :return: The new disease status for that individual
+        Call an R function to calculate the new disease status for all individuals.
+        Update the indivdiuals dataframe in place
+        :return: None. Update the dataframe inplace
         """
         # Can access th individual's data using the 'row' variable like a dictionary.
         #for activity_name, activity in activity_locations.items():
@@ -1287,8 +1292,9 @@ class Microsim:
         #    pass
 
         # Also update  ColumnNames.DAYS_WITH_STATUS
+        self.r_int.calculate_disease_status(self.individuals)
+        pass
 
-        return row['Disease_Status'] # TEMP DON'T ACTUALLT DO ANYTHING
 
     def step(self) -> None:
         """
@@ -1308,19 +1314,11 @@ class Microsim:
         # become more dangerous) then update the risk to each individual of going to those venues.
         self.update_venue_danger_and_risks()
 
-
         # Update disease counters. E.g. count diseases in MSOAs & households
         self.update_disease_counts()
 
         # Calculate new disease status
-        # ACTUALLY THIS WONT BE DONE HERE. THE DATA WILL BE PASSED TO R AND DEALT WITH THERE, GETTING A NEW
-        # DISEASE STATUS COLUMN BACK
-        print("Now should calculate new disease status")
-        # (need to pass activity locations as well becasue the calculate_new_disease_status needs to be class-level
-        # rather than object level (otherwise I couldn't get the argument passing to work properly)
-        # tqdm.pandas(desc="Calculating new disease status") # means pd.apply() has a progress bar
-        #self.individuals["Disease_Status"] = self.individuals.progress_apply(
-        #   func=Microsim.calculate_new_disease_status, axis=1, activity_locations=self.activity_locations)
+        self.calculate_new_disease_status()
 
         # Can export after every iteration if we want to
         #self.export_to_feather()
@@ -1356,10 +1354,11 @@ def run(iterations, data_dir, do_visualisations, debug):
     #base_dir = 'C:\\Users\\Toshiba\\git_repos\\RAMP-UA'
     # overwrite data_dir with full path
     data_dir = os.path.join(base_dir, data_dir)
+    r_script_dir = os.path.join(base_dir, "R", "py_int")
 
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
-    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir, do_visualisations=do_visualisations, debug=debug)
+    m = Microsim(data_dir=data_dir, r_script_dir=r_script_dir, study_msoas=list(devon_msoas.Code), do_visualisations=do_visualisations, debug=debug)
 
     # Temporily use dummy data for testing
     #data_dir = os.path.join(base_dir, "dummy_data")
