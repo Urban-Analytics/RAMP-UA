@@ -208,7 +208,7 @@ class Microsim:
         # of each iteration when the secondary school dangers are set to 0 (danger is not cumulative) it will override
         # the primary school dangers that were calculated first.
         self.individuals = Microsim.add_individual_flows(primary_name, self.individuals, primary_flows)
-        self.activt ity_locations[primary_name] = \
+        self.activity_locations[primary_name] = \
             ActivityLocation(primary_name, schools.copy(), primary_flows, self.individuals, "pschool")
         self.individuals = Microsim.add_individual_flows(secondary_name, self.individuals, secondary_flows)
         self.activity_locations[secondary_name] = \
