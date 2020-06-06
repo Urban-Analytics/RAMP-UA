@@ -1291,19 +1291,23 @@ class Microsim:
         #    venus + flows  # Just to see how long this might take
         #    pass
 
-        # Also update  ColumnNames.DAYS_WITH_STATUS
-        self.r_int.calculate_disease_status(self.individuals)
-        pass
+        # Remember the current status so we can calculate the current days with this status
+        current_status = self.individuals[ColumnNames.DISEASE_STATUS]
+        # (could remember permanently by adding a new column, but don't think we need this)
+        # self.individuals[ColumnNames.DISEASE_STATUS+"{0:0=3d}".format(self.iteration)] = self.individuals[ColumnNames.DISEASE_STATUS]
+
+        # Calculate the new status (will return a new dataframe)
+        new_df = self.r_int.calculate_disease_status(self.individuals)
+        self.individuals[ColumnNames.DISEASE_STATUS] = new_df['disease_status']
+        # Need to do anything with these?
+        #new_df['presymp_days']
+        #new_df['symp_days']
+
 
 
     def step(self) -> None:
         """
         Step (iterate) the model
-
-        :param danger_multiplier: Danger assigned to a place if an infected individual visits it
-        is calcuated as duration * flow * danger_multiplier.
-        :param risk_multiplier: Risk that individuals get from a location is calculatd as
-        duration * flow * risk_multiplier
 
         :return:
         """

@@ -37,8 +37,17 @@ class RInterface():
         self.R = R
 
     def calculate_disease_status(self, individuals: pd.DataFrame):
-        a = self.R.run_status(individuals)
-
+        """
+        Call the R 'run_status' function to calculate the new disease status. It will return a new dataframe with
+        a few columns, including the new status.
+        :param individuals:  The individuals dataframe from which new statuses need to be calculated
+        :return: a new dataframe that includes new disease statuses
+        """
+        print("Calculating new disease status...",)
+        out_df = self.R.run_status(individuals)
+        print(" .... finished.")
+        assert len(out_df) == len(individuals)
+        return out_df
 
 
     @staticmethod
