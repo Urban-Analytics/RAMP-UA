@@ -8,13 +8,13 @@
 
 create_input <- function(micro_sim_pop, num_sample,vars = NULL, lockdown_date = NULL,  pnothome_multiplier = 1){
   
-  if(!all(vars %in% colnames(population_sample))){
-    print(paste0(vars[!vars %in% colnames(population_sample)], " not in population column names"))
+  if(!all(vars %in% colnames(micro_sim_pop))){
+    print(paste0(vars[!vars %in% colnames(micro_sim_pop)], " not in population column names"))
   }
   
   var_list <- list()
   for (i in 1:length(vars)){
-    var_list[[i]] <- population_sample[,vars[i]]
+    var_list[[i]] <- micro_sim_pop[,vars[i]]
   }
   
   names(var_list) <- vars
@@ -24,21 +24,21 @@ create_input <- function(micro_sim_pop, num_sample,vars = NULL, lockdown_date = 
     betaxs = rep(0, num_sample),
     new_beta0 = rep(0, num_sample),
     hid_status = rep(0, num_sample),
-    presymp_days = micro_sim_pop$presymp_days,
-    symp_days = micro_sim_pop$symp_days,
-    probability = rep(0, nnum_sample),
+    presymp_days = rep(NA, num_sample),
+    symp_days = rep(NA, num_sample),
+    probability = rep(0, num_sample),
     #optim_probability = matrix(0, nrow = num_sample),
-    status = micro_sim_pop$status,
-    new_status = micro_sim_pop$status
+    status = micro_sim_pop$disease_status0,
+    new_status = micro_sim_pop$disease_status0
   )
   
   df <- c(var_list, constant_list)
   
-  df$pnothome[,1:num_days] <- df$pnothome[,1]
+  df$pnothome[,1] <- df$pnothome[,1]
   
   if(!is.null(lockdown_date)){
     li <- as.numeric(lockdown_date - start_date)
-    df$pnothome[, (li+1):num_days] <-  df$pnothome[,1] * pnothome_multiplier
+    df$pnothome[, (li+1)] <-  df$pnothome[,1] * pnothome_multiplier
   }
   
   return(df)
