@@ -44,9 +44,22 @@ class RInterface():
         :return: a new dataframe that includes new disease statuses
         """
         print("Calculating new disease status...",)
-        out_df = self.R.run_status(individuals)
+        # It's expesive to convert large dataframes, only give the required columns to R.
+        # Also make the columns also be lower case
+        individuals_reduced = individuals.loc[:, [ "area", "House_ID", "ID", "age1", "sex", "Current_Risk", "pnothome"] ]
+        individuals_reduced["area"] = individuals_reduced.area.astype(str)
+        individuals_reduced["id"] = individuals_reduced.ID
+        del individuals_reduced["ID"]
+        individuals_reduced["house_id"] = individuals_reduced.House_ID
+        del individuals_reduced["House_ID"]
+        individuals_reduced["current_risk"] = individuals_reduced.Current_Risk
+        del individuals_reduced["Current_Risk"]
+
+        out_df = self.R.run_status(individuals_reduced)
         print(" .... finished.")
         assert len(out_df) == len(individuals)
+
+        # TODO Attach the new disease status on to the end of the individuals dataframe
         return out_df
 
 
