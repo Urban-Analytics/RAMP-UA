@@ -229,9 +229,9 @@ class Microsim:
         # Some flows will be very complicated numbers. Reduce the numbers of decimal places across the board.
         # This makes it easier to write out the files.
         # TODO Check whether rounding flows is necessary. As they are rounded in _normalise() I actually think this is unnecessary
-        pool = Pool()  # Use multiprocessing because swifter doesn't work properly for some reason
+        # Use multiprocessing because swifter doesn't work properly for some reason (wont paralelise)
+        pool = Pool(processes=int(os.cpu_count()/2))
         try:
-            #for name in self.activity_locations.keys():
             for name in tqdm(self.activity_locations.keys(), desc="Rounding all flows"):
                 rounded_flows = pool.map( Microsim._round_flows, list(self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"]))
                 self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = rounded_flows
@@ -248,7 +248,7 @@ class Microsim:
         self.individuals = Microsim.add_disease_columns(self.individuals)
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
 
-        return
+        return # finish __init__
 
     @staticmethod
     def _round_flows(flows):
@@ -647,9 +647,12 @@ class Microsim:
         assert ( len(households_df.loc[~households_df.House_ID.isin(large_house_idx)]) + len(large_house_idx) ) == len(households_df)
         # Remove people, but leave the households (no one will live there so they wont affect anything)
         tuh = tuh[tuh.TEMP_HOUSE_ID != -1]
-        # TODO Work out why removing households kills the model later.
+        # TODO Work out why removing households kills the model later. - it's probably because houses are removed but the indexes and IDs don't change, so indexes will end up larger than size of the households list. Probably would need to recalculate the index and House_ID so that they are ascending again (pain, can't be bothered).
         #households_df = households_df.loc[~households_df.House_ID.isin(large_house_idx)]
         #households_df = households_df.loc[households_df.Num_People <= 10]
+        # Check that the large house ids no longer exist in the individuals df (use House_ID rather than index to be sure, but they're the same anyway)
+        id_set = frozenset(households_df.loc[households_df.Num_People>10,"House_ID"].values)
+        assert True not in list(tuh["House_ID"].apply(lambda x: x in id_set))
         del tuh["TEMP_HOUSE_ID"]
 
         # Add flows for each individual (this is easy, it's just converting their House_ID and flow (1.0) into a
@@ -1297,6 +1300,7 @@ class Microsim:
         # self.individuals[ColumnNames.DISEASE_STATUS+"{0:0=3d}".format(self.iteration)] = self.individuals[ColumnNames.DISEASE_STATUS]
 
         # Calculate the new status (will return a new dataframe)
+        # a test: self.r_int.test_int(pd.DataFrame( data={'count':[1,2,3,4,5]}))
         new_df = self.r_int.calculate_disease_status(self.individuals)
         self.individuals[ColumnNames.DISEASE_STATUS] = new_df['disease_status']
         # Need to do anything with these?
@@ -1370,6 +1374,7 @@ def run(iterations, data_dir, do_visualisations, debug):
 
     # Store some information for use in the visualisations
     if do_visualisations:
+        print("Saving initial models for analysis ... ",)
         # save initial model
         output_dir = os.path.join(data_dir, "output")
         pickle_out = open(os.path.join(output_dir, "m0.pickle"),"wb")
@@ -1391,6 +1396,7 @@ def run(iterations, data_dir, do_visualisations, debug):
 
             locals()[loc_name+'_to_pickle'] = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
 
+        print(" ... finished.")
 
     # Step the model
     for i in range(num_iter):
