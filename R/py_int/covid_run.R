@@ -28,7 +28,7 @@ run_status <- function(pop) {
   
   num_sample <- nrow(population)
   
-  print(num_sample)
+  #print(num_sample)
   
   # the stuff below here should be loaded only once in python i guess and
   # passed as columns in the dataframe
@@ -58,7 +58,7 @@ run_status <- function(pop) {
   population_in$cases_per_area <- 0
   population_in$disease_status <- 0
   
-  print("c")
+  #print("c")
   
   df_cr_in <-create_input(micro_sim_pop  = population_in,
                           num_sample = num_sample,
@@ -78,7 +78,7 @@ run_status <- function(pop) {
                           beta0_fixed = -4, #0.19, #-9.5, 
                           divider = 4)  # adding in the age/sex betas 
   
-  print("e")
+  #print("e")
   
   pnothome <-  0.25 #0.35
   connectivity_index <- 0.25#0.3 doesn't work
@@ -101,7 +101,7 @@ run_status <- function(pop) {
   df_msoa <- df_in
   df_risk <- list()
   
-  print("f")
+  #print("f")
   
   df_prob <- covid_prob(df = df_msoa, betas = other_betas)
   df_ass <- case_assign(df = df_prob, with_optimiser = FALSE)
@@ -115,7 +115,7 @@ run_status <- function(pop) {
   df_rec <- removed(df = df_inf, chance_recovery = 0.95)
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
   
-  print("h")
+  #print("h")
   
   #colSums(df_msoa$had_covid)
   #colMeans(df_msoa$cases_per_area)
@@ -127,7 +127,7 @@ run_status <- function(pop) {
                        presymp_days=df_msoa$presymp_days,
                        symp_days=df_msoa$symp_days)
   
-  print("new disease status calculated")
+  #print("new disease status calculated")
   
   return(df_out)
 }

@@ -59,12 +59,12 @@ class Microsim:
 
 
     def __init__(self,
-                 data_dir="./data/", r_script_dir="./R/py_int/",
+                 data_dir: str="./data/", r_script_dir: str="./R/py_int/",
                  study_msoas: List[str] = [],
-                 danger_multiplier=1.0, risk_multiplier=1.0,
+                 danger_multiplier: float = 1.0, risk_multiplier: float = 1.0,
                  random_seed: float = None, read_data: bool = True,
-                 testing=False,
-                 do_visualisations=True,
+                 testing: bool = False,
+                 visualisations: bool = True,
                  debug=False
                  ):
         """
@@ -92,7 +92,7 @@ class Microsim:
         self.danger_multiplier = danger_multiplier
         self.risk_multiplier = risk_multiplier
         self.random = random.Random(time.time() if random_seed is None else random_seed)
-        self.do_visualisations = do_visualisations
+        self.visualisations = visualisations
         Microsim.debug = debug
         Microsim.testing = testing
         if self.testing:
@@ -247,7 +247,7 @@ class Microsim:
         self.individuals = Microsim.add_disease_columns(self.individuals)
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
 
-        return # finish __init__
+        return  # finish __init__
 
     @staticmethod
     def _round_flows(flows):
@@ -1156,8 +1156,8 @@ class Microsim:
         individuals[ColumnNames.CURRENT_RISK] = 0  # This is the risk that people get when visiting locations.
         individuals[ColumnNames.MSOA_CASES] = 0  # Useful to count cases per MSOA
         individuals[ColumnNames.HID_CASES] = 0  # Ditto for the household
-        individuals['presymp_days'] = -1
-        individuals['symp_days'] = -1
+        individuals[ColumnNames.DISEASE_PRESYMP] = -1
+        individuals[ColumnNames.DISEASE_SYMP_DAYS] = -1
         return individuals
 
     @classmethod
@@ -1213,7 +1213,7 @@ class Microsim:
 
             # 2D lists, for each individual: the venues they visit, the flows to the venue (i.e. how much they visit it)
             # and the durations (how long they spend doing it)
-            statuses = self.individuals.Disease_Status
+            statuses = self.individuals[ColumnNames.DISEASE_STATUS]
             venues = self.individuals.loc[:, venues_col]
             flows = self.individuals.loc[:, flows_col]
             durations = self.individuals.loc[:, durations_col]
@@ -1263,9 +1263,9 @@ class Microsim:
         # TODO replace Nan's with 0 (not a problem with MSOAs because they're a cateogry so the value_counts()
         # returns all, including those with 0 counts, but with HID those with 0 count don't get returned
         # Get rows with cases
-        cases = self.individuals.loc[(self.individuals.Disease_Status == 1) |
-                                     (self.individuals.Disease_Status == 2) |
-                                     (self.individuals.Disease_Status == 3), :]
+        cases = self.individuals.loc[(self.individuals[ColumnNames.DISEASE_STATUS] == 1) |
+                                     (self.individuals[ColumnNames.DISEASE_STATUS] == 2) |
+                                     (self.individuals[ColumnNames.DISEASE_STATUS] == 3), :]
         # Count cases per area (convert to a dataframe)
         case_counts = cases["Area"].value_counts()
         case_counts = pd.DataFrame(data={"Area": case_counts.index, "Count": case_counts}).reset_index(drop=True)
@@ -1296,7 +1296,7 @@ class Microsim:
         #    pass
 
         # Remember the current status so we can calculate the current days with this status
-        current_status = self.individuals[ColumnNames.DISEASE_STATUS]
+        #current_status = self.individuals[ColumnNames.DISEASE_STATUS]
         # (could remember permanently by adding a new column, but don't think we need this)
         # self.individuals[ColumnNames.DISEASE_STATUS+"{0:0=3d}".format(self.iteration)] = self.individuals[ColumnNames.DISEASE_STATUS]
 
@@ -1332,7 +1332,7 @@ class Microsim:
         #self.export_to_feather()
 
         # Do some analysis / visualisations
-        if self.do_visualisations:
+        if self.visualisations:
             fig = MicrosimAnalysis.population_distribution(self.individuals, ["DC1117EW_C_AGE"])
             fig.show()
             #MicrosimAnalysis.location_danger_distribution(self.activity_locatons['Retail'], ["Danger"])
@@ -1344,9 +1344,9 @@ class Microsim:
 @click.command()
 @click.option('--iterations', default=10, help='Number of model iterations. 0 means just run the initialisation')
 @click.option('--data_dir', default="data", help='Root directory to load data from')
-@click.option('--do_visualisations', default=True, help='Whether to generate plots and associated data (default True)')
-@click.option('--debug', default=False, help="Whether to run some more expensive checks (default False)")
-def run(iterations, data_dir, do_visualisations, debug):
+@click.option('--visualisations/--no-visualisations', default=True, help='Whether to generate plots and associated data')
+@click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
+def run(iterations, data_dir, visualisations, debug):
     num_iter = iterations
     if num_iter==0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
@@ -1366,14 +1366,16 @@ def run(iterations, data_dir, do_visualisations, debug):
 
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
-    m = Microsim(data_dir=data_dir, r_script_dir=r_script_dir, study_msoas=list(devon_msoas.Code), do_visualisations=do_visualisations, debug=debug)
+    m = Microsim(data_dir=data_dir, r_script_dir=r_script_dir, study_msoas=list(devon_msoas.Code),
+                 visualisations=visualisations, debug=debug)
 
     # Temporily use dummy data for testing
     #data_dir = os.path.join(base_dir, "dummy_data")
     #m = Microsim(data_dir=data_dir, testing=True, do_visualisations=do_visualisations)
 
     # Store some information for use in the visualisations
-    if do_visualisations:
+    x=1
+    if visualisations:
         print("Saving initial models for analysis ... ",)
         # save initial model
         output_dir = os.path.join(data_dir, "output")
@@ -1383,7 +1385,7 @@ def run(iterations, data_dir, do_visualisations, debug):
 
         # collect disease status in new df (for analysis/visualisation)
         individuals_to_pickle = m.individuals
-        individuals_to_pickle["DiseaseStatus0"] = m.individuals.Disease_Status
+        individuals_to_pickle["DiseaseStatus0"] = m.individuals[ColumnNames.DISEASE_STATUS]
 
         # collect location dangers at time 0 in new df(for analysis/visualisation)
         # TODO make a function for this so that it doesn't need to be repeated in the for loop below
@@ -1403,8 +1405,8 @@ def run(iterations, data_dir, do_visualisations, debug):
         m.step()
         
         # add to items to pickle for visualisations
-        if do_visualisations:
-            individuals_to_pickle["DiseaseStatus"+str(i+1)] = m.individuals.Disease_Status
+        if visualisations:
+            individuals_to_pickle["DiseaseStatus{0:0=3d}".format(str(i))] = m.individuals[ColumnNames.DISEASE_STATUS]
             for name in m.activity_locations:
                 # Get the details of the location activity
                 activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
