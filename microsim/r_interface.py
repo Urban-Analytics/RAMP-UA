@@ -5,6 +5,7 @@ import rpy2.robjects.packages as rpackages  # For installing packages
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 pandas2ri.activate()
+from column_names import ColumnNames
 
 class RInterface():
     """
@@ -45,17 +46,13 @@ class RInterface():
         """
         print("\tCalculating new disease status...",)
         # It's expesive to convert large dataframes, only give the required columns to R.
-        # TODO Consolidate the columns names and make them lower case in the python sciipt so no need to convert here.
-        individuals_reduced = individuals.loc[:, [ "area", "House_ID", "ID", "age1", "sex", "Current_Risk", "pnothome", "Disease_Status", "presymp_days", "symp_days"] ]
+        individuals_reduced = individuals.loc[:, ["area", "House_ID", "ID", "age1", "sex", ColumnNames.CURRENT_RISK, "pnothome",
+                                                   ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP, ColumnNames.DISEASE_SYMP_DAYS] ]
         individuals_reduced["area"] = individuals_reduced.area.astype(str)
         individuals_reduced["id"] = individuals_reduced.ID
         del individuals_reduced["ID"]
         individuals_reduced["house_id"] = individuals_reduced.House_ID
         del individuals_reduced["House_ID"]
-        individuals_reduced["current_risk"] = individuals_reduced.Current_Risk
-        del individuals_reduced["Current_Risk"]
-        individuals_reduced["disease_status"] = individuals_reduced.Disease_Status
-        del individuals_reduced["Disease_Status"]
 
         r_df = self.R.run_status(individuals_reduced)  # This gets converted to a pandas dataframe implicitly
         #pd_df = ro.conversion.ri2py(r_df)  # Is explicit conversion necessary? 'pandas2ri.activate()' in import lines might make it implicit
@@ -64,11 +61,11 @@ class RInterface():
 
         # Update the individuals dataframe with the new values
         for col in ['disease_status', 'presymp_days', 'symp_days']:
-            individuals[col] = r_df[col]
-        individuals['Disease_Status'] = individuals['disease_status']  # TODO (temp) make this lower case permanently
+            individuals[col] = list(r_df[col])
+        assert False not in (individuals.loc[individuals.disease_status > 0, ColumnNames.DISEASE_STATUS].values ==
+                             r_df.loc[r_df.disease_status > 0, ColumnNames.DISEASE_STATUS].values)
 
         print(" .... finished.")
-        x=1
         return individuals
 
 

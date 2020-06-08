@@ -23,7 +23,7 @@
 # requires a dataframe list, a vector of betas, and a timestep
 
 covid_prob <- function(df, betas, interaction_terms = NULL) {
-  print("assign probabilities")
+  #print("assign probabilities")
 
   beta_names <- names(betas)
   
@@ -63,7 +63,7 @@ covid_prob <- function(df, betas, interaction_terms = NULL) {
 #########################################
 # assigns covid based on probabilities
 case_assign <- function(df, with_optimiser = FALSE) {
-  print("assign cases")
+  #print("assign cases")
   
   susceptible <- which(df$status == 0)
   
@@ -72,7 +72,7 @@ case_assign <- function(df, with_optimiser = FALSE) {
                                          size = 1,
                                          prob = df$optim_probability[susceptible])
   } else{
-    print("nop")
+    #print("nop")
     df$new_status[susceptible] <- rbinom(n = length(susceptible),
                                          size = 1,
                                          prob = df$probability[susceptible])
