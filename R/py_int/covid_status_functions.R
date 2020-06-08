@@ -37,7 +37,7 @@ covid_prob <- function(df, betas, interaction_terms = NULL) {
   beta_names <- beta_names[beta_names %in% names(df)]
   
   if (length(beta_names) > 0 ){
-    beta_out <- lapply(X = beta_names, FUN = beta_make, timestep = timestep-1, betas=betas,df=df)
+    beta_out <- lapply(X = beta_names, FUN = beta_make, betas=betas, df=df)
     beta_out <- do.call(cbind, beta_out)
     colnames(beta_out) <- beta_names
     beta_out_sums <- rowSums(beta_out)
@@ -119,7 +119,7 @@ removed <- function(df, chance_recovery = 0.95){
  
   df$symp_days[removed_cases] <- 0
   df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] <- df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] - 1
-  df$symp_days[df$new_status == 2 & df$symp_days > 0] <- df$symp_days[df$status == 2 & df$symp_days>0] - 1
+  df$symp_days[df$new_status == 2 & df$symp_days > 0] <- df$symp_days[df$new_status == 2 & df$symp_days>0] - 1
   
   return(df)
 }

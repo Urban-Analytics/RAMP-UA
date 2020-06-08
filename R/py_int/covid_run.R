@@ -14,8 +14,13 @@ library(mixdist)
 # Working directory set automatically by python
 #setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 
+#setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
+
+source("R/py_int/covid_status_functions.R")
+source("R/py_int/initialize_and_helper_functions.R")
+
 #beta1 <- current_risk /  danger <- 0.55
-#pop <- read.csv("~/Downloads/individuals_reduced.csv")
+pop <- read.csv("~/Downloads/individuals_reduced.csv")
 
 run_status <- function(pop) {
   
@@ -51,7 +56,7 @@ run_status <- function(pop) {
   #mutate(log_pop_dens = log10(pop_dens_km2)) 
   
   population_in$cases_per_area <- 0
-  #population_in$Disease_Status <- 0
+  population_in$disease_status <- 0
   
   print("c")
   
@@ -88,14 +93,10 @@ run_status <- function(pop) {
   underlining <- factor(c(0,0))
   names(underlining) <- c("0","1") #1 = has underlying health conditions
   hid_infected <- 0
-  current_risk <- 0
-  
+
   ### any betas included must link to columns/data.frames in df_in 
   
-  other_betas <- list(pnothome = pnothome,
-                      cases_per_area = cases_per_area,
-                      connectivity_index = connectivity_index,
-                      current_risk = current_risk)
+  other_betas <- list(current_risk = current_risk)
   
   df_msoa <- df_in
   df_risk <- list()
