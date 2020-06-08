@@ -8,10 +8,11 @@ library(mixdist)
 #library(sf)
 #library(viridisLite)
 
-setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
+# set wd is done by parent python class
+#setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 
-source("R/py_int/covid_status_functions.R")
-source("R/py_int/initialize_and_helper_functions.R")
+# Working directory set automatically by python
+#setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 
 #pop <- read.csv("~/Downloads/individuals_reduced.csv")
 
@@ -20,6 +21,8 @@ run_status <- function(pop) {
   population <- clean_names(pop)
   
   num_sample <- nrow(population)
+  
+  print(num_sample)
   
   # the stuff below here should be loaded only once in python i guess and
   # passed as columns in the dataframe
@@ -49,6 +52,8 @@ run_status <- function(pop) {
   population_in$cases_per_area <- 0
   #population_in$Disease_Status <- 0
   
+  print("c")
+  
   df_cr_in <-create_input(micro_sim_pop  = population_in,
                           num_sample = num_sample,
                           pnothome_multiplier = 0.6,   # 0.1 = a 60% reduction in time people not home
@@ -67,6 +72,8 @@ run_status <- function(pop) {
                           sex = sex, 
                           beta0_fixed = -9.5, 
                           divider = 4)  # adding in the age/sex betas 
+  
+  print("e")
   
   pnothome <-  0.25 #0.35
   connectivity_index <- 0.25#0.3 doesn't work
@@ -91,6 +98,8 @@ run_status <- function(pop) {
   df_msoa <- df_in
   df_risk <- list()
   
+  print("f")
+  
   df_prob <- covid_prob(df = df_msoa, betas = other_betas)
   df_ass <- case_assign(df = df_prob, with_optimiser = FALSE)
   df_inf <- infection_length(df = df_ass,
@@ -102,6 +111,8 @@ run_status <- function(pop) {
                              infection_sd = 2)
   df_rec <- removed(df = df_inf, chance_recovery = 0.95)
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
+  
+  print("h")
   
   #colSums(df_msoa$had_covid)
   #colMeans(df_msoa$cases_per_area)
