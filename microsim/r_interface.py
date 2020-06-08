@@ -60,10 +60,10 @@ class RInterface():
         assert False not in list(r_df.ID.values == individuals.ID.values)  # Check that person IDs are the same
 
         # Update the individuals dataframe with the new values
-        for col in ['disease_status', 'presymp_days', 'symp_days']:
+        for col in [ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP, ColumnNames.DISEASE_SYMP_DAYS]:
             individuals[col] = list(r_df[col])
-        assert False not in (individuals.loc[individuals.disease_status > 0, ColumnNames.DISEASE_STATUS].values ==
-                             r_df.loc[r_df.disease_status > 0, ColumnNames.DISEASE_STATUS].values)
+        assert False not in (individuals.loc[individuals[ColumnNames.DISEASE_STATUS] > 0, ColumnNames.DISEASE_STATUS].values ==
+                             r_df.loc[r_df[ColumnNames.DISEASE_STATUS] > 0, ColumnNames.DISEASE_STATUS].values)
 
         print(" .... finished.")
         return individuals

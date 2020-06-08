@@ -1344,7 +1344,8 @@ class Microsim:
 @click.command()
 @click.option('--iterations', default=10, help='Number of model iterations. 0 means just run the initialisation')
 @click.option('--data_dir', default="data", help='Root directory to load data from')
-@click.option('--visualisations/--no-visualisations', default=True, help='Whether to generate plots and associated data')
+@click.option('--visualisations/--no-visualisations', default=True,
+              help='Whether to generate plots and associated data (default visualise).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
 def run(iterations, data_dir, visualisations, debug):
     num_iter = iterations
@@ -1374,7 +1375,6 @@ def run(iterations, data_dir, visualisations, debug):
     #m = Microsim(data_dir=data_dir, testing=True, do_visualisations=do_visualisations)
 
     # Store some information for use in the visualisations
-    x=1
     if visualisations:
         print("Saving initial models for analysis ... ",)
         # save initial model
