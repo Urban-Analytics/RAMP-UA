@@ -13,8 +13,9 @@ setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 source("R/py_int/covid_status_functions.R")
 source("R/py_int/initialize_and_helper_functions.R")
 
+#pop <- read.csv("~/Downloads/individuals_reduced.csv")
 
-run_status <- function(pop_df) {
+run_status <- function(pop) {
   
   population <- clean_names(pop)
   
@@ -34,8 +35,8 @@ run_status <- function(pop_df) {
   #connectivity$connectivity_index <- normalizer(connectivity$log_connectedness, 0.01, 1, min(connectivity$log_connectedness), max(connectivity$log_connectedness))
   
   area <- "area"
-  hid <- "hid"
-  pid <- "pid"
+  hid <- "house_id"
+  #pid <- "pid"
   age <- "age1"
   sex <- "sex"
   id <- "id"
@@ -46,20 +47,22 @@ run_status <- function(pop_df) {
   #mutate(log_pop_dens = log10(pop_dens_km2)) 
   
   population_in$cases_per_area <- 0
+  #population_in$Disease_Status <- 0
   
   df_cr_in <-create_input(micro_sim_pop  = population_in,
                           num_sample = num_sample,
                           pnothome_multiplier = 0.6,   # 0.1 = a 60% reduction in time people not home
                           vars = c(area,   # must match columns in the population data.frame
                                    hid,
-                                   pid,
+                                   #pid,
                                    id,
                                    age,
                                    sex,
-                                   "current_risk"))
+                                   "current_risk",
+                                   "pnothome"))
   
   df_in <- as_betas_devon(population_sample = df_cr_in, 
-                          pid = pid,
+                          id = id,
                           age = age, 
                           sex = sex, 
                           beta0_fixed = -9.5, 
@@ -105,7 +108,7 @@ run_status <- function(pop_df) {
   
   df_out <- data.frame(area=df_msoa$area,
                        ID=df_msoa$id,
-                       hid=df_msoa$hid,
+                       hid=df_msoa$house_id,
                        Disease_Status=df_msoa$new_status,
                        presymp_days=df_msoa$presymp_days,
                        symp_days=df_msoa$symp_days)
