@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Core RAMP-UA model.
 
@@ -30,6 +32,7 @@ from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
 import pickle # to save data
+import swifter
 
 
 class Microsim:
@@ -207,6 +210,14 @@ class Microsim:
         self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces)
         self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
                                                               individuals=self.individuals, duration_col="pwork")
+
+        # Some flows will be very complicated numbers. Reduce the numbers of decimal places across the board.
+        # This makes it easier to write out the files
+        for name in tqdm(self.activity_locations.keys(), desc="Rounding all flows"):
+            self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = \
+                self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"].swifter.progress_bar(False).apply(
+                    lambda flows: [round(flow, 5) for flow in flows])
+
 
         # Add some necessary columns for the disease and assign initial SEIR status
         self.individuals = Microsim.add_disease_columns(self.individuals)
@@ -1045,8 +1056,12 @@ class Microsim:
         return individuals
 
     @classmethod
-    def _normalise(cls, l: List[float]) -> List[float]:
-        """Normalise a list so that it sums to 1.0"""
+    def _normalise(cls, l: List[float], decimals=3) -> List[float]:
+        """
+        Normalise a list so that it sums to almost 1.0. Rounding might cause it not to add exactly to 1
+
+        :param decimals: Optionally round to the number of decimal places. Default 3. If 'None' the do no rounding.
+        """
         if not isinstance(l, Iterable):
             raise Exception("Can only work with iterables")
         if len(l) == 1:  # Special case for 1-item iterables
@@ -1055,11 +1070,9 @@ class Microsim:
         l = np.array(l)  # Easier to work with numpy vectorised operators
         total = l.sum()
         l = l / total
-        ## Scale so all are between 0-1
-        ##l = (l - l.min()) / (l.max() - l.min())
-        ## Scale so sum to 1
-        ##l = l / l.sum()
-        return list(l)
+        if decimals is None:
+            return list(l)
+        return [round(x, decimals) for x in l]
 
     def export_to_feather(self, path="export"):
         """
@@ -1108,12 +1121,14 @@ class Microsim:
         return individuals
 
 
-    def update_venue_danger_and_risks(self):
+    def update_venue_danger_and_risks(self, decimals=10):
         """
         Update the danger score for each location, based on where the individuals who have the infection visit.
         Then look through the individuals again, assigning some of that danger back to them as 'current risk'.
 
         :param risk_multiplier: Risk is calcuated as duration * flow * risk_multiplier.
+        :param decimals: Number of decimals to round the indivdiual risks and dangers to (defult 10). If 'None'
+                        then do no rounding
         """
         print("\tUpdating danger associated with visiting each venue")
 
@@ -1129,8 +1144,6 @@ class Microsim:
             #
 
             print(f"\t\t{name} activity")
-            if name=="PrimarySchool" and i==16:
-                x=1
             # Get the details of the location activity
             activity_location = self.activity_locations[name]  # Pointer to the ActivityLocation object
             # Create a list to store the dangers associated with each location for this activity.
@@ -1156,16 +1169,9 @@ class Microsim:
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue_idx, flow in zip(v, f):
                         #print(i, venue_idx, flow, duration)
-                        # Individual i goes to the venue with index (row number) "venue" and flow "flow"
-                        #print(i,v,f,s,venue_idx, flow)
-                        #if venue_idx==0:
-                        #    lkjasd=1
-                        #venue_index = loc_ids.index(venue_id)
                         # Increase the danger by the flow multiplied by some disease risk
                         loc_dangers[venue_idx] += (flow * duration * self.risk_multiplier)
 
-            # Now we have the dangers associated with each location, apply these back to the main dataframe
-            activity_location.update_dangers(loc_dangers)
 
             #
             # ***** 2 - risks for individuals who visit dangerous venues
@@ -1178,23 +1184,23 @@ class Microsim:
                     danger = loc_dangers[venue_idx]
                     current_risk[i] += (flow * danger * duration * self.danger_multiplier)
 
+            # Now we have the dangers associated with each location, apply these back to the main dataframe
+            if decimals is not None: # Round the dangers?
+                loc_dangers = [round(x, decimals) for x in loc_dangers]
+            activity_location.update_dangers(loc_dangers)
+
         # Sanity check
         assert len(current_risk) == len(self.individuals)
         assert min(current_risk) >= 0  # Should not be risk less than 0
+
+        # Round the current risks?
+        if decimals is not None:
+            current_risk = [round(x, decimals) for x in current_risk]
 
         self.individuals[ColumnNames.CURRENT_RISK] = current_risk
 
         return
 
-    def update_current_risk(self):
-        """Individuals will be visitting locations which may have some danger if they were previously
-        visitted by infected) which is now assigned to others."""
-
-
-
-
-
-        pass
 
     def update_disease_counts(self):
         """Update some disease counters -- counts of diseases in MSOAs & households -- which are useful
@@ -1288,14 +1294,10 @@ class Microsim:
 
 # PROGRAM ENTRY POINT
 # Uses 'click' library so that it can be run from the command line
-#@click.command()
-#@click.option('--iterations', default=0, help='Number of model iterations. 0 means just run the initialisation')
-#@click.option('--data_dir', default="data", help='Root directory to load data from')
-#@click.option('--disease_status', default=0, help='Root directory to load data from')
-#@click.option('--msoa_codes', default=0, help='Root directory to load data from')
-def run(iterations, data_dir, disease_status, msoa_codes):
-#def run(data_dir):
-#def run(iterations, data_dir):
+@click.command()
+@click.option('--iterations', default=2, help='Number of model iterations. 0 means just run the initialisation')
+@click.option('--data_dir', default="data", help='Root directory to load data from')
+def run(iterations, data_dir):
     num_iter = iterations
     if num_iter==0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
@@ -1313,9 +1315,8 @@ def run(iterations, data_dir, disease_status, msoa_codes):
     data_dir = os.path.join(base_dir, data_dir)
 
     # Temporarily only want to use Devon MSOAs
-    #devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
-    #m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
-    m = Microsim(study_msoas=list(msoa_codes), data_dir=data_dir)
+    devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
+    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
     # Temporily use dummy data for testing
     #data_dir = os.path.join(base_dir, "dummy_data")
@@ -1329,8 +1330,7 @@ def run(iterations, data_dir, disease_status, msoa_codes):
 
     # collect disease status in new df (for analysis/visualisation)
     individuals_to_pickle = m.individuals
-    #individuals_to_pickle["DiseaseStatus0"] = m.individuals.Disease_Status
-    individuals_to_pickle["DiseaseStatus0"] = disease_status
+    individuals_to_pickle["DiseaseStatus0"] = m.individuals.Disease_Status
     
     # collect location dangers at time 0 in new df(for analysis/visualisation)
     # TODO make a function for this so that it doesn't need to be repeated in the for loop below
@@ -1349,8 +1349,7 @@ def run(iterations, data_dir, disease_status, msoa_codes):
         m.step()
         
         # add to items to pickle
-        #individuals_to_pickle["DiseaseStatus"+str(i+1)] = m.individuals.Disease_Status
-        individuals_to_pickle["DiseaseStatus"+str(i+1)] = disease_status
+        individuals_to_pickle["DiseaseStatus"+str(i+1)] = m.individuals.Disease_Status
         for name in m.activity_locations:
             # Get the details of the location activity
             activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
@@ -1373,27 +1372,50 @@ def run(iterations, data_dir, disease_status, msoa_codes):
         pickle_out = open(os.path.join(output_dir, loc_name+".pickle"),"wb")
         pickle.dump(locals()[loc_name+'_to_pickle'], pickle_out)
         pickle_out.close() 
+       
         
-    return individuals_to_pickle 
-    
+    # Make some plots (save or show) - see seperate script for now
+    # fig = MicrosimAnalysis.heatmap(individuals, ["Danger"])
+    # fig.show()     
+    # fig = MicrosimAnalysis.geogif(individuals, ["Danger"])
+    # # save - can't display gif?   
+        
+        
     print("End of program")
-    
-    
+
+
+
 
 def pop_init(data_dir):
     num_iter = 0
 
+    # To fix file path issues, use absolute/full path at all times
+    # Pick either: get working directory (if user starts this script in place, or set working directory
+    # Option A: copy current working directory:
+    ## COMMENTED BY NICK os.chdir("..") # assume microsim subdir so need to go up one level
     base_dir = os.getcwd()  # get current directory
+    # Option B: specific directory
+    #base_dir = 'C:\\Users\\Toshiba\\git_repos\\RAMP-UA'
+    # overwrite data_dir with full path
     data_dir = os.path.join(base_dir, data_dir)
 
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
     m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
 
+    # Temporily use dummy data for testing
+    #data_dir = os.path.join(base_dir, "dummy_data")
+    #m = Microsim(data_dir=data_dir, testing=True)
+    
+    # save initial m
+    output_dir = os.path.join(data_dir, "output")
+    pickle_out = open(os.path.join(output_dir, "m0.pickle"),"wb")
+    pickle.dump(m, pickle_out)
+    pickle_out.close()
+
     # collect disease status in new df (for analysis/visualisation)
     individuals_to_pickle = m.individuals
     individuals_to_pickle["DiseaseStatus0"] = m.individuals.Disease_Status
-    #individuals_to_pickle["DiseaseStatus0"] = disease_status
     
     # collect location dangers at time 0 in new df(for analysis/visualisation)
     # TODO make a function for this so that it doesn't need to be repeated in the for loop below
@@ -1428,5 +1450,6 @@ def pop_init(data_dir):
         # Get the details of the location activity
         activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
         loc_name = activity.get_name()  # retail, school etc
+        
         
     return individuals_to_pickle 
