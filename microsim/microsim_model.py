@@ -243,9 +243,8 @@ class Microsim:
         #    pool.close()  # Make sure the child processes are killed even if there is an exception
 
 
-        # Add some necessary columns for the disease and assign initial SEIR status
+        # Add some necessary columns for the disease
         self.individuals = Microsim.add_disease_columns(self.individuals)
-        self.individuals = Microsim.assign_initial_disease_status(self.individuals)
 
         return  # finish __init__
 
@@ -1158,20 +1157,6 @@ class Microsim:
         individuals[ColumnNames.HID_CASES] = 0  # Ditto for the household
         individuals[ColumnNames.DISEASE_PRESYMP] = -1
         individuals[ColumnNames.DISEASE_SYMP_DAYS] = -1
-        return individuals
-
-    @classmethod
-    def assign_initial_disease_status(cls, individuals: pd.DataFrame) -> pd.DataFrame:
-        """
-        Create a new column to represent the initial disease status of the individuals and assign them
-        an initial status. Also create a column to record the number of days with that status
-        :param individuals: The dataframe containin synthetic individuals
-        :return: A new DataFrame for the individuals with the additional column
-        """
-        print("Assigning initial disease status ...",)
-        #individuals["Disease_Status"] = [random.choice( range(0,4)) for _ in range(len(individuals))]
-        # THIS WILL NEED TO BE DONE PROPERLY IN ANOTHER PROCESS (R?)
-        print(f"... finished assigning initial status for {len(individuals)} individuals.")
         return individuals
 
 
