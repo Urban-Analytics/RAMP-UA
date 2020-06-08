@@ -1416,18 +1416,18 @@ def run(iterations, data_dir, visualisations, debug):
 
                 locals()[loc_name+'_to_pickle']["Danger"+str(i+1)] = loc_dangers
 
-        # save individuals and danger dfs
-        pickle_out = open(os.path.join(output_dir, "Individuals.pickle"),"wb")
-        pickle.dump(individuals_to_pickle, pickle_out)
-        pickle_out.close()
-        for name in m.activity_locations:
-            # Get the details of the location activity
-            activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
-            loc_name = activity.get_name()  # retail, school etc
-
-            pickle_out = open(os.path.join(output_dir, loc_name+".pickle"),"wb")
-            pickle.dump(locals()[loc_name+'_to_pickle'], pickle_out)
+            # save individuals and danger dfs
+            pickle_out = open(os.path.join(output_dir, "Individuals.pickle"),"wb")
+            pickle.dump(individuals_to_pickle, pickle_out)
             pickle_out.close()
+            for name in m.activity_locations:
+                # Get the details of the location activity
+                activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
+                loc_name = activity.get_name()  # retail, school etc
+
+                pickle_out = open(os.path.join(output_dir, loc_name+".pickle"),"wb")
+                pickle.dump(locals()[loc_name+'_to_pickle'], pickle_out)
+                pickle_out.close()
        
         
     # Make some plots (save or show) - see seperate script for now
