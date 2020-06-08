@@ -25,9 +25,9 @@ class ColumnNames:
 
     # Disease status is one of the following:
     #Susceptible = 0
-    #Exposed = 1
-    #Pre - Symptomatic = 2
-    #Symptomatic = 3
+    #Pre - Symptomatic = 1
+    #Symptomatic = 2
+    #Recovered = 3
     #Removed = 4
     DISEASE_STATUS = "Disease_Status"
 
