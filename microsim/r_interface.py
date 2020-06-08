@@ -43,10 +43,10 @@ class RInterface():
         :param individuals:  The individuals dataframe from which new statuses need to be calculated
         :return: a new dataframe that includes new disease statuses
         """
-        print("Calculating new disease status...",)
+        print("\tCalculating new disease status...",)
         # It's expesive to convert large dataframes, only give the required columns to R.
         # TODO Consolidate the columns names and make them lower case in the python sciipt so no need to convert here.
-        individuals_reduced = individuals.loc[:, [ "area", "House_ID", "ID", "age1", "sex", "Current_Risk", "pnothome", "Disease_Status"] ]
+        individuals_reduced = individuals.loc[:, [ "area", "House_ID", "ID", "age1", "sex", "Current_Risk", "pnothome", "Disease_Status", "presymp_days", "symp_days"] ]
         individuals_reduced["area"] = individuals_reduced.area.astype(str)
         individuals_reduced["id"] = individuals_reduced.ID
         del individuals_reduced["ID"]
@@ -56,18 +56,20 @@ class RInterface():
         del individuals_reduced["Current_Risk"]
         individuals_reduced["disease_status"] = individuals_reduced.Disease_Status
         del individuals_reduced["Disease_Status"]
-        # TODO Do these columns need to be set once on initialisation and then left alone? If so then do then when adding
-        # the other disease-related columns
-        individuals_reduced['presymp_days'] = -1
-        individuals_reduced['symp_days'] = -1
 
-        r_df = self.R.run_status(individuals_reduced)
-        pd_df = ro.conversion.ri2py(r_df)  # Is explicit conversion necessary? 'pandas2ri.activate()' in import lines might make it implicit
+        r_df = self.R.run_status(individuals_reduced)  # This gets converted to a pandas dataframe implicitly
+        #pd_df = ro.conversion.ri2py(r_df)  # Is explicit conversion necessary? 'pandas2ri.activate()' in import lines might make it implicit
+        assert len(r_df) == len(individuals)
+        assert False not in list(r_df.ID.values == individuals.ID.values)  # Check that person IDs are the same
+
+        # Update the individuals dataframe with the new values
+        for col in ['disease_status', 'presymp_days', 'symp_days']:
+            individuals[col] = r_df[col]
+        individuals['Disease_Status'] = individuals['disease_status']  # TODO (temp) make this lower case permanently
+
         print(" .... finished.")
-        assert len(pd_df) == len(individuals)
-
-        # TODO Attach the new disease status on to the end of the individuals dataframe
-        return pd_df
+        x=1
+        return individuals
 
 
     @staticmethod
