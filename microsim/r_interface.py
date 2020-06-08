@@ -44,7 +44,7 @@ class RInterface():
         :param individuals:  The individuals dataframe from which new statuses need to be calculated
         :return: a new dataframe that includes new disease statuses
         """
-        print("\tCalculating new disease status...",)
+        print("\tCalculating new disease status...", end='')
         # It's expesive to convert large dataframes, only give the required columns to R.
         individuals_reduced = individuals.loc[:, ["area", "House_ID", "ID", "age1", "sex", ColumnNames.CURRENT_RISK, "pnothome",
                                                    ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP, ColumnNames.DISEASE_SYMP_DAYS] ]
