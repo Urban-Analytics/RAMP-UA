@@ -1153,7 +1153,7 @@ class Microsim:
     def add_disease_columns(cls, individuals: pd.DataFrame) -> pd.DataFrame:
         """Adds columns required to estimate disease prevalence"""
         individuals[ColumnNames.DISEASE_STATUS] = 0
-        individuals[ColumnNames.DAYS_WITH_STATUS] = 0  # Also keep the number of days that have elapsed with this status
+        #individuals[ColumnNames.DAYS_WITH_STATUS] = 0  # Also keep the number of days that have elapsed with this status
         individuals[ColumnNames.CURRENT_RISK] = 0  # This is the risk that people get when visiting locations.
         individuals[ColumnNames.MSOA_CASES] = 0  # Useful to count cases per MSOA
         individuals[ColumnNames.HID_CASES] = 0  # Ditto for the household
