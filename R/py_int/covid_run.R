@@ -16,11 +16,11 @@ library(mixdist)
 
 #setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 
-source("R/py_int/covid_status_functions.R")
-source("R/py_int/initialize_and_helper_functions.R")
+#source("R/py_int/covid_status_functions.R")
+#source("R/py_int/initialize_and_helper_functions.R")
 
 #beta1 <- current_risk /  danger <- 0.55
-pop <- read.csv("~/Downloads/individuals_reduced.csv")
+#pop <- read.csv("~/Downloads/individuals_reduced.csv")
 
 run_status <- function(pop) {
   
