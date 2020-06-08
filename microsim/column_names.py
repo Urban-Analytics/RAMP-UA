@@ -31,7 +31,7 @@ class ColumnNames:
     #Removed = 4
     DISEASE_STATUS = "Disease_Status"
 
-    DAYS_WITH_STATUS = "Days_With_Status"  # The number of days that have elapsed with this status
+    #DAYS_WITH_STATUS = "Days_With_Status"  # The number of days that have elapsed with this status
     CURRENT_RISK = "Current_Risk"  # This is the risk that people get when visiting locations.
     MSOA_CASES = "MSOA_Cases"  # The number of cases per MSOA
     HID_CASES = "HID_Cases"  # The number of cases in the individual's house

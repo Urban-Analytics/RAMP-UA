@@ -61,12 +61,13 @@ class RInterface():
         individuals_reduced['presymp_days'] = -1
         individuals_reduced['symp_days'] = -1
 
-        out_df = self.R.run_status(individuals_reduced)
+        r_df = self.R.run_status(individuals_reduced)
+        pd_df = ro.conversion.ri2py(r_df)  # Is explicit conversion necessary? 'pandas2ri.activate()' in import lines might make it implicit
         print(" .... finished.")
-        assert len(out_df) == len(individuals)
+        assert len(pd_df) == len(individuals)
 
         # TODO Attach the new disease status on to the end of the individuals dataframe
-        return out_df
+        return pd_df
 
 
     @staticmethod
