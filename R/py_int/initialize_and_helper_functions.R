@@ -22,14 +22,14 @@ create_input <- function(micro_sim_pop, num_sample,vars = NULL, lockdown_date = 
   constant_list <- list(
     beta0 = rep(0, num_sample),
     betaxs = rep(0, num_sample),
-    new_beta0 = rep(0, num_sample),
+    #new_beta0 = rep(0, num_sample),
     hid_status = rep(0, num_sample),
-    presymp_days = rep(NA, num_sample),
-    symp_days = rep(NA, num_sample),
+    presymp_days = micro_sim_pop$presymp_days,
+    symp_days = micro_sim_pop$symp_days,
     probability = rep(0, num_sample),
     #optim_probability = matrix(0, nrow = num_sample),
-    status = micro_sim_pop$disease_status0,
-    new_status = micro_sim_pop$disease_status0
+    status = micro_sim_pop$Disease_Status,
+    new_status = micro_sim_pop$Disease_Status
   )
   
   df <- c(var_list, constant_list)

@@ -7,12 +7,21 @@ library(mixdist)
 #library(ggplot2)
 #library(sf)
 #library(viridisLite)
+library(reticulate)
 
 setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 
 source("R/py_int/covid_status_functions.R")
 source("R/py_int/initialize_and_helper_functions.R")
 
+reticulate::source_python("microsim/microsim_model_JESSE.py")
+
+pull_pop <- function(data_dir="data") {
+  population <- pop_init(data_dir)
+  return(population)
+}
+
+pop <- pull_pop()
 
 run_status <- function(pop_df) {
   
@@ -41,9 +50,9 @@ run_status <- function(pop_df) {
   id <- "id"
   
   population_in <- population #%>% 
-  #left_join(., pop_dens, by =  c("area" = "msoa_area_codes")) %>% 
-  #dplyr::left_join(.,connectivity, by = c("area" = "msoa11cd")) %>% 
-  #mutate(log_pop_dens = log10(pop_dens_km2)) 
+    #left_join(., pop_dens, by =  c("area" = "msoa_area_codes")) %>% 
+    #dplyr::left_join(.,connectivity, by = c("area" = "msoa11cd")) %>% 
+    #mutate(log_pop_dens = log10(pop_dens_km2)) 
   
   population_in$cases_per_area <- 0
   
