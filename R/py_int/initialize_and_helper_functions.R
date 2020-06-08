@@ -48,11 +48,11 @@ create_input <- function(micro_sim_pop, num_sample,vars = NULL, lockdown_date = 
 }
 
 
-beta_make <- function(name, betas, timestep, df) {
+beta_make <- function(name, betas, df) {
  
   #dynamic betas with linear multiplier
   if (is.matrix(df[[name]]) & length(betas[[name]])== 1){  #dynamic betas will be a matrix from the create_input function
-    y <- df[[name]][,timestep] * betas[[name]]
+    y <- df[[name]] * betas[[name]]
   } 
   #fixed betas with linear multiplier
   if(!is.matrix(df[[name]]) & length(betas[[name]]) == 1){
@@ -64,7 +64,7 @@ beta_make <- function(name, betas, timestep, df) {
     classes <- names(betas[[name]])
     y<-numeric(length(df[[name]]))
     for (cls in classes){
-      y[which(df[[name]][,timestep]==cls)] <- as.numeric(as.character(betas[[name]][[cls]])) 
+      y[which(df[[name]]==cls)] <- as.numeric(as.character(betas[[name]][[cls]])) 
     }
   }
  
