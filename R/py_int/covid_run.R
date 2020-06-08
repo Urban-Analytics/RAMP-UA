@@ -70,7 +70,7 @@ run_status <- function(pop) {
                           id = id,
                           age = age, 
                           sex = sex, 
-                          beta0_fixed = -3.3, #0.19, #-9.5, 
+                          beta0_fixed = -4, #0.19, #-9.5, 
                           divider = 4)  # adding in the age/sex betas 
   
   print("e")
