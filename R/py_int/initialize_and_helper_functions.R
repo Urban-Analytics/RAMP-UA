@@ -19,22 +19,25 @@ create_input <- function(micro_sim_pop, num_sample,vars = NULL, lockdown_date = 
   
   names(var_list) <- vars
   
+  #micro_sim_pop$presymp_days[micro_sim_pop$presymp_days==-1] <- NA
+  #micro_sim_pop$symp_days[micro_sim_pop$symp_days==-1] <- NA
+  
   constant_list <- list(
     beta0 = rep(0, num_sample),
     betaxs = rep(0, num_sample),
-    new_beta0 = rep(0, num_sample),
+    #new_beta0 = rep(0, num_sample),
     hid_status = rep(0, num_sample),
-    presymp_days = rep(NA, num_sample),
-    symp_days = rep(NA, num_sample),
+    presymp_days = micro_sim_pop$presymp_days,
+    symp_days = micro_sim_pop$symp_days,
     probability = rep(0, num_sample),
     #optim_probability = matrix(0, nrow = num_sample),
-    status = micro_sim_pop$disease_status0,
-    new_status = micro_sim_pop$disease_status0
+    status = micro_sim_pop$disease_status,
+    new_status = micro_sim_pop$disease_status
   )
   
   df <- c(var_list, constant_list)
   
-  df$pnothome[,1] <- df$pnothome[,1]
+  df$pnothome <- df$pnothome
   
   if(!is.null(lockdown_date)){
     li <- as.numeric(lockdown_date - start_date)
@@ -80,11 +83,11 @@ beta_make <- function(name, betas, timestep, df) {
 
 #########################################
 #### for age sex betas - needs making more listy
-as_betas_devon <- function(population_sample,pid, age, sex, beta0_fixed = NULL, divider = 1){
+as_betas_devon <- function(population_sample,id, age, sex, beta0_fixed = NULL, divider = 1){
   
   if (length(unique(population_sample$age1)) == 6){
     
-    fixed_risks <- data.frame(pid = population_sample[[pid]],
+    fixed_risks <- data.frame(id = population_sample[[id]],
                               age=population_sample[[age]],
                               sex=population_sample[[sex]],
                               beta0 = beta0_fixed,#-7.8100663,
@@ -106,7 +109,7 @@ as_betas_devon <- function(population_sample,pid, age, sex, beta0_fixed = NULL, 
   
   if (length(unique(population_sample$age1)) == 21){
     # we can define fixed risks here for things like age and sex because they won't change
-    fixed_risks <- data.frame(pid = population_sample[[pid]],
+    fixed_risks <- data.frame(id = population_sample[[id]],
                               age=population_sample[[age]],
                               sex=population_sample[[sex]],
                               beta0 = -8.79806350,

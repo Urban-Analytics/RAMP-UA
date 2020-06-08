@@ -7,22 +7,27 @@ library(mixdist)
 #library(ggplot2)
 #library(sf)
 #library(viridisLite)
+library(reticulate)
 
-# set wd is done by parent python class
-#setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
+setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 
-# Working directory set automatically by python
-#setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
+source("R/py_int/covid_status_functions.R")
+source("R/py_int/initialize_and_helper_functions.R")
 
-#pop <- read.csv("~/Downloads/individuals_reduced.csv")
+reticulate::source_python("microsim/microsim_model_JESSE.py")
 
-run_status <- function(pop) {
+pull_pop <- function(data_dir="data") {
+  population <- pop_init(data_dir)
+  return(population)
+}
+
+pop <- pull_pop()
+
+run_status <- function(pop_df) {
   
   population <- clean_names(pop)
   
   num_sample <- nrow(population)
-  
-  print(num_sample)
   
   # the stuff below here should be loaded only once in python i guess and
   # passed as columns in the dataframe
@@ -38,42 +43,36 @@ run_status <- function(pop) {
   #connectivity$connectivity_index <- normalizer(connectivity$log_connectedness, 0.01, 1, min(connectivity$log_connectedness), max(connectivity$log_connectedness))
   
   area <- "area"
-  hid <- "house_id"
-  #pid <- "pid"
+  hid <- "hid"
+  pid <- "pid"
   age <- "age1"
   sex <- "sex"
   id <- "id"
   
   population_in <- population #%>% 
-  #left_join(., pop_dens, by =  c("area" = "msoa_area_codes")) %>% 
-  #dplyr::left_join(.,connectivity, by = c("area" = "msoa11cd")) %>% 
-  #mutate(log_pop_dens = log10(pop_dens_km2)) 
+    #left_join(., pop_dens, by =  c("area" = "msoa_area_codes")) %>% 
+    #dplyr::left_join(.,connectivity, by = c("area" = "msoa11cd")) %>% 
+    #mutate(log_pop_dens = log10(pop_dens_km2)) 
   
   population_in$cases_per_area <- 0
-  #population_in$Disease_Status <- 0
-  
-  print("c")
   
   df_cr_in <-create_input(micro_sim_pop  = population_in,
                           num_sample = num_sample,
                           pnothome_multiplier = 0.6,   # 0.1 = a 60% reduction in time people not home
                           vars = c(area,   # must match columns in the population data.frame
                                    hid,
-                                   #pid,
+                                   pid,
                                    id,
                                    age,
                                    sex,
-                                   "current_risk",
-                                   "pnothome"))
+                                   "current_risk"))
   
   df_in <- as_betas_devon(population_sample = df_cr_in, 
-                          id = id,
+                          pid = pid,
                           age = age, 
                           sex = sex, 
                           beta0_fixed = -9.5, 
                           divider = 4)  # adding in the age/sex betas 
-  
-  print("e")
   
   pnothome <-  0.25 #0.35
   connectivity_index <- 0.25#0.3 doesn't work
@@ -98,8 +97,6 @@ run_status <- function(pop) {
   df_msoa <- df_in
   df_risk <- list()
   
-  print("f")
-  
   df_prob <- covid_prob(df = df_msoa, betas = other_betas)
   df_ass <- case_assign(df = df_prob, with_optimiser = FALSE)
   df_inf <- infection_length(df = df_ass,
@@ -112,14 +109,12 @@ run_status <- function(pop) {
   df_rec <- removed(df = df_inf, chance_recovery = 0.95)
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
   
-  print("h")
-  
   #colSums(df_msoa$had_covid)
   #colMeans(df_msoa$cases_per_area)
   
   df_out <- data.frame(area=df_msoa$area,
                        ID=df_msoa$id,
-                       hid=df_msoa$house_id,
+                       hid=df_msoa$hid,
                        Disease_Status=df_msoa$new_status,
                        presymp_days=df_msoa$presymp_days,
                        symp_days=df_msoa$symp_days)
