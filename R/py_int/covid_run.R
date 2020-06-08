@@ -13,6 +13,7 @@ setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 source("R/py_int/covid_status_functions.R")
 source("R/py_int/initialize_and_helper_functions.R")
 
+#beta1 <- current_risk /  danger <- 0.55
 #pop <- read.csv("~/Downloads/individuals_reduced.csv")
 
 run_status <- function(pop) {
@@ -58,20 +59,20 @@ run_status <- function(pop) {
                                    id,
                                    age,
                                    sex,
-                                   "current_risk",
-                                   "pnothome"))
+                                   "current_risk"))
   
   df_in <- as_betas_devon(population_sample = df_cr_in, 
                           id = id,
                           age = age, 
                           sex = sex, 
-                          beta0_fixed = -9.5, 
+                          beta0_fixed = -3.3, #0.19, #-9.5, 
                           divider = 4)  # adding in the age/sex betas 
   
   pnothome <-  0.25 #0.35
   connectivity_index <- 0.25#0.3 doesn't work
   log_pop_dens <- 0#0.2#0.4#0.3 #0.175
   cases_per_area <- 10 #2.5
+  current_risk <- 0.55
   
   origin <- factor(c(0,0,0,0,0))
   names(origin) <- c("1", "2", "3", "4", "5") #1 = white, 2 = black, 3 = asian, 4 = mixed, 5 = other
@@ -86,7 +87,8 @@ run_status <- function(pop) {
   
   other_betas <- list(pnothome = pnothome,
                       cases_per_area = cases_per_area,
-                      connectivity_index = connectivity_index)
+                      connectivity_index = connectivity_index,
+                      current_risk = current_risk)
   
   df_msoa <- df_in
   df_risk <- list()
@@ -108,8 +110,8 @@ run_status <- function(pop) {
   
   df_out <- data.frame(area=df_msoa$area,
                        ID=df_msoa$id,
-                       hid=df_msoa$house_id,
-                       Disease_Status=df_msoa$new_status,
+                       house_id=df_msoa$house_id,
+                       disease_status=df_msoa$new_status,
                        presymp_days=df_msoa$presymp_days,
                        symp_days=df_msoa$symp_days)
   
