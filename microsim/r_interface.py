@@ -45,8 +45,8 @@ class RInterface():
         """
         print("Calculating new disease status...",)
         # It's expesive to convert large dataframes, only give the required columns to R.
-        # Also make the columns also be lower case
-        individuals_reduced = individuals.loc[:, [ "area", "House_ID", "ID", "age1", "sex", "Current_Risk", "pnothome"] ]
+        # TODO Consolidate the columns names and make them lower case in the python sciipt so no need to convert here.
+        individuals_reduced = individuals.loc[:, [ "area", "House_ID", "ID", "age1", "sex", "Current_Risk", "pnothome", "Disease_Status"] ]
         individuals_reduced["area"] = individuals_reduced.area.astype(str)
         individuals_reduced["id"] = individuals_reduced.ID
         del individuals_reduced["ID"]
@@ -54,6 +54,12 @@ class RInterface():
         del individuals_reduced["House_ID"]
         individuals_reduced["current_risk"] = individuals_reduced.Current_Risk
         del individuals_reduced["Current_Risk"]
+        individuals_reduced["disease_status"] = individuals_reduced.Disease_Status
+        del individuals_reduced["Disease_Status"]
+        # TODO Do these columns need to be set once on initialisation and then left alone? If so then do then when adding
+        # the other disease-related columns
+        individuals_reduced['presymp_days'] = -1
+        individuals_reduced['symp_days'] = -1
 
         out_df = self.R.run_status(individuals_reduced)
         print(" .... finished.")
