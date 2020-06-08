@@ -12,10 +12,12 @@ Created on Wed Apr 29 19:59:25 2020
 import sys
 sys.path.append("microsim") # This is only needed when testing. I'm so confused about the imports
 from activity_location import ActivityLocation
+from r_interface import RInterface
 #from microsim.microsim_analysis import MicrosimAnalysis
 from microsim_analysis import MicrosimAnalysis
 from column_names import ColumnNames
 from utilities import Optimise
+from multiprocessing import Pool
 
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
@@ -31,8 +33,10 @@ from collections.abc import Iterable   # drop `.abc` with Python 2.7 or lower
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 import click  # command-line interface
-import pickle # to save data
-import swifter
+import pickle  # to save data
+import swifter  # For speeding up apply functions (e.g. df.swifter.apply)
+import rpy2.robjects as ro  # For calling R scripts
+#import pandas.rpy.common as com
 
 
 class Microsim:
@@ -55,14 +59,19 @@ class Microsim:
 
 
     def __init__(self,
+                 data_dir="./data/", r_script_dir="./R/py_int/",
                  study_msoas: List[str] = [],
-                 danger_multiplier = 1.0, risk_multiplier = 1.0,
+                 danger_multiplier=1.0, risk_multiplier=1.0,
                  random_seed: float = None, read_data: bool = True,
-                 data_dir = "data", testing=False
+                 testing=False,
+                 do_visualisations=True,
+                 debug=False
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
         ----------
+        :param data_dir: A data directory from which to read the source data
+        :param r_script_dir: A directory with the required R scripts in (these are used to estimate disease status)
         :param study_msoas: An optional list of MSOA codes to restrict the model to
         :param danger_multiplier: Danger assigned to a place if an infected individual visits it
         is calcuated as duration * flow * danger_multiplier.
@@ -72,22 +81,28 @@ class Microsim:
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
             in debugging).
-        :param data_dir: Optionally provide a root data directory
         :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!)
+        :param do_visualisations: Whether to visualise the results (default True)
+        :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
         """
 
         # Administrative variables that need to be defined
+        Microsim.DATA_DIR = data_dir
         self.iteration = 0
         self.danger_multiplier = danger_multiplier
         self.risk_multiplier = risk_multiplier
         self.random = random.Random(time.time() if random_seed is None else random_seed)
-        Microsim.DATA_DIR = data_dir
+        self.do_visualisations = do_visualisations
+        Microsim.debug = debug
         Microsim.testing = testing
         if self.testing:
             warnings.warn("Running in testing mode. Some exceptions will be disabled.")
 
         if not read_data:  # Optionally can not do this, usually for debugging
             return
+
+        # Create the interface to R now as this will be needed later anyway
+        self.r_int = RInterface(r_script_dir)
 
         # Now the main chunk of initialisation is to read the input data.
 
@@ -212,18 +227,32 @@ class Microsim:
                                                               individuals=self.individuals, duration_col="pwork")
 
         # Some flows will be very complicated numbers. Reduce the numbers of decimal places across the board.
-        # This makes it easier to write out the files
-        for name in tqdm(self.activity_locations.keys(), desc="Rounding all flows"):
-            self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = \
-                self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"].swifter.progress_bar(False).apply(
-                    lambda flows: [round(flow, 5) for flow in flows])
+        # This makes it easier to write out the files.
+        # TODO Check whether rounding flows is necessary. As they are rounded in _normalise() I actually think this is unnecessary
+        # Use multiprocessing because swifter doesn't work properly for some reason (wont paralelise)
+        pool = Pool(processes=int(os.cpu_count()/2))
+        try:
+            for name in tqdm(self.activity_locations.keys(), desc="Rounding all flows"):
+                rounded_flows = pool.map( Microsim._round_flows, list(self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"]))
+                self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = rounded_flows
+            # Use swifter, but for some reason it wont paralelise the problem. Not sure why.
+            #self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = \
+            #        self.individuals.loc[:,f"{name}{ColumnNames.ACTIVITY_FLOWS}"].\
+            #            swifter.allow_dask_on_strings(enable=True).progress_bar(True, desc=name).\
+            #            apply(lambda flows: [round(flow, 5) for flow in flows])
+        finally:
+            pool.close()  # Make sure the child processes are killed even if there is an exception
 
 
         # Add some necessary columns for the disease and assign initial SEIR status
         self.individuals = Microsim.add_disease_columns(self.individuals)
         self.individuals = Microsim.assign_initial_disease_status(self.individuals)
 
-        return
+        return # finish __init__
+
+    @staticmethod
+    def _round_flows(flows):
+        return [round(flow, 5) for flow in flows]
 
     @classmethod
     def read_msm_data(cls) -> (pd.DataFrame, pd.DataFrame):
@@ -333,10 +362,8 @@ class Microsim:
                           f"data. They will be removed.")
         individuals = individuals.loc[individuals.HID != -1]
         # Now everyone should have a household. This will raise an exception if not. (unless testing)
-        # TODO uncomment below to check that no people without households have been introduced
-        # (commented while developing beause it is very slow
-        warnings.warn("Not checking that no homeless were introduced, uncomment when running properly")
-        #Microsim._check_no_homeless(individuals, households, warn=True if Microsim.testing else False )
+        if Microsim.debug:
+            Microsim._check_no_homeless(individuals, households, warn=True if Microsim.testing else False )
 
         print("Have read files:",
               f"\n\tHouseholds:  {len(house_dfs)} files with {len(households)}",
@@ -433,10 +460,8 @@ class Microsim:
               f"\tAfter subsetting: {len(individuals_to_keep)} individuals, {len(households_to_keep)} househods.")
 
         # Check no individuals without households have been introduced (raise an exception if so)
-        # TODO uncomment below to check that no people without households have been introduced
-        # (commented while developing beause it is very slow
-        warnings.warn("Not checking that no homeless were introduced, uncomment when running properly")
-        #Microsim._check_no_homeless(individuals, households, warn=False)
+        if Microsim.debug:
+            Microsim._check_no_homeless(individuals, households, warn=False)
 
         return (study_msoas, individuals_to_keep, households_to_keep)
 
@@ -475,7 +500,7 @@ class Microsim:
         tuh = tuh.loc[tuh.hid != -1]
 
         # Indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
-        # identify indivuals / households in this health data and be specif about what 'Area' means
+        # identify indivuals / households in this health data
         tuh = tuh.rename(columns={'hid': '_hid', 'pid': '_pid'})
         individuals = individuals.rename(columns={"PID": "_PID", "HID": "_HID"})
         # Not sure why HID and PID aren't ints
@@ -576,7 +601,7 @@ class Microsim:
         assert len(house_ids_dict) == house_id_counter
 
         # While we're here, may as well also check that [Area, HID, PID] is a unique identifier of individuals
-        # TODO FIND OUT FROM KARYN WHY THESE LEGTHS ARE DIFFERENT
+        # TODO FIND OUT FROM KARYN WHY THERE ARE ~20,000 NON-UNIQUE PEOPLE
         #assert len(tuh) == len(set(unique_individuals))
 
         # Done! Now can create the households dataframe
@@ -594,19 +619,48 @@ class Microsim:
         assert len(temp_merge) == len(tuh)
         assert False not in list(temp_merge['area_x']==temp_merge['area_y'])
 
+        # Check that NumPople in the house dataframe is the same as number of people in the indivdiuals dataframe
+        # with this house id
+        if Microsim.debug:
+            for house_id, num_people in tqdm(zip(households_df.House_ID, households_df.Num_People),
+                   desc="Checking household sizes match"): # I know you shouldn't loop, but I can't work out the apply way (and this only happens once)
+                num_people2 = len(tuh.loc[tuh.House_ID==house_id])  # Number of individuals who link to this house
+                assert num_people == num_people2, f"House {house_id} doesn't match: {num_people} / {num_people2}"
+
         # Add some required columns
         Microsim._add_location_columns(households_df, location_names=list(households_df.House_ID),
                                        location_ids=households_df.House_ID )
         # The new ID column should be the same as the House_ID
         assert False not in list(households_df.House_ID == households_df[ColumnNames.LOCATION_ID])
 
-        # Add flows for each individual (this is easy, it's just converting their House_ID into a one-value list)
-        # Names for the new columns
-        venues_col = f"{home_name}{ColumnNames.ACTIVITY_VENUES}"
-        flows_col = f"{home_name}{ColumnNames.ACTIVITY_FLOWS}"
+        # For some reason, we get some *very* large households. Can demonstrate this with:
+        # households_df.Num_People.hist()
+        # This needs to be resolved, but in the meantime just remove all households that have more than 10 people
+        large_house_idx = frozenset(households_df.index[households_df.Num_People > 10]) # Indexes of large houses
+        # For each person, get a house_id, or -1 if the house is very large
+        large_people_idx = tuh["House_ID"].apply(lambda x: -1 if x in large_house_idx else x)
+        warnings.warn(f"There are {len(large_house_idx)} households with more than 10 people in them. This covers "
+                      f"{len(large_people_idx[large_people_idx==-1])} people. These households are being removed.")
+        tuh["TEMP_HOUSE_ID"] = large_people_idx  # Use this colum to remove people (all people with HOUSE_ID == -1)
+        # Check the numbers add up (normal house len + large house len = original len)
+        assert ( len(tuh.loc[tuh.TEMP_HOUSE_ID != -1]) + len(large_people_idx[large_people_idx == -1]) ) == len(tuh)
+        assert ( len(households_df.loc[~households_df.House_ID.isin(large_house_idx)]) + len(large_house_idx) ) == len(households_df)
+        # Remove people, but leave the households (no one will live there so they wont affect anything)
+        tuh = tuh[tuh.TEMP_HOUSE_ID != -1]
+        # TODO Work out why removing households kills the model later. - it's probably because houses are removed but the indexes and IDs don't change, so indexes will end up larger than size of the households list. Probably would need to recalculate the index and House_ID so that they are ascending again (pain, can't be bothered).
+        #households_df = households_df.loc[~households_df.House_ID.isin(large_house_idx)]
+        #households_df = households_df.loc[households_df.Num_People <= 10]
+        # Check that the large house ids no longer exist in the individuals df (use House_ID rather than index to be sure, but they're the same anyway)
+        id_set = frozenset(households_df.loc[households_df.Num_People>10,"House_ID"].values)
+        assert True not in list(tuh["House_ID"].apply(lambda x: x in id_set))
+        del tuh["TEMP_HOUSE_ID"]
 
+        # Add flows for each individual (this is easy, it's just converting their House_ID and flow (1.0) into a
+        # one-value lists).
+        venues_col = f"{home_name}{ColumnNames.ACTIVITY_VENUES}" # Names for the new columns
+        flows_col = f"{home_name}{ColumnNames.ACTIVITY_FLOWS}"
         tuh[venues_col] = tuh["House_ID"].apply(lambda x: [x])
-        tuh[flows_col] = [ [1.0] for _ in range(len(tuh))]
+        tuh[flows_col] = [[1.0]] * len(tuh)
 
         print("... finished reading TU&H data.")
 
@@ -1036,7 +1090,6 @@ class Microsim:
             #
             # A quicker way to do this is probably to create N subsets of individuals (one table for
             # each area) and then concatenate them at the end.
-
             individuals.loc[oa_code, venues_col] = \
                 individuals.loc[oa_code, venues_col].apply(lambda _: dests).values
             individuals.loc[oa_code, flows_col] = \
@@ -1165,7 +1218,7 @@ class Microsim:
             durations = self.individuals.loc[:, durations_col]
             assert len(venues) == len(flows) and len(venues) == len(statuses)
             for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)): # For each individual
-                if s == 1 or s == 2 or s == 3: # Exposed (1), pre-symptomatic (2), symptomatic (3)
+                if s == 1 or s == 2:  #  pre-symptomatic (1), symptomatic (2)
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue_idx, flow in zip(v, f):
                         #print(i, venue_idx, flow, duration)
@@ -1226,14 +1279,11 @@ class Microsim:
         self.individuals[ColumnNames.HID_CASES].fillna(0, inplace=True)
 
 
-    @classmethod
-    def calculate_new_disease_status(cls, row: pd.Series, activity_locations: List[ActivityLocation]):
+    def calculate_new_disease_status(self) -> None:
         """
-        Given a row of the DataFrame of individuals (as pd.Series object) calculate their
-        disease status
-        :param row: The row (a Series) with the information about an individual
-        :param activity_locations: The activity locations that people currently visit
-        :return: The new disease status for that individual
+        Call an R function to calculate the new disease status for all individuals.
+        Update the indivdiuals dataframe in place
+        :return: None. Update the dataframe inplace
         """
         # Can access th individual's data using the 'row' variable like a dictionary.
         #for activity_name, activity in activity_locations.items():
@@ -1243,16 +1293,25 @@ class Microsim:
         #    flows = row[f"{activity_name}{ColumnNames.ACTIVITY_FLOWS}"]
         #    venus + flows  # Just to see how long this might take
         #    pass
-        return row['Disease_Status'] # TEMP DON'T ACTUALLT DO ANYTHING
+
+        # Remember the current status so we can calculate the current days with this status
+        current_status = self.individuals[ColumnNames.DISEASE_STATUS]
+        # (could remember permanently by adding a new column, but don't think we need this)
+        # self.individuals[ColumnNames.DISEASE_STATUS+"{0:0=3d}".format(self.iteration)] = self.individuals[ColumnNames.DISEASE_STATUS]
+
+        # Calculate the new status (will return a new dataframe)
+        # a test: self.r_int.test_int(pd.DataFrame( data={'count':[1,2,3,4,5]}))
+        new_df = self.r_int.calculate_disease_status(self.individuals)
+        self.individuals[ColumnNames.DISEASE_STATUS] = new_df['disease_status']
+        # Need to do anything with these?
+        #new_df['presymp_days']
+        #new_df['symp_days']
+
+
 
     def step(self) -> None:
         """
         Step (iterate) the model
-
-        :param danger_multiplier: Danger assigned to a place if an infected individual visits it
-        is calcuated as duration * flow * danger_multiplier.
-        :param risk_multiplier: Risk that individuals get from a location is calculatd as
-        duration * flow * risk_multiplier
 
         :return:
         """
@@ -1263,32 +1322,20 @@ class Microsim:
         # become more dangerous) then update the risk to each individual of going to those venues.
         self.update_venue_danger_and_risks()
 
-
         # Update disease counters. E.g. count diseases in MSOAs & households
         self.update_disease_counts()
 
         # Calculate new disease status
-        # ACTUALLY THIS WONT BE DONE HERE. THE DATA WILL BE PASSED TO R AND DEALT WITH THERE, GETTING A NEW
-        # DISEASE STATUS COLUMN BACK
-        print("Now should calculate new disease status")
-        # (need to pass activity locations as well becasue the calculate_new_disease_status needs to be class-level
-        # rather than object level (otherwise I couldn't get the argument passing to work properly)
-        # tqdm.pandas(desc="Calculating new disease status") # means pd.apply() has a progress bar
-        #self.individuals["Disease_Status"] = self.individuals.progress_apply(
-        #   func=Microsim.calculate_new_disease_status, axis=1, activity_locations=self.activity_locations)
-
-
-        # Increase the number of days that each individual has had their current status
-        self.individuals["Days_With_Status"] = self.individuals["Days_With_Status"].apply(
-            lambda x: x + 1)
+        self.calculate_new_disease_status()
 
         # Can export after every iteration if we want to
         #self.export_to_feather()
 
-        # Do some analysis
-        fig = MicrosimAnalysis.population_distribution(self.individuals, ["DC1117EW_C_AGE"])
-        fig.show()
-        #MicrosimAnalysis.location_danger_distribution(self.activity_locatons['Retail'], ["Danger"])
+        # Do some analysis / visualisations
+        if self.do_visualisations:
+            fig = MicrosimAnalysis.population_distribution(self.individuals, ["DC1117EW_C_AGE"])
+            fig.show()
+            #MicrosimAnalysis.location_danger_distribution(self.activity_locatons['Retail'], ["Danger"])
 
 
 
@@ -1297,7 +1344,9 @@ class Microsim:
 @click.command()
 @click.option('--iterations', default=2, help='Number of model iterations. 0 means just run the initialisation')
 @click.option('--data_dir', default="data", help='Root directory to load data from')
-def run(iterations, data_dir):
+@click.option('--do_visualisations', default=True, help='Whether to generate plots and associated data (default True)')
+@click.option('--debug', default=False, help="Whether to run some more expensive checks (default False)")
+def run(iterations, data_dir, do_visualisations, debug):
     num_iter = iterations
     if num_iter==0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
@@ -1313,65 +1362,70 @@ def run(iterations, data_dir):
     #base_dir = 'C:\\Users\\Toshiba\\git_repos\\RAMP-UA'
     # overwrite data_dir with full path
     data_dir = os.path.join(base_dir, data_dir)
+    r_script_dir = os.path.join(base_dir, "R", "py_int")
 
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
-    m = Microsim(study_msoas=list(devon_msoas.Code), data_dir=data_dir)
+    m = Microsim(data_dir=data_dir, r_script_dir=r_script_dir, study_msoas=list(devon_msoas.Code), do_visualisations=do_visualisations, debug=debug)
 
     # Temporily use dummy data for testing
     #data_dir = os.path.join(base_dir, "dummy_data")
-    #m = Microsim(data_dir=data_dir, testing=True)
-    
-    # save initial m
-    output_dir = os.path.join(data_dir, "output")
-    pickle_out = open(os.path.join(output_dir, "m0.pickle"),"wb")
-    pickle.dump(m, pickle_out)
-    pickle_out.close()
+    #m = Microsim(data_dir=data_dir, testing=True, do_visualisations=do_visualisations)
 
-    # collect disease status in new df (for analysis/visualisation)
-    individuals_to_pickle = m.individuals
-    individuals_to_pickle["DiseaseStatus0"] = m.individuals.Disease_Status
-    
-    # collect location dangers at time 0 in new df(for analysis/visualisation)
-    # TODO make a function for this so that it doesn't need to be repeated in the for loop below
-    for name in m.activity_locations:
-        # Get the details of the location activity
-        activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
-        loc_name = activity.get_name()  # retail, school etc
-        loc_ids = activity.get_ids()  # List of the IDs of the locations 
-        loc_dangers = activity.get_dangers()  # List of the current dangers
+    # Store some information for use in the visualisations
+    if do_visualisations:
+        print("Saving initial models for analysis ... ",)
+        # save initial model
+        output_dir = os.path.join(data_dir, "output")
+        pickle_out = open(os.path.join(output_dir, "m0.pickle"),"wb")
+        pickle.dump(m, pickle_out)
+        pickle_out.close()
 
-        locals()[loc_name+'_to_pickle'] = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
+        # collect disease status in new df (for analysis/visualisation)
+        individuals_to_pickle = m.individuals
+        individuals_to_pickle["DiseaseStatus0"] = m.individuals.Disease_Status
 
+        # collect location dangers at time 0 in new df(for analysis/visualisation)
+        # TODO make a function for this so that it doesn't need to be repeated in the for loop below
+        for name in m.activity_locations:
+            # Get the details of the location activity
+            activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
+            loc_name = activity.get_name()  # retail, school etc
+            loc_ids = activity.get_ids()  # List of the IDs of the locations
+            loc_dangers = activity.get_dangers()  # List of the current dangers
+
+            locals()[loc_name+'_to_pickle'] = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
+
+        print(" ... finished.")
 
     # Step the model
     for i in range(num_iter):
         m.step()
         
-        # add to items to pickle
-        individuals_to_pickle["DiseaseStatus"+str(i+1)] = m.individuals.Disease_Status
+        # add to items to pickle for visualisations
+        if do_visualisations:
+            individuals_to_pickle["DiseaseStatus"+str(i+1)] = m.individuals.Disease_Status
+            for name in m.activity_locations:
+                # Get the details of the location activity
+                activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
+                loc_name = activity.get_name()  # retail, school etc
+                loc_ids = activity.get_ids()  # List of the IDs of the locations
+                loc_dangers = activity.get_dangers()  # List of the current dangers
+
+                locals()[loc_name+'_to_pickle']["Danger"+str(i+1)] = loc_dangers
+
+        # save individuals and danger dfs
+        pickle_out = open(os.path.join(output_dir, "Individuals.pickle"),"wb")
+        pickle.dump(individuals_to_pickle, pickle_out)
+        pickle_out.close()
         for name in m.activity_locations:
             # Get the details of the location activity
             activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
             loc_name = activity.get_name()  # retail, school etc
-            loc_ids = activity.get_ids()  # List of the IDs of the locations 
-            loc_dangers = activity.get_dangers()  # List of the current dangers
 
-            locals()[loc_name+'_to_pickle']["Danger"+str(i+1)] = loc_dangers
-
-    
-    # save individuals and danger dfs
-    pickle_out = open(os.path.join(output_dir, "Individuals.pickle"),"wb")
-    pickle.dump(individuals_to_pickle, pickle_out)
-    pickle_out.close()  
-    for name in m.activity_locations:
-        # Get the details of the location activity
-        activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
-        loc_name = activity.get_name()  # retail, school etc
-               
-        pickle_out = open(os.path.join(output_dir, loc_name+".pickle"),"wb")
-        pickle.dump(locals()[loc_name+'_to_pickle'], pickle_out)
-        pickle_out.close() 
+            pickle_out = open(os.path.join(output_dir, loc_name+".pickle"),"wb")
+            pickle.dump(locals()[loc_name+'_to_pickle'], pickle_out)
+            pickle_out.close()
        
         
     # Make some plots (save or show) - see seperate script for now
