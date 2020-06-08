@@ -62,7 +62,7 @@ class RInterface():
         individuals_reduced['symp_days'] = -1
 
         r_df = self.R.run_status(individuals_reduced)
-        pd_df = ro.conversion.ri2py(r_df)
+        pd_df = ro.conversion.ri2py(r_df)  # Is explicit conversion necessary? 'pandas2ri.activate()' in import lines might make it implicit
         print(" .... finished.")
         assert len(pd_df) == len(individuals)
 
