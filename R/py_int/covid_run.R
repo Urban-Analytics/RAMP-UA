@@ -56,7 +56,7 @@ run_status <- function(pop) {
   #mutate(log_pop_dens = log10(pop_dens_km2)) 
   
   population_in$cases_per_area <- 0
-  population_in$disease_status <- 0
+  #population_in$disease_status <- 0
   
   print("c")
   
