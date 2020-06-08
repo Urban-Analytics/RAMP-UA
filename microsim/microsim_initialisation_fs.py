@@ -86,6 +86,10 @@ class MicrosimInit(Microsim):
         # Loop for every iteration (get this from cases)
         for i, row in m.cases.iterrows():
             print(i, row['date'], row['new_cases'])
+
+            if i == 80: # FOR  A BREAK POINT. Now can add a breakpoint into m.update_venue_danger_and_risks and see how the risks and dangers are calculated
+                x=1
+
             # Reset everyone's disease status
             m.individuals.loc[:,ColumnNames.DISEASE_STATUS] = 0
 

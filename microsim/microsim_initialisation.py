@@ -83,6 +83,11 @@ class MicrosimInit(Microsim):
         for name, activity_location in m.activity_locations.items():
             activity_dangers[name] = activity_location._locations.copy()
 
+        if len(m.cases) > 100:
+            raise Exception("Internal error. If there are more than 100 days of cases then the format"
+                            "line below which is used to create a new column for each day as a two-digit "
+                            "number, will need to be adapted to make 3-digit numbers.")
+
         # Loop for every iteration (get this from cases)
         for i, row in m.cases.iterrows():
             print(i, row['date'], row['new_cases'])
@@ -94,6 +99,8 @@ class MicrosimInit(Microsim):
                 total_duration = 0.0
                 for colum_name in ['Retail', 'PrimarySchool', 'SecondarySchool', 'Work']:
                     new_duration = m.individuals.loc[:, colum_name+ ColumnNames.ACTIVITY_DURATION] * 0.33
+                    # Round the new duration to prevent tiny numbers
+                    new_duration = round(new_duration, 10)
                     total_duration += new_duration
                     m.individuals.loc[:, colum_name + ColumnNames.ACTIVITY_DURATION] = new_duration
 
@@ -107,18 +114,14 @@ class MicrosimInit(Microsim):
                         #m.individuals.loc[ : , name+ColumnNames.ACTIVITY_DURATION  ] * 0.9
 
             #  Randomly assign cases to individuals
-            cases = row['new_cases']
-            if len(cases) > 100:
-                raise Exception("Internal error. If there are more than 100 days of cases then the format"
-                                "line below which is used to create a new column for each day as a two-digit "
-                                "number, will need to be adapted to make 3-digit numbers.")
+            num_cases = row['new_cases']
             random.seed()  # Sometimes different Processes can be given the same generator and seed
-            infected_individuals = random.sample(list(m.high_risk_individuals), cases)
-            assert len(infected_individuals) == cases
-            m.individuals.loc[infected_individuals,ColumnNames.DISEASE_STATUS] = 1
-            assert len(m.individuals.loc[m.individuals[ColumnNames.DISEASE_STATUS] == 1]) == cases
+            infected_individuals = random.sample(list(m.high_risk_individuals), num_cases)
+            assert len(infected_individuals) == num_cases
+            m.individuals.loc[infected_individuals, ColumnNames.DISEASE_STATUS] = 1
+            assert len(m.individuals.loc[m.individuals[ColumnNames.DISEASE_STATUS] == 1]) == num_cases
             # Aggregate and count the cases per area and check they are the correct numbers of cases
-            assert m.individuals.loc[m.individuals.Disease_Status > 0, :]["Area"].value_counts().sum() == cases
+            assert m.individuals.loc[m.individuals.Disease_Status > 0, :]["Area"].value_counts().sum() == num_cases
 
             # Step the model
             m.step()
@@ -156,7 +159,8 @@ class MicrosimInit(Microsim):
 @click.option('--data_dir', default="data", help='Root directory to load main model data from')
 @click.option('--init_dir', default="init_data", help="Directory that stores initialisation data, and where outputs are written")
 @click.option('--multiprocess', default=False, help="Whether to run multiprocess or not")
-def run_script(repetitions, data_dir, init_dir, multiprocess):
+@click.option('--debug', default=False, help="Whether to run some more expensive checks (default True)")
+def run_script(repetitions, data_dir, init_dir, multiprocess, debug):
     # To fix file path issues, use absolute/full path at all times
     base_dir = os.getcwd()  # get current directory
     data_dir = os.path.join(base_dir, data_dir)
@@ -181,7 +185,7 @@ def run_script(repetitions, data_dir, init_dir, multiprocess):
 
     # Initialise a model (MirosimInit init is a child of Microsim)
     m = MicrosimInit(msoa_danger=msoa_danger, cases=cases, results_dir=results_dir,
-                     study_msoas=list(devon_msoas.Code), data_dir=data_dir)  # These are for the parent Microsim object
+                     study_msoas=list(devon_msoas.Code), data_dir=data_dir, do_visualisations=False, debug=debug)  # These are for the parent Microsim object
 
     # Find a new directory for this initialisation (may have old ones)
     i = 0
