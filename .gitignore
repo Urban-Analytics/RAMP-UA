@@ -10,6 +10,9 @@ __pycache__
 .spyproject/
 .idea/
 
+# jupyter notebook stuff
+*.ipynb_checkpoints/
+
 # Others
 *.swp
 *.Rhistory
