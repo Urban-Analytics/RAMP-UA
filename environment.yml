@@ -12,10 +12,11 @@ dependencies:
   - bokeh=2.0.2=py37_0
   - bwidget=1.9.11=1
   - bzip2=1.0.8=h1de35cc_0
-  - ca-certificates=2020.1.1=0
+  - ca-certificates=2020.4.5.2=hecda079_0
   - cairo=1.14.12=hc4e6be7_4
   - cctools=927.0.2=h5ba7a2e_4
-  - certifi=2020.4.5.1=py37_0
+  - certifi=2020.4.5.2=py37hc8dfbb8_0
+  - cffi=1.14.0=py37h356ff06_0
   - clang=10.0.0=default_hf57f61e_0
   - clang_osx-64=10.0.0=h05bbb7f_1
   - clangxx=10.0.0=default_hf57f61e_0
@@ -106,7 +107,7 @@ dependencies:
   - numpy-base=1.18.1=py37h3304bdc_1
   - olefile=0.46=py37_0
   - openjdk=8.0.152=h1de35cc_3
-  - openssl=1.1.1g=h1de35cc_0
+  - openssl=1.1.1g=h0b31af3_0
   - packaging=20.3=py_0
   - pandas=1.0.3=py37h6c726b0_0
   - pandoc=2.2.3.2=0
@@ -127,6 +128,7 @@ dependencies:
   - psutil=5.7.0=py37h1de35cc_0
   - ptyprocess=0.6.0=py37_0
   - py=1.8.1=py_0
+  - pycparser=2.20=py_0
   - pygments=2.6.1=py_0
   - pyparsing=2.4.7=py_0
   - pyrsistent=0.16.0=py37h1de35cc_0
@@ -228,10 +230,11 @@ dependencies:
   - r-xtable=1.8_4=r36h6115d3f_0
   - r-yaml=2.2.0=r36h46e59ec_0
   - readline=7.0=h1de35cc_5
-  - rpy2=2.9.4=py37r36h1d22016_0
+  - rpy2=3.3.2=py37r36h10e2902_0
   - rstudio=1.1.456=h04f5b5a_1
   - send2trash=1.5.0=py37_0
   - setuptools=47.1.1=py37_0
+  - simplegeneric=0.8.1=py_1
   - six=1.15.0=py_0
   - sortedcontainers=2.1.0=py37_0
   - sqlite=3.31.1=h5c1f38d_1
