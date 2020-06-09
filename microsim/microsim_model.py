@@ -246,6 +246,33 @@ class Microsim:
         # Add some necessary columns for the disease
         self.individuals = Microsim.add_disease_columns(self.individuals)
 
+        # Might need to write out some data if saving output for analysis later
+        # Store some information for use in the visualisations and analysis
+        if self.output:
+            print("Saving initial models for analysis ... ", )
+            # save initial model
+            self.output_dir = os.path.join(data_dir, "output")
+            pickle_out = open(os.path.join(self.output_dir, "m0.pickle"), "wb")
+            pickle.dump(self, pickle_out)
+            pickle_out.close()
+
+            # collect disease status in new df (for analysis/visualisation)
+            self.individuals_to_pickle = self.individuals.copy()
+            self.individuals_to_pickle[ColumnNames.DISEASE_STATUS+"000"] = self.individuals_to_pickle[ColumnNames.DISEASE_STATUS]
+
+            # collect location dangers at time 0 in new df(for analysis/visualisation)
+            self.activities_to_pickle = {}
+            for name in self.activity_locations:
+                # Get the details of the location activity
+                activity = self.activity_locations[name]  # Pointer to the ActivityLocation object
+                loc_name = activity.get_name()  # retail, school etc
+                loc_ids = activity.get_ids()  # List of the IDs of the locations
+                loc_dangers = activity.get_dangers()  # List of the current dangers
+                self.activities_to_pickle[loc_name] = pd.DataFrame(list(zip(loc_ids, loc_dangers)),
+                                                                   columns=['ID', 'Danger0'])
+
+            print(" ... finished.")
+
         return  # finish __init__
 
     @staticmethod
@@ -1296,7 +1323,7 @@ class Microsim:
 
     def step(self) -> None:
         """
-        Step (iterate) the model
+        Step (iterate) the model for 1 iteration
 
         :return:
         """
@@ -1316,36 +1343,68 @@ class Microsim:
         # Can export after every iteration if we want to
         #self.export_to_feather()
 
+    def run(self, iterations: int) -> None:
+        """
+        Run the model (call the step() function) for the given number of iterations
+        :param iterations:
+        """
+        # Step the model
+        for i in range(iterations):
+            self.step()
+
+            # Add to items to pickle for visualisations
+            if self.output:
+                # (Force column names to have leading zeros)
+                self.individuals_to_pickle[f"{ColumnNames.DISEASE_STATUS}{(i + 1):03d}"] = self.individuals[ColumnNames.DISEASE_STATUS]
+                with open(os.path.join(self.output_dir, "Individuals.pickle"), "wb") as pickle_out:
+                    pickle.dump(self.individuals_to_pickle, pickle_out)
+
+                for name in self.activity_locations:
+                    # Get the details of the location activity
+                    activity = self.activity_locations[name]  # Pointer to the ActivityLocation object
+                    loc_name = activity.get_name()  # retail, school etc
+                    loc_ids = activity.get_ids()  # List of the IDs of the locations
+                    loc_dangers = activity.get_dangers()  # List of the current dangers
+                    # Add a new danger column to the previous dataframe
+                    self.activities_to_pickle[loc_name][f"{ColumnNames.LOCATION_DANGER}{(i + 1):03d}"] = loc_dangers
+                    # Save this activity location
+                    with open(os.path.join(self.output_dir, loc_name + ".pickle"), "wb") as pickle_out:
+                        pickle.dump(self.activities_to_pickle[loc_name], pickle_out)
 
 
+# ********
 # PROGRAM ENTRY POINT
 # Uses 'click' library so that it can be run from the command line
+# ********
 @click.command()
 @click.option('--iterations', default=10, help='Number of model iterations. 0 means just run the initialisation')
 @click.option('--data_dir', default="data", help='Root directory to load data from')
 @click.option('--output/--no-output', default=True,
               help='Whether to generate output data (default yes).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
-def run(iterations, data_dir, output, debug):
-    num_iter = iterations
-    if num_iter==0:
+@click.option('--repetitions', default=1, help="How many times to run the model (default 1)")
+def run_script(iterations, data_dir, output, debug, repetitions):
+    print(f"Running model with the following parameters:\n"
+          f"\tNumber of iterations: {iterations}\n"
+          f"\tData dir: {data_dir}\n"
+          f"\tOutputting results?: {output}\n"
+          f"\tDebug mode?: {debug}\n"
+          f"\tNumber of repetitions: {repetitions}")
+
+    if iterations == 0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
-    else:
-        print("Running model for", num_iter, "iterations.")
-    
+
     # To fix file path issues, use absolute/full path at all times
     # Pick either: get working directory (if user starts this script in place, or set working directory
     # Option A: copy current working directory:
-    ## COMMENTED BY NICK os.chdir("..") # assume microsim subdir so need to go up one level
     base_dir = os.getcwd()  # get current directory
-    # Option B: specific directory
-    #base_dir = 'C:\\Users\\Toshiba\\git_repos\\RAMP-UA'
-    # overwrite data_dir with full path
     data_dir = os.path.join(base_dir, data_dir)
     r_script_dir = os.path.join(base_dir, "R", "py_int")
 
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
+
+    # Create a microsim object
     m = Microsim(data_dir=data_dir, r_script_dir=r_script_dir, study_msoas=list(devon_msoas.Code),
                  output=output, debug=debug)
 
@@ -1353,72 +1412,12 @@ def run(iterations, data_dir, output, debug):
     #data_dir = os.path.join(base_dir, "dummy_data")
     #m = Microsim(data_dir=data_dir, testing=True, output=output)
 
-    # Store some information for use in the visualisations and analysis
-    if output:
-        print("Saving initial models for analysis ... ",)
-        # save initial model
-        output_dir = os.path.join(data_dir, "output")
-        pickle_out = open(os.path.join(output_dir, "m0.pickle"),"wb")
-        pickle.dump(m, pickle_out)
-        pickle_out.close()
+    # Run it!
+    m.run(iterations)
 
-        # collect disease status in new df (for analysis/visualisation)
-        individuals_to_pickle = m.individuals
-        individuals_to_pickle["DiseaseStatus000"] = m.individuals[ColumnNames.DISEASE_STATUS]
-
-        # collect location dangers at time 0 in new df(for analysis/visualisation)
-        # TODO make a function for this so that it doesn't need to be repeated in the for loop below
-        for name in m.activity_locations:
-            # Get the details of the location activity
-            activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
-            loc_name = activity.get_name()  # retail, school etc
-            loc_ids = activity.get_ids()  # List of the IDs of the locations
-            loc_dangers = activity.get_dangers()  # List of the current dangers
-
-            locals()[loc_name+'_to_pickle'] = pd.DataFrame(list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
-
-        print(" ... finished.")
-
-    # Step the model
-    for i in range(num_iter):
-        m.step()
-        # add to items to pickle for visualisations
-        if output:
-            # (Force column names to have leading zeros)
-            individuals_to_pickle[f"DiseaseStatus{(i+1):03d}"] = m.individuals[ColumnNames.DISEASE_STATUS]
-            for name in m.activity_locations:
-                # Get the details of the location activity
-                activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
-                loc_name = activity.get_name()  # retail, school etc
-                loc_ids = activity.get_ids()  # List of the IDs of the locations
-                loc_dangers = activity.get_dangers()  # List of the current dangers
-
-                locals()[loc_name+'_to_pickle']["Danger"+str(i+1)] = loc_dangers
-
-            # save individuals and danger dfs
-            pickle_out = open(os.path.join(output_dir, "Individuals.pickle"),"wb")
-            pickle.dump(individuals_to_pickle, pickle_out)
-            pickle_out.close()
-            for name in m.activity_locations:
-                # Get the details of the location activity
-                activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
-                loc_name = activity.get_name()  # retail, school etc
-
-                pickle_out = open(os.path.join(output_dir, loc_name+".pickle"),"wb")
-                pickle.dump(locals()[loc_name+'_to_pickle'], pickle_out)
-                pickle_out.close()
-       
-        
-    # Make some plots (save or show) - see seperate script for now
-    # fig = MicrosimAnalysis.heatmap(individuals, ["Danger"])
-    # fig.show()     
-    # fig = MicrosimAnalysis.geogif(individuals, ["Danger"])
-    # # save - can't display gif?   
-        
-        
     print("End of program")
 
 
 if __name__ == "__main__":
-    run()
+    run_script()
     print("End of program")
