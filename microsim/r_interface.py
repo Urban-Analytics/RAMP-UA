@@ -54,8 +54,8 @@ class RInterface():
         individuals_reduced["house_id"] = individuals_reduced.House_ID
         del individuals_reduced["House_ID"]
 
-        print("TEMPORERILY WRITINT OUT DATAFRAME BEFORE SENDING TO R")
-        individuals_reduced.to_csv("~/Desktop/individuals_results.temp.csv")
+        #print("TEMPORERILY WRITINT OUT DATAFRAME BEFORE SENDING TO R")
+        #individuals_reduced.to_csv("~/Desktop/individuals_results.temp.csv")
         r_df = self.R.run_status(individuals_reduced)  # This gets converted to a pandas dataframe implicitly
         #pd_df = ro.conversion.ri2py(r_df)  # Is explicit conversion necessary? 'pandas2ri.activate()' in import lines might make it implicit
         assert len(r_df) == len(individuals)
