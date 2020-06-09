@@ -151,20 +151,20 @@ for d in range(0, nr_days):
 
 # create (if first run, takes a while) or read in existing
 # create
-for d in range(0, nr_days):
-    print(d)
-    for v in range(0, len(home_dangers)):
-        if d == 0:
-            # set seed
-            home_dangers.iloc[v,d+1] = 0
-        else:
-            home_dangers.iloc[v,d+1] = home_dangers.iloc[v,d] + random.randrange(-5, 5, 1)
-            if home_dangers.iloc[v,d+1] < 0:
-                home_dangers.iloc[v,d+1] = 0
-data_file = os.path.join(data_dir, "output","Fake_home_dangers.pickle")
-pickle_out = open(data_file,"wb")
-pickle.dump(home_dangers, pickle_out)
-pickle_out.close() 
+# for d in range(0, nr_days):
+#     print(d)
+#     for v in range(0, len(home_dangers)):
+#         if d == 0:
+#             # set seed
+#             home_dangers.iloc[v,d+1] = 0
+#         else:
+#             home_dangers.iloc[v,d+1] = home_dangers.iloc[v,d] + random.randrange(-5, 5, 1)
+#             if home_dangers.iloc[v,d+1] < 0:
+#                 home_dangers.iloc[v,d+1] = 0
+# data_file = os.path.join(data_dir, "output","Fake_home_dangers.pickle")
+# pickle_out = open(data_file,"wb")
+# pickle.dump(home_dangers, pickle_out)
+# pickle_out.close() 
 # read
 data_file = os.path.join(data_dir, "output","Fake_home_dangers.pickle")
 pickle_in = open(data_file,"rb")
@@ -501,6 +501,61 @@ plt.show()
 
 
 
+# from https://towardsdatascience.com/walkthrough-mapping-basics-with-bokeh-and-geopandas-in-python-43f40aa5b7e9
+
+import json
+from bokeh.io import show
+from bokeh.models import (CDSView, ColorBar, ColumnDataSource,
+                          CustomJS, CustomJSFilter, 
+                          GeoJSONDataSource, HoverTool,
+                          LinearColorMapper, Slider)
+from bokeh.layouts import column, row, widgetbox
+from bokeh.palettes import brewer
+from bokeh.plotting import figure
+
+# Turn data into GeoJSON source
+geosource = GeoJSONDataSource(geojson = merged_data.to_json())
+
+# Define color palettes
+palette = brewer['BuGn'][8]
+palette = palette[::-1] # reverse order of colors so higher values have darker colors
+# Instantiate LinearColorMapper that linearly maps numbers in a range, into a sequence of colors.
+color_mapper = LinearColorMapper(palette = palette, low = 0, high = 2000)
+# Define custom tick labels for color bar.
+tick_labels = {'0': '0', '500': '500', '1000':'1,000', '1500':'1,500',
+ '2000':'2,000+'}
+# Create color bar.
+color_bar = ColorBar(color_mapper = color_mapper, 
+                     label_standoff = 8,
+                     width = 500, height = 20,
+                     border_line_color = None,
+                     location = (0,0), 
+                     orientation = 'horizontal',
+                     major_label_overrides = tick_labels)
+
+
+# Create figure object.
+p = figure(title = 'Title goes here', 
+           plot_height = 600 ,
+           plot_width = 950, 
+           toolbar_location = 'below',
+           tools = "pan, wheel_zoom, box_zoom, reset")
+p.xgrid.grid_line_color = None
+p.ygrid.grid_line_color = None
+# Add patch renderer to figure.
+msoasrender = p.patches('xs','ys', source = geosource,
+                   fill_color = {'field' :'Day2',
+                                 'transform' : color_mapper},     
+                   #fill_color = None,
+                   line_color = 'gray', 
+                   line_width = 0.25, 
+                   fill_alpha = 1)
+# Create hover tool
+p.add_tools(HoverTool(renderers = [msoasrender],
+                      tooltips = [('MSOA','@Area'),
+                                ('Nr exposed people','@Day2')]))
+p.add_layout(color_bar, 'below')
+show(p)
 
 
 
