@@ -64,7 +64,7 @@ class Microsim:
                  danger_multiplier: float = 1.0, risk_multiplier: float = 1.0,
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
-                 visualisations: bool = True,
+                 output: bool = True,
                  debug=False
                  ):
         """
@@ -82,7 +82,7 @@ class Microsim:
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
             in debugging).
         :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!)
-        :param do_visualisations: Whether to visualise the results (default True)
+        :param output: Whether to create files to store the results (default True)
         :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
         """
 
@@ -92,7 +92,7 @@ class Microsim:
         self.danger_multiplier = danger_multiplier
         self.risk_multiplier = risk_multiplier
         self.random = random.Random(time.time() if random_seed is None else random_seed)
-        self.visualisations = visualisations
+        self.output = output
         Microsim.debug = debug
         Microsim.testing = testing
         if self.testing:
@@ -1316,12 +1316,6 @@ class Microsim:
         # Can export after every iteration if we want to
         #self.export_to_feather()
 
-        # Do some analysis / visualisations
-        if self.visualisations:
-            fig = MicrosimAnalysis.population_distribution(self.individuals, ["DC1117EW_C_AGE"])
-            fig.show()
-            #MicrosimAnalysis.location_danger_distribution(self.activity_locatons['Retail'], ["Danger"])
-
 
 
 # PROGRAM ENTRY POINT
@@ -1329,10 +1323,10 @@ class Microsim:
 @click.command()
 @click.option('--iterations', default=10, help='Number of model iterations. 0 means just run the initialisation')
 @click.option('--data_dir', default="data", help='Root directory to load data from')
-@click.option('--visualisations/--no-visualisations', default=True,
-              help='Whether to generate plots and associated data (default visualise).')
+@click.option('--output/--no-output', default=True,
+              help='Whether to generate output data (default yes).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
-def run(iterations, data_dir, visualisations, debug):
+def run(iterations, data_dir, output, debug):
     num_iter = iterations
     if num_iter==0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
@@ -1353,14 +1347,14 @@ def run(iterations, data_dir, visualisations, debug):
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
     m = Microsim(data_dir=data_dir, r_script_dir=r_script_dir, study_msoas=list(devon_msoas.Code),
-                 visualisations=visualisations, debug=debug)
+                 output=output, debug=debug)
 
     # Temporily use dummy data for testing
     #data_dir = os.path.join(base_dir, "dummy_data")
-    #m = Microsim(data_dir=data_dir, testing=True, do_visualisations=do_visualisations)
+    #m = Microsim(data_dir=data_dir, testing=True, output=output)
 
-    # Store some information for use in the visualisations
-    if visualisations:
+    # Store some information for use in the visualisations and analysis
+    if output:
         print("Saving initial models for analysis ... ",)
         # save initial model
         output_dir = os.path.join(data_dir, "output")
@@ -1389,7 +1383,7 @@ def run(iterations, data_dir, visualisations, debug):
     for i in range(num_iter):
         m.step()
         # add to items to pickle for visualisations
-        if visualisations:
+        if output:
             # (Force column names to have leading zeros)
             individuals_to_pickle[f"DiseaseStatus{(i+1):03d}"] = m.individuals[ColumnNames.DISEASE_STATUS]
             for name in m.activity_locations:
