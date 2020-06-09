@@ -1370,7 +1370,7 @@ def run(iterations, data_dir, visualisations, debug):
 
         # collect disease status in new df (for analysis/visualisation)
         individuals_to_pickle = m.individuals
-        individuals_to_pickle["DiseaseStatus0"] = m.individuals[ColumnNames.DISEASE_STATUS]
+        individuals_to_pickle["DiseaseStatus000"] = m.individuals[ColumnNames.DISEASE_STATUS]
 
         # collect location dangers at time 0 in new df(for analysis/visualisation)
         # TODO make a function for this so that it doesn't need to be repeated in the for loop below
@@ -1388,10 +1388,10 @@ def run(iterations, data_dir, visualisations, debug):
     # Step the model
     for i in range(num_iter):
         m.step()
-        
         # add to items to pickle for visualisations
         if visualisations:
-            individuals_to_pickle["DiseaseStatus{0:0=3d}".format(str(i))] = m.individuals[ColumnNames.DISEASE_STATUS]
+            # (Force column names to have leading zeros)
+            individuals_to_pickle[f"DiseaseStatus{(i+1):03d}"] = m.individuals[ColumnNames.DISEASE_STATUS]
             for name in m.activity_locations:
                 # Get the details of the location activity
                 activity = m.activity_locations[name]  # Pointer to the ActivityLocation object
