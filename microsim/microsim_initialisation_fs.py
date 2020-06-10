@@ -83,24 +83,21 @@ class MicrosimInit(Microsim):
         for name, activity_location in m.activity_locations.items():
             activity_dangers[name] = activity_location._locations.copy()
 
-        if len(m.cases) > 100:
-            raise Exception("Internal error. If there are more than 100 days of cases then the format"
-                            "line below which is used to create a new column for each day as a two-digit "
-                            "number, will need to be adapted to make 3-digit numbers.")
-
         # Loop for every iteration (get this from cases)
         for i, row in m.cases.iterrows():
             print(i, row['date'], row['new_cases'])
+
+            if i == 80: # FOR  A BREAK POINT. Now can add a breakpoint into m.update_venue_danger_and_risks and see how the risks and dangers are calculated
+                x=1
+
             # Reset everyone's disease status
             m.individuals.loc[:,ColumnNames.DISEASE_STATUS] = 0
 
             # Manually change people's activity durations after lockdown
-            if i > 39:  # After day 39 - March 23RD in new cases
+            if i > 39: # After day 39 - March 23RD in new cases 
                 total_duration = 0.0
                 for colum_name in ['Retail', 'PrimarySchool', 'SecondarySchool', 'Work']:
                     new_duration = m.individuals.loc[:, colum_name+ ColumnNames.ACTIVITY_DURATION] * 0.33
-                    # Round the new duration to prevent tiny numbers
-                    new_duration = round(new_duration, 10)
                     total_duration += new_duration
                     m.individuals.loc[:, colum_name + ColumnNames.ACTIVITY_DURATION] = new_duration
 
@@ -114,14 +111,12 @@ class MicrosimInit(Microsim):
                         #m.individuals.loc[ : , name+ColumnNames.ACTIVITY_DURATION  ] * 0.9
 
             #  Randomly assign cases to individuals
-            num_cases = row['new_cases']
+            cases = row['new_cases']
             random.seed()  # Sometimes different Processes can be given the same generator and seed
-            infected_individuals = random.sample(list(m.high_risk_individuals), num_cases)
-            assert len(infected_individuals) == num_cases
-            m.individuals.loc[infected_individuals, ColumnNames.DISEASE_STATUS] = 1
-            assert len(m.individuals.loc[m.individuals[ColumnNames.DISEASE_STATUS] == 1]) == num_cases
-            # Aggregate and count the cases per area and check they are the correct numbers of cases
-            assert m.individuals.loc[m.individuals.Disease_Status > 0, :]["Area"].value_counts().sum() == num_cases
+            infected_individuals = random.sample(list(m.high_risk_individuals), cases)
+            assert len(infected_individuals) == cases
+            m.individuals.loc[infected_individuals,ColumnNames.DISEASE_STATUS] = 1
+            assert len(m.individuals.loc[m.individuals[ColumnNames.DISEASE_STATUS] == 1]) == cases
 
             # Step the model
             m.step()
@@ -135,8 +130,8 @@ class MicrosimInit(Microsim):
                     activity_location._locations[ColumnNames.LOCATION_DANGER]
 
             # Remember the current risk per individual per day
-            individual_risks[ColumnNames.CURRENT_RISK+"{0:0=2d}".format(i)] = m.individuals.loc[:, ColumnNames.CURRENT_RISK]
-
+            individual_risks[ColumnNames.CURRENT_RISK+str(i)] = m.individuals.loc[:, ColumnNames.CURRENT_RISK]
+            
         # Write out the risks per individual each day
         individual_risks.to_csv(os.path.join(results_subdirectory, "individual_risks.csv"))
         # And the locations dangers per day
@@ -155,12 +150,11 @@ class MicrosimInit(Microsim):
 # PROGRAM ENTRY POINT
 # Uses 'click' library so that it can be run from the command line
 @click.command()
-@click.option('--repetitions', default=5, help='Number of times to repeat the initialisation process')
+@click.option('--repetitions', default=10, help='Number of times to repeat the initialisation process')
 @click.option('--data_dir', default="data", help='Root directory to load main model data from')
 @click.option('--init_dir', default="init_data", help="Directory that stores initialisation data, and where outputs are written")
 @click.option('--multiprocess', default=False, help="Whether to run multiprocess or not")
-@click.option('--debug', default=False, help="Whether to run some more expensive checks (default True)")
-def run_script(repetitions, data_dir, init_dir, multiprocess, debug):
+def run_script(repetitions, data_dir, init_dir, multiprocess):
     # To fix file path issues, use absolute/full path at all times
     base_dir = os.getcwd()  # get current directory
     data_dir = os.path.join(base_dir, data_dir)
@@ -174,7 +168,7 @@ def run_script(repetitions, data_dir, init_dir, multiprocess, debug):
     # Read the initialisation data
     cases = pd.read_csv(os.path.join(init_dir, "devon_cases_fn.csv"))
     # Cut off cases after 10
-    #cases = cases.loc[0:10, :]
+    #cases = cases.loc[:, :]
     msoa_danger = pd.read_csv(os.path.join(init_dir, "msoa_danger_fn.csv"))
 
     # Sense check: all MSOAs in Devon should have a danger score
@@ -185,7 +179,7 @@ def run_script(repetitions, data_dir, init_dir, multiprocess, debug):
 
     # Initialise a model (MirosimInit init is a child of Microsim)
     m = MicrosimInit(msoa_danger=msoa_danger, cases=cases, results_dir=results_dir,
-                     study_msoas=list(devon_msoas.Code), data_dir=data_dir, output=False, debug=debug)  # These are for the parent Microsim object
+                     study_msoas=list(devon_msoas.Code), data_dir=data_dir)  # These are for the parent Microsim object
 
     # Find a new directory for this initialisation (may have old ones)
     i = 0

@@ -25,13 +25,15 @@ class ColumnNames:
 
     # Disease status is one of the following:
     #Susceptible = 0
-    #Exposed = 1
-    #Pre - Symptomatic = 2
-    #Symptomatic = 3
+    #Pre - Symptomatic = 1
+    #Symptomatic = 2
+    #Recovered = 3
     #Removed = 4
-    DISEASE_STATUS = "Disease_Status"
+    DISEASE_STATUS = "disease_status"
+    DISEASE_PRESYMP = "presymp_days"
+    DISEASE_SYMP_DAYS = "symp_days"
 
-    DAYS_WITH_STATUS = "Days_With_Status"  # The number of days that have elapsed with this status
-    CURRENT_RISK = "Current_Risk"  # This is the risk that people get when visiting locations.
+    #DAYS_WITH_STATUS = "Days_With_Status"  # The number of days that have elapsed with this status
+    CURRENT_RISK = "current_risk"  # This is the risk that people get when visiting locations.
     MSOA_CASES = "MSOA_Cases"  # The number of cases per MSOA
     HID_CASES = "HID_Cases"  # The number of cases in the individual's house
