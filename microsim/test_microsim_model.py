@@ -20,9 +20,9 @@ def test_microsim():
     """
     with pytest.raises(FileNotFoundError):
         # This should fail because the directory doesn't exist
-        m = Microsim(data_dir="./bad_directory")
+        m = Microsim(data_dir="./bad_directory", r_script_dir="./R/py_int")
 
-    m = Microsim(data_dir="./dummy_data", testing=True)
+    m = Microsim(data_dir="./dummy_data", r_script_dir="./R/py_int", testing=True, debug=True)
 
     # Check that the dummy data have been read in correctly. E.g. check the number of individuals is
     # accurate, that they link to households correctly, that they have the right *flows* to the right
@@ -443,6 +443,7 @@ def test__add_location_columns():
 
 
 def test__normalise():
+    # TODO test the 'decimals' argument too.
     # Should normalise so that the input list sums to 1
     # Fail if aa single number is given
     for l in [2, 1]:
