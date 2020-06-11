@@ -1442,8 +1442,8 @@ def run_script(iterations, data_dir, output, debug, repetitions):
     if repetitions == 1:
         m.run(iterations)
     else:  # Run it multiple times in lots of cores
-        with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
-            try:
+        try:
+            with multiprocessing.Pool(processes=int(os.cpu_count() / 2)) as pool:
                 # Copy the model instance so we don't have to re-read the data each time
                 # TODO WIll copying the model correctly copy the R process??
                 # (Use a generator so we don't need to store all the models in memory at once).
@@ -1452,9 +1452,8 @@ def run_script(iterations, data_dir, output, debug, repetitions):
                 iters = (iterations for _ in range(repetitions))
                 # Run the models by passing each model and the number of iterations
                 pool.starmap(_run_multicore, zip(models, iters))
-
-            finally:
-                pool.close()
+        finally:  # Make sure they get closed (shouldn't be necessary)
+            pool.close()
 
 
     print("End of program")
