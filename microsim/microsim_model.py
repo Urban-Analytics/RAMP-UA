@@ -255,8 +255,10 @@ class Microsim:
         # Store some information for use in the visualisations and analysis
         if self.output:
             print("Saving initial models for analysis ... ", )
+            # Find a directory to use, within the 'outut' directory
+            self.output_dir = Microsim._find_new_directory(os.path.join(data_dir, "output"))
+
             # save initial model
-            self.output_dir = os.path.join(data_dir, "output")
             pickle_out = open(os.path.join(self.output_dir, "m0.pickle"), "wb")
             pickle.dump(self, pickle_out)
             pickle_out.close()
@@ -279,6 +281,26 @@ class Microsim:
             print(" ... finished.")
 
         return  # finish __init__
+
+    @staticmethod
+    def _find_new_directory(dir):
+        """
+        Find a new directory and make one to store results in starting from 'dir'.
+        :param dir: Start looking from this directory
+        :return: The new directory (full path)
+        """
+        # Find a new directory for this initialisation (may have old ones)
+        i = 0
+        while os.path.exists(os.path.join(dir, str(i))):
+            i += 1
+        # Create a directory for these results
+        results_subdir = os.path.join(dir, str(i) )
+        try:
+            os.mkdir(results_subdir)
+        except FileExistsError as e:
+            print("Directory ", results_subdir, " already exists")
+            raise e
+        return results_subdir
 
     @staticmethod
     def _round_flows(flows):
@@ -1374,6 +1396,10 @@ class Microsim:
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
 @click.option('--repetitions', default=1, help="How many times to run the model (default 1)")
 def run_script(iterations, data_dir, output, debug, repetitions):
+    # Check the parameters are sensible
+    if iterations < 0:
+        raise ValueError("Iterations must be > 0")
+
     print(f"Running model with the following parameters:\n"
           f"\tNumber of iterations: {iterations}\n"
           f"\tData dir: {data_dir}\n"
@@ -1403,6 +1429,7 @@ def run_script(iterations, data_dir, output, debug, repetitions):
     #m = Microsim(data_dir=data_dir, testing=True, output=output)
 
     # Run it!
+    if repetitions == 1
     m.run(iterations)
 
     print("End of program")
