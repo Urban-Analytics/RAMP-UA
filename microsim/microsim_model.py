@@ -18,6 +18,7 @@ from microsim_analysis import MicrosimAnalysis
 from column_names import ColumnNames
 from utilities import Optimise
 import multiprocessing
+import copy
 
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
@@ -1330,6 +1331,16 @@ class Microsim:
         # a test: self.r_int.test_int(pd.DataFrame( data={'count':[1,2,3,4,5]}))
         self.individuals = self.r_int.calculate_disease_status(self.individuals)
 
+    @staticmethod
+    def _make_a_copy(m):
+        """
+        When copying a microsim object, reset the seed
+
+        :param m: A Microsim object
+        :return: A deep copy of the microsim object
+        """
+        m.random.seed()
+        return copy.deepcopy(m)
 
 
     def step(self) -> None:
@@ -1351,9 +1362,6 @@ class Microsim:
         # Calculate new disease status
         if not self.disable_disease_status:
             self.calculate_new_disease_status()
-
-        # Can export after every iteration if we want to
-        #self.export_to_feather()
 
     def run(self, iterations: int) -> None:
         """
@@ -1437,8 +1445,9 @@ def run_script(iterations, data_dir, output, debug, repetitions):
         with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
             try:
                 # Copy the model instance so we don't have to re-read the data each time
+                # TODO WIll copying the model correctly copy the R process??
                 # (Use a generator so we don't need to store all the models in memory at once).
-                models = ( m.copy for _ in range(repetitions))
+                models = ( Microsim._make_a_copy(m) for _ in range(repetitions))
                 # Also need a list giving the number of iterations for each model (same for each model)
                 iters = (iterations for _ in range(repetitions))
                 # Run the models by passing each model and the number of iterations
