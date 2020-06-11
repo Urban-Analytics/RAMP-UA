@@ -17,7 +17,7 @@ from r_interface import RInterface
 from microsim_analysis import MicrosimAnalysis
 from column_names import ColumnNames
 from utilities import Optimise
-from multiprocessing import Pool
+import multiprocessing
 
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
@@ -1399,6 +1399,8 @@ def run_script(iterations, data_dir, output, debug, repetitions):
     # Check the parameters are sensible
     if iterations < 0:
         raise ValueError("Iterations must be > 0")
+    if repetitions < 1:
+        raise ValueError("Repetitions must be greater than 0")
 
     print(f"Running model with the following parameters:\n"
           f"\tNumber of iterations: {iterations}\n"
@@ -1429,11 +1431,27 @@ def run_script(iterations, data_dir, output, debug, repetitions):
     #m = Microsim(data_dir=data_dir, testing=True, output=output)
 
     # Run it!
-    if repetitions == 1
-    m.run(iterations)
+    if repetitions == 1:
+        m.run(iterations)
+    else:  # Run it multiple times in lots of cores
+        with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
+            try:
+                # Copy the model instance so we don't have to re-read the data each time
+                # (Use a generator so we don't need to store all the models in memory at once).
+                models = ( m.copy for _ in range(repetitions))
+                # Also need a list giving the number of iterations for each model (same for each model)
+                iters = (iterations for _ in range(repetitions))
+                # Run the models by passing each model and the number of iterations
+                pool.starmap(_run_multicore, zip(models, iters))
+
+            finally:
+                pool.close()
+
 
     print("End of program")
 
+def _run_multicore(m,iter):
+    return m.run(iter)
 
 if __name__ == "__main__":
     run_script()
