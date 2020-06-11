@@ -22,7 +22,7 @@ class RInterface():
         R = ro.r
         R.setwd(script_dir)
         R.source('covid_status_functions.R')
-        R.source("initialize_and_helper_functions.R")
+        R.source('covid_status_functions.R')
         try:
             R.source("covid_run.R")
         except rpy2.rinterface.RRuntimeError as e:
