@@ -65,7 +65,8 @@ class Microsim:
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
                  output: bool = True,
-                 debug=False
+                 debug=False,
+                 disable_disease_status=False
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
@@ -84,6 +85,8 @@ class Microsim:
         :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!)
         :param output: Whether to create files to store the results (default True)
         :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
+        :param disable_disease_status: Optionally turn off the R interface. This will mean we cannot calculate new
+            disease status. Only good for testing.
         """
 
         # Administrative variables that need to be defined
@@ -94,6 +97,7 @@ class Microsim:
         self.random = random.Random(time.time() if random_seed is None else random_seed)
         self.output = output
         Microsim.debug = debug
+        self.disable_disease_status = disable_disease_status
         Microsim.testing = testing
         if self.testing:
             warnings.warn("Running in testing mode. Some exceptions will be disabled.")
@@ -102,7 +106,8 @@ class Microsim:
             return
 
         # Create the interface to R now as this will be needed later anyway
-        self.r_int = RInterface(r_script_dir)
+        if not self.disable_disease_status:
+            self.r_int = RInterface(r_script_dir)
 
         # Now the main chunk of initialisation is to read the input data.
 
@@ -1298,26 +1303,10 @@ class Microsim:
         Update the indivdiuals dataframe in place
         :return: None. Update the dataframe inplace
         """
-        # Can access th individual's data using the 'row' variable like a dictionary.
-        #for activity_name, activity in activity_locations.items():
-        #    # Work through each activity, and find the total risk
-        #    assert activity_name == activity.get_name()
-        #    venus = row[f"{activity_name}{ColumnNames.ACTIVITY_VENUES}"]
-        #    flows = row[f"{activity_name}{ColumnNames.ACTIVITY_FLOWS}"]
-        #    venus + flows  # Just to see how long this might take
-        #    pass
-
-        # Remember the current status so we can calculate the current days with this status
-        #current_status = self.individuals[ColumnNames.DISEASE_STATUS]
-        # (could remember permanently by adding a new column, but don't think we need this)
-        # self.individuals[ColumnNames.DISEASE_STATUS+"{0:0=3d}".format(self.iteration)] = self.individuals[ColumnNames.DISEASE_STATUS]
 
         # Calculate the new status (will return a new dataframe)
         # a test: self.r_int.test_int(pd.DataFrame( data={'count':[1,2,3,4,5]}))
         self.individuals = self.r_int.calculate_disease_status(self.individuals)
-        # Need to do anything with these?
-        #new_df['presymp_days']
-        #new_df['symp_days']
 
 
 
@@ -1338,7 +1327,8 @@ class Microsim:
         self.update_disease_counts()
 
         # Calculate new disease status
-        self.calculate_new_disease_status()
+        if not self.disable_disease_status:
+            self.calculate_new_disease_status()
 
         # Can export after every iteration if we want to
         #self.export_to_feather()
