@@ -97,6 +97,7 @@ class Microsim:
         self.risk_multiplier = risk_multiplier
         self.random = random.Random(time.time() if random_seed is None else random_seed)
         self.output = output
+        self.r_script_dir = r_script_dir
         Microsim.debug = debug
         self.disable_disease_status = disable_disease_status
         Microsim.testing = testing
@@ -106,9 +107,9 @@ class Microsim:
         if not read_data:  # Optionally can not do this, usually for debugging
             return
 
-        # Create the interface to R now as this will be needed later anyway
-        if not self.disable_disease_status:
-            self.r_int = RInterface(r_script_dir)
+        # We need an interface to R code to calculate disease status, but don't initialise it until the run()
+        # method is called so that the R process is initiatied in the same process as the Microsim object
+        self.r_int = None
 
         # Now the main chunk of initialisation is to read the input data.
 
@@ -509,7 +510,7 @@ class Microsim:
         assert (len(individuals_to_keep.Area.unique()) == len(study_msoas))
         households_to_keep = households.loc[households.HID.isin(individuals_to_keep.HID), :]
         print(f"\tUsing a subset study area consisting of {len(study_msoas)} MSOAs.\n"
-              f"\tBefore subsetting: {len(individuals)} individuals, {len(households)} househods.",
+              f"\tBefore subsetting: {len(individuals)} individuals, {len(households)} househods.\n",
               f"\tAfter subsetting: {len(individuals_to_keep)} individuals, {len(households_to_keep)} househods.")
 
         # Check no individuals without households have been introduced (raise an exception if so)
@@ -1328,7 +1329,6 @@ class Microsim:
         """
 
         # Calculate the new status (will return a new dataframe)
-        # a test: self.r_int.test_int(pd.DataFrame( data={'count':[1,2,3,4,5]}))
         self.individuals = self.r_int.calculate_disease_status(self.individuals)
 
     @staticmethod
@@ -1368,6 +1368,10 @@ class Microsim:
         Run the model (call the step() function) for the given number of iterations
         :param iterations:
         """
+        # Initialise the R interface. Do this here, rather than in init, because when in multiprocessing mode
+        # at this point the Microsim object will be in its own process
+        if not self.disable_disease_status:
+            self.r_int = RInterface(self.r_script_dir)
         # Step the model
         for i in range(iterations):
             self.step()
@@ -1430,9 +1434,9 @@ def run_script(iterations, data_dir, output, debug, repetitions):
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None, names=["x", "y", "Num", "Code", "Desc"])
 
-    # Create a microsim object
-    m = Microsim(data_dir=data_dir, r_script_dir=r_script_dir, study_msoas=list(devon_msoas.Code),
-                 output=output, debug=debug)
+    # Use same arguments whether running 1 repetition or many
+    msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir, "study_msoas": list(devon_msoas.Code),
+                 "output": output, "debug": debug}
 
     # Temporily use dummy data for testing
     #data_dir = os.path.join(base_dir, "dummy_data")
@@ -1440,14 +1444,19 @@ def run_script(iterations, data_dir, output, debug, repetitions):
 
     # Run it!
     if repetitions == 1:
+        # Create a microsim object
+        m = Microsim(**msim_args)
         m.run(iterations)
     else:  # Run it multiple times in lots of cores
         try:
             with multiprocessing.Pool(processes=int(os.cpu_count() / 2)) as pool:
                 # Copy the model instance so we don't have to re-read the data each time
-                # TODO WIll copying the model correctly copy the R process??
                 # (Use a generator so we don't need to store all the models in memory at once).
-                models = ( Microsim._make_a_copy(m) for _ in range(repetitions))
+                m = Microsim(**msim_args)
+                # TODO When copying, need to create new output directories.
+                #    self.r_int = RInterface(r_script_dir)
+                models = (Microsim._make_a_copy(m) for _ in range(repetitions))
+                #models = ( Microsim(msim_args) for _ in range(repetitions))
                 # Also need a list giving the number of iterations for each model (same for each model)
                 iters = (iterations for _ in range(repetitions))
                 # Run the models by passing each model and the number of iterations
