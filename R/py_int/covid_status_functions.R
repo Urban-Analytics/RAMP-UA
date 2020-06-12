@@ -57,6 +57,8 @@ covid_prob <- function(df, betas, interaction_terms = NULL) {
   df$betaxs <- df$as_risk + beta_out_sums
   df$probability <- psi
   
+  write.csv(df, paste0("df_prob_out_",format(Sys.time(), "%H%M%S"), ".csv"), row.names = FALSE)
+  
   return(df)
 }
 
@@ -66,6 +68,8 @@ case_assign <- function(df, with_optimiser = FALSE) {
   #print("assign cases")
   
   susceptible <- which(df$status == 0)
+  
+  # df$probability[is.na(df$probability)] <- 0
   
   if (with_optimiser) {
     df$new_status[susceptible] <- rbinom(n = length(susceptible),
@@ -77,6 +81,9 @@ case_assign <- function(df, with_optimiser = FALSE) {
                                          size = 1,
                                          prob = df$probability[susceptible])
   }
+  
+  df_assign <- data.frame(status = df$status, new_status = df$new_status)
+  write.csv(df, paste0("df_ass_out_",format(Sys.time(), "%H%M%S"), ".csv"), row.names = FALSE)
   
   return(df)
 }
@@ -103,6 +110,9 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
   becoming_sympt <- which(df$new_status == 1 & df$presymp_days == 0)
   df$new_status[becoming_sympt] <- 2
   
+  write.csv(df, paste0("df_inf_out_",format(Sys.time(), "%H%M%S"), ".csv"), row.names = FALSE)
+  
+  
  return(df)
 }
 
@@ -120,6 +130,8 @@ removed <- function(df, chance_recovery = 0.95){
   df$symp_days[removed_cases] <- 0
   df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] <- df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] - 1
   df$symp_days[df$new_status == 2 & df$symp_days > 0] <- df$symp_days[df$new_status == 2 & df$symp_days>0] - 1
+  
+  write.csv(df, paste0("df_rem_out_",format(Sys.time(), "%H%M%S"), ".csv"), row.names = FALSE)
   
   return(df)
 }
@@ -158,4 +170,10 @@ removed <- function(df, chance_recovery = 0.95){
 #
 #  return(df)
 #}
+
+normalizer <- function(x ,lower_bound, upper_bound, xmin, xmax){
+  
+  normx <-  (upper_bound - lower_bound)*(x - xmin)/(xmax-xmin) + lower_bound
+  return(normx)
+}
 
