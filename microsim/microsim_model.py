@@ -91,7 +91,8 @@ class Microsim:
         """
 
         # Administrative variables that need to be defined
-        Microsim.DATA_DIR = data_dir
+        Microsim.DATA_DIR = data_dir   # TODO (minor) pass the data_dir to class functions directly so no need to have it defined at class level
+        self.DATA_DIR = data_dir
         self.iteration = 0
         self.danger_multiplier = danger_multiplier
         self.risk_multiplier = risk_multiplier
@@ -253,34 +254,7 @@ class Microsim:
         # Add some necessary columns for the disease
         self.individuals = Microsim.add_disease_columns(self.individuals)
 
-        # Might need to write out some data if saving output for analysis later
-        # Store some information for use in the visualisations and analysis
-        if self.output:
-            print("Saving initial models for analysis ... ", )
-            # Find a directory to use, within the 'outut' directory
-            self.output_dir = Microsim._find_new_directory(os.path.join(data_dir, "output"))
-
-            # save initial model
-            pickle_out = open(os.path.join(self.output_dir, "m0.pickle"), "wb")
-            pickle.dump(self, pickle_out)
-            pickle_out.close()
-
-            # collect disease status in new df (for analysis/visualisation)
-            self.individuals_to_pickle = self.individuals.copy()
-            self.individuals_to_pickle[ColumnNames.DISEASE_STATUS+"000"] = self.individuals_to_pickle[ColumnNames.DISEASE_STATUS]
-
-            # collect location dangers at time 0 in new df(for analysis/visualisation)
-            self.activities_to_pickle = {}
-            for name in self.activity_locations:
-                # Get the details of the location activity
-                activity = self.activity_locations[name]  # Pointer to the ActivityLocation object
-                loc_name = activity.get_name()  # retail, school etc
-                loc_ids = activity.get_ids()  # List of the IDs of the locations
-                loc_dangers = activity.get_dangers()  # List of the current dangers
-                self.activities_to_pickle[loc_name] = pd.DataFrame(list(zip(loc_ids, loc_dangers)),
-                                                                   columns=['ID', 'Danger0'])
-
-            print(" ... finished.")
+        print(" ... finished initialisation.")
 
         return  # finish __init__
 
@@ -1181,27 +1155,36 @@ class Microsim:
             return list(l)
         return [round(x, decimals) for x in l]
 
-    def export_to_feather(self, path="export"):
+    def _init_output(self):
         """
-        Export the dataframes that represent the current model state. See also `import_from_feather`.
-        :param path: Optional directory to write the files to (default '.')
-        :return:
+        Might need to write out some data if saving output for analysis later. If so, creates a new directory for the
+        results as a subdirectory of the data directory.
+        Also store some information for use in the visualisations and analysis.
         """
-        # TODO finish this function properly, at the moment it writes to my desktop
-        # Export individuals. Need to drop the flows columns because feather can't currently export those
-        individuals = self.individuals.copy()
-        for activity_name, activity in self.activity_locations.items():
-            individuals = individuals.drop(f"{activity_name}{ColumnNames.ACTIVITY_VENUES}", 1)
-            individuals = individuals.drop(f"{activity_name}{ColumnNames.ACTIVITY_FLOWS}", 1)
+        if self.output:
+            print("Saving initial models for analysis ... ", )
+            # Find a directory to use, within the 'outut' directory
+            self.output_dir = Microsim._find_new_directory(os.path.join(self.DATA_DIR, "output"))
 
-        #feather.write_feather(individuals, "/Users/nick/Desktop/individuals.feather")
-        # Include a CSV file to check
-        individuals.to_csv("/Users/nick/Desktop/individuals.csv")
-        # Export locations
+            # save initial model
+            pickle_out = open(os.path.join(self.output_dir, "m0.pickle"), "wb")
+            pickle.dump(self, pickle_out)
+            pickle_out.close()
 
+            # collect disease status in new df (for analysis/visualisation)
+            self.individuals_to_pickle = self.individuals.copy()
+            self.individuals_to_pickle[ColumnNames.DISEASE_STATUS+"000"] = self.individuals_to_pickle[ColumnNames.DISEASE_STATUS]
 
-    def import_from_feather(self, path="export"):
-        pass
+            # collect location dangers at time 0 in new df(for analysis/visualisation)
+            self.activities_to_pickle = {}
+            for name in self.activity_locations:
+                # Get the details of the location activity
+                activity = self.activity_locations[name]  # Pointer to the ActivityLocation object
+                loc_name = activity.get_name()  # retail, school etc
+                loc_ids = activity.get_ids()  # List of the IDs of the locations
+                loc_dangers = activity.get_dangers()  # List of the current dangers
+                self.activities_to_pickle[loc_name] = pd.DataFrame(
+                    list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
 
     @classmethod
     def add_disease_columns(cls, individuals: pd.DataFrame) -> pd.DataFrame:
@@ -1368,6 +1351,9 @@ class Microsim:
         Run the model (call the step() function) for the given number of iterations
         :param iterations:
         """
+        # Create directories for the results
+        self._init_output()
+
         # Initialise the R interface. Do this here, rather than in init, because when in multiprocessing mode
         # at this point the Microsim object will be in its own process
         if not self.disable_disease_status:
