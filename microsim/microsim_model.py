@@ -112,6 +112,10 @@ class Microsim:
         # method is called so that the R process is initiatied in the same process as the Microsim object
         self.r_int = None
 
+        # If we do output information, then it will go to this directory. This is determined in run(), rather than
+        # here, because otherwise all copies of this object will have the same output directory.
+        self.output_dir = None
+
         # Now the main chunk of initialisation is to read the input data.
 
         # This is the main population of individuals and their households
@@ -1248,7 +1252,12 @@ class Microsim:
                     for venue_idx, flow in zip(v, f):
                         #print(i, venue_idx, flow, duration)
                         # Increase the danger by the flow multiplied by some disease risk
-                        loc_dangers[venue_idx] += (flow * duration * self.risk_multiplier)
+                        danger_increase = (flow * duration * self.risk_multiplier)
+                        if name == "Work":  # Temporarily reduce danger for work while we have virtual work locations
+                            work_danger = float(danger_increase / 1500)
+                            loc_dangers[venue_idx] += work_danger
+                        else:
+                            loc_dangers[venue_idx] += danger_increase
 
 
             #
