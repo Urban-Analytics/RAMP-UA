@@ -29,7 +29,7 @@ run_status <- function(pop) {
   population <- clean_names(pop)
   
   #scale current risk to be 0-1, from an assumed max of 5000
- population$current_risk <- normalizer(population$current_risk, 0, 1, 0, 5000)
+# population$current_risk <- normalizer(population$current_risk, 0, 1, 0, 5000)
 #  population$current_risk <- scale(population$current_risk)
   
   num_sample <- nrow(population)
@@ -70,7 +70,7 @@ run_status <- function(pop) {
   
   df_cr_in <-create_input(micro_sim_pop  = population_in,
                           num_sample = num_sample,
-                          pnothome_multiplier = 0.6,   # 0.1 = a 60% reduction in time people not home
+                          pnothome_multiplier = 0.3320964,   # 0.1 = a 60% reduction in time people not home
                           vars = c(area,   # must match columns in the population data.frame
                                    hid,
                                    #pid,
