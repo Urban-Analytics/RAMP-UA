@@ -24,7 +24,13 @@ library(mixdist)
 
 run_status <- function(pop) {
   
+  write.csv(pop, paste0("input_population",format(Sys.time(), "%H%M%S"), ".csv"), row.names = FALSE)
+  
   population <- clean_names(pop)
+  
+  #scale current risk to be 0-1, from an assumed max of 5000
+ population$current_risk <- normalizer(population$current_risk, 0, 1, 0, 5000)
+#  population$current_risk <- scale(population$current_risk)
   
   num_sample <- nrow(population)
   
@@ -60,6 +66,8 @@ run_status <- function(pop) {
   
   #print("c")
   
+  
+  
   df_cr_in <-create_input(micro_sim_pop  = population_in,
                           num_sample = num_sample,
                           pnothome_multiplier = 0.6,   # 0.1 = a 60% reduction in time people not home
@@ -75,7 +83,7 @@ run_status <- function(pop) {
                           id = id,
                           age = age, 
                           sex = sex, 
-                          beta0_fixed = -4, #0.19, #-9.5, 
+                          beta0_fixed = -9, #0.19, #-9.5, 
                           divider = 4)  # adding in the age/sex betas 
   
   #print("e")
@@ -98,10 +106,15 @@ run_status <- function(pop) {
   
   other_betas <- list(current_risk = current_risk)
   
-  df_msoa <- df_in
-  df_risk <- list()
   
-  #print("f")
+  df_msoa <- df_in
+  
+  
+  df_risk <- list()
+ 
+  
+   #print("f")
+
   
   df_prob <- covid_prob(df = df_msoa, betas = other_betas)
   df_ass <- case_assign(df = df_prob, with_optimiser = FALSE)
@@ -134,9 +147,4 @@ run_status <- function(pop) {
 
 
 #out <- run_status(pop)
-
-#test
-
-
-
 
