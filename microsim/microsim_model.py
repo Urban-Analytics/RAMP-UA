@@ -194,7 +194,7 @@ class Microsim:
         # Generate travel time columns and assign travel modes to some kind of risky activity (not doing this yet)
         #self.individuals = Microsim.generate_travel_time_colums(self.individuals)
         # One thing we do need to do (this would be done in the function) is replace NaNs in the time use data with 0
-        for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
+        for col in ["pwork", "_pschool", "pshop", "pleisure", "ptransport", "pother"]:
             self.individuals[col].fillna(0, inplace=True)
 
         # Read Retail flows data
@@ -221,10 +221,10 @@ class Microsim:
         # or 0 depending on the age of the child.
         self.individuals = Microsim.add_individual_flows(primary_name, self.individuals, primary_flows)
         self.activity_locations[primary_name] = \
-            ActivityLocation(primary_name, schools.copy(), primary_flows, self.individuals, "pschool")
+            ActivityLocation(primary_name, schools.copy(), primary_flows, self.individuals, "pschool-primary")
         self.individuals = Microsim.add_individual_flows(secondary_name, self.individuals, secondary_flows)
         self.activity_locations[secondary_name] = \
-            ActivityLocation(secondary_name, schools.copy(), secondary_flows, self.individuals, "pschool")
+            ActivityLocation(secondary_name, schools.copy(), secondary_flows, self.individuals, "pschool-secondary")
         del schools  # No longer needed as we gave copies to the ActivityLocation
 
         # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go
@@ -664,6 +664,28 @@ class Microsim:
                                        location_ids=households_df.House_ID )
         # The new ID column should be the same as the House_ID
         assert False not in list(households_df.House_ID == households_df[ColumnNames.LOCATION_ID])
+
+        # Later we need time spent in primary and secondary school. But currently we just have 'pschool'. Make
+        # two new columns separating out primary and secondary based on age
+        tuh["pschool"] = tuh["pschool"].fillna(0)
+        tuh["pschool-primary"] = 0.0
+        tuh["pschool-secondary"] = 0.0
+        children_idx = tuh.index[tuh["DC1117EW_C_AGE"] < 11]
+        teen_idx = tuh.index[(tuh["DC1117EW_C_AGE"] >= 11) & (tuh["DC1117EW_C_AGE"] < 19)]
+
+        tuh.loc[children_idx, "pschool-primary"] = tuh.loc[children_idx, "pschool"]
+        tuh.loc[teen_idx, "pschool-secondary"] = tuh.loc[teen_idx, "pschool"]
+
+        # Check that people have been allocated correctly
+        adults_in_school =  tuh.loc[~(tuh["pschool-primary"] + tuh["pschool-secondary"] == tuh["pschool"]),
+                ["DC1117EW_C_AGE", "pschool", "pschool-primary", "pschool-secondary"]]
+        if len(adults_in_school) > 0:
+            warnings.warn(f"{len(adults_in_school)} people > 18y/o go to school, but they are not being assigned to a "
+                          f"primary or secondary school (so their schooling is ignored at the moment")
+
+        #assert False not in list(tuh["pschool-primary"] + tuh["pschool-secondary"] == tuh["pschool"])
+        tuh = tuh.rename(columns={"pschool": "_pschool"})  # Indicate that the pschool column shouldn't be used now
+
 
         # For some reason, we get some *very* large households. Can demonstrate this with:
         # households_df.Num_People.hist()
@@ -1222,7 +1244,7 @@ class Microsim:
                     total_duration += new_duration
                     self.individuals.loc[:, activity+ColumnNames.ACTIVITY_DURATION] = new_duration
 
-                # Now set home duration to
+                # Now set home duration to fill in the time lost from doing other activities.
                 self.individuals.loc[:, 'Home'+ ColumnNames.ACTIVITY_DURATION] = (1 - total_duration)
 
 
@@ -1277,7 +1299,8 @@ class Microsim:
                         #print(i, venue_idx, flow, duration)
                         # Increase the danger by the flow multiplied by some disease risk
                         danger_increase = (flow * duration * self.risk_multiplier)
-                        if name == "Work":  # Temporarily reduce danger for work while we have virtual work locations
+                        warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
+                        if name == "Work":
                             work_danger = float(danger_increase / 1500)
                             loc_dangers[venue_idx] += work_danger
                         else:
