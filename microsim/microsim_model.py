@@ -63,6 +63,7 @@ class Microsim:
                  data_dir: str="./data/", r_script_dir: str="./R/py_int/",
                  study_msoas: List[str] = [],
                  danger_multiplier: float = 1.0, risk_multiplier: float = 1.0,
+                 lockdown_start: int=0,
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
                  output: bool = True,
@@ -79,6 +80,7 @@ class Microsim:
         is calcuated as duration * flow * danger_multiplier.
         :param risk_multiplier: Risk that individuals get from a location is calculatd as
         duration * flow * * danger * risk_multiplier
+        :param lockdown_start: Optional day to start lockdown. Default 0 (no lockdown)
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
@@ -96,6 +98,7 @@ class Microsim:
         self.iteration = 0
         self.danger_multiplier = danger_multiplier
         self.risk_multiplier = risk_multiplier
+        self.lockdown_start = lockdown_start
         self.random = random.Random(time.time() if random_seed is None else random_seed)
         self.output = output
         self.r_script_dir = r_script_dir
@@ -1202,6 +1205,28 @@ class Microsim:
         individuals[ColumnNames.DISEASE_SYMP_DAYS] = -1
         return individuals
 
+    def update_behaviour_during_lockdown(self):
+        """
+        Unilaterally alter the proportions of time spent on different activities after 'lockddown' (assuming
+        the user has set the 'lockdown_start' variable, otherwise this doesn't do anything
+        update_behaviour_during_lockdown
+        """
+        if self.lockdown_start > 0:  # Is there any lockdown at all?
+            # Manually change people's activity durations after lockdown
+            if self.iteration > self.lockdown_start:
+                # Reduce all activities, replacing the lost time with time spent at home
+                non_home_activities = self.activity_locations.keys()
+                non_home_activities.remove("Home")
+                total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
+                for activity in non_home_activities:
+                    new_duration = self.individuals.loc[:, activity+ColumnNames.ACTIVITY_DURATION] * 0.33
+                    total_duration += new_duration
+                    self.individuals.loc[:, activity+ColumnNames.ACTIVITY_DURATION] = new_duration
+
+                # Now set home duration to
+                self.individuals.loc[:, 'Home'+ ColumnNames.ACTIVITY_DURATION] = (1 - total_duration)
+
+
 
     def update_venue_danger_and_risks(self, decimals=10):
         """
@@ -1344,6 +1369,9 @@ class Microsim:
         self.iteration += 1
         print(f"\nIteration: {self.iteration}\n")
 
+        # Unilaterally adjust the proportions of time that people spend doing different activities after lockdown
+        self.update_behaviour_during_lockdown()
+
         # Update the danger associated with each venue (i.e. the as people with the disease visit them they
         # become more dangerous) then update the risk to each individual of going to those venues.
         self.update_venue_danger_and_risks()
@@ -1402,12 +1430,15 @@ class Microsim:
               help='Whether to generate output data (default yes).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
 @click.option('--repetitions', default=1, help="How many times to run the model (default 1)")
-def run_script(iterations, data_dir, output, debug, repetitions):
+@click.option('--lockdown_start', default=0, help="Optional day to start lockdown (default 0, no lockdown")
+def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start):
     # Check the parameters are sensible
     if iterations < 0:
         raise ValueError("Iterations must be > 0")
     if repetitions < 1:
         raise ValueError("Repetitions must be greater than 0")
+    if lockdown_start < 0:
+        raise ValueError("Start of lockdown must be 0 (no lockdown) or >= 1")
 
     print(f"Running model with the following parameters:\n"
           f"\tNumber of iterations: {iterations}\n"
@@ -1431,7 +1462,7 @@ def run_script(iterations, data_dir, output, debug, repetitions):
 
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir, "study_msoas": list(devon_msoas.Code),
-                 "output": output, "debug": debug}
+                 "output": output, "debug": debug, "lockdown_start": lockdown_start}
 
     # Temporily use dummy data for testing
     #data_dir = os.path.join(base_dir, "dummy_data")
