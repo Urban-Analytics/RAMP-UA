@@ -20,7 +20,7 @@ library(mixdist)
 #source("R/py_int/initialize_and_helper_functions.R")
 
 #beta1 <- current_risk /  danger <- 0.55
-#pop <- read.csv("~/Downloads/individuals_reduced.csv")
+#pop <- read.csv("~/Downloads/input_population100917.csv")
 
 run_status <- function(pop) {
   
@@ -103,7 +103,7 @@ run_status <- function(pop) {
   
   #print("f")
   
-  df_prob <- covid_prob(df = df_msoa, betas = other_betas)
+  df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100)
   df_ass <- case_assign(df = df_prob, with_optimiser = FALSE)
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
