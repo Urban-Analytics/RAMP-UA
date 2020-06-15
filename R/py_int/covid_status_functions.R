@@ -88,7 +88,9 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
   
   susceptible <- which(df$status == 0)
   
-  new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
+  new_cases <- which((df$new_status-df$status==1) & df$status == 0)
+  
+  #new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
   
   if (presymp_dist == "weibull"){
     wpar <- mixdist::weibullpar(mu = presymp_mean, sigma = presymp_sd, loc = 0) 
@@ -100,7 +102,7 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
   }
 
   #switching people from being pre symptomatic to symptomatic and infected
-  becoming_sympt <- which(df$new_status == 1 & df$presymp_days == 0)
+  becoming_sympt <- which((df$status == 1 | df$new_status == 1) & df$presymp_days == 0) ### maybe should be status rather than new_status
   df$new_status[becoming_sympt] <- 2
   
  return(df)
