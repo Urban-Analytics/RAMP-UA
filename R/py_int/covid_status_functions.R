@@ -26,7 +26,7 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk
   #print("assign probabilities")
 
   if(risk_cap==TRUE){
-    df$current_risk[df$current_risk>100] <- 100
+    df$current_risk[df$current_risk>risk_cap_val] <- risk_cap_val
   }
   
   beta_names <- names(betas)
