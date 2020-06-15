@@ -22,9 +22,13 @@
 # calculate the probability of becoming infect
 # requires a dataframe list, a vector of betas, and a timestep
 
-covid_prob <- function(df, betas, interaction_terms = NULL) {
+covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk_cap_val=100) {
   #print("assign probabilities")
 
+  if(risk_cap==TRUE){
+    df$current_risk[df$current_risk>100] <- 100
+  }
+  
   beta_names <- names(betas)
   
   if (all(!beta_names %in% names(df))) {
