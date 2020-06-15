@@ -219,9 +219,6 @@ class Microsim:
         # seconary school duration, regardless of their age. I think the only way round this is to
         # make two new columns - 'pschool_primary' and 'pschool_seconary', and set these to either 'pschool'
         # or 0 depending on the age of the child.
-        # Also all schools are in the same dataframe, we need to make copies of the dataframe. Otherwise at the start
-        # of each iteration when the secondary school dangers are set to 0 (danger is not cumulative) it will override
-        # the primary school dangers that were calculated first.
         self.individuals = Microsim.add_individual_flows(primary_name, self.individuals, primary_flows)
         self.activity_locations[primary_name] = \
             ActivityLocation(primary_name, schools.copy(), primary_flows, self.individuals, "pschool")
@@ -1214,8 +1211,10 @@ class Microsim:
         if self.lockdown_start > 0:  # Is there any lockdown at all?
             # Manually change people's activity durations after lockdown
             if self.iteration > self.lockdown_start:
+                if self.iteration == self.lockdown_start:
+                    print(f"Iteration {self.iteration}: Entering lockdown")
                 # Reduce all activities, replacing the lost time with time spent at home
-                non_home_activities = self.activity_locations.keys()
+                non_home_activities = set(self.activity_locations.keys())
                 non_home_activities.remove("Home")
                 total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
                 for activity in non_home_activities:
