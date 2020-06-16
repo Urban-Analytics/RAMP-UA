@@ -82,6 +82,18 @@ case_assign <- function(df, with_optimiser = FALSE) {
                                          prob = df$probability[susceptible])
   }
   
+  if(file.exists("new_cases.csv")==FALSE) {
+    ncase <- sum(df$new_status[susceptible])
+  } else {
+    ncase <- read.csv("new_cases.csv")
+    ncase$X <- NULL
+    tmp <- sum(df$new_status[susceptible])
+    ncase <- rbind(ncase,tmp)
+    rownames(ncase) <- seq(1,nrow(ncase))
+  }
+  #ncase <- as.data.frame(ncase)
+  write.csv(ncase, "new_cases.csv")
+  
   return(df)
 }
 
