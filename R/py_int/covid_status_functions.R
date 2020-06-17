@@ -127,7 +127,7 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
     rownames(ncase) <- seq(1,nrow(ncase))
   }
   #ncase <- as.data.frame(ncase)
-  write.csv(ncase, paste(tmp.dir,"new_cases.csv",sep=""))
+  write.csv(ncase, paste(tmp.dir,"/new_cases.csv",sep=""))
 
   #new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
   
