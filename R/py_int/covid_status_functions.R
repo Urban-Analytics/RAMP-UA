@@ -22,7 +22,8 @@
 # calculate the probability of becoming infect
 # requires a dataframe list, a vector of betas, and a timestep
 
-covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk_cap_val=100) {
+covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, 
+                       risk_cap_val=100, include_age_sex = FALSE) {
   #print("assign probabilities")
   
   if(risk_cap==TRUE){
@@ -49,10 +50,18 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk
     beta_out_sums <- 0
   }
   
-  if (length(interaction_terms) > 0 ){
-    lpsi <- df$beta0 + df$as_risk + beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
+  if(include_age_sex){
+    if (length(interaction_terms) > 0 ){
+      lpsi <- df$beta0 + df$as_risk + beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
+    } else{
+      lpsi <- df$beta0 + df$as_risk + beta_out_sums
+    }
   } else{
-    lpsi <- df$beta0 + df$as_risk + beta_out_sums
+    if (length(interaction_terms) > 0 ){
+      lpsi <- df$beta0 +  beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
+    } else{
+      lpsi <- df$beta0 + beta_out_sums
+    }
   }
   
   psi <- exp(lpsi) / (exp(lpsi) + 1)
