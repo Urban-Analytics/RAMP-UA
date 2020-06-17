@@ -66,7 +66,7 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk
 
 #########################################
 # assigns covid based on probabilities
-case_assign <- function(df, with_optimiser = FALSE,timestep) {
+case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir) {
   #print("assign cases")
   
   susceptible <- which(df$status == 0)
@@ -96,7 +96,6 @@ case_assign <- function(df, with_optimiser = FALSE,timestep) {
   
   if(timestep==1) {
     nsus <- length(susceptible)
-    tmp.dir <- paste(getwd(),"/output/",Sys.time(),sep="")
     dir.create(tmp.dir,recursive=TRUE)
   } else {
     tmp <- length(susceptible)
@@ -104,7 +103,7 @@ case_assign <- function(df, with_optimiser = FALSE,timestep) {
     rownames(nsus) <- seq(1,nrow(nsus))
   }
   #ncase <- as.data.frame(ncase)
-  write.csv(nsus, paste(tmp.dir,"susceptible_cases.csv",sep=""))
+  write.csv(nsus, paste(tmp.dir,"/susceptible_cases.csv",sep=""))
   
   return(df)
 }
@@ -112,7 +111,9 @@ case_assign <- function(df, with_optimiser = FALSE,timestep) {
 
 #########################################
 # calculate the infection length of new cases
-infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,presymp_sd = NULL,infection_dist = "normal", infection_mean = NULL, infection_sd = NULL,timestep){
+infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,presymp_sd = NULL,
+                             infection_dist = "normal", infection_mean = NULL, infection_sd = NULL,
+                             timestep,tmp.dir){
   
   susceptible <- which(df$status == 0)
   
