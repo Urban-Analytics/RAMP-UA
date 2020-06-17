@@ -1425,8 +1425,10 @@ class Microsim:
             if self.output:
                 # (Force column names to have leading zeros)
                 self.individuals_to_pickle[f"{ColumnNames.DISEASE_STATUS}{(i + 1):03d}"] = self.individuals[ColumnNames.DISEASE_STATUS]
-                with open(os.path.join(self.output_dir, "Individuals.pickle"), "wb") as pickle_out:
+                fname = os.path.join(self.output_dir, "Individuals")
+                with open(fname+".pickle", "wb") as pickle_out:
                     pickle.dump(self.individuals_to_pickle, pickle_out)
+                self.individuals_to_pickle.to_csv(fname+".csv")
 
                 for name in self.activity_locations:
                     # Get the details of the location activity
@@ -1437,8 +1439,10 @@ class Microsim:
                     # Add a new danger column to the previous dataframe
                     self.activities_to_pickle[loc_name][f"{ColumnNames.LOCATION_DANGER}{(i + 1):03d}"] = loc_dangers
                     # Save this activity location
-                    with open(os.path.join(self.output_dir, loc_name + ".pickle"), "wb") as pickle_out:
+                    fname = os.path.join(self.output_dir, loc_name)
+                    with open(fname+".pickle", "wb") as pickle_out:
                         pickle.dump(self.activities_to_pickle[loc_name], pickle_out)
+                    self.activities_to_pickle[loc_name].to_csv(fname+".csv")
 
 
 # ********
