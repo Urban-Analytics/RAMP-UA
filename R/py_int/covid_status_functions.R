@@ -24,7 +24,7 @@
 
 covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk_cap_val=100) {
   #print("assign probabilities")
-
+  
   if(risk_cap==TRUE){
     df$current_risk[df$current_risk>risk_cap_val] <- risk_cap_val
   }
@@ -54,7 +54,7 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk
   } else{
     lpsi <- df$beta0 + df$as_risk + beta_out_sums
   }
- 
+  
   psi <- exp(lpsi) / (exp(lpsi) + 1)
   psi[df$status %in% c(3,4)] <- 0 # if they are not susceptible then their probability is 0 of getting it 
   psi[df$status %in% c(1,2)] <- 1 # this makes keeping track of who has it easier
@@ -93,6 +93,18 @@ case_assign <- function(df, with_optimiser = FALSE) {
   #}
   #ncase <- as.data.frame(ncase)
   #write.csv(ncase, "new_cases.csv")
+  
+  if(file.exists("susceptible_cases.csv")==FALSE) {
+    ncase <- length(susceptible)
+  } else {
+    ncase <- read.csv("susceptible_cases.csv")
+    ncase$X <- NULL
+    tmp <- length(susceptible)
+    ncase <- rbind(ncase,tmp)
+    rownames(ncase) <- seq(1,nrow(ncase))
+  }
+  #ncase <- as.data.frame(ncase)
+  write.csv(ncase, "susceptible_cases.csv")
   
   return(df)
 }
@@ -148,7 +160,7 @@ removed <- function(df, chance_recovery = 0.95){
   df$new_status[removed_cases] <- 3 + rbinom(n = length(removed_cases),
                                              size = 1,
                                              prob = (1-chance_recovery))
- 
+  
   df$symp_days[removed_cases] <- 0
   df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] <- df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] - 1
   df$symp_days[df$new_status == 2 & df$symp_days > 0] <- df$symp_days[df$new_status == 2 & df$symp_days>0] - 1
