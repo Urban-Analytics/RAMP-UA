@@ -144,8 +144,8 @@ run_status <- function(pop, timestep=1) {
     stat <- cbind(stat,tmp3)
   }
   #ncase <- as.data.frame(ncase)
-  write.csv(stat, paste("disease_status.csv",Sys.time(),".csv",sep=""))
-
+  write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
+  
   return(df_out)
 }
 
