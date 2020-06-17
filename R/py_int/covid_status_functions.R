@@ -97,7 +97,7 @@ case_assign <- function(df, with_optimiser = FALSE,timestep) {
   if(timestep==1) {
     nsus <- length(susceptible)
     tmp.dir <- paste(getwd(),"/output/",Sys.time(),sep="")
-    dir.create(tmp.dir)
+    dir.create(tmp.dir,recursive=TRUE)
   } else {
     tmp <- length(susceptible)
     nsus <- rbind(nsus,tmp)
