@@ -107,7 +107,9 @@ run_status <- function(pop, timestep=1) {
   df_risk <- list()
   
   #print("f")
-  tmp.dir <- paste(getwd(),"/output/",Sys.time(),sep="")
+  if(timestep==1) {
+    tmp.dir <- paste(getwd(),"/output/",Sys.time(),sep="")
+  }
   
   df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100)
   df_ass <- case_assign(df = df_prob, with_optimiser = FALSE,timestep=timestep,tmp.dir=tmp.dir)
