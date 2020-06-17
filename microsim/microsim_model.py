@@ -1428,7 +1428,8 @@ class Microsim:
                 fname = os.path.join(self.output_dir, "Individuals")
                 with open(fname+".pickle", "wb") as pickle_out:
                     pickle.dump(self.individuals_to_pickle, pickle_out)
-                self.individuals_to_pickle.to_csv(fname+".csv")
+                # Also make a (compressed) csv file for others
+                self.individuals_to_pickle.to_csv(fname+".csv.zip", compression='zip')
 
                 for name in self.activity_locations:
                     # Get the details of the location activity
@@ -1442,7 +1443,8 @@ class Microsim:
                     fname = os.path.join(self.output_dir, loc_name)
                     with open(fname+".pickle", "wb") as pickle_out:
                         pickle.dump(self.activities_to_pickle[loc_name], pickle_out)
-                    self.activities_to_pickle[loc_name].to_csv(fname+".csv")
+                    # Also make a (compressed) csv file for others
+                    self.activities_to_pickle[loc_name].to_csv(fname+".csv.zip", compression='zip')
 
 
 # ********
