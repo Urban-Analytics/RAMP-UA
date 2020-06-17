@@ -1368,7 +1368,7 @@ class Microsim:
         """
 
         # Calculate the new status (will return a new dataframe)
-        self.individuals = self.r_int.calculate_disease_status(self.individuals)
+        self.individuals = self.r_int.calculate_disease_status(self.individuals, self.iteration)
 
     @staticmethod
     def _make_a_copy(m):
