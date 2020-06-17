@@ -24,6 +24,11 @@ library(mixdist)
 
 run_status <- function(pop) {
   
+  if(sum(pop$disease_status) == 0){
+    seeds <- sample(1:nrow(pop), size = 20)
+    pop$disease_status[seeds] <- 1
+  }
+  
   population <- clean_names(pop)
   
   num_sample <- nrow(population)
