@@ -26,8 +26,9 @@ run_status <- function(pop, timestep=1) {
   
   print(paste("R timestep:", timestep))
   
-  if(sum(pop$disease_status) == 0){
-    seeds <- sample(1:nrow(pop), size = 20)
+  #if(sum(pop$disease_status) == 0){
+  if(timestep==1){
+      seeds <- sample(1:nrow(pop), size = 20)
     pop$disease_status[seeds] <- 1
   }
   
@@ -91,7 +92,7 @@ run_status <- function(pop, timestep=1) {
   connectivity_index <- 0.25#0.3 doesn't work
   log_pop_dens <- 0#0.2#0.4#0.3 #0.175
   cases_per_area <- 10 #2.5
-  current_risk <- 1.5 #0.55
+  current_risk <- 10.0 #1.5 #0.55
   
   origin <- factor(c(0,0,0,0,0))
   names(origin) <- c("1", "2", "3", "4", "5") #1 = white, 2 = black, 3 = asian, 4 = mixed, 5 = other
