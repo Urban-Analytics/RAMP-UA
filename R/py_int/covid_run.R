@@ -22,7 +22,7 @@ library(mixdist)
 #beta1 <- current_risk /  danger <- 0.55
 #pop <- read.csv("~/Downloads/input_population100917.csv")
 
-run_status <- function(pop, timestep) {
+run_status <- function(pop, timestep=1) {
   
   if(sum(pop$disease_status) == 0){
     seeds <- sample(1:nrow(pop), size = 20)
