@@ -22,9 +22,13 @@
 # calculate the probability of becoming infect
 # requires a dataframe list, a vector of betas, and a timestep
 
-covid_prob <- function(df, betas, interaction_terms = NULL) {
+covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk_cap_val=100) {
   #print("assign probabilities")
 
+  if(risk_cap==TRUE){
+    df$current_risk[df$current_risk>risk_cap_val] <- risk_cap_val
+  }
+  
   beta_names <- names(betas)
   
   if (all(!beta_names %in% names(df))) {
@@ -82,9 +86,18 @@ case_assign <- function(df, with_optimiser = FALSE) {
                                          prob = df$probability[susceptible])
   }
   
-  df_assign <- data.frame(status = df$status, new_status = df$new_status)
-  write.csv(df, paste0("df_ass_out_",format(Sys.time(), "%H%M%S"), ".csv"), row.names = FALSE)
-  
+
+  if(file.exists("new_cases.csv")==FALSE) {
+    ncase <- sum(df$new_status[susceptible])
+  } else {
+    ncase <- read.csv("new_cases.csv")
+    ncase$X <- NULL
+    tmp <- sum(df$new_status[susceptible])
+    ncase <- rbind(ncase,tmp)
+    rownames(ncase) <- seq(1,nrow(ncase))
+  }
+  #ncase <- as.data.frame(ncase)
+  write.csv(ncase, "new_cases.csv")
   return(df)
 }
 
@@ -95,7 +108,9 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
   
   susceptible <- which(df$status == 0)
   
-  new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
+  new_cases <- which((df$new_status-df$status==1) & df$status == 0)
+  
+  #new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
   
   if (presymp_dist == "weibull"){
     wpar <- mixdist::weibullpar(mu = presymp_mean, sigma = presymp_sd, loc = 0) 
@@ -105,15 +120,14 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
   if (infection_dist == "normal"){
     df$symp_days[new_cases] <- round(rnorm(1:length(new_cases), mean = infection_mean, sd = infection_sd))
   }
-
+  
+  
+  
   #switching people from being pre symptomatic to symptomatic and infected
-  becoming_sympt <- which(df$new_status == 1 & df$presymp_days == 0)
+  becoming_sympt <- which((df$status == 1 | df$new_status == 1) & df$presymp_days == 0) ### maybe should be status rather than new_status
   df$new_status[becoming_sympt] <- 2
   
-  write.csv(df, paste0("df_inf_out_",format(Sys.time(), "%H%M%S"), ".csv"), row.names = FALSE)
-  
-  
- return(df)
+  return(df)
 }
 
 

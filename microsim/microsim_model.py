@@ -63,6 +63,7 @@ class Microsim:
                  data_dir: str="./data/", r_script_dir: str="./R/py_int/",
                  study_msoas: List[str] = [],
                  danger_multiplier: float = 1.0, risk_multiplier: float = 1.0,
+                 lockdown_start: int=0,
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
                  output: bool = True,
@@ -79,6 +80,7 @@ class Microsim:
         is calcuated as duration * flow * danger_multiplier.
         :param risk_multiplier: Risk that individuals get from a location is calculatd as
         duration * flow * * danger * risk_multiplier
+        :param lockdown_start: Optional day to start lockdown. Default 0 (no lockdown)
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
@@ -96,6 +98,7 @@ class Microsim:
         self.iteration = 0
         self.danger_multiplier = danger_multiplier
         self.risk_multiplier = risk_multiplier
+        self.lockdown_start = lockdown_start
         self.random = random.Random(time.time() if random_seed is None else random_seed)
         self.output = output
         self.r_script_dir = r_script_dir
@@ -111,6 +114,10 @@ class Microsim:
         # We need an interface to R code to calculate disease status, but don't initialise it until the run()
         # method is called so that the R process is initiatied in the same process as the Microsim object
         self.r_int = None
+
+        # If we do output information, then it will go to this directory. This is determined in run(), rather than
+        # here, because otherwise all copies of this object will have the same output directory.
+        self.output_dir = None
 
         # Now the main chunk of initialisation is to read the input data.
 
@@ -187,7 +194,7 @@ class Microsim:
         # Generate travel time columns and assign travel modes to some kind of risky activity (not doing this yet)
         #self.individuals = Microsim.generate_travel_time_colums(self.individuals)
         # One thing we do need to do (this would be done in the function) is replace NaNs in the time use data with 0
-        for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
+        for col in ["pwork", "_pschool", "pshop", "pleisure", "ptransport", "pother"]:
             self.individuals[col].fillna(0, inplace=True)
 
         # Read Retail flows data
@@ -212,15 +219,12 @@ class Microsim:
         # seconary school duration, regardless of their age. I think the only way round this is to
         # make two new columns - 'pschool_primary' and 'pschool_seconary', and set these to either 'pschool'
         # or 0 depending on the age of the child.
-        # Also all schools are in the same dataframe, we need to make copies of the dataframe. Otherwise at the start
-        # of each iteration when the secondary school dangers are set to 0 (danger is not cumulative) it will override
-        # the primary school dangers that were calculated first.
         self.individuals = Microsim.add_individual_flows(primary_name, self.individuals, primary_flows)
         self.activity_locations[primary_name] = \
-            ActivityLocation(primary_name, schools.copy(), primary_flows, self.individuals, "pschool")
+            ActivityLocation(primary_name, schools.copy(), primary_flows, self.individuals, "pschool-primary")
         self.individuals = Microsim.add_individual_flows(secondary_name, self.individuals, secondary_flows)
         self.activity_locations[secondary_name] = \
-            ActivityLocation(secondary_name, schools.copy(), secondary_flows, self.individuals, "pschool")
+            ActivityLocation(secondary_name, schools.copy(), secondary_flows, self.individuals, "pschool-secondary")
         del schools  # No longer needed as we gave copies to the ActivityLocation
 
         # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go
@@ -660,6 +664,28 @@ class Microsim:
                                        location_ids=households_df.House_ID )
         # The new ID column should be the same as the House_ID
         assert False not in list(households_df.House_ID == households_df[ColumnNames.LOCATION_ID])
+
+        # Later we need time spent in primary and secondary school. But currently we just have 'pschool'. Make
+        # two new columns separating out primary and secondary based on age
+        tuh["pschool"] = tuh["pschool"].fillna(0)
+        tuh["pschool-primary"] = 0.0
+        tuh["pschool-secondary"] = 0.0
+        children_idx = tuh.index[tuh["DC1117EW_C_AGE"] < 11]
+        teen_idx = tuh.index[(tuh["DC1117EW_C_AGE"] >= 11) & (tuh["DC1117EW_C_AGE"] < 19)]
+
+        tuh.loc[children_idx, "pschool-primary"] = tuh.loc[children_idx, "pschool"]
+        tuh.loc[teen_idx, "pschool-secondary"] = tuh.loc[teen_idx, "pschool"]
+
+        # Check that people have been allocated correctly
+        adults_in_school =  tuh.loc[~(tuh["pschool-primary"] + tuh["pschool-secondary"] == tuh["pschool"]),
+                ["DC1117EW_C_AGE", "pschool", "pschool-primary", "pschool-secondary"]]
+        if len(adults_in_school) > 0:
+            warnings.warn(f"{len(adults_in_school)} people > 18y/o go to school, but they are not being assigned to a "
+                          f"primary or secondary school (so their schooling is ignored at the moment")
+
+        #assert False not in list(tuh["pschool-primary"] + tuh["pschool-secondary"] == tuh["pschool"])
+        tuh = tuh.rename(columns={"pschool": "_pschool"})  # Indicate that the pschool column shouldn't be used now
+
 
         # For some reason, we get some *very* large households. Can demonstrate this with:
         # households_df.Num_People.hist()
@@ -1198,6 +1224,30 @@ class Microsim:
         individuals[ColumnNames.DISEASE_SYMP_DAYS] = -1
         return individuals
 
+    def update_behaviour_during_lockdown(self):
+        """
+        Unilaterally alter the proportions of time spent on different activities after 'lockddown' (assuming
+        the user has set the 'lockdown_start' variable, otherwise this doesn't do anything
+        update_behaviour_during_lockdown
+        """
+        if self.lockdown_start > 0:  # Is there any lockdown at all?
+            # Manually change people's activity durations after lockdown
+            if self.iteration > self.lockdown_start:
+                if self.iteration == self.lockdown_start:
+                    print(f"Iteration {self.iteration}: Entering lockdown")
+                # Reduce all activities, replacing the lost time with time spent at home
+                non_home_activities = set(self.activity_locations.keys())
+                non_home_activities.remove("Home")
+                total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
+                for activity in non_home_activities:
+                    new_duration = self.individuals.loc[:, activity+ColumnNames.ACTIVITY_DURATION] * 0.33
+                    total_duration += new_duration
+                    self.individuals.loc[:, activity+ColumnNames.ACTIVITY_DURATION] = new_duration
+
+                # Now set home duration to fill in the time lost from doing other activities.
+                self.individuals.loc[:, 'Home'+ ColumnNames.ACTIVITY_DURATION] = (1 - total_duration)
+
+
 
     def update_venue_danger_and_risks(self, decimals=10):
         """
@@ -1248,7 +1298,13 @@ class Microsim:
                     for venue_idx, flow in zip(v, f):
                         #print(i, venue_idx, flow, duration)
                         # Increase the danger by the flow multiplied by some disease risk
-                        loc_dangers[venue_idx] += (flow * duration * self.risk_multiplier)
+                        danger_increase = (flow * duration * self.risk_multiplier)
+                        warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
+                        if name == "Work":
+                            work_danger = float(danger_increase / 1500)
+                            loc_dangers[venue_idx] += work_danger
+                        else:
+                            loc_dangers[venue_idx] += danger_increase
 
 
             #
@@ -1335,6 +1391,9 @@ class Microsim:
         self.iteration += 1
         print(f"\nIteration: {self.iteration}\n")
 
+        # Unilaterally adjust the proportions of time that people spend doing different activities after lockdown
+        self.update_behaviour_during_lockdown()
+
         # Update the danger associated with each venue (i.e. the as people with the disease visit them they
         # become more dangerous) then update the risk to each individual of going to those venues.
         self.update_venue_danger_and_risks()
@@ -1393,12 +1452,15 @@ class Microsim:
               help='Whether to generate output data (default yes).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
 @click.option('--repetitions', default=1, help="How many times to run the model (default 1)")
-def run_script(iterations, data_dir, output, debug, repetitions):
+@click.option('--lockdown_start', default=0, help="Optional day to start lockdown (default 0, no lockdown")
+def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start):
     # Check the parameters are sensible
     if iterations < 0:
         raise ValueError("Iterations must be > 0")
     if repetitions < 1:
         raise ValueError("Repetitions must be greater than 0")
+    if lockdown_start < 0:
+        raise ValueError("Start of lockdown must be 0 (no lockdown) or >= 1")
 
     print(f"Running model with the following parameters:\n"
           f"\tNumber of iterations: {iterations}\n"
@@ -1422,7 +1484,7 @@ def run_script(iterations, data_dir, output, debug, repetitions):
 
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir, "study_msoas": list(devon_msoas.Code),
-                 "output": output, "debug": debug}
+                 "output": output, "debug": debug, "lockdown_start": lockdown_start}
 
     # Temporily use dummy data for testing
     #data_dir = os.path.join(base_dir, "dummy_data")
