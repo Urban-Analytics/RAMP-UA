@@ -96,15 +96,15 @@ as_betas_devon <- function(population_sample,id, age, sex, beta0_fixed = NULL, d
                               tot_risk=0)
     
     # check that this is correct. males should be more likely
-    fixed_risks$sex_risk[fixed_risks$sex %in% c(0)] <- 0.1297575 
+    fixed_risks$sex_risk[fixed_risks$sex %in% c(0)] <- 0 #0.1297575 
     fixed_risks$sex_risk[fixed_risks$sex %in% c(1)] <- 0
     
-    fixed_risks$age_risk[fixed_risks$age %in% c(1)] <- -2.2464676 #0-18
-    fixed_risks$age_risk[fixed_risks$age %in% c(2)] <- -0.7057833 #19-29
+    fixed_risks$age_risk[fixed_risks$age %in% c(1)] <- 0 #-2.2464676 #0-18
+    fixed_risks$age_risk[fixed_risks$age %in% c(2)] <- 0 #-0.7057833 #19-29
     fixed_risks$age_risk[fixed_risks$age %in% c(3)] <- 0 #30-44
-    fixed_risks$age_risk[fixed_risks$age %in% c(4)] <- 0.3134440 ##45-59
-    fixed_risks$age_risk[fixed_risks$age %in% c(5)] <- 0.1095025  #60-74
-    fixed_risks$age_risk[fixed_risks$age %in% c(6)] <- 0.8089118 #75+
+    fixed_risks$age_risk[fixed_risks$age %in% c(4)] <- 0 #0.3134440 ##45-59
+    fixed_risks$age_risk[fixed_risks$age %in% c(5)] <- 0 #0.1095025  #60-74
+    fixed_risks$age_risk[fixed_risks$age %in% c(6)] <- 0 #0.8089118 #75+
    
   }
   
