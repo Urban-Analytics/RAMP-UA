@@ -121,8 +121,6 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
     df$symp_days[new_cases] <- round(rnorm(1:length(new_cases), mean = infection_mean, sd = infection_sd))
   }
   
-  
-  
   #switching people from being pre symptomatic to symptomatic and infected
   becoming_sympt <- which((df$status == 1 | df$new_status == 1) & df$presymp_days == 0) ### maybe should be status rather than new_status
   df$new_status[becoming_sympt] <- 2
