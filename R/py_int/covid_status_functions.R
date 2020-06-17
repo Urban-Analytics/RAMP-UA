@@ -106,6 +106,7 @@ case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir) {
   if(timestep==1) {
     nsus <<- length(susceptible)
     prob <<- df$probability
+    current_risk <<- df$current_risk
     dir.create(tmp.dir)
   } else {
     tmp <- length(susceptible)
@@ -113,10 +114,13 @@ case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir) {
     rownames(nsus) <<- seq(1,nrow(nsus))
     prob.tmp <<- df$probability
     prob <<- cbind(prob,prob.tmp)
+    risk.tmp <<- df$current_risk
+    current_risk <<- cbind(current_risk,risk.tmp)
   }
   #ncase <- as.data.frame(ncase)
   write.csv(nsus, paste(tmp.dir,"/susceptible_cases.csv",sep=""))
   write.csv(prob, paste(tmp.dir,"/probability.csv",sep=""))
+  write.csv(current_risk, paste(tmp.dir,"/risk.csv",sep=""))
   
   return(df)
 }
