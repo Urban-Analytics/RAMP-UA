@@ -66,7 +66,7 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk
 
 #########################################
 # assigns covid based on probabilities
-case_assign <- function(df, with_optimiser = FALSE) {
+case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir) {
   #print("assign cases")
   
   susceptible <- which(df$status == 0)
@@ -94,17 +94,16 @@ case_assign <- function(df, with_optimiser = FALSE) {
   #ncase <- as.data.frame(ncase)
   #write.csv(ncase, "new_cases.csv")
   
-  if(file.exists("susceptible_cases.csv")==FALSE) {
+  if(timestep==1) {
     nsus <- length(susceptible)
+    dir.create(tmp.dir)
   } else {
-    nsus <- read.csv("susceptible_cases.csv")
-    nsus$X <- NULL
     tmp <- length(susceptible)
     nsus <- rbind(nsus,tmp)
     rownames(nsus) <- seq(1,nrow(nsus))
   }
   #ncase <- as.data.frame(ncase)
-  write.csv(nsus, "susceptible_cases.csv")
+  write.csv(nsus, paste(tmp.dir,"/susceptible_cases.csv",sep=""))
   
   return(df)
 }
@@ -112,24 +111,24 @@ case_assign <- function(df, with_optimiser = FALSE) {
 
 #########################################
 # calculate the infection length of new cases
-infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,presymp_sd = NULL,infection_dist = "normal", infection_mean = NULL, infection_sd = NULL){
+infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,presymp_sd = NULL,
+                             infection_dist = "normal", infection_mean = NULL, infection_sd = NULL,
+                             timestep,tmp.dir){
   
   susceptible <- which(df$status == 0)
   
   new_cases <- which((df$new_status-df$status==1) & df$status == 0)
   
-  if(file.exists("new_cases.csv")==FALSE) {
+  if(timestep==1) {
     ncase <- length(new_cases)
   } else {
-    ncase <- read.csv("new_cases.csv")
-    ncase$X <- NULL
     tmp2 <- length(new_cases)
     ncase <- rbind(ncase,tmp2)
     rownames(ncase) <- seq(1,nrow(ncase))
   }
   #ncase <- as.data.frame(ncase)
-  write.csv(ncase, "new_cases.csv")
-  
+  write.csv(ncase, paste(tmp.dir,"/new_cases.csv",sep=""))
+
   #new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
   
   if (presymp_dist == "weibull"){
