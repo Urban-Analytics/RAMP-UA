@@ -22,7 +22,7 @@
 # calculate the probability of becoming infect
 # requires a dataframe list, a vector of betas, and a timestep
 
-covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE) {
+covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk_cap_val=100) {
   #print("assign probabilities")
   
   if(risk_cap==TRUE){
@@ -49,30 +49,17 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk
     beta_out_sums <- 0
   }
   
-  if(include_age_sex){
-    if (length(interaction_terms) > 0 ){
-      lpsi <- df$beta0 + df$as_risk + beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
-    } else{
-      lpsi <- df$beta0 + df$as_risk + beta_out_sums
-    }
+  if (length(interaction_terms) > 0 ){
+    lpsi <- df$beta0 + df$as_risk + beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
   } else{
-    if (length(interaction_terms) > 0 ){
-      lpsi <- df$beta0 +  beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
-    } else{
-      lpsi <- df$beta0 + beta_out_sums
-    }
+    lpsi <- df$beta0 + df$as_risk + beta_out_sums
   }
-
-
- 
-
+  
   psi <- exp(lpsi) / (exp(lpsi) + 1)
   psi[df$status %in% c(3,4)] <- 0 # if they are not susceptible then their probability is 0 of getting it 
   psi[df$status %in% c(1,2)] <- 1 # this makes keeping track of who has it easier
   df$betaxs <- df$as_risk + beta_out_sums
   df$probability <- psi
-  
-  write.csv(df, paste0("df_prob_out_",format(Sys.time(), "%H%M%S"), ".csv"), row.names = FALSE)
   
   return(df)
 }
@@ -83,8 +70,6 @@ case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir) {
   #print("assign cases")
   
   susceptible <- which(df$status == 0)
-  
-  # df$probability[is.na(df$probability)] <- 0
   
   if (with_optimiser) {
     df$new_status[susceptible] <- rbinom(n = length(susceptible),
@@ -97,7 +82,6 @@ case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir) {
                                          prob = df$probability[susceptible])
   }
   
-
   #if(file.exists("new_cases.csv")==FALSE) {
   #  ncase <- sum(df$new_status[susceptible])
   #} else {
@@ -119,9 +103,8 @@ case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir) {
     rownames(nsus) <- seq(1,nrow(nsus))
   }
   #ncase <- as.data.frame(ncase)
-
   write.csv(nsus, paste(tmp.dir,"/susceptible_cases.csv",sep=""))
-
+  
   return(df)
 }
 
@@ -157,6 +140,8 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
     df$symp_days[new_cases] <- round(rnorm(1:length(new_cases), mean = infection_mean, sd = infection_sd))
   }
   
+  
+  
   #switching people from being pre symptomatic to symptomatic and infected
   becoming_sympt <- which((df$status == 1 | df$new_status == 1) & df$presymp_days == 0) ### maybe should be status rather than new_status
   df$new_status[becoming_sympt] <- 2
@@ -178,8 +163,6 @@ removed <- function(df, chance_recovery = 0.95){
   df$symp_days[removed_cases] <- 0
   df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] <- df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] - 1
   df$symp_days[df$new_status == 2 & df$symp_days > 0] <- df$symp_days[df$new_status == 2 & df$symp_days>0] - 1
-  
-  write.csv(df, paste0("df_rem_out_",format(Sys.time(), "%H%M%S"), ".csv"), row.names = FALSE)
   
   return(df)
 }
@@ -218,10 +201,4 @@ removed <- function(df, chance_recovery = 0.95){
 #
 #  return(df)
 #}
-
-normalizer <- function(x ,lower_bound, upper_bound, xmin, xmax){
-  
-  normx <-  (upper_bound - lower_bound)*(x - xmin)/(xmax-xmin) + lower_bound
-  return(normx)
-}
 
