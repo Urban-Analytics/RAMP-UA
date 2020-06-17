@@ -146,10 +146,10 @@ run_status <- function(pop, timestep=1) {
   #print("new disease status calculated")
   
   if(timestep==1) {
-    stat <- df_out$disease_status
+    stat <<- df_out$disease_status
   } else {
     tmp3 <- df_out$disease_status
-    stat <- cbind(stat,tmp3)
+    stat <<- cbind(stat,tmp3)
   }
   #ncase <- as.data.frame(ncase)
   write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))

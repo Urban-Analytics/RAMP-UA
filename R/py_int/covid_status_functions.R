@@ -104,12 +104,12 @@ case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir) {
   #write.csv(ncase, "new_cases.csv")
   
   if(timestep==1) {
-    nsus <- length(susceptible)
+    nsus <<- length(susceptible)
     dir.create(tmp.dir)
   } else {
     tmp <- length(susceptible)
-    nsus <- rbind(nsus,tmp)
-    rownames(nsus) <- seq(1,nrow(nsus))
+    nsus <<- rbind(nsus,tmp)
+    rownames(nsus) <<- seq(1,nrow(nsus))
   }
   #ncase <- as.data.frame(ncase)
   write.csv(nsus, paste(tmp.dir,"/susceptible_cases.csv",sep=""))
@@ -129,11 +129,11 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
   new_cases <- which((df$new_status-df$status==1) & df$status == 0)
   
   if(timestep==1) {
-    ncase <- length(new_cases)
+    ncase <<- length(new_cases)
   } else {
     tmp2 <- length(new_cases)
-    ncase <- rbind(ncase,tmp2)
-    rownames(ncase) <- seq(1,nrow(ncase))
+    ncase <<- rbind(ncase,tmp2)
+    rownames(ncase) <<- seq(1,nrow(ncase))
   }
   #ncase <- as.data.frame(ncase)
   write.csv(ncase, paste(tmp.dir,"/new_cases.csv",sep=""))
