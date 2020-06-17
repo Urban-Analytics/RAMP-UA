@@ -129,16 +129,14 @@ run_status <- function(pop, timestep=1) {
   df_risk <- list()
  
   
-   #print("f")
 
+  #print("f")
+  if(timestep==1) {
+    tmp.dir <- paste(getwd(),"/output/",Sys.time(),sep="")
+  }
   
-  df_prob <- covid_prob(df = df_msoa, 
-                        betas = other_betas, 
-                        risk_cap=FALSE, 
-                        risk_cap_val=100, 
-                        include_age_sex = FALSE)
-  df_ass <- case_assign(df = df_prob, with_optimiser = FALSE)
-
+  df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE)
+  df_ass <- case_assign(df = df_prob, with_optimiser = FALSE,timestep=timestep,tmp.dir=tmp.dir)
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
                              presymp_mean = 6.4,
@@ -146,7 +144,8 @@ run_status <- function(pop, timestep=1) {
                              infection_dist = "normal",
                              infection_mean =  14,
                              infection_sd = 2,
-                             timestep=timestep)
+                             timestep=timestep,
+                             tmp.dir=tmp.dir)
   df_rec <- removed(df = df_inf, chance_recovery = 0.95)
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
   
@@ -171,8 +170,8 @@ run_status <- function(pop, timestep=1) {
     stat <- cbind(stat,tmp3)
   }
   #ncase <- as.data.frame(ncase)
-  write.csv(stat, paste("disease_status.csv",Sys.time(),".csv",sep=""))
-
+  write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
+  
   return(df_out)
 }
 
