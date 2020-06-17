@@ -101,7 +101,7 @@ run_status <- function(pop) {
   # connectivity_index <- 0.25#0.3 doesn't work
   # log_pop_dens <- 0#0.2#0.4#0.3 #0.175
   # cases_per_area <- 10 #2.5
-  current_risk <- 2
+  current_risk <- 2.3
   
   # origin <- factor(c(0,0,0,0,0))
   # names(origin) <- c("1", "2", "3", "4", "5") #1 = white, 2 = black, 3 = asian, 4 = mixed, 5 = other
