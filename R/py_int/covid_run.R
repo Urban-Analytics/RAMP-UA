@@ -75,7 +75,7 @@ run_status <- function(pop) {
                           id = id,
                           age = age, 
                           sex = sex, 
-                          beta0_fixed = -4, #0.19, #-9.5, 
+                          beta0_fixed = -9, #0.19, #-9.5, 
                           divider = 4)  # adding in the age/sex betas 
   
   #print("e")
@@ -129,6 +129,17 @@ run_status <- function(pop) {
   
   #print("new disease status calculated")
   
+  if(file.exists("disease_status.csv")==FALSE) {
+    stat <- df_out$disease_status
+  } else {
+    stat <- read.csv("disease_status.csv")
+    stat$X <- NULL
+    tmp3 <- df_out$disease_status
+    stat <- cbind(stat,tmp3)
+  }
+  #ncase <- as.data.frame(ncase)
+  write.csv(stat, "disease_status.csv")
+
   return(df_out)
 }
 
