@@ -17,14 +17,15 @@ library(mixdist)
 #setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 
 #source("R/py_int/covid_status_functions.R")
-#source("R/py_int/initialize_and_helper_functions.R")
+#
+source("R/py_int/initialize_and_helper_functions.R")
 
 #beta1 <- current_risk /  danger <- 0.55
 #pop <- read.csv("~/Downloads/input_population100917.csv")
 
 run_status <- function(pop) {
   
-  if(sum(pop$current_risk) == 0){
+  if(sum(pop$disease_status) == 0){
     seeds <- sample(1:nrow(pop), size = 20)
     pop$disease_status[seeds] <- 1
   }
@@ -84,7 +85,7 @@ run_status <- function(pop) {
                           id = id,
                           age = age, 
                           sex = sex, 
-                          beta0_fixed = -5, #0.19, #-9.5, 
+                          beta0_fixed = -11, #0.19, #-9.5, 
                           divider = 4)  # adding in the age/sex betas 
   
   #print("e")
@@ -93,7 +94,7 @@ run_status <- function(pop) {
   # connectivity_index <- 0.25#0.3 doesn't work
   # log_pop_dens <- 0#0.2#0.4#0.3 #0.175
   # cases_per_area <- 10 #2.5
-  current_risk <- 0.275
+  current_risk <- 2
   
   # origin <- factor(c(0,0,0,0,0))
   # names(origin) <- c("1", "2", "3", "4", "5") #1 = white, 2 = black, 3 = asian, 4 = mixed, 5 = other
