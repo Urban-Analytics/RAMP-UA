@@ -24,6 +24,8 @@ library(mixdist)
 
 run_status <- function(pop, timestep=1) {
   
+  print(paste("R timestep:", timestep))
+  
   if(sum(pop$disease_status) == 0){
     seeds <- sample(1:nrow(pop), size = 20)
     pop$disease_status[seeds] <- 1
@@ -108,11 +110,13 @@ run_status <- function(pop, timestep=1) {
   
   #print("f")
   if(timestep==1) {
-    tmp.dir <- paste(getwd(),"/output/",Sys.time(),sep="")
+    tmp.dir <<- paste(getwd(),"/output/",Sys.time(),sep="")
   }
   
   df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE)
+  print("probabilities calculated")
   df_ass <- case_assign(df = df_prob, with_optimiser = FALSE,timestep=timestep,tmp.dir=tmp.dir)
+  print("cases asigned")
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
                              presymp_mean = 6.4,
@@ -122,7 +126,9 @@ run_status <- function(pop, timestep=1) {
                              infection_sd = 2,
                              timestep=timestep,
                              tmp.dir=tmp.dir)
+  print("infection and recovery lengths assigned")
   df_rec <- removed(df = df_inf, chance_recovery = 0.95)
+  print("recoveries and deaths assigned")
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
   
   #print("h")
