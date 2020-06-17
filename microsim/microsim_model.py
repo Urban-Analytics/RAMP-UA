@@ -1429,7 +1429,7 @@ class Microsim:
                 with open(fname+".pickle", "wb") as pickle_out:
                     pickle.dump(self.individuals_to_pickle, pickle_out)
                 # Also make a (compressed) csv file for others
-                self.individuals_to_pickle.to_csv(fname+".csv.zip", compression='zip')
+                self.individuals_to_pickle.to_csv(fname+".csv.gz", compression='gzip')
 
                 for name in self.activity_locations:
                     # Get the details of the location activity
@@ -1444,7 +1444,8 @@ class Microsim:
                     with open(fname+".pickle", "wb") as pickle_out:
                         pickle.dump(self.activities_to_pickle[loc_name], pickle_out)
                     # Also make a (compressed) csv file for others
-                    self.activities_to_pickle[loc_name].to_csv(fname+".csv.zip", compression='zip')
+                    self.activities_to_pickle[loc_name].to_csv(fname+".csv.gz", compression='gzip')
+                    #self.activities_to_pickle[loc_name].to_csv(fname+".csv")  # They not so big so don't compress
 
 
 # ********
@@ -1473,7 +1474,8 @@ def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start)
           f"\tData dir: {data_dir}\n"
           f"\tOutputting results?: {output}\n"
           f"\tDebug mode?: {debug}\n"
-          f"\tNumber of repetitions: {repetitions}")
+          f"\tNumber of repetitions: {repetitions}\n"
+          f"\tStart Lockdown on day: {lockdown_start}")
 
     if iterations == 0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
