@@ -1345,8 +1345,7 @@ class Microsim:
         # returns all, including those with 0 counts, but with HID those with 0 count don't get returned
         # Get rows with cases
         cases = self.individuals.loc[(self.individuals[ColumnNames.DISEASE_STATUS] == 1) |
-                                     (self.individuals[ColumnNames.DISEASE_STATUS] == 2) |
-                                     (self.individuals[ColumnNames.DISEASE_STATUS] == 3), :]
+                                     (self.individuals[ColumnNames.DISEASE_STATUS] == 2), :]
         # Count cases per area (convert to a dataframe)
         case_counts = cases["Area"].value_counts()
         case_counts = pd.DataFrame(data={"Area": case_counts.index, "Count": case_counts}).reset_index(drop=True)
