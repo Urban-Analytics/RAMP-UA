@@ -24,7 +24,7 @@
 
 covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE) {
   #print("assign probabilities")
-
+  
   if(risk_cap==TRUE){
     df$current_risk[df$current_risk>risk_cap_val] <- risk_cap_val
   }
@@ -63,7 +63,9 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk
     }
   }
 
+
  
+
   psi <- exp(lpsi) / (exp(lpsi) + 1)
   psi[df$status %in% c(3,4)] <- 0 # if they are not susceptible then their probability is 0 of getting it 
   psi[df$status %in% c(1,2)] <- 1 # this makes keeping track of who has it easier
@@ -77,7 +79,7 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, risk
 
 #########################################
 # assigns covid based on probabilities
-case_assign <- function(df, with_optimiser = FALSE) {
+case_assign <- function(df, with_optimiser = FALSE,timestep) {
   #print("assign cases")
   
   susceptible <- which(df$status == 0)
@@ -96,28 +98,51 @@ case_assign <- function(df, with_optimiser = FALSE) {
   }
   
 
-  if(file.exists("new_cases.csv")==FALSE) {
-    ncase <- sum(df$new_status[susceptible])
+  #if(file.exists("new_cases.csv")==FALSE) {
+  #  ncase <- sum(df$new_status[susceptible])
+  #} else {
+  #  ncase <- read.csv("new_cases.csv")
+  #  ncase$X <- NULL
+  #  tmp <- sum(df$new_status[susceptible])
+  #  ncase <- rbind(ncase,tmp)
+  #  rownames(ncase) <- seq(1,nrow(ncase))
+  #}
+  #ncase <- as.data.frame(ncase)
+  #write.csv(ncase, "new_cases.csv")
+  
+  if(timestep==1) {
+    nsus <- length(susceptible)
   } else {
-    ncase <- read.csv("new_cases.csv")
-    ncase$X <- NULL
-    tmp <- sum(df$new_status[susceptible])
-    ncase <- rbind(ncase,tmp)
-    rownames(ncase) <- seq(1,nrow(ncase))
+    tmp <- length(susceptible)
+    nsus <- rbind(nsus,tmp)
   }
   #ncase <- as.data.frame(ncase)
-  write.csv(ncase, "new_cases.csv")
+
+  rownames(nsus) <- seq(1,nrow(nsus))
+  write.csv(nsus, paste("susceptible_cases_",Sys.time(),".csv",sep=""))
+  
+
   return(df)
 }
 
 
 #########################################
 # calculate the infection length of new cases
-infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,presymp_sd = NULL,infection_dist = "normal", infection_mean = NULL, infection_sd = NULL){
+infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,presymp_sd = NULL,infection_dist = "normal", infection_mean = NULL, infection_sd = NULL,timestep){
   
   susceptible <- which(df$status == 0)
   
   new_cases <- which((df$new_status-df$status==1) & df$status == 0)
+  
+  if(timestep==1) {
+    ncase <- length(new_cases)
+  } else {
+    tmp2 <- length(new_cases)
+    ncase <- rbind(ncase,tmp2)
+  }
+  #ncase <- as.data.frame(ncase)
+  rownames(ncase) <- seq(1,nrow(ncase))
+  write.csv(ncase, paste("new_cases.csv",Sys.time(),".csv",sep=""))
   
   #new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
   
@@ -147,7 +172,7 @@ removed <- function(df, chance_recovery = 0.95){
   df$new_status[removed_cases] <- 3 + rbinom(n = length(removed_cases),
                                              size = 1,
                                              prob = (1-chance_recovery))
- 
+  
   df$symp_days[removed_cases] <- 0
   df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] <- df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] - 1
   df$symp_days[df$new_status == 2 & df$symp_days > 0] <- df$symp_days[df$new_status == 2 & df$symp_days>0] - 1

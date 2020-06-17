@@ -520,6 +520,7 @@ class Microsim:
         #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_health.txt")
         #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_keyworker.txt")
         filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_Complete.txt")
+        #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_keyworker_health.txt")
 
         tuh = pd.read_csv(filename)
         tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.

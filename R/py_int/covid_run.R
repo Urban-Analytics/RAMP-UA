@@ -23,7 +23,12 @@ source("R/py_int/initialize_and_helper_functions.R")
 #beta1 <- current_risk /  danger <- 0.55
 #pop <- read.csv("~/Downloads/input_population100917.csv")
 
-run_status <- function(pop) {
+run_status <- function(pop, timestep=1) {
+  
+  if(sum(pop$disease_status) == 0){
+    seeds <- sample(1:nrow(pop), size = 20)
+    pop$disease_status[seeds] <- 1
+  }
   
 
   if(sum(pop$disease_status) == 0){
@@ -92,11 +97,12 @@ run_status <- function(pop) {
                           id = id,
                           age = age, 
                           sex = sex, 
-                          beta0_fixed = -11, #0.19, #-9.5, 
+                          beta0_fixed = -9, #0.19, #-9.5, 
                           divider = 4)  # adding in the age/sex betas 
   
   #print("e")
   
+
   # pnothome <-  0.25 #0.35
   # connectivity_index <- 0.25#0.3 doesn't work
   # log_pop_dens <- 0#0.2#0.4#0.3 #0.175
@@ -111,6 +117,7 @@ run_status <- function(pop) {
   # names(underlining) <- c("0","1") #1 = has underlying health conditions
   # hid_infected <- 0
   # 
+  
   ### any betas included must link to columns/data.frames in df_in 
   
   other_betas <- list(current_risk = current_risk)
@@ -131,13 +138,15 @@ run_status <- function(pop) {
                         risk_cap_val=100, 
                         include_age_sex = FALSE)
   df_ass <- case_assign(df = df_prob, with_optimiser = FALSE)
+
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
                              presymp_mean = 6.4,
                              presymp_sd = 2.3,
                              infection_dist = "normal",
                              infection_mean =  14,
-                             infection_sd = 2)
+                             infection_sd = 2,
+                             timestep=timestep)
   df_rec <- removed(df = df_inf, chance_recovery = 0.95)
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
   
@@ -155,6 +164,15 @@ run_status <- function(pop) {
   
   #print("new disease status calculated")
   
+  if(timestep==1) {
+    stat <- df_out$disease_status
+  } else {
+    tmp3 <- df_out$disease_status
+    stat <- cbind(stat,tmp3)
+  }
+  #ncase <- as.data.frame(ncase)
+  write.csv(stat, paste("disease_status.csv",Sys.time(),".csv",sep=""))
+
   return(df_out)
 }
 
