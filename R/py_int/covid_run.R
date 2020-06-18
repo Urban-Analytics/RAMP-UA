@@ -35,7 +35,7 @@ run_status <- function(pop, timestep=1) {
   
   print(paste("R timestep:", timestep))
   
-  #pop <- read.csv("input_pop_01.csv") 
+ # pop <- vroom::vroom("R/py_int/input_pop_02.csv") 
   if(timestep==1){
       seeds <- sample(1:nrow(pop), size = new_cases[timestep])
     pop$disease_status[seeds] <- 1
@@ -93,7 +93,7 @@ run_status <- function(pop, timestep=1) {
                           id = id,
                           age = age, 
                           sex = sex, 
-                          beta0_fixed = -11, #0.19, #-9.5, 
+                          beta0_fixed = -8, #0.19, #-9.5, 
                           divider = 4)  # adding in the age/sex betas 
   
   #print("e")
@@ -102,7 +102,7 @@ run_status <- function(pop, timestep=1) {
   connectivity_index <- 0.25#0.3 doesn't work
   log_pop_dens <- 0#0.2#0.4#0.3 #0.175
   cases_per_area <- 10 #2.5
-  current_risk <- 5.0 #1.5 #0.55
+  current_risk <- 0.55#1.5 #0.55
   
   origin <- factor(c(0,0,0,0,0))
   names(origin) <- c("1", "2", "3", "4", "5") #1 = white, 2 = black, 3 = asian, 4 = mixed, 5 = other
@@ -131,7 +131,7 @@ run_status <- function(pop, timestep=1) {
     
   df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE)
   print("probabilities calculated")
-  df_prob_opt <- new_beta0_probs(df_prob, daily_case = new_cases[timestep])
+  df_prob_opt <- new_beta0_probs(df = df_prob, daily_case = new_cases[timestep])
   df_ass <- case_assign(df = df_prob_opt, with_optimiser = TRUE,timestep=timestep,tmp.dir=tmp.dir, 
                         save_output = FALSE)
   print("cases assigned")
