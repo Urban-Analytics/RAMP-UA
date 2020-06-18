@@ -172,7 +172,8 @@ run_status <- function(pop, timestep=1) {
   }
   #ncase <- as.data.frame(ncase)
   write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
-
+  write.csv(nb0, paste(tmp.dir,"/optim_b0.csv",sep=""))
+  
   return(df_out)
 }
 
