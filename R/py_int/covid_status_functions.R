@@ -75,7 +75,7 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE,
 
 #########################################
 # assigns covid based on probabilities
-case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir) {
+case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir, save_output = TRUE) {
   #print("assign cases")
   
   susceptible <- which(df$status == 0)
@@ -103,25 +103,28 @@ case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir) {
   #ncase <- as.data.frame(ncase)
   #write.csv(ncase, "new_cases.csv")
   
-  if(timestep==1) {
-    nsus <<- length(susceptible)
-    prob <<- df$probability
-    current_risk <<- df$current_risk
-    dir.create(tmp.dir)
-  } else {
-    tmp <- length(susceptible)
-    nsus <<- rbind(nsus,tmp)
-    rownames(nsus) <<- seq(1,nrow(nsus))
-    prob.tmp <<- df$probability
-    prob <<- cbind(prob,prob.tmp)
-    risk.tmp <<- df$current_risk
-    current_risk <<- cbind(current_risk,risk.tmp)
+  if (save_output == TRUE){
+    if(timestep==1) {
+      nsus <<- length(susceptible)
+      prob <<- df$probability
+      current_risk <<- df$current_risk
+      dir.create(tmp.dir)
+    } else {
+      tmp <- length(susceptible)
+      nsus <<- rbind(nsus,tmp)
+      rownames(nsus) <<- seq(1,nrow(nsus))
+      prob.tmp <<- df$probability
+      prob <<- cbind(prob,prob.tmp)
+      risk.tmp <<- df$current_risk
+      current_risk <<- cbind(current_risk,risk.tmp)
+    }
+    #ncase <- as.data.frame(ncase)
+    write.csv(nsus, paste(tmp.dir,"/susceptible_cases.csv",sep=""))
+    write.csv(prob, paste(tmp.dir,"/probability.csv",sep=""))
+    write.csv(current_risk, paste(tmp.dir,"/risk.csv",sep=""))
+    
   }
-  #ncase <- as.data.frame(ncase)
-  write.csv(nsus, paste(tmp.dir,"/susceptible_cases.csv",sep=""))
-  write.csv(prob, paste(tmp.dir,"/probability.csv",sep=""))
-  write.csv(current_risk, paste(tmp.dir,"/risk.csv",sep=""))
-  
+    
   return(df)
 }
 
