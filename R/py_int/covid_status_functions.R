@@ -217,5 +217,38 @@ removed <- function(df, chance_recovery = 0.95){
 #  }
 #
 #  return(df)
+
+
+
+#########################################
+beta0_optim <- function(beta0new, n, betaX, Y){ 
+  tmp_mu <-  tmp_prob <- rep(NA, n)
+  for (i in 1:n) {
+    tmp_mu[i] <- beta0new + betaX[i]
+    tmp_prob[i] <- exp(tmp_mu[i])/(1+exp(tmp_mu[i]))
+  }
+  tmp_sum <- abs(Y-sum(tmp_prob))
+  tmp_sum
+}
+
+#########################################
+new_beta0_probs <- function(df, daily_case){
+  
+  susceptible <- which(df$susceptible == 1)
+  
+  new_beta0 <- optim(par = -1, beta0_optim,  n = length(susceptible), betaX=df$betaxs[susceptible], Y=daily_case, 
+                     method="Brent",  lower  =-30, upper = 0)$par
+  
+  df$new_beta0 <- new_beta0
+  tot_risk_new <- df$new_beta0  + df$betaxs
+  df$optim_probability <- exp(tot_risk_new)/(1+exp(tot_risk_new))
+  
+  case_YN <- rbinom(n=length(df$optim_probability[susceptible]), size=1, prob =   df$optim_probability[susceptible])
+  print(paste0("optim cases ",sum(case_YN)))
+  
+  return(df)
+}
+
+
 #}
 
