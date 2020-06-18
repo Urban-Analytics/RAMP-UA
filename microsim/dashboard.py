@@ -116,6 +116,12 @@ conditions_dict = {
 
 msoacounts_dict = {}  # empty dictionary to store results: nr per msoa and day
 totalcounts_dict = {}  # empty dictionary to store results: nr per day
+cumcounts_dict = {}  # empty dictionary to store results: total nr across time period
+# time range for cumulative counts
+start_day = 0
+end_day = nr_days-1 # last 'named' day - nrs starts from 0
+start_col = individuals.shape[1] - nr_days + start_day
+end_col = individuals.shape[1] - nr_days + end_day + 1
 
 for r in range(nr_runs):
     # read in pickle file individuals (disease status)
@@ -127,11 +133,29 @@ for r in range(nr_runs):
     if r == 0:
         individuals = individuals_tmp
         msoas = sorted(individuals.area.unique())
+        area_individuals = individuals['area']
         
     for key, value in conditions_dict.items():
         if r == 0:
             msoacounts_dict[key] = np.zeros((len(msoas),nr_days,nr_runs))        
-            totalcounts_dict[key] = np.zeros((nr_days,nr_runs))      
+            totalcounts_dict[key] = np.zeros((nr_days,nr_runs))  
+            cumcounts_dict[key] = np.zeros((len(msoas),nr_runs))
+        # cumulative counts
+        # select right columns
+        tmp = individuals_tmp.iloc[:,start_col:end_col]  
+        # find all rows with condition (dict value)
+        indices = tmp[tmp.eq(value).any(1)].index
+        # create new df of zeros and replace with 1 at indices
+        cumcounts_run = pd.DataFrame(np.zeros((tmp.shape[0], 1)))
+        cumcounts_run.loc[indices] = 1
+        # merge with MSOA df
+        cumcounts_run = cumcounts_run.merge(area_individuals, left_index=True, right_index=True)
+        cumcounts_msoa_run = mergeddf[mergeddf == conditions_dict[key]].groupby(['area']).agg({cumcounts_run.columns[0]: ['count']})  
+        cumcounts_msoa_run = cumcounts_msoa_run.values
+
+        
+        
+        
         # loop aroud days
         msoacounts_run = np.zeros((len(msoas),nr_days))
         for d in range(0, nr_days):
@@ -144,12 +168,15 @@ for r in range(nr_runs):
         # get current values from dict
         msoacounts = msoacounts_dict[key]
         totalcounts = totalcounts_dict[key]
+        cumcounts = cumcounts_dict[key]
         # add current run's values
         msoacounts[:,:,r] = msoacounts_run
         totalcounts[:,r] = msoacounts_run.sum(axis=0)
+        cumcounts[:,r] = cumcounts_msoa_run[:, 0]
         # write out to dict
         msoacounts_dict[key] = msoacounts
         totalcounts_dict[key] = totalcounts
+        cumcounts_dict[key] = cumcounts
    
 dict_days = [] # empty list for column names 'Day0' etc
 for d in range(0, nr_days):
