@@ -22,6 +22,14 @@ library(mixdist)
 #beta1 <- current_risk /  danger <- 0.55
 #pop <- read.csv("~/Downloads/input_population100917.csv")
 
+cases <- getUKCovidTimeseries()
+ua_cases <- cases$tidyEnglandUnitAuth
+devon_cases <- ua_cases[as.character(ua_cases$CTYUA19NM)=="Devon",]
+devon_cases$cumulative_cases[84] <- 812 #type here I think
+new_cases <- diff(devon_cases$cumulative_cases)
+new_cases[new_cases == 0]<-1
+new_cases <- new_cases*20
+
 run_status <- function(pop, timestep=1) {
   
   print(paste("R timestep:", timestep))
@@ -92,7 +100,7 @@ run_status <- function(pop, timestep=1) {
   connectivity_index <- 0.25#0.3 doesn't work
   log_pop_dens <- 0#0.2#0.4#0.3 #0.175
   cases_per_area <- 10 #2.5
-  current_risk <- 25.0 #1.5 #0.55
+  current_risk <- 5.0 #1.5 #0.55
   
   origin <- factor(c(0,0,0,0,0))
   names(origin) <- c("1", "2", "3", "4", "5") #1 = white, 2 = black, 3 = asian, 4 = mixed, 5 = other
@@ -119,9 +127,10 @@ run_status <- function(pop, timestep=1) {
   
   df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE)
   print("probabilities calculated")
-  df_prob_opt <- new_beta0_probs(df_prob, daily_case = 20)
-  df_ass <- case_assign(df = df_prob_opt, with_optimiser = TRUE,timestep=timestep,tmp.dir=tmp.dir)
-  print("cases asigned")
+  df_prob_opt <- new_beta0_probs(df_prob, daily_case = new_cases[timestep])
+  df_ass <- case_assign(df = df_prob_opt, with_optimiser = TRUE,timestep=timestep,tmp.dir=tmp.dir, 
+                        save_output = FALSE)
+  print("cases assigned")
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
                              presymp_mean = 6.4,
