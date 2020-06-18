@@ -2,6 +2,7 @@ library(tidyr)
 library(janitor)
 library(readr)
 library(mixdist)
+library(dplyr)
 #library(arrow)
 #library(dplyr)
 #library(ggplot2)
@@ -22,16 +23,25 @@ library(mixdist)
 #beta1 <- current_risk /  danger <- 0.55
 #pop <- read.csv("~/Downloads/input_population100917.csv")
 
+cases <- getUKCovidTimeseries()
+ua_cases <- cases$tidyEnglandUnitAuth
+devon_cases <- ua_cases[as.character(ua_cases$CTYUA19NM)=="Devon",]
+devon_cases$cumulative_cases[84] <- 812 #type here I think
+new_cases <- diff(devon_cases$cumulative_cases)
+new_cases[new_cases == 0]<-1
+new_cases <- new_cases*20
+
 run_status <- function(pop, timestep=1) {
   
   print(paste("R timestep:", timestep))
   
-  #if(sum(pop$disease_status) == 0){
-  if(timestep==1){
-      seeds <- sample(1:nrow(pop), size = 20)
-    pop$disease_status[seeds] <- 1
-  }
+ # pop <- vroom::vroom("R/py_int/input_pop_02.csv") 
+  # if(timestep==1){
+  #     seeds <- sample(1:nrow(pop), size = new_cases[timestep])
+  #   pop$disease_status[seeds] <- 1
+  # }
   
+  write.csv(pop, paste0("input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
   population <- clean_names(pop)
   
   num_sample <- nrow(population)
@@ -83,7 +93,7 @@ run_status <- function(pop, timestep=1) {
                           id = id,
                           age = age, 
                           sex = sex, 
-                          beta0_fixed = -11, #0.19, #-9.5, 
+                          beta0_fixed = -8, #0.19, #-9.5, 
                           divider = 4)  # adding in the age/sex betas 
   
   #print("e")
@@ -92,7 +102,7 @@ run_status <- function(pop, timestep=1) {
   connectivity_index <- 0.25#0.3 doesn't work
   log_pop_dens <- 0#0.2#0.4#0.3 #0.175
   cases_per_area <- 10 #2.5
-  current_risk <- 25.0 #1.5 #0.55
+  current_risk <- 0.55#1.5 #0.55
   
   origin <- factor(c(0,0,0,0,0))
   names(origin) <- c("1", "2", "3", "4", "5") #1 = white, 2 = black, 3 = asian, 4 = mixed, 5 = other
@@ -112,12 +122,17 @@ run_status <- function(pop, timestep=1) {
   #print("f")
   if(timestep==1) {
     tmp.dir <<- paste(getwd(),"/output/",Sys.time(),sep="")
+    if(!dir.exists(tmp.dir)){
+      dir.create(tmp.dir, recursive = TRUE)
+    }
   }
   
   df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE)
   print("probabilities calculated")
-  df_ass <- case_assign(df = df_prob, with_optimiser = FALSE,timestep=timestep,tmp.dir=tmp.dir)
-  print("cases asigned")
+  df_prob_opt <- new_beta0_probs(df = df_prob, daily_case = new_cases[timestep])
+  df_ass <- case_assign(df = df_prob_opt, with_optimiser = TRUE,timestep=timestep,tmp.dir=tmp.dir, 
+                        save_output = FALSE)
+  print("cases assigned")
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
                              presymp_mean = 6.4,
@@ -148,13 +163,16 @@ run_status <- function(pop, timestep=1) {
   
   if(timestep==1) {
     stat <<- df_out$disease_status
+    nb0 <<- unique(df_msoa$new_beta0)
   } else {
     tmp3 <- df_out$disease_status
+    tmp4 <- unique(df_msoa$new_beta0)
     stat <<- cbind(stat,tmp3)
+    nb0 <<- cbind(nb0, tmp4)
   }
   #ncase <- as.data.frame(ncase)
   write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
-  
+
   return(df_out)
 }
 
