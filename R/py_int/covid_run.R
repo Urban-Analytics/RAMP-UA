@@ -41,7 +41,7 @@ run_status <- function(pop, timestep=1) {
   #   pop$disease_status[seeds] <- 1
   # }
   
-  write.csv(pop, paste0("input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
+ # write.csv(pop, paste0("input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
   population <- clean_names(pop)
   
   num_sample <- nrow(population)
