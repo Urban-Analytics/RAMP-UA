@@ -112,11 +112,15 @@ run_status <- function(pop, timestep=1) {
   #print("f")
   if(timestep==1) {
     tmp.dir <<- paste(getwd(),"/output/",Sys.time(),sep="")
+    if(!dir.exists(tmp.dir)){
+      dir.create(tmp.dir, recursive = TRUE)
+    }
   }
   
   df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE)
   print("probabilities calculated")
-  df_ass <- case_assign(df = df_prob, with_optimiser = FALSE,timestep=timestep,tmp.dir=tmp.dir)
+  df_prob_opt <- new_beta0_probs(df_prob, daily_case = 20)
+  df_ass <- case_assign(df = df_prob_opt, with_optimiser = TRUE,timestep=timestep,tmp.dir=tmp.dir)
   print("cases asigned")
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
