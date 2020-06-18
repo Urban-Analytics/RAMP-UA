@@ -11,6 +11,9 @@ from microsim.activity_location import ActivityLocation
 # These tests run through a whole dummy model process
 # ********************************************************
 
+# arguments used when calling the Microsim constructor. Usually these are the same
+microsim_args = {"data_dir":"./dummy_data", "r_script_dir":"./R/py_int", "testing":True, "debug":True, "disable_disease_status":True}
+
 # This 'fixture' means that other functions (e.g. step) can use the object created here.
 # Note: Don't try to run this test, it will be called when running the others that need it, like `test_step()`.
 @pytest.fixture()
@@ -20,9 +23,11 @@ def test_microsim():
     """
     with pytest.raises(FileNotFoundError):
         # This should fail because the directory doesn't exist
-        m = Microsim(data_dir="./bad_directory", r_script_dir="./R/py_int")
+        args = microsim_args.copy()
+        args['data_dir'] = "./bad_directory"
+        m = Microsim(**args)
 
-    m = Microsim(data_dir="./dummy_data", r_script_dir="./R/py_int", testing=True, debug=True)
+    m = Microsim(**microsim_args)
 
     # Check that the dummy data have been read in correctly. E.g. check the number of individuals is
     # accurate, that they link to households correctly, that they have the right *flows* to the right
@@ -183,13 +188,13 @@ def test_update_disease_counts(test_microsim):
     """Check that disease counts for MSOAs and households are updated properly"""
     m = test_microsim  # less typing
     # Make sure no one has the disease to start with
-    m.individuals["Disease_Status"] = 0
+    m.individuals[ColumnNames.DISEASE_STATUS] = 0
     # (Shouldn't use _PID any more, this is a hangover to old version, but works OK with dummy data)
-    m.individuals.loc[9, "Disease_Status"] = 1  # lives alone
-    m.individuals.loc[13, "Disease_Status"] = 1  # Lives with 3 people
-    m.individuals.loc[11, "Disease_Status"] = 1  # | Live
-    m.individuals.loc[12, "Disease_Status"] = 1  # | Together
-    #m.individuals.loc[:, ["PID", "HID", "Area", "Disease_Status", "MSOA_Cases", "HID_Cases"]]
+    m.individuals.loc[9, ColumnNames.DISEASE_STATUS] = 1  # lives alone
+    m.individuals.loc[13, ColumnNames.DISEASE_STATUS] = 1  # Lives with 3 people
+    m.individuals.loc[11, ColumnNames.DISEASE_STATUS] = 1  # | Live
+    m.individuals.loc[12, ColumnNames.DISEASE_STATUS] = 1  # | Together
+    #m.individuals.loc[:, ["PID", "HID", "Area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
     m.update_disease_counts()
     # This person has the disease
     assert m.individuals.at[9, "MSOA_Cases"] == 1
@@ -227,12 +232,12 @@ def test_step(test_microsim):
     m = test_microsim  # For less typing and so as not to interfere with other functions use test_microsim
 
     # Note: the following is a useul way to get relevant info about the individuals
-    #m.individuals.loc[:, ["ID", "PID", "HID", "Area", "Disease_Status", "MSOA_Cases", "HID_Cases"]]
+    #m.individuals.loc[:, ["ID", "PID", "HID", "Area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
 
     # Step 0 (initialisation):
 
     # Everyone should start without the disease (they will have been assigned a status as part of initialisation)
-    m.individuals["Disease_Status"] = 0
+    m.individuals[ColumnNames.DISEASE_STATUS] = 0
 
     # Set understandable multipliers
     m.risk_multiplier = 1.0
@@ -244,8 +249,8 @@ def test_step(test_microsim):
     p1 = 0
     p2 = 1
 
-    m.individuals.loc[p1, "Disease_Status"] = 1  # Give them the disease
-    for p in [p1, p2]: # Set their activity durations to 0
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = 1  # Give them the disease
+    for p in [p1, p2]:  # Set their activity durations to 0
         for name, activity in m.activity_locations.items():
             m.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
         m.individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] = 1.0  # Spend all their time at home
@@ -283,7 +288,7 @@ def test_step(test_microsim):
 
 
     # But if they both get sick then they should be 2.0 (double danger and risk)
-    m.individuals.loc[p1:p2, "Disease_Status"] = 1  # Give them the disease
+    m.individuals.loc[p1:p2, ColumnNames.DISEASE_STATUS] = 1  # Give them the disease
     m.individuals.at[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] = 1.0 # Make the duration normal again
     m.step()
     for p in [p1, p2]:
@@ -298,8 +303,8 @@ def test_step(test_microsim):
     del p1, p2
     p1 = 4 # The infected person is index 1
     # Make everyone better except for that one person
-    m.individuals["Disease_Status"] = 0
-    m.individuals.loc[p1, "Disease_Status"] = 1
+    m.individuals[ColumnNames.DISEASE_STATUS] = 0
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = 1
     # Assign everyone equal time doing all activities
     for name, activity in m.activity_locations.items():
         m.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 1.0/len(m.activity_locations)
@@ -342,9 +347,9 @@ def test_random():
     Checks that random classes are produce different (or the same!) numbers when they should do
     :return:
     """
-    m1 = Microsim(read_data=False)
-    m2 = Microsim(random_seed=2.0, read_data=False)
-    m3 = Microsim(random_seed=2.0, read_data=False)
+    m1 = Microsim(**microsim_args, read_data=False)
+    m2 = Microsim(**microsim_args, random_seed=2.0, read_data=False)
+    m3 = Microsim(**microsim_args, random_seed=2.0, read_data=False)
 
     # Genrate a random number from each model. The second two numbers should be the same
     r1, r2, r3 = [_get_rand(x) for x in [m1, m2, m3]]
@@ -355,7 +360,7 @@ def test_random():
     # Check that this still happens even if they are executed in pools.
     # Create a large number of microsims and check that all random numbers are unique
     pool = multiprocessing.Pool()
-    m = [Microsim(read_data=False) for _ in range(10000)]
+    m = [Microsim(**microsim_args, read_data=False) for _ in range(10000)]
     r = pool.map(_get_rand, m)
     assert len(r) == len(set(r))
 
@@ -372,8 +377,9 @@ def test_extract_msoas_from_indiviuals():
 def test_check_study_area():
     all_msoa_list = ["C", "A", "F", "B", "D", "E"]
     individuals = pd.DataFrame(
-        data={"PID": [1, 2, 3, 4, 5, 6], "HID": [1, 1, 2, 2, 2, 3], "Area": ["B", "B", "A", "A", "A", "D"]})
-    households = pd.DataFrame(data={"HID": [1, 2, 3]})
+        data={"PID": [1, 2, 3, 4, 5, 6], "HID": [1, 1, 2, 2, 2, 3], "Area": ["B", "B", "A", "A", "A", "D"],
+                "House_OA": ["B", "B", "A", "A", "A", "D"]})
+    households = pd.DataFrame(data={"HID": [1, 2, 3], "Area": ["B", "A", "D"]})
 
     with pytest.raises(Exception):
         # Check that it catches duplicate areas

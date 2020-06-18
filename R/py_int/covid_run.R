@@ -20,9 +20,17 @@ library(mixdist)
 #source("R/py_int/initialize_and_helper_functions.R")
 
 #beta1 <- current_risk /  danger <- 0.55
-#pop <- read.csv("~/Downloads/individuals_reduced.csv")
+#pop <- read.csv("~/Downloads/input_population100917.csv")
 
-run_status <- function(pop) {
+run_status <- function(pop, timestep=1) {
+  
+  print(paste("R timestep:", timestep))
+  
+  #if(sum(pop$disease_status) == 0){
+  if(timestep==1){
+      seeds <- sample(1:nrow(pop), size = 20)
+    pop$disease_status[seeds] <- 1
+  }
   
   population <- clean_names(pop)
   
@@ -75,7 +83,7 @@ run_status <- function(pop) {
                           id = id,
                           age = age, 
                           sex = sex, 
-                          beta0_fixed = -4, #0.19, #-9.5, 
+                          beta0_fixed = -11, #0.19, #-9.5, 
                           divider = 4)  # adding in the age/sex betas 
   
   #print("e")
@@ -84,7 +92,7 @@ run_status <- function(pop) {
   connectivity_index <- 0.25#0.3 doesn't work
   log_pop_dens <- 0#0.2#0.4#0.3 #0.175
   cases_per_area <- 10 #2.5
-  current_risk <- 0.55
+  current_risk <- 25.0 #1.5 #0.55
   
   origin <- factor(c(0,0,0,0,0))
   names(origin) <- c("1", "2", "3", "4", "5") #1 = white, 2 = black, 3 = asian, 4 = mixed, 5 = other
@@ -102,17 +110,26 @@ run_status <- function(pop) {
   df_risk <- list()
   
   #print("f")
+  if(timestep==1) {
+    tmp.dir <<- paste(getwd(),"/output/",Sys.time(),sep="")
+  }
   
-  df_prob <- covid_prob(df = df_msoa, betas = other_betas)
-  df_ass <- case_assign(df = df_prob, with_optimiser = FALSE)
+  df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE)
+  print("probabilities calculated")
+  df_ass <- case_assign(df = df_prob, with_optimiser = FALSE,timestep=timestep,tmp.dir=tmp.dir)
+  print("cases asigned")
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
                              presymp_mean = 6.4,
                              presymp_sd = 2.3,
                              infection_dist = "normal",
                              infection_mean =  14,
-                             infection_sd = 2)
+                             infection_sd = 2,
+                             timestep=timestep,
+                             tmp.dir=tmp.dir)
+  print("infection and recovery lengths assigned")
   df_rec <- removed(df = df_inf, chance_recovery = 0.95)
+  print("recoveries and deaths assigned")
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
   
   #print("h")
@@ -128,6 +145,15 @@ run_status <- function(pop) {
                        symp_days=df_msoa$symp_days)
   
   #print("new disease status calculated")
+  
+  if(timestep==1) {
+    stat <<- df_out$disease_status
+  } else {
+    tmp3 <- df_out$disease_status
+    stat <<- cbind(stat,tmp3)
+  }
+  #ncase <- as.data.frame(ncase)
+  write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
   
   return(df_out)
 }

@@ -185,7 +185,11 @@ def run_script(repetitions, data_dir, init_dir, multiprocess, debug):
 
     # Initialise a model (MirosimInit init is a child of Microsim)
     m = MicrosimInit(msoa_danger=msoa_danger, cases=cases, results_dir=results_dir,
-                     study_msoas=list(devon_msoas.Code), data_dir=data_dir, output=False, debug=debug)  # These are for the parent Microsim object
+                     # These are for the parent Microsim object
+                     study_msoas=list(devon_msoas.Code), data_dir=data_dir, output=False, debug=debug,
+                     # TODO Since implementing this we have the disease status stuff working. Check that deactivating it works.
+                     disable_disease_status=True # Turn off disease status calculation as we want to run it without this
+                     )
 
     # Find a new directory for this initialisation (may have old ones)
     i = 0
