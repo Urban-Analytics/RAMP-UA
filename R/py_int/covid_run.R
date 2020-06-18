@@ -168,7 +168,7 @@ run_status <- function(pop, timestep=1) {
     tmp3 <- df_out$disease_status
     tmp4 <- unique(df_msoa$new_beta0)
     stat <<- cbind(stat,tmp3)
-    nb0 <<- cbind(nbo, tmp4)
+    nb0 <<- cbind(nb0, tmp4)
   }
   #ncase <- as.data.frame(ncase)
   write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
