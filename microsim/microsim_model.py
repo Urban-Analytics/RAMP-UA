@@ -194,6 +194,9 @@ class Microsim:
         # Generate travel time columns and assign travel modes to some kind of risky activity (not doing this yet)
         #self.individuals = Microsim.generate_travel_time_colums(self.individuals)
         # One thing we do need to do (this would be done in the function) is replace NaNs in the time use data with 0
+        #for col in ["punknown", "phome", "pworkhome", "pwork", "_pschool", "pshop", "pservices", "pleisure",
+        #            "pescort", "ptransport", "pnothome", "phometot", "pmwalk", "pmcycle", "pmprivate",
+        #            "pmpublic", "pmunknown"]:
         for col in ["pwork", "_pschool", "pshop", "pleisure", "ptransport", "pother"]:
             self.individuals[col].fillna(0, inplace=True)
 
@@ -229,8 +232,8 @@ class Microsim:
 
         # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go
         # to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
-        # Occupation is taken from column soc2010b in individuals df
-        possible_jobs = sorted(self.individuals.soc2010b.unique())  # list of possible jobs in alphabetical order
+        # Occupation is taken from column soc2010 in individuals df
+        possible_jobs = sorted(self.individuals.soc2010.unique())  # list of possible jobs in alphabetical order
         workplaces = pd.DataFrame({'ID': range(0, 0+len(possible_jobs))})  # df with all possible 'virtual offices'
         Microsim._add_location_columns(workplaces, location_names=possible_jobs)
         work_name = "Work"
@@ -717,7 +720,11 @@ class Microsim:
         tuh[venues_col] = tuh["House_ID"].apply(lambda x: [x])
         tuh[flows_col] = [[1.0]] * len(tuh)
 
-        print("... finished reading TU&H data.")
+        # Later we also record the individual risks for each activity per individual. It's nice if the columns for
+        # each activity are grouped together, so create that column now.
+        tuh[f"{home_name}{ColumnNames.ACTIVITY_RISK}"] = [-1] * len(tuh)
+
+        print(f"... finished reading TU&H data. Now there are {len(tuh)} individuals in {len(households_df)} houses")
 
         return tuh, households_df
 
@@ -926,11 +933,14 @@ class Microsim:
         # Need to do the flows in venues in 2 stages: first just add the venue, then turn that venu into a single-element
         # list (pandas complains about 'TypeError: unhashable type: 'list'' if you try to make the single-item lists
         # directly in the apply
-        venues = list(individuals["soc2010b"].apply(
+        venues = list(individuals["soc2010"].apply(
             lambda job: workplaces.index[workplaces["Location_Name"] == job].values[0] ) )
         venues = [ [x] for x in venues]
         individuals[venues_col] = venues
         individuals[flows_col] = [[1.0] for _ in range(len(individuals))] # Flows are easy, [1.0] to the single work venue
+        # Later we also record the individual risks for each activity per individual. It's nice if the columns for
+        # each activity are grouped together, so create that column now.
+        individuals[f"{flow_type}{ColumnNames.ACTIVITY_RISK}"] = [-1] * len(individuals)
         return individuals
 
     @classmethod
@@ -1115,6 +1125,10 @@ class Microsim:
         individuals[venues_col] = [[] for _ in range(len(individuals))]
         individuals[flows_col] = [[] for _ in range(len(individuals))]
 
+        # Later we also record the individual risks for each activity per individual. It's nice if the columns for
+        # each activity are grouped together, so create that column now.
+        individuals[f"{flow_type}{ColumnNames.ACTIVITY_RISK}"] = [-1] * len(individuals)
+
         # Use a hierarchical index on the Area to speed up finding all individuals in an area
         # (not sure this makes much difference).
         individuals.set_index(["Area", "ID"], inplace=True, drop=False)
@@ -1210,8 +1224,13 @@ class Microsim:
                 loc_name = activity.get_name()  # retail, school etc
                 loc_ids = activity.get_ids()  # List of the IDs of the locations
                 loc_dangers = activity.get_dangers()  # List of the current dangers
-                self.activities_to_pickle[loc_name] = pd.DataFrame(
-                    list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
+                # XXXX HERE CREATE NEW DATAFRAME FROM PREVIOUS ONE AND ADD Danger0 Column
+                self.activities_to_pickle[loc_name] = activity.get_dataframe_copy()
+                self.activities_to_pickle[loc_name]['Danger0'] = loc_dangers
+                assert False not in list(loc_ids == self.activities_to_pickle[loc_name]["ID"].values)
+                # Just use ID and Danger columns
+                #self.activities_to_pickle[loc_name] = pd.DataFrame(
+                #    list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
 
     @classmethod
     def add_disease_columns(cls, individuals: pd.DataFrame) -> pd.DataFrame:
@@ -1266,15 +1285,15 @@ class Microsim:
         current_risk = [0] * len(self.individuals)
 
         #for name in tqdm(self.activity_locations, desc=f"Updating dangers and risks for activity locations"):
-        for name in self.activity_locations:
+        for activty_name in self.activity_locations:
 
             #
             # ***** 1 - update dangers of each venue (infected people visitting places)
             #
 
-            print(f"\t\t{name} activity")
+            print(f"\t\t{activty_name} activity")
             # Get the details of the location activity
-            activity_location = self.activity_locations[name]  # Pointer to the ActivityLocation object
+            activity_location = self.activity_locations[activty_name]  # Pointer to the ActivityLocation object
             # Create a list to store the dangers associated with each location for this activity.
             # Assume 0 initially, it should be reset each day
             loc_dangers = [0] * len(activity_location.get_dangers())
@@ -1282,9 +1301,9 @@ class Microsim:
 
 
             # Now look up those venues in the table of individuals
-            venues_col = f"{name}{ColumnNames.ACTIVITY_VENUES}" # The names of the venues and
-            flows_col = f"{name}{ColumnNames.ACTIVITY_FLOWS}"   # flows in the individuals DataFrame
-            durations_col = f"{name}{ColumnNames.ACTIVITY_DURATION}"   # flows in the individuals DataFrame
+            venues_col = f"{activty_name}{ColumnNames.ACTIVITY_VENUES}" # The names of the venues and
+            flows_col = f"{activty_name}{ColumnNames.ACTIVITY_FLOWS}"   # flows in the individuals DataFrame
+            durations_col = f"{activty_name}{ColumnNames.ACTIVITY_DURATION}"   # flows in the individuals DataFrame
 
             # 2D lists, for each individual: the venues they visit, the flows to the venue (i.e. how much they visit it)
             # and the durations (how long they spend doing it)
@@ -1301,7 +1320,7 @@ class Microsim:
                         # Increase the danger by the flow multiplied by some disease risk
                         danger_increase = (flow * duration * self.risk_multiplier)
                         warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
-                        if name == "Work":
+                        if activty_name == "Work":
                             work_danger = float(danger_increase / 1500)
                             loc_dangers[venue_idx] += work_danger
                         else:
@@ -1312,21 +1331,35 @@ class Microsim:
             # ***** 2 - risks for individuals who visit dangerous venues
             #
 
+            # It's useful to report the specific risks associated with *this* activity for each individual
+            activity_specific_risk = [0] * len(self.individuals)
+
             for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)):  # For each individual
                 # v and f are lists of flows and venues for the individual. Go through each one
                 for venue_idx, flow in zip(v, f):
                     #  Danger associated with the location (we just created these updated dangers in the previous loop)
                     danger = loc_dangers[venue_idx]
                     current_risk[i] += (flow * danger * duration * self.danger_multiplier)
+                    activity_specific_risk[i] += (flow * danger * duration * self.danger_multiplier)
+
+            # Remember the risk for this activity
+            self.individuals[f"{activty_name}{ColumnNames.ACTIVITY_RISK}"] = activity_specific_risk
 
             # Now we have the dangers associated with each location, apply these back to the main dataframe
-            if decimals is not None: # Round the dangers?
+            if decimals is not None:  # Round the dangers?
                 loc_dangers = [round(x, decimals) for x in loc_dangers]
             activity_location.update_dangers(loc_dangers)
 
         # Sanity check
         assert len(current_risk) == len(self.individuals)
         assert min(current_risk) >= 0  # Should not be risk less than 0
+        # Santity check - do the risks of each activity add up to the total?
+        if True: # replace with self.debug
+            total_risk = [0.0] * len(self.individuals)
+            for activty_name in self.activity_locations:
+                total_risk = [i + j for (i, j) in zip(total_risk, list(self.individuals[f"{activty_name}{ColumnNames.ACTIVITY_RISK}"]))]
+            assert current_risk == total_risk
+
 
         # Round the current risks?
         if decimals is not None:
@@ -1417,8 +1450,10 @@ class Microsim:
         # at this point the Microsim object will be in its own process
         if not self.disable_disease_status:
             self.r_int = RInterface(self.r_script_dir)
+
         # Step the model
         for i in range(iterations):
+            iter_start_time = time.time()  # time how long each iteration takes (for info)
             self.step()
 
             # Add to items to pickle for visualisations
@@ -1435,7 +1470,7 @@ class Microsim:
                     # Get the details of the location activity
                     activity = self.activity_locations[name]  # Pointer to the ActivityLocation object
                     loc_name = activity.get_name()  # retail, school etc
-                    loc_ids = activity.get_ids()  # List of the IDs of the locations
+                    #loc_ids = activity.get_ids()  # List of the IDs of the locations
                     loc_dangers = activity.get_dangers()  # List of the current dangers
                     # Add a new danger column to the previous dataframe
                     self.activities_to_pickle[loc_name][f"{ColumnNames.LOCATION_DANGER}{(i + 1):03d}"] = loc_dangers
@@ -1446,6 +1481,8 @@ class Microsim:
                     # Also make a (compressed) csv file for others
                     self.activities_to_pickle[loc_name].to_csv(fname+".csv.gz", compression='gzip')
                     #self.activities_to_pickle[loc_name].to_csv(fname+".csv")  # They not so big so don't compress
+
+            print(f"\tIteration {i} took {round(float(time.time() - iter_start_time), 2)}s")
 
 
 # ********
