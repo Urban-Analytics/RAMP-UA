@@ -2,6 +2,7 @@ library(tidyr)
 library(janitor)
 library(readr)
 library(mixdist)
+library(dplyr)
 #library(arrow)
 #library(dplyr)
 #library(ggplot2)
@@ -34,12 +35,13 @@ run_status <- function(pop, timestep=1) {
   
   print(paste("R timestep:", timestep))
   
-  #if(sum(pop$disease_status) == 0){
+  #pop <- read.csv("input_pop_01.csv") 
   if(timestep==1){
-      seeds <- sample(1:nrow(pop), size = 20)
+      seeds <- sample(1:nrow(pop), size = new_cases[timestep])
     pop$disease_status[seeds] <- 1
   }
   
+  write.csv(pop, paste0("input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
   population <- clean_names(pop)
   
   num_sample <- nrow(population)
@@ -125,12 +127,18 @@ run_status <- function(pop, timestep=1) {
     }
   }
   
+  if (timestep > 1){
+    
   df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE)
   print("probabilities calculated")
   df_prob_opt <- new_beta0_probs(df_prob, daily_case = new_cases[timestep])
   df_ass <- case_assign(df = df_prob_opt, with_optimiser = TRUE,timestep=timestep,tmp.dir=tmp.dir, 
                         save_output = FALSE)
   print("cases assigned")
+  } else {
+    df_ass <- df_msoa
+  }
+  
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
                              presymp_mean = 6.4,
