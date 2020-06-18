@@ -66,6 +66,13 @@ class ActivityLocation():
         """
         return list(self._locations.index)
 
+    def get_dataframe_copy(self) -> pd.DataFrame:
+        """
+        Get a copy of the dataframe that underpins this ActivityLocation
+        :return:
+        """
+        return self._locations.copy()
+
     def get_ids(self) -> List[int]:
         """Retrn the IDs of each destination.
         Shouldn't need to know these. Use get_dangers or update_dangers instead"""

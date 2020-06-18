@@ -22,9 +22,14 @@
 # calculate the probability of becoming infect
 # requires a dataframe list, a vector of betas, and a timestep
 
-covid_prob <- function(df, betas, interaction_terms = NULL) {
+covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, 
+                       risk_cap_val=100, include_age_sex = FALSE) {
   #print("assign probabilities")
-
+  
+  if(risk_cap==TRUE){
+    df$current_risk[df$current_risk>risk_cap_val] <- risk_cap_val
+  }
+  
   beta_names <- names(betas)
   
   if (all(!beta_names %in% names(df))) {
@@ -45,12 +50,20 @@ covid_prob <- function(df, betas, interaction_terms = NULL) {
     beta_out_sums <- 0
   }
   
-  if (length(interaction_terms) > 0 ){
-    lpsi <- df$beta0 + df$as_risk + beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
+  if(include_age_sex){
+    if (length(interaction_terms) > 0 ){
+      lpsi <- df$beta0 + df$as_risk + beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
+    } else{
+      lpsi <- df$beta0 + df$as_risk + beta_out_sums
+    }
   } else{
-    lpsi <- df$beta0 + df$as_risk + beta_out_sums
+    if (length(interaction_terms) > 0 ){
+      lpsi <- df$beta0 +  beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
+    } else{
+      lpsi <- df$beta0 + beta_out_sums
+    }
   }
- 
+  
   psi <- exp(lpsi) / (exp(lpsi) + 1)
   psi[df$status %in% c(3,4)] <- 0 # if they are not susceptible then their probability is 0 of getting it 
   psi[df$status %in% c(1,2)] <- 1 # this makes keeping track of who has it easier
@@ -62,7 +75,7 @@ covid_prob <- function(df, betas, interaction_terms = NULL) {
 
 #########################################
 # assigns covid based on probabilities
-case_assign <- function(df, with_optimiser = FALSE) {
+case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir) {
   #print("assign cases")
   
   susceptible <- which(df$status == 0)
@@ -78,17 +91,62 @@ case_assign <- function(df, with_optimiser = FALSE) {
                                          prob = df$probability[susceptible])
   }
   
+  #if(file.exists("new_cases.csv")==FALSE) {
+  #  ncase <- sum(df$new_status[susceptible])
+  #} else {
+  #  ncase <- read.csv("new_cases.csv")
+  #  ncase$X <- NULL
+  #  tmp <- sum(df$new_status[susceptible])
+  #  ncase <- rbind(ncase,tmp)
+  #  rownames(ncase) <- seq(1,nrow(ncase))
+  #}
+  #ncase <- as.data.frame(ncase)
+  #write.csv(ncase, "new_cases.csv")
+  
+  if(timestep==1) {
+    nsus <<- length(susceptible)
+    prob <<- df$probability
+    current_risk <<- df$current_risk
+    dir.create(tmp.dir)
+  } else {
+    tmp <- length(susceptible)
+    nsus <<- rbind(nsus,tmp)
+    rownames(nsus) <<- seq(1,nrow(nsus))
+    prob.tmp <<- df$probability
+    prob <<- cbind(prob,prob.tmp)
+    risk.tmp <<- df$current_risk
+    current_risk <<- cbind(current_risk,risk.tmp)
+  }
+  #ncase <- as.data.frame(ncase)
+  write.csv(nsus, paste(tmp.dir,"/susceptible_cases.csv",sep=""))
+  write.csv(prob, paste(tmp.dir,"/probability.csv",sep=""))
+  write.csv(current_risk, paste(tmp.dir,"/risk.csv",sep=""))
+  
   return(df)
 }
 
 
 #########################################
 # calculate the infection length of new cases
-infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,presymp_sd = NULL,infection_dist = "normal", infection_mean = NULL, infection_sd = NULL){
+infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,presymp_sd = NULL,
+                             infection_dist = "normal", infection_mean = NULL, infection_sd = NULL,
+                             timestep,tmp.dir){
   
   susceptible <- which(df$status == 0)
   
-  new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
+  new_cases <- which((df$new_status-df$status==1) & df$status == 0)
+  
+  if(timestep==1) {
+    ncase <<- length(new_cases)
+  } else {
+    tmp2 <- length(new_cases)
+    ncase <<- rbind(ncase,tmp2)
+    rownames(ncase) <<- seq(1,nrow(ncase))
+  }
+  #ncase <- as.data.frame(ncase)
+  write.csv(ncase, paste(tmp.dir,"/new_cases.csv",sep=""))
+
+  #new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
   
   if (presymp_dist == "weibull"){
     wpar <- mixdist::weibullpar(mu = presymp_mean, sigma = presymp_sd, loc = 0) 
@@ -98,12 +156,14 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
   if (infection_dist == "normal"){
     df$symp_days[new_cases] <- round(rnorm(1:length(new_cases), mean = infection_mean, sd = infection_sd))
   }
-
+  
+  
+  
   #switching people from being pre symptomatic to symptomatic and infected
-  becoming_sympt <- which(df$new_status == 1 & df$presymp_days == 0)
+  becoming_sympt <- which((df$status == 1 | df$new_status == 1) & df$presymp_days == 0) ### maybe should be status rather than new_status
   df$new_status[becoming_sympt] <- 2
   
- return(df)
+  return(df)
 }
 
 
@@ -116,7 +176,7 @@ removed <- function(df, chance_recovery = 0.95){
   df$new_status[removed_cases] <- 3 + rbinom(n = length(removed_cases),
                                              size = 1,
                                              prob = (1-chance_recovery))
- 
+  
   df$symp_days[removed_cases] <- 0
   df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] <- df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] - 1
   df$symp_days[df$new_status == 2 & df$symp_days > 0] <- df$symp_days[df$new_status == 2 & df$symp_days>0] - 1

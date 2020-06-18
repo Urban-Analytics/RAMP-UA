@@ -12,10 +12,10 @@ dependencies:
   - bokeh=2.0.2=py37_0
   - bwidget=1.9.11=1
   - bzip2=1.0.8=h1de35cc_0
-  - ca-certificates=2020.4.5.2=hecda079_0
+  - ca-certificates=2020.1.1=0
   - cairo=1.14.12=hc4e6be7_4
   - cctools=927.0.2=h5ba7a2e_4
-  - certifi=2020.4.5.2=py37hc8dfbb8_0
+  - certifi=2020.4.5.1=py37_0
   - cffi=1.14.0=py37h356ff06_0
   - clang=10.0.0=default_hf57f61e_0
   - clang_osx-64=10.0.0=h05bbb7f_1
@@ -107,7 +107,7 @@ dependencies:
   - numpy-base=1.18.1=py37h3304bdc_1
   - olefile=0.46=py37_0
   - openjdk=8.0.152=h1de35cc_3
-  - openssl=1.1.1g=h0b31af3_0
+  - openssl=1.1.1g=h1de35cc_0
   - packaging=20.3=py_0
   - pandas=1.0.3=py37h6c726b0_0
   - pandoc=2.2.3.2=0
