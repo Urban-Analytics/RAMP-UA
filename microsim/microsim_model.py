@@ -1269,7 +1269,7 @@ class Microsim:
 
 
 
-    def update_venue_danger_and_risks(self, decimals=10):
+    def update_venue_danger_and_risks(self, decimals=8):
         """
         Update the danger score for each location, based on where the individuals who have the infection visit.
         Then look through the individuals again, assigning some of that danger back to them as 'current risk'.
@@ -1342,7 +1342,9 @@ class Microsim:
                     current_risk[i] += (flow * danger * duration * self.danger_multiplier)
                     activity_specific_risk[i] += (flow * danger * duration * self.danger_multiplier)
 
-            # Remember the risk for this activity
+            # Remember the (rounded) risk for this activity
+            if decimals is not None:
+                activity_specific_risk = [round(x, decimals) for x in activity_specific_risk]
             self.individuals[f"{activty_name}{ColumnNames.ACTIVITY_RISK}"] = activity_specific_risk
 
             # Now we have the dangers associated with each location, apply these back to the main dataframe
@@ -1350,20 +1352,23 @@ class Microsim:
                 loc_dangers = [round(x, decimals) for x in loc_dangers]
             activity_location.update_dangers(loc_dangers)
 
+        # Round the current risk
+        if decimals is not None:
+            current_risk = [round(x, decimals) for x in current_risk]
+
         # Sanity check
         assert len(current_risk) == len(self.individuals)
         assert min(current_risk) >= 0  # Should not be risk less than 0
         # Santity check - do the risks of each activity add up to the total?
-        if True: # replace with self.debug
+        if Microsim.debug: # replace with self.debug
             total_risk = [0.0] * len(self.individuals)
             for activty_name in self.activity_locations:
                 total_risk = [i + j for (i, j) in zip(total_risk, list(self.individuals[f"{activty_name}{ColumnNames.ACTIVITY_RISK}"]))]
-            assert current_risk == total_risk
-
-
-        # Round the current risks?
-        if decimals is not None:
-            current_risk = [round(x, decimals) for x in current_risk]
+            #assert current_risk == total_risk
+            if decimals is not None:  # Both lists need to be rounded
+                total_risk = [round(x, decimals) for x in total_risk]
+            if current_risk != total_risk:
+                x=1# BREAK
 
         self.individuals[ColumnNames.CURRENT_RISK] = current_risk
 
