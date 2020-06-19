@@ -145,21 +145,23 @@ rank_assign <- function(df, daily_case , timestep){
 # calculate the infection length of new cases
 infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,presymp_sd = NULL,
                              infection_dist = "normal", infection_mean = NULL, infection_sd = NULL,
-                             timestep,tmp.dir){
+                             timestep,tmp.dir, save_output = TRUE){
   
   susceptible <- which(df$status == 0)
   
   new_cases <- which((df$new_status-df$status==1) & df$status == 0)
   
-  if(timestep==1) {
-    ncase <<- length(new_cases)
-  } else {
-    tmp2 <- length(new_cases)
-    ncase <<- rbind(ncase,tmp2)
-    rownames(ncase) <<- seq(1,nrow(ncase))
+  if (save_output == TRUE){
+    if(timestep==1) {
+      ncase <<- length(new_cases)
+    } else {
+      tmp2 <- length(new_cases)
+      ncase <<- rbind(ncase,tmp2)
+      rownames(ncase) <<- seq(1,nrow(ncase))
+    }
+    #ncase <- as.data.frame(ncase)
+    write.csv(ncase, paste(tmp.dir,"/new_cases.csv",sep=""))
   }
-  #ncase <- as.data.frame(ncase)
-  write.csv(ncase, paste(tmp.dir,"/new_cases.csv",sep=""))
 
   #new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
   
