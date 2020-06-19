@@ -29,6 +29,7 @@ new_cases <- diff(devon_cases$cumulative_cases)
 new_cases[new_cases == 0]<-1
 new_cases <- new_cases*20
 
+w <- NULL
 run_status <- function(pop, timestep=1) {
   
   print(paste("R timestep:", timestep))
@@ -39,7 +40,7 @@ run_status <- function(pop, timestep=1) {
   #   pop$disease_status[seeds] <- 1
   # }
   
-# write.csv(pop, paste0("input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
+ write.csv(pop, paste0("input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
   population <- clean_names(pop)
   
   num_sample <- nrow(population)
@@ -130,6 +131,14 @@ run_status <- function(pop, timestep=1) {
   df_prob_opt <- new_beta0_probs(df = df_prob, daily_case = new_cases[timestep])
   df_ass <- case_assign(df = df_prob_opt, with_optimiser = FALSE,timestep=timestep,tmp.dir=tmp.dir, 
                         save_output = FALSE)
+  
+  w[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))/new_cases[timestep]
+  print(paste0("w is ", w[timestep]))
+  
+  if(round(w[timestep],2) != 1){
+    df_ass <- rank_assign(df = df_prob_opt, daily_case = new_cases[timestep], timestep=timestep)
+  }
+    
   print("cases assigned")
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
