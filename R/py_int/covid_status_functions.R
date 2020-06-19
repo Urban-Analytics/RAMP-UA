@@ -128,6 +128,18 @@ case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir, save_output
   return(df)
 }
 
+rank_assign <- function(df, daily_case , timestep){
+  
+  dfw <- data.frame(id = df$id, current_risk = df$current_risk, status = df$status)
+  dfw <- dfw[dfw$status == 0,]
+  rank_inf <- dfw[order(-dfw$current_risk),][1:daily_case,"id"]
+  inf_ind <- which(df$id$id %in% rank_inf)
+  df$new_status[inf_ind] <- 1 
+  return(df)
+}
+
+
+
 
 #########################################
 # calculate the infection length of new cases
