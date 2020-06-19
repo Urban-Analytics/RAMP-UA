@@ -23,7 +23,7 @@ library(dplyr)
 #beta1 <- current_risk /  danger <- 0.55
 #pop <- read.csv("~/Downloads/input_population100917.csv")
 
-devon_cases <- readRDS("data/devon_cases.RDS")
+devon_cases <- readRDS(paste0(getwd(),"/devon_cases.RDS"))
 devon_cases$cumulative_cases[84] <- 812 #type here I think
 new_cases <- diff(devon_cases$cumulative_cases)
 new_cases[new_cases == 0]<-1
