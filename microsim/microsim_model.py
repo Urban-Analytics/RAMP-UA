@@ -257,6 +257,12 @@ class Microsim:
         #finally:
         #    pool.close()  # Make sure the child processes are killed even if there is an exception
 
+        # Now that we have everone's initial activities, remember the proportions of times that they spend doing things
+        # so that if these change (e.g. under lockdown) they can return to 'normality' later
+        for activity_name in self.activity_locations.keys():
+            self.individuals[f"{activity_name}{ColumnNames.ACTIVITY_DURATION_INITIAL}"] = \
+                self.individuals[f"{activity_name}{ColumnNames.ACTIVITY_DURATION}"]
+
 
         # Add some necessary columns for the disease
         self.individuals = Microsim.add_disease_columns(self.individuals)
@@ -1409,6 +1415,15 @@ class Microsim:
         # Calculate the new status (will return a new dataframe)
         self.individuals = self.r_int.calculate_disease_status(self.individuals, self.iteration)
 
+    def change_behaviour_with_disease(self) -> None:
+        """
+        When people have the disease the proportions that they spend doing activities changes. This function applies
+        those changes inline to the individuals dataframe
+        :return: None. Update the dataframe inplace
+        """
+        XXXX
+
+
     @staticmethod
     def _make_a_copy(m):
         """
@@ -1440,9 +1455,11 @@ class Microsim:
         # Update disease counters. E.g. count diseases in MSOAs & households
         self.update_disease_counts()
 
-        # Calculate new disease status
+        # Calculate new disease status and update the people's behaviour
         if not self.disable_disease_status:
             self.calculate_new_disease_status()
+            self.change_behaviour_with_disease()
+
 
     def run(self, iterations: int) -> None:
         """

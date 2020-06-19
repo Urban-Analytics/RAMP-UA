@@ -7,10 +7,9 @@ class ColumnNames:
 
     ACTIVITY_VENUES = "_Venues"  # Venues an individual may visit. Appended to activity type, e.g. 'Retail_Venues'
     ACTIVITY_FLOWS = "_Flows"  # Flows to a venue for an individual. Appended to activity type, e.g. 'Retail_Flows'
-    ACTIVITY_TIME = "_Time"  # Amount of time an individual spends doing an activity. E.g. 'Retail_Time'
     ACTIVITY_RISK = "_Risk"  # Risk associated with a particular activity for each individual. E.g. 'Retail_Risk'
-
     ACTIVITY_DURATION = "_Duration" # Column to record proportion of the day that invividuals do the activity
+    ACTIVITY_DURATION_INITIAL = "_Duration_Initial"  # Amount of time on the activity at the start (might change)
 
     # Standard columns for time spent travelling in different modes
     TRAVEL_CAR = "Car"
