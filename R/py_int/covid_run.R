@@ -35,9 +35,10 @@ run_status <- function(pop, timestep=1) {
   
   opt_switch <- FALSE
   output_switch <- TRUE
-  log_risk <- TRUE
-  beta0_fixed <- -11
-  current_risk <- 5 #0.55 #1.5 #0.55
+  log_risk <- FALSE
+  logistic_risk <- TRUE
+  beta0_fixed <- -12
+  current_risk <- 10 #0.55 #1.5 #0.55
   
   print(paste("R timestep:", timestep))
   
@@ -48,7 +49,7 @@ run_status <- function(pop, timestep=1) {
   # }
   
   #print("f")
-
+  
   
   if(output_switch==TRUE) {
     if(timestep==1) {
@@ -63,6 +64,10 @@ run_status <- function(pop, timestep=1) {
   population <- clean_names(pop)
   
   if(log_risk==TRUE) {
+    population$current_risk <- log(population$current_risk)
+  }
+  
+  if(logistic_risk==TRUE) {
     population$current_risk <- exp(population$current_risk) / (exp(population$current_risk) + 1)
   }
   
