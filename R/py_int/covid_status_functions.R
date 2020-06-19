@@ -240,7 +240,7 @@ new_beta0_probs <- function(df, daily_case){
   susceptible <- which(df$status == 0)
   
   new_beta0 <- optim(par = -1, beta0_optim,  n = length(susceptible), betaX=df$betaxs[susceptible], Y=daily_case, 
-                     method="Brent",  lower  =-30, upper = 0)$par
+                     method="Brent",  lower =-30, upper = 0)$par
   
   df$new_beta0 <- new_beta0
   tot_risk_new <- df$new_beta0  + df$betaxs
