@@ -33,13 +33,44 @@ w <- NULL
 
 run_status <- function(pop, timestep=1) {
   
+  opt_switch <- FALSE
+  output_switch <- TRUE
+  log_risk <- FALSE
+  logistic_risk <- TRUE
+  beta0_fixed <- -12
+  current_risk <- 10 #0.55 #1.5 #0.55
+  rank_assign <- TRUE
+  
   print(paste("R timestep:", timestep))
   
-
-
+  #pop <- vroom::vroom("R/py_int/input_pop_02.csv")
+  # if(timestep==1){
+  #     seeds <- sample(1:nrow(pop), size = new_cases[timestep])
+  #   pop$disease_status[seeds] <- 1
+  # }
   
-# write.csv(pop,)
+  #print("f")
+  
+  
+  if(output_switch==TRUE) {
+    if(timestep==1) {
+      tmp.dir <<- paste(getwd(),"/output/",Sys.time(),sep="")
+      if(!dir.exists(tmp.dir)){
+        dir.create(tmp.dir, recursive = TRUE)
+      }
+    }
+    write.csv(pop, paste0(tmp.dir,"/input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
+  }
+
   population <- clean_names(pop)
+  
+  if(log_risk==TRUE) {
+    population$current_risk <- log(population$current_risk)
+  }
+  
+  if(logistic_risk==TRUE) {
+    population$current_risk <- exp(population$current_risk) / (exp(population$current_risk) + 1)
+  }
   
   num_sample <- nrow(population)
   
@@ -90,16 +121,15 @@ run_status <- function(pop, timestep=1) {
                           id = id,
                           age = age, 
                           sex = sex, 
-                          beta0_fixed = -10, #0.19, #-9.5, 
+                          beta0_fixed = beta0_fixed, #-9, #0.19, #-9.5,
                           divider = 4)  # adding in the age/sex betas 
   
   #print("e")
   
-  pnothome <-  0.25 #0.35
-  connectivity_index <- 0.25#0.3 doesn't work
-  log_pop_dens <- 0#0.2#0.4#0.3 #0.175
-  cases_per_area <- 10 #2.5
-  current_risk <- 0.55#1.5 #0.55
+  #pnothome <-  0.25 #0.35
+  #connectivity_index <- 0.25#0.3 doesn't work
+  #log_pop_dens <- 0#0.2#0.4#0.3 #0.175
+  #cases_per_area <- 10 #2.5
   
   origin <- factor(c(0,0,0,0,0))
   names(origin) <- c("1", "2", "3", "4", "5") #1 = white, 2 = black, 3 = asian, 4 = mixed, 5 = other
@@ -108,7 +138,7 @@ run_status <- function(pop, timestep=1) {
   underlining <- factor(c(0,0))
   names(underlining) <- c("0","1") #1 = has underlying health conditions
   hid_infected <- 0
-
+  
   ### any betas included must link to columns/data.frames in df_in 
   
   other_betas <- list(current_risk = current_risk)
@@ -116,13 +146,7 @@ run_status <- function(pop, timestep=1) {
   df_msoa <- df_in
   df_risk <- list()
   
-  #print("f")
-  if(timestep==1) {
-    tmp.dir <<- paste(getwd(),"/output/",Sys.time(),sep="")
-    if(!dir.exists(tmp.dir)){
-      dir.create(tmp.dir, recursive = TRUE)
-    }
-  }
+  
   
   if(timestep==1){
     seeds <- sample(1:nrow(pop), size = new_cases[timestep])
@@ -131,10 +155,15 @@ run_status <- function(pop, timestep=1) {
   
   df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE)
   print("probabilities calculated")
- # df_prob_opt <- new_beta0_probs(df = df_prob, daily_case = new_cases[timestep])
+ 
+  if(opt_switch==TRUE) {
+    df_prob <- new_beta0_probs(df = df_prob, daily_case = new_cases[timestep])
+  }
+  
+
   if(timestep > 1){
-    df_ass <- case_assign(df = df_prob, with_optimiser = FALSE,timestep=timestep,tmp.dir=tmp.dir, 
-                          save_output = FALSE)
+    df_ass <- case_assign(df = df_prob, with_optimiser = opt_switch, timestep=timestep,
+                          tmp.dir=tmp.dir, save_output = output_switch)
   } else {
     df_ass <- df_prob
   }
@@ -143,11 +172,15 @@ run_status <- function(pop, timestep=1) {
   w[1] <- 1
   print(paste0("w is ", w[timestep]))
   
-  if(timestep > 1 & round(w[timestep],2) != 1){
-    df_ass <- rank_assign(df = df_prob, daily_case = new_cases[timestep], timestep=timestep)
+  if(rank_assign == TRUE){
+    if(timestep > 1 & round(w[timestep],2) != 1){
+      df_ass <- rank_assign(df = df_prob, daily_case = new_cases[timestep], timestep=timestep)
+    }
   }
+
     
   print("cases assigned")
+  
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
                              presymp_mean = 6.4,
@@ -156,10 +189,13 @@ run_status <- function(pop, timestep=1) {
                              infection_mean =  14,
                              infection_sd = 2,
                              timestep=timestep,
-                             tmp.dir=tmp.dir)
+                             tmp.dir=tmp.dir,
+                             save_output = output_switch)
   print("infection and recovery lengths assigned")
+  
   df_rec <- removed(df = df_inf, chance_recovery = 0.95)
   print("recoveries and deaths assigned")
+  
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
   
   #print("h")
@@ -176,22 +212,23 @@ run_status <- function(pop, timestep=1) {
   
   #print("new disease status calculated")
   
-  if(timestep==1) {
-    stat <<- df_out$disease_status
-    nb0 <<- unique(df_msoa$new_beta0)
-    wo <<- w[timestep[1]]
-  } else {
-    tmp3 <- df_out$disease_status
-    tmp4 <- unique(df_msoa$new_beta0)
-    stat <<- cbind(stat,tmp3)
-    nb0 <<- cbind(nb0, tmp4)
-    wo <<- rbind(wo, w[timestep])
+  if(output_switch==TRUE) {
+    if(timestep==1) {
+      stat <<- df_out$disease_status
+      nb0 <<- unique(df_msoa$new_beta0)
+      wo <<- w[timestep[1]]
+    } else {
+      tmp3 <- df_out$disease_status
+      tmp4 <- unique(df_msoa$new_beta0)
+      stat <<- cbind(stat,tmp3)
+      nb0 <<- cbind(nb0, tmp4)
+      wo <<- rbind(wo, w[timestep])
+    }
+    #ncase <- as.data.frame(ncase)
+    write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
+    write.csv(nb0, paste(tmp.dir,"/optim_b0.csv",sep=""))
+    write.csv(wo, paste(tmp.dir,"/w_out.csv",sep=""))
   }
-  #ncase <- as.data.frame(ncase)
-  write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
-  write.csv(nb0, paste(tmp.dir,"/optim_b0.csv",sep=""))
-  write.csv(wo, paste(tmp.dir,"/w_out.csv",sep=""))
-  write.csv(pop,  paste0(tmp.dir,"/input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
   
   return(df_out)
 }
