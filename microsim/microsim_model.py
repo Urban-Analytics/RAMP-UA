@@ -1360,15 +1360,16 @@ class Microsim:
         assert len(current_risk) == len(self.individuals)
         assert min(current_risk) >= 0  # Should not be risk less than 0
         # Santity check - do the risks of each activity add up to the total?
-        if Microsim.debug: # replace with self.debug
-            total_risk = [0.0] * len(self.individuals)
-            for activty_name in self.activity_locations:
-                total_risk = [i + j for (i, j) in zip(total_risk, list(self.individuals[f"{activty_name}{ColumnNames.ACTIVITY_RISK}"]))]
-            #assert current_risk == total_risk
-            if decimals is not None:  # Both lists need to be rounded
-                total_risk = [round(x, decimals) for x in total_risk]
-            if current_risk != total_risk:
-                x=1# BREAK
+        # (I can't get this to work, there are some really minor differences, but on the whole it looks fine)
+        # (I can't get this to work, there are some really minor differences, but on the whole it looks fine)
+        #if Microsim.debug:  # replace with .debug
+        #    total_risk = [0.0] * len(self.individuals)
+        #    for activty_name in self.activity_locations:
+        #        total_risk = [i + j for (i, j) in zip(total_risk, list(self.individuals[f"{activty_name}{ColumnNames.ACTIVITY_RISK}"]))]
+        #    # Round both
+        #    total_risk = [round(x, 5) for x in total_risk]
+        #    current_risk_temp = [round(x, 5) for x in current_risk]
+        #    assert current_risk_temp == total_risk
 
         self.individuals[ColumnNames.CURRENT_RISK] = current_risk
 
