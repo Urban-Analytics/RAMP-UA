@@ -6,13 +6,14 @@ from microsim.microsim_model import Microsim
 from microsim.column_names import ColumnNames
 from microsim.activity_location import ActivityLocation
 
-
 # ********************************************************
 # These tests run through a whole dummy model process
 # ********************************************************
 
 # arguments used when calling the Microsim constructor. Usually these are the same
-microsim_args = {"data_dir":"./dummy_data", "r_script_dir":"./R/py_int", "testing":True, "debug":True, "disable_disease_status":True}
+microsim_args = {"data_dir": "./dummy_data", "r_script_dir": "./R/py_int", "testing": True, "debug": True,
+                 "disable_disease_status": True}
+
 
 # This 'fixture' means that other functions (e.g. step) can use the object created here.
 # Note: Don't try to run this test, it will be called when running the others that need it, like `test_step()`.
@@ -46,11 +47,11 @@ def test_microsim():
     assert False not in list(m.households.index == m.households.ID)
 
     # First two people live together in first household
-    assert list(m.individuals.loc[0:1,:][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) ==[[0], [0]]
+    assert list(m.individuals.loc[0:1, :][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) == [[0], [0]]
     # This one lives on their own in the fourth house
-    assert list(m.individuals.loc[9:9,:][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) ==[[3]]
+    assert list(m.individuals.loc[9:9, :][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) == [[3]]
     # These three live together in the last house
-    assert list(m.individuals.loc[13:15,:][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) ==[[6], [6], [6]]
+    assert list(m.individuals.loc[13:15, :][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) == [[6], [6], [6]]
 
     # Workplaces
     # All flows should be to one location (single element [1.0])
@@ -73,11 +74,11 @@ def test_microsim():
     assert len(shop_locs) == 248
     # First person has these flows and venues
     venue_ids = list(m.individuals.loc[0:0, f"Retail{ColumnNames.ACTIVITY_VENUES}"])[0]
-    #flows = list(m.individuals.loc[0:0, f"Retail{ColumnNames.ACTIVITY_FLOWS}"])[0]
+    # flows = list(m.individuals.loc[0:0, f"Retail{ColumnNames.ACTIVITY_FLOWS}"])[0]
     # These are the venues in the filename:
-    raw_venues = sorted([24,  23, 22, 21, 19, 12, 13, 25, 20, 17])
+    raw_venues = sorted([24, 23, 22, 21, 19, 12, 13, 25, 20, 17])
     # Mark counts from 1, so these should be 1 greater than the ids
-    assert [ x-1 for x in raw_venues ] == venue_ids
+    assert [x - 1 for x in raw_venues] == venue_ids
     # Check the indexes point correctly
     assert shop_locs.loc[0:0, ColumnNames.LOCATION_NAME].values[0] == "Co-op Lyme Regis"
     assert shop_locs.loc[18:18, ColumnNames.LOCATION_NAME].values[0] == "Aldi Honiton"
@@ -90,21 +91,21 @@ def test_microsim():
     assert len(secondary_locs) == 350
     assert primary_locs.equals(secondary_locs)
     # Check primary and secondary indexes point to primary and secondary schools respectively
-    for indexes in m.individuals.loc[:,f"PrimarySchool{ColumnNames.ACTIVITY_VENUES}"]:
+    for indexes in m.individuals.loc[:, f"PrimarySchool{ColumnNames.ACTIVITY_VENUES}"]:
         for index in indexes:
-            assert primary_locs.loc[index,"PhaseOfEducation_name"]=="Primary"
-    for indexes in m.individuals.loc[:,f"SecondarySchool{ColumnNames.ACTIVITY_VENUES}"]:
+            assert primary_locs.loc[index, "PhaseOfEducation_name"] == "Primary"
+    for indexes in m.individuals.loc[:, f"SecondarySchool{ColumnNames.ACTIVITY_VENUES}"]:
         for index in indexes:
-            assert secondary_locs.loc[index,"PhaseOfEducation_name"]=="Secondary"
+            assert secondary_locs.loc[index, "PhaseOfEducation_name"] == "Secondary"
 
     # First person has these flows and venues to primary school
     # (we know this because, by coincidence, the first person lives in the area that has the
     # first area name if they were ordered alphabetically)
     list(m.individuals.loc[0:0, "Area"])[0] == "E00101308"
     venue_ids = list(m.individuals.loc[0:0, f"PrimarySchool{ColumnNames.ACTIVITY_VENUES}"])[0]
-    raw_venues = sorted([12, 110, 118, 151, 163, 180, 220, 249, 280] )
+    raw_venues = sorted([12, 110, 118, 151, 163, 180, 220, 249, 280])
     # Mark counts from 1, so these should be 1 greater than the ids
-    assert [ x-1 for x in raw_venues ] == venue_ids
+    assert [x - 1 for x in raw_venues] == venue_ids
     # Check the indexes point correctly
     assert primary_locs.loc[12:12, ColumnNames.LOCATION_NAME].values[0] == "Axminster Community Primary Academy"
     assert primary_locs.loc[163:163, ColumnNames.LOCATION_NAME].values[0] == "Milton Abbot School"
@@ -114,10 +115,10 @@ def test_microsim():
     venue_ids = list(m.individuals.loc[9:9, f"SecondarySchool{ColumnNames.ACTIVITY_VENUES}"])[0]
     raw_venues = sorted([335, 346])
     # Mark counts from 1, so these should be 1 greater than the ids
-    assert [ x-1 for x in raw_venues ] == venue_ids
+    assert [x - 1 for x in raw_venues] == venue_ids
     # Check these are both secondary schools
     for idx in venue_ids:
-        assert secondary_locs.loc[idx,"PhaseOfEducation_name"] == "Secondary"
+        assert secondary_locs.loc[idx, "PhaseOfEducation_name"] == "Secondary"
     # Check the indexes point correctly
     assert secondary_locs.loc[335:335, ColumnNames.LOCATION_NAME].values[0] == "South Dartmoor Community College"
 
@@ -194,7 +195,7 @@ def test_update_disease_counts(test_microsim):
     m.individuals.loc[13, ColumnNames.DISEASE_STATUS] = 1  # Lives with 3 people
     m.individuals.loc[11, ColumnNames.DISEASE_STATUS] = 1  # | Live
     m.individuals.loc[12, ColumnNames.DISEASE_STATUS] = 1  # | Together
-    #m.individuals.loc[:, ["PID", "HID", "Area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
+    # m.individuals.loc[:, ["PID", "HID", "Area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
     m.update_disease_counts()
     # This person has the disease
     assert m.individuals.at[9, "MSOA_Cases"] == 1
@@ -208,9 +209,69 @@ def test_update_disease_counts(test_microsim):
         assert m.individuals.at[p, "MSOA_Cases"] == 2
         assert m.individuals.at[p, "HID_Cases"] == 2
 
-
     # Note: Can't fully test MSOA cases because I don't have any examples of people from different
     # households living in the same MSOA in the test data
+
+
+def test_change_behaviour_with_disease(test_microsim):
+    """Check that individuals behaviour changed correctly with the disease status"""
+    m = test_microsim  # less typing
+    # Give some people the disease (these two chosen because they both spend a bit of time in retail
+    p1 = 1
+    p2 = 6
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DISEASE_STATUS_Symptomatic  # Behaviour change
+    m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DISEASE_STATUS_PreSymptomatic  # No change
+
+    m.step()
+    m.change_behaviour_with_disease()  # (this isn't called by default when testing)
+
+    # Nothing should have happended as we hadn't indicated a change in disease status
+    for p, act in zip([p1, p1, p2, p2], ["Home", "Retail", "Home", "Retail"]):
+        assert m.individuals.loc[p, f"{act}{ColumnNames.ACTIVITY_DURATION}"] == \
+               m.individuals.loc[p, f"{act}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+
+    # Mark behaviour changed then try again
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS_CHANGED] = True
+    m.individuals.loc[p2, ColumnNames.DISEASE_STATUS_CHANGED] = True
+
+    m.step()
+    m.change_behaviour_with_disease()  # (this isn't called by default when testing)
+
+    # First person should spend more time at home and less at work
+    assert m.individuals.loc[p1, f"Retail{ColumnNames.ACTIVITY_DURATION}"] < m.individuals.loc[p1, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] > m.individuals.loc[p1, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    # Second person should be unchanged
+    assert m.individuals.loc[p2, f"Retail{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[p2, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p2, f"Home{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[p2, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+
+    # Mark behaviour changed then try again
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS_CHANGED] = True
+    m.individuals.loc[p2, ColumnNames.DISEASE_STATUS_CHANGED] = True
+
+    m.step()
+    m.change_behaviour_with_disease()  # (this isn't called by default when testing)
+
+    # First person should spend more time at home and less at work
+    assert m.individuals.loc[p1, f"Retail{ColumnNames.ACTIVITY_DURATION}"] < m.individuals.loc[
+        p1, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] > m.individuals.loc[
+        p1, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+
+    # Second person should be unchanged
+    assert m.individuals.loc[p2, f"Retail{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
+        p2, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p2, f"Home{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
+        p2, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+
+    # First person no longer infectious, behaviour should go back to normal
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DISEASE_STATUS_Recovered
+    m.step()
+    m.change_behaviour_with_disease()  # (this isn't called by default when testing)
+    assert m.individuals.loc[p1, f"Retail{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
+        p1, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
+        p1, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+
 
 
 def test_update_venue_danger_and_risks(test_microsim):
@@ -232,7 +293,7 @@ def test_step(test_microsim):
     m = test_microsim  # For less typing and so as not to interfere with other functions use test_microsim
 
     # Note: the following is a useul way to get relevant info about the individuals
-    #m.individuals.loc[:, ["ID", "PID", "HID", "Area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
+    # m.individuals.loc[:, ["ID", "PID", "HID", "Area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
 
     # Step 0 (initialisation):
 
@@ -260,7 +321,7 @@ def test_step(test_microsim):
     # Check the disease has spread to the house but nowhere else
     for p in [p1, p2]:
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 1.0
-    for p in range(2,len(m.individuals)):
+    for p in range(2, len(m.individuals)):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
     assert m.households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
     for h in range(1, len(m.households)):  # all others are 0
@@ -271,7 +332,7 @@ def test_step(test_microsim):
     # Risk and danger stay the same (it does not cumulate over days)
     for p in [p1, p2]:
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 1.0
-    for p in range(2,len(m.individuals)):
+    for p in range(2, len(m.individuals)):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
     m.households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
     for h in range(1, len(m.households)):
@@ -286,28 +347,27 @@ def test_step(test_microsim):
     for h in range(0, len(m.households)):
         assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
-
     # But if they both get sick then they should be 2.0 (double danger and risk)
     m.individuals.loc[p1:p2, ColumnNames.DISEASE_STATUS] = 1  # Give them the disease
-    m.individuals.at[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] = 1.0 # Make the duration normal again
+    m.individuals.at[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] = 1.0  # Make the duration normal again
     m.step()
     for p in [p1, p2]:
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 2.0
     assert m.households.at[0, ColumnNames.LOCATION_DANGER] == 2.0
-    for h in range(1, len(m.households)): # All other houses are danger free
+    for h in range(1, len(m.households)):  # All other houses are danger free
         m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     #
     # Now see what happens when one person gets the disease and spreads it to schools, shops and work
     #
     del p1, p2
-    p1 = 4 # The infected person is index 1
+    p1 = 4  # The infected person is index 1
     # Make everyone better except for that one person
     m.individuals[ColumnNames.DISEASE_STATUS] = 0
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = 1
     # Assign everyone equal time doing all activities
     for name, activity in m.activity_locations.items():
-        m.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 1.0/len(m.activity_locations)
+        m.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 1.0 / len(m.activity_locations)
 
     m.step()
 
@@ -316,10 +376,10 @@ def test_step(test_microsim):
     for name, activity in m.activity_locations.items():
         # Indices of the locations where this person visited
         visited_idx = m.individuals.at[p1, f"{name}{ColumnNames.ACTIVITY_VENUES}"]
-        not_visited_idx = list(set(range(len(activity._locations)))-set(visited_idx))
+        not_visited_idx = list(set(range(len(activity._locations))) - set(visited_idx))
         # Dangers should be >0.0 (or not if the person didn't visit there)
-        assert False not in list(activity._locations.loc[visited_idx, "Danger"].values > 0 )
-        assert False not in list(activity._locations.loc[not_visited_idx, "Danger"].values == 0 )
+        assert False not in list(activity._locations.loc[visited_idx, "Danger"].values > 0)
+        assert False not in list(activity._locations.loc[not_visited_idx, "Danger"].values == 0)
         # Individuals should have an associated risk
         for index, row in m.individuals.iterrows():
             for idx in visited_idx:
@@ -328,7 +388,6 @@ def test_step(test_microsim):
                     # Note: can't check if risk is equal to 0 becuase it might come from another activity
 
     print("End of test step")
-
 
 
 # ********************************************************
@@ -378,7 +437,7 @@ def test_check_study_area():
     all_msoa_list = ["C", "A", "F", "B", "D", "E"]
     individuals = pd.DataFrame(
         data={"PID": [1, 2, 3, 4, 5, 6], "HID": [1, 1, 2, 2, 2, 3], "Area": ["B", "B", "A", "A", "A", "D"],
-                "House_OA": ["B", "B", "A", "A", "A", "D"]})
+              "House_OA": ["B", "B", "A", "A", "A", "D"]})
     households = pd.DataFrame(data={"HID": [1, 2, 3], "Area": ["B", "A", "D"]})
 
     with pytest.raises(Exception):
