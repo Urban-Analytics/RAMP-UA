@@ -36,9 +36,9 @@ run_status <- function(pop, timestep=1) {
   opt_switch <- FALSE
   output_switch <- TRUE
   log_risk <- FALSE
-  logistic_risk <- TRUE
-  beta0_fixed <- -12
-  current_risk <- 10 #0.55 #1.5 #0.55
+  logistic_risk <- FALSE
+  beta0_fixed <- -10.5
+  current_risk <- 3 #0.55 #1.5 #0.55
   rank_assign <- TRUE
   
   print(paste("R timestep:", timestep))
