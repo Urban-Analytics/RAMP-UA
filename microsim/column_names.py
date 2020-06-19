@@ -7,10 +7,9 @@ class ColumnNames:
 
     ACTIVITY_VENUES = "_Venues"  # Venues an individual may visit. Appended to activity type, e.g. 'Retail_Venues'
     ACTIVITY_FLOWS = "_Flows"  # Flows to a venue for an individual. Appended to activity type, e.g. 'Retail_Flows'
-    ACTIVITY_TIME = "_Time"  # Amount of time an individual spends doing an activity. E.g. 'Retail_Time'
     ACTIVITY_RISK = "_Risk"  # Risk associated with a particular activity for each individual. E.g. 'Retail_Risk'
-
     ACTIVITY_DURATION = "_Duration" # Column to record proportion of the day that invividuals do the activity
+    ACTIVITY_DURATION_INITIAL = "_Duration_Initial"  # Amount of time on the activity at the start (might change)
 
     # Standard columns for time spent travelling in different modes
     TRAVEL_CAR = "Car"
@@ -25,12 +24,13 @@ class ColumnNames:
     # Columns for information about the disease. These are needed for estimating the disease status
 
     # Disease status is one of the following:
-    #Susceptible = 0
-    #Pre - Symptomatic = 1
-    #Symptomatic = 2
-    #Recovered = 3
-    #Removed = 4
-    DISEASE_STATUS = "disease_status"
+    DISEASE_STATUS_Susceptible = 0
+    DISEASE_STATUS_PreSymptomatic = 1
+    DISEASE_STATUS_Symptomatic = 2
+    DISEASE_STATUS_Recovered = 3
+    DISEASE_STATUS_Removed = 4
+    DISEASE_STATUS = "disease_status"  # Which one it is
+    DISEASE_STATUS_CHANGED = "status_changed"  # Whether it has changed between the current iteration and the last
     DISEASE_PRESYMP = "presymp_days"
     DISEASE_SYMP_DAYS = "symp_days"
 
