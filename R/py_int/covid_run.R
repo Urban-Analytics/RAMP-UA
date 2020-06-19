@@ -30,17 +30,18 @@ new_cases[new_cases == 0]<-1
 new_cases <- new_cases*20
 
 w <- NULL
+
 run_status <- function(pop, timestep=1) {
   
   print(paste("R timestep:", timestep))
   
 
-  # if(timestep==1){
-  #     seeds <- sample(1:nrow(pop), size = new_cases[timestep])
-  #   pop$disease_status[seeds] <- 1
-  # }
+  if(timestep==1){
+      seeds <- sample(1:nrow(pop), size = new_cases[timestep])
+    pop$disease_status[seeds] <- 1
+  }
   
- write.csv(pop, paste0("input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
+# write.csv(pop,)
   population <- clean_names(pop)
   
   num_sample <- nrow(population)
@@ -92,7 +93,7 @@ run_status <- function(pop, timestep=1) {
                           id = id,
                           age = age, 
                           sex = sex, 
-                          beta0_fixed = -8, #0.19, #-9.5, 
+                          beta0_fixed = -10.5, #0.19, #-9.5, 
                           divider = 4)  # adding in the age/sex betas 
   
   #print("e")
@@ -101,7 +102,7 @@ run_status <- function(pop, timestep=1) {
   connectivity_index <- 0.25#0.3 doesn't work
   log_pop_dens <- 0#0.2#0.4#0.3 #0.175
   cases_per_area <- 10 #2.5
-  current_risk <- 0.55#1.5 #0.55
+  current_risk <- 5#1.5 #0.55
   
   origin <- factor(c(0,0,0,0,0))
   names(origin) <- c("1", "2", "3", "4", "5") #1 = white, 2 = black, 3 = asian, 4 = mixed, 5 = other
@@ -128,15 +129,20 @@ run_status <- function(pop, timestep=1) {
   
   df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE)
   print("probabilities calculated")
-  df_prob_opt <- new_beta0_probs(df = df_prob, daily_case = new_cases[timestep])
-  df_ass <- case_assign(df = df_prob_opt, with_optimiser = FALSE,timestep=timestep,tmp.dir=tmp.dir, 
-                        save_output = FALSE)
-  
+ # df_prob_opt <- new_beta0_probs(df = df_prob, daily_case = new_cases[timestep])
+  if(timestep > 1){
+    df_ass <- case_assign(df = df_prob, with_optimiser = FALSE,timestep=timestep,tmp.dir=tmp.dir, 
+                          save_output = FALSE)
+  } else {
+    df_ass <- df_prob
+  }
+
   w[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))/new_cases[timestep]
+  w[1] <- 1
   print(paste0("w is ", w[timestep]))
   
-  if(round(w[timestep],2) != 1){
-    df_ass <- rank_assign(df = df_prob_opt, daily_case = new_cases[timestep], timestep=timestep)
+  if(timestep > 1 & round(w[timestep],2) != 1){
+    df_ass <- rank_assign(df = df_prob, daily_case = new_cases[timestep], timestep=timestep)
   }
     
   print("cases assigned")
@@ -171,15 +177,19 @@ run_status <- function(pop, timestep=1) {
   if(timestep==1) {
     stat <<- df_out$disease_status
     nb0 <<- unique(df_msoa$new_beta0)
+    wo <<- w[timestep[1]]
   } else {
     tmp3 <- df_out$disease_status
     tmp4 <- unique(df_msoa$new_beta0)
     stat <<- cbind(stat,tmp3)
     nb0 <<- cbind(nb0, tmp4)
+    wo <<- rbind(wo, w[timestep])
   }
   #ncase <- as.data.frame(ncase)
   write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
   write.csv(nb0, paste(tmp.dir,"/optim_b0.csv",sep=""))
+  write.csv(wo, paste(tmp.dir,"/w_out.csv",sep=""))
+  write.csv(pop,  paste0(tmp.dir,"/input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
   
   return(df_out)
 }
