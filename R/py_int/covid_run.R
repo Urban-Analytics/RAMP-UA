@@ -23,9 +23,7 @@ library(dplyr)
 #beta1 <- current_risk /  danger <- 0.55
 #pop <- read.csv("~/Downloads/input_population100917.csv")
 
-cases <- getUKCovidTimeseries()
-ua_cases <- cases$tidyEnglandUnitAuth
-devon_cases <- ua_cases[as.character(ua_cases$CTYUA19NM)=="Devon",]
+devon_cases <- readRDS("data/devon_cases.RDS")
 devon_cases$cumulative_cases[84] <- 812 #type here I think
 new_cases <- diff(devon_cases$cumulative_cases)
 new_cases[new_cases == 0]<-1
@@ -35,7 +33,7 @@ run_status <- function(pop, timestep=1) {
   
   print(paste("R timestep:", timestep))
   
- # pop <- vroom::vroom("R/py_int/input_pop_02.csv") 
+
   # if(timestep==1){
   #     seeds <- sample(1:nrow(pop), size = new_cases[timestep])
   #   pop$disease_status[seeds] <- 1
@@ -130,7 +128,7 @@ run_status <- function(pop, timestep=1) {
   df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE)
   print("probabilities calculated")
   df_prob_opt <- new_beta0_probs(df = df_prob, daily_case = new_cases[timestep])
-  df_ass <- case_assign(df = df_prob_opt, with_optimiser = TRUE,timestep=timestep,tmp.dir=tmp.dir, 
+  df_ass <- case_assign(df = df_prob_opt, with_optimiser = FALSE,timestep=timestep,tmp.dir=tmp.dir, 
                         save_output = FALSE)
   print("cases assigned")
   df_inf <- infection_length(df = df_ass,
