@@ -1,1 +1,4 @@
 devon_data/devon-retail/** filter=lfs diff=lfs merge=lfs -text
+devon_data/devon_msoas.csv filter=lfs diff=lfs merge=lfs -text
+devon_data/devon_msoas.xlsx filter=lfs diff=lfs merge=lfs -text
+devon_data/devon-schools/** filter=lfs diff=lfs merge=lfs -text
