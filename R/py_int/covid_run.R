@@ -3,6 +3,7 @@ library(janitor)
 library(readr)
 library(mixdist)
 library(dplyr)
+#library(mgcv)
 #library(arrow)
 #library(dplyr)
 #library(ggplot2)
@@ -25,20 +26,29 @@ library(dplyr)
 
 devon_cases <- readRDS(paste0(getwd(),"/devon_cases.RDS"))
 devon_cases$cumulative_cases[84] <- 812 #type here I think
-new_cases <- diff(devon_cases$cumulative_cases)
-new_cases[new_cases == 0]<-1
-new_cases <- new_cases*20
+devon_cases$new_cases <- c(0,diff(devon_cases$cumulative_cases))
+devon_cases$devon_date <- as.numeric(devon_cases$date)
+devon_cases <- as.data.frame(devon_cases)
+
+# gam_Devon <- mgcv::gam(new_cases ~ s(devon_date, bs = "cr"), data = devon_cases,family = nb())
+# plot(devon_cases$new_cases*20)
+# lines(round(fitted.values(gam_Devon)*20), type = "l")
+# gam_cases <- round(fitted.values(gam_Devon)*20)
+
+gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
+# new_cases[new_cases == 0]<-1
+# new_cases <- new_cases*20
 
 w <- NULL
-
+nick_cases <- NULL
 run_status <- function(pop, timestep=1) {
   
   opt_switch <- FALSE
   output_switch <- TRUE
   log_risk <- FALSE
   logistic_risk <- FALSE
-  beta0_fixed <- -10.5
-  current_risk <- 3 #0.55 #1.5 #0.55
+  beta0_fixed <- -8.5
+  current_risk <- 1 #0.55 #1.5 #0.55
   rank_assign <- TRUE
   
   print(paste("R timestep:", timestep))
@@ -149,7 +159,7 @@ run_status <- function(pop, timestep=1) {
   
   
   if(timestep==1){
-    seeds <- sample(1:nrow(pop), size = new_cases[timestep])
+    seeds <- sample(1:nrow(pop), size = gam_cases[timestep])
     df_msoa$new_status[seeds] <- 1
   }
   
@@ -157,7 +167,7 @@ run_status <- function(pop, timestep=1) {
   print("probabilities calculated")
  
   if(opt_switch==TRUE) {
-    df_prob <- new_beta0_probs(df = df_prob, daily_case = new_cases[timestep])
+    df_prob <- new_beta0_probs(df = df_prob, daily_case = gam_cases[timestep])
   }
   
 
@@ -167,14 +177,19 @@ run_status <- function(pop, timestep=1) {
   } else {
     df_ass <- df_prob
   }
-
-  w[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))/new_cases[timestep]
+  
+  nick_cases[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))
+  print(paste0("model cases ", nick_cases[timestep]))
+  print(paste0("PHE cases ", gam_cases[timestep]))
+  
+  
+  w[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))/gam_cases[timestep]
   w[1] <- 1
   print(paste0("w is ", w[timestep]))
   
   if(rank_assign == TRUE){
     if(timestep > 1 & round(w[timestep],2) != 1){
-      df_ass <- rank_assign(df = df_prob, daily_case = new_cases[timestep], timestep=timestep)
+      df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], timestep=timestep)
     }
   }
 
