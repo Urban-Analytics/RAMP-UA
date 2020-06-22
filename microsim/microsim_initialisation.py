@@ -156,7 +156,7 @@ class MicrosimInit(Microsim):
 # Uses 'click' library so that it can be run from the command line
 @click.command()
 @click.option('--repetitions', default=5, help='Number of times to repeat the initialisation process')
-@click.option('--data_dir', default="devon-data", help='Root directory to load main model data from')
+@click.option('--data_dir', default="devon_data", help='Root directory to load main model data from')
 @click.option('--init_dir', default="init_data", help="Directory that stores initialisation data, and where outputs are written")
 @click.option('--multiprocess', default=False, help="Whether to run multiprocess or not")
 @click.option('--debug', default=False, help="Whether to run some more expensive checks (default True)")
