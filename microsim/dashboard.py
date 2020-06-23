@@ -31,7 +31,7 @@ from bokeh.transform import transform
 # Read in data
 # ------------
 base_dir = os.getcwd()  # get current directory (usually RAMP-UA)
-data_dir = os.path.join(base_dir, "data") # go to data dir
+data_dir = os.path.join(base_dir, "devon_data") # go to data dir
 
 # read in details about venues
 data_file = os.path.join(data_dir, "devon-schools","exeter schools.csv")
@@ -371,26 +371,63 @@ for key, value in totalcounts_dict.items():
 source_2 = ColumnDataSource(data=data_s2)
 
 s2 = figure(background_fill_color="#fafafa",title="Time", x_axis_label='Time', y_axis_label='Nr of people')
+# for key, value in totalcounts_dict.items():
+#     s2.line(x = 'days', y = key, source = source_2, legend_label=f"nr {key}", line_width=2, line_color=colour_dict[key])
+#     s2.square(x = 'days', y = key, source = source_2, fill_color=colour_dict[key], line_color=colour_dict[key], size=5,legend_label=f"nr {key}")
+    
+#     s2.rect('days', f"{key}_std_upper", 0.2, 0.01, source = source_2, line_color="black")
+#     s2.rect('days', f"{key}_std_lower", 0.2, 0.01, source = source_2, line_color="black")
+#     s2.segment('days', f"{key}_std_lower", 'days', f"{key}_std_upper", source = source_2, line_color="black")
+#     # # find the outliers
+#     # y = data_s2[key]
+#     # std_lower = data_s2[f"{key}_std_lower"]
+#     # std_upper = data_s2[f"{key}_std_upper"]
+#     # outliers = [y[(y > std_upper) | (y < std_lower) for y in y for std_upper in std_upper]
+    
+#     # [y[(y > std_upper) | (y < std_lower)] for x in my_list]
+    
+#     # y[(y > std_upper) | (y < std_lower)]
+    
+#     # map(lambda ro: map(op, ro[0], ro[1]), zip(a,b))
+#     # outliers = y[(y > std_upper) | (y < std_lower)]
+#     # x = days[0:len(y3)]
+#     # s2.circle(x = x3, y = y3, fill_color="black", size=5)
+    
+
+# tooltips = tooltips_cond_basic.copy()
+# tooltips.append(tuple(( 'Day',  '@days' )))
+# s2.add_tools(HoverTool(
+#     tooltips=tooltips,
+# ))
+# s2.legend.location = "top_left"
+# s2.legend.click_policy="hide"
+
+
+legend_it = []
 for key, value in totalcounts_dict.items():
-    s2.line(x = 'days', y = key, source = source_2, legend_label=f"nr {key}", line_width=2, line_color=colour_dict[key])
-    s2.square(x = 'days', y = key, source = source_2, fill_color=colour_dict[key], line_color=colour_dict[key], size=5,legend_label=f"nr {key}")
+    c1 = s2.line(x = 'days', y = key, source = source_2, line_width=2, line_color=colour_dict[key],muted_color="grey", muted_alpha=0.2)
     
-    # s2.rect('days', f"{key}_std_upper", 0.2, 0.01, line_color="black")
-    # s2.rect('days', f"{key}_std_lower", 0.2, 0.01, line_color="black")
-    # s2.segment('days', f"{key}_std_lower", 'days', f"{key}_std_upper", line_color="black")
-#     # find the outliers
-#     y3 = y[(y > y2+stdev) | (y < y2-stdev)]
-#     x3 = x[0:len(y3)]
-#     s5.circle(x = x3, y = y3, fill_color="black", size=5)
+    c2 = s2.square(x = 'days', y = key, source = source_2, fill_color=colour_dict[key], line_color=colour_dict[key], size=5, muted_color="grey", muted_alpha=0.2)
     
+    legend_it.append((f"nr {key}", [c1,c2]))
+    
+    s2.rect('days', f"{key}_std_upper", 0.2, 0.01, source = source_2, line_color="black")
+    s2.rect('days', f"{key}_std_lower", 0.2, 0.01, source = source_2, line_color="black")
+    s2.segment('days', f"{key}_std_lower", 'days', f"{key}_std_upper", source = source_2, line_color="black")
+    
+legend = Legend(items=legend_it)
+legend.click_policy="hide"
 
 tooltips = tooltips_cond_basic.copy()
 tooltips.append(tuple(( 'Day',  '@days' )))
 s2.add_tools(HoverTool(
     tooltips=tooltips,
 ))
-s2.legend.location = "top_left"
-s2.legend.click_policy="hide"
+s2.add_layout(legend, 'right')
+
+    
+
+    
 
 
 
@@ -599,60 +636,60 @@ s5.legend.click_policy="hide"
 
 # plot 7: choropleth dangers
 
-# # merge counts with spatial data
-# data_s4 = data_s3.copy()
-# merged_data = pd.DataFrame()
-# merged_data['Area'] = msoas
-# for key, value in dangers_msoa_dict.items():
-#     #merged_data[key] = msoacounts_dict[key].sum(axis = 1).to_list()
-#     merged_data[key] = cumcounts_dict[key].to_list()
-# merged_data = pd.merge(map_df,merged_data,on='Area')
-# # Turn data into GeoJSON source
-# geosource = GeoJSONDataSource(geojson = merged_data.to_json())
 
-# def plot_choropleth_condition(condition2plot):
-#     """ Create choropleth: colour = nr people with condition = condition2plot. condition2plot is key to conditions_dict. """
 
-#     # Instantiate LinearColorMapper that linearly maps numbers in a range, into a sequence of colors.
-#     mapper_4 = LinearColorMapper(palette = palette, low = 0, high = merged_data[condition2plot].max())
-#     # Create color bar.
-#     color_bar_4 = ColorBar(color_mapper = mapper_4, 
-#                          label_standoff = 8,
-#                          #"width = 500, height = 20,
-#                          border_line_color = None,
-#                          location = (0,0), 
-#                          orientation = 'horizontal')#,
-#                          #major_label_overrides = tick_labels)
+def plot_choropleth_danger(venue2plot):
+    """ Create choropleth: colour = average danger score """
+    # merge counts with spatial data
+    merged_data = pd.DataFrame()
+    merged_data["Danger"] = dangers_msoa_dict[venue2plot].sum(axis = 1).to_list()
+    merged_data["Area"] = dangers_msoa_dict[venue2plot].index.to_list()
+    merged_data = pd.merge(map_df,merged_data,on='Area')
+    # Turn data into GeoJSON source
+    geosource = GeoJSONDataSource(geojson = merged_data.to_json())
     
-#     # Create figure object.
-#     s4 = figure(title = f"{condition2plot} total")
-#     s4.xgrid.grid_line_color = None
-#     s4.ygrid.grid_line_color = None
-#     # Add patch renderer to figure.
-#     msoasrender = s4.patches('xs','ys', source = geosource,
-#                        fill_color = {'field' :condition2plot,
-#                                      'transform' : mapper_4},     
-#                        #fill_color = None,
-#                        line_color = 'gray', 
-#                        line_width = 0.25, 
-#                        fill_alpha = 1)
-#     # Create hover tool
-#     s4.add_tools(HoverTool(renderers = [msoasrender],
-#                           tooltips = [('MSOA','@Area'),
-#                                     (f'Nr {condition2plot} people',f'@{condition2plot}')]))
-#     s4.add_layout(color_bar_4, 'below')
+    
 
-#     plotref_dict[f"ch{condition2plot}"] = s4
+    # Instantiate LinearColorMapper that linearly maps numbers in a range, into a sequence of colors.
+    mapper_4 = LinearColorMapper(palette = palette, low = 0, high = merged_data["Danger"].max())
+    # Create color bar.
+    color_bar_4 = ColorBar(color_mapper = mapper_4, 
+                          label_standoff = 8,
+                          #"width = 500, height = 20,
+                          border_line_color = None,
+                          location = (0,0), 
+                          orientation = 'horizontal')#,
+                          #major_label_overrides = tick_labels)
+    
+    # Create figure object.
+    s4 = figure(title = f"{venue2plot} total")
+    s4.xgrid.grid_line_color = None
+    s4.ygrid.grid_line_color = None
+    # Add patch renderer to figure.
+    msoasrender = s4.patches('xs','ys', source = geosource,
+                        fill_color = {'field' : 'Danger',
+                                      'transform' : mapper_4},     
+                        #fill_color = None,
+                        line_color = 'gray', 
+                        line_width = 0.25, 
+                        fill_alpha = 1)
+    # Create hover tool
+    s4.add_tools(HoverTool(renderers = [msoasrender],
+                          tooltips = [('MSOA','@Area'),
+                                    ('Danger', '@Danger')]))
+    s4.add_layout(color_bar_4, 'below')
 
-# for key,value in conditions_dict.items():
-#     plot_choropleth_condition(key)
+    plotref_dict[f"ch{venue2plot}"] = s4
+
+for key,value in dangers_msoa_dict.items():
+    plot_choropleth_danger(key)
 
 
 
 
 # Layout and outpit
 # Create a Panel with a title for each tab
-tab1 = Panel(child=row(s2, s3), title='Summary')
+tab1 = Panel(child=row(s2, s3), title='Summary conditions')
 tab2 = Panel(child=row(plotref_dict["hmsusceptible"],plotref_dict["chsusceptible"]), title='Susceptible')
 tab3 = Panel(child=row(plotref_dict["hmpresymptomatic"],plotref_dict["chpresymptomatic"]), title='Presymptomatic')
 tab4 = Panel(child=row(plotref_dict["hmsymptomatic"],plotref_dict["chsymptomatic"]), title='Symptomatic')
@@ -660,12 +697,12 @@ tab5 = Panel(child=row(plotref_dict["hmrecovered"],plotref_dict["chrecovered"]),
 tab6 = Panel(child=row(plotref_dict["hmdead"],plotref_dict["chdead"]), title='Dead')
 
 # tab7 = Panel(child=row(plotref_dict["hmRetail"],plotref_dict["hmPrimarySchool"]), title='test')
-tab7 = Panel(child=row(s5), title='Venue dangers')
+tab7 = Panel(child=row(s5), title='Summary dangers')
 
-# tab8 = Panel(child=row(s5), title='Venue dangers')
+tab8 = Panel(child=row(plotref_dict["chRetail"],plotref_dict["chPrimarySchool"],plotref_dict["chSecondarySchool"]), title='Danger choropleths')
 
 # Put the Panels in a Tabs object
-tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7])
+tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8])
 show(tabs)
 
 
