@@ -23,8 +23,12 @@
 # requires a dataframe list, a vector of betas, and a timestep
 
 covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, 
-                       risk_cap_val=100, include_age_sex = FALSE) {
+                       risk_cap_val=100, include_age_sex = FALSE, normalizer_on = FALSE) {
   #print("assign probabilities")
+  
+  if(normalizer_on){
+    df$beta0 <- 0
+  }
   
   if(risk_cap==TRUE){
     df$current_risk[df$current_risk>risk_cap_val] <- risk_cap_val
@@ -65,6 +69,11 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE,
   }
   
   psi <- exp(lpsi) / (exp(lpsi) + 1)
+  
+  if(normalizer_on == TRUE){
+    psi <- normalizer(psi, 0,1,0.5,1)
+  }
+  
   psi[df$status %in% c(3,4)] <- 0 # if they are not susceptible then their probability is 0 of getting it 
   psi[df$status %in% c(1,2)] <- 1 # this makes keeping track of who has it easier
   df$betaxs <- df$as_risk + beta_out_sums
@@ -132,7 +141,7 @@ rank_assign <- function(df, daily_case , timestep){
   
   dfw <- data.frame(id = df$id, current_risk = df$current_risk, status = df$status)
   dfw <- dfw[dfw$status == 0,]
-  rank_inf <- dfw[order(dfw$current_risk),][1:daily_case,"id"]
+  rank_inf <- dfw[order(-dfw$current_risk),][1:daily_case,"id"]
   inf_ind <- which(df$id %in% rank_inf)
   df$new_status[inf_ind] <- 1 
   return(df)
@@ -268,4 +277,11 @@ new_beta0_probs <- function(df, daily_case){
 
 
 #}
+
+
+normalizer <- function(x ,lower_bound, upper_bound, xmin, xmax){
+  
+  normx <-  (upper_bound - lower_bound)*(x - xmin)/(xmax-xmin) + lower_bound
+  return(normx)
+}
 
