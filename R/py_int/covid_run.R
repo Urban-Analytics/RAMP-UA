@@ -48,8 +48,9 @@ run_status <- function(pop, timestep=1) {
   log_risk <- FALSE
   logistic_risk <- FALSE
   beta0_fixed <- 0
-  current_risk <- 0.1 #0.55 #1.5 #0.55
+  current_risk <- 0.002 #0.55 #1.5 #0.55
   rank_assign <- TRUE
+  rank_assign_days <- 10
   normalizer_on <- TRUE
   
   print(paste("R timestep:", timestep))
@@ -189,7 +190,8 @@ run_status <- function(pop, timestep=1) {
   print(paste0("w is ", w[timestep]))
   
   if(rank_assign == TRUE){
-    if(timestep > 1 & (w[timestep] <= 0.9 | w[timestep] >= 1.1)){
+   # if(timestep > 1 & (w[timestep] <= 0.9 | w[timestep] >= 1.1)){
+    if(timestep >1 & timestep <= rank_assign_days){
       df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], timestep=timestep)
     }
   }
