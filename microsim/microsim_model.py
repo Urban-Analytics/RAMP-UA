@@ -43,6 +43,7 @@ import rpy2.robjects as ro  # For calling R scripts
 # import pandas.rpy.common as com
 
 
+
 class Microsim:
     """
     A class used to represent the microsimulation model.
@@ -1555,7 +1556,7 @@ class Microsim:
 # ********
 @click.command()
 @click.option('--iterations', default=10, help='Number of model iterations. 0 means just run the initialisation')
-@click.option('--data_dir', default="data", help='Root directory to load data from')
+@click.option('--data_dir', default="devon_data", help='Root directory to load data from')
 @click.option('--output/--no-output', default=True,
               help='Whether to generate output data (default yes).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
