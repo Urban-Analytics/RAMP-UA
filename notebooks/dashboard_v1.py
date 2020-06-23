@@ -29,7 +29,7 @@ from bokeh.transform import transform
 # Read in data
 # ------------
 base_dir = os.getcwd()  # get current directory (usually RAMP-UA)
-data_dir = os.path.join(base_dir, "data") # go to data dir
+data_dir = os.path.join(base_dir, "devon_data") # go to data dir
 
 # read in details about venues
 data_file = os.path.join(data_dir, "devon-schools","exeter schools.csv")
