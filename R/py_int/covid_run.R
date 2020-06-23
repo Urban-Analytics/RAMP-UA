@@ -47,9 +47,10 @@ run_status <- function(pop, timestep=1) {
   output_switch <- TRUE
   log_risk <- FALSE
   logistic_risk <- FALSE
-  beta0_fixed <- -8.5
-  current_risk <- 1 #0.55 #1.5 #0.55
+  beta0_fixed <- 0
+  current_risk <- 0.1 #0.55 #1.5 #0.55
   rank_assign <- TRUE
+  normalizer_on <- TRUE
   
   print(paste("R timestep:", timestep))
   
@@ -163,7 +164,7 @@ run_status <- function(pop, timestep=1) {
     df_msoa$new_status[seeds] <- 1
   }
   
-  df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE)
+  df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE, normalizer_on = normalizer_on)
   print("probabilities calculated")
  
   if(opt_switch==TRUE) {
@@ -188,7 +189,7 @@ run_status <- function(pop, timestep=1) {
   print(paste0("w is ", w[timestep]))
   
   if(rank_assign == TRUE){
-    if(timestep > 1 & round(w[timestep],2) != 1){
+    if(timestep > 1 & (w[timestep] <= 0.9 | w[timestep] >= 1.1)){
       df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], timestep=timestep)
     }
   }
