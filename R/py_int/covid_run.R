@@ -48,7 +48,7 @@ run_status <- function(pop, timestep=1) {
   log_risk <- FALSE
   logistic_risk <- FALSE
   beta0_fixed <- 0
-  current_risk <- 0.002 #0.55 #1.5 #0.55
+  current_risk <- 0.004 #0.55 #1.5 #0.55
   rank_assign <- TRUE
   rank_assign_days <- 10
   normalizer_on <- TRUE
@@ -161,8 +161,13 @@ run_status <- function(pop, timestep=1) {
   
   
   if(timestep==1){
-    seeds <- sample(1:nrow(pop), size = gam_cases[timestep])
-    df_msoa$new_status[seeds] <- 1
+    msoas <- read.csv(paste0(getwd(),"/msoa_danger_fn.csv"))
+    msoas <- msoas[msoas$risk == "High",]
+    pop_hr <- pop %>% filter(area %in% msoas$area & pnothome > 0.3)
+    seeds <- sample(1:nrow(pop_hr), size = gam_cases[timestep])
+    seeds_id <- pop_hr$id[seeds]
+    df_msoa$new_status[df_msoa$id %in% seeds_id] <- 1
+  #  df_msoa$new_status[seeds] <- 1
   }
   
   df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE, normalizer_on = normalizer_on)
@@ -186,12 +191,11 @@ run_status <- function(pop, timestep=1) {
   
   
   w[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))/gam_cases[timestep]
-  w[1] <- 1
   print(paste0("w is ", w[timestep]))
   
   if(rank_assign == TRUE){
-   # if(timestep > 1 & (w[timestep] <= 0.9 | w[timestep] >= 1.1)){
-    if(timestep >1 & timestep <= rank_assign_days){
+   if(timestep > 1 & (w[timestep] <= 0.95 | w[timestep] >= 1.05)){
+  #  if(timestep >1 & timestep <= rank_assign_days){
       df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], timestep=timestep)
     }
   }
@@ -235,17 +239,21 @@ run_status <- function(pop, timestep=1) {
       stat <<- df_out$disease_status
       nb0 <<- unique(df_msoa$new_beta0)
       wo <<- w[timestep[1]]
+      prob <<- df_msoa$probability
     } else {
       tmp3 <- df_out$disease_status
       tmp4 <- unique(df_msoa$new_beta0)
+      tmp5 <- df_msoa$probability
       stat <<- cbind(stat,tmp3)
       nb0 <<- cbind(nb0, tmp4)
       wo <<- rbind(wo, w[timestep])
+      prob <<- cbind(prob, tmp5)
     }
     #ncase <- as.data.frame(ncase)
     write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
     write.csv(nb0, paste(tmp.dir,"/optim_b0.csv",sep=""))
     write.csv(wo, paste(tmp.dir,"/w_out.csv",sep=""))
+    write.csv(prob, paste(tmp.dir, "/probabilities.csv", sep = ""))
   }
   
   return(df_out)
