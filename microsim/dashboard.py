@@ -532,6 +532,88 @@ for key,value in conditions_dict.items():
 
 
 
+
+
+
+
+
+
+# choropleth alt
+
+def plot_choropleth_danger_slider(venue2plot):
+
+    max_val = 0
+    
+    merged_data = pd.DataFrame()
+    merged_data["y"] = dangers_msoa_dict[venue2plot].iloc[:,0]
+    for d in range(0,nr_days):
+        merged_data[f"{d}"] = dangers_msoa_dict[venue2plot].iloc[:,d]
+        max_tmp = merged_data[f"{d}"].max()
+        if max_tmp > max_val: max_val = max_tmp
+        
+    merged_data["Area"] = dangers_msoa_dict[venue2plot].index.to_list()
+    merged_data = pd.merge(map_df,merged_data,on='Area')
+    geosource2 = GeoJSONDataSource(geojson = merged_data.to_json())
+    
+    
+    
+    mapper_4 = LinearColorMapper(palette = palette, low = 0, high = max_val)
+    # Create color bar.
+    color_bar_4 = ColorBar(color_mapper = mapper_4, 
+                          label_standoff = 8,
+                          #"width = 500, height = 20,
+                          border_line_color = None,
+                          location = (0,0), 
+                          orientation = 'horizontal')#,
+                          #major_label_overrides = tick_labels)
+    
+    # Create figure object.
+    s4 = figure(title = f"{venue2plot} total")
+    s4.xgrid.grid_line_color = None
+    s4.ygrid.grid_line_color = None
+    # Add patch renderer to figure.
+    msoasrender = s4.patches('xs','ys', source = geosource2,
+                        fill_color = {'field' : 'y',
+                                      'transform' : mapper_4},     
+                        #fill_color = None,
+                        line_color = 'gray', 
+                        line_width = 0.25, 
+                        fill_alpha = 1)
+    
+    # Create hover tool
+    s4.add_tools(HoverTool(renderers = [msoasrender],
+                           tooltips = [('MSOA','@Area'),
+                                        ('Nr people','@y'),
+                                         ]))
+    s4.add_layout(color_bar_4, 'below')
+    
+    callback = CustomJS(args=dict(source=geosource2), code="""
+        var data = source.data;
+        var f = cb_obj.value
+        var y = data['y']
+        var toreplace = data[f]
+        for (var i = 0; i < y.length; i++) {
+            y[i] = toreplace[i]
+        }
+        source.change.emit();
+    """)
+    
+    slider = Slider(start=0, end=20, value=0, step=1, title="select")
+    slider.js_on_change('value', callback)
+
+    # layout = column(slider, s4)
+    
+    # show(layout)
+
+
+    plotref_dict[f"chpl{venue2plot}"] = s4
+    plotref_dict[f"chsl{venue2plot}"] = slider
+
+for key,value in dangers_msoa_dict.items():
+    plot_choropleth_danger_slider(key)
+
+
+
 # # plot 5: dangers heatmap - too dense, replace by composite version or remove
 
 # def plot_heatmap_venues(venue2plot):
@@ -699,11 +781,18 @@ tab6 = Panel(child=row(plotref_dict["hmdead"],plotref_dict["chdead"]), title='De
 # tab7 = Panel(child=row(plotref_dict["hmRetail"],plotref_dict["hmPrimarySchool"]), title='test')
 tab7 = Panel(child=row(s5), title='Summary dangers')
 
-tab8 = Panel(child=row(plotref_dict["chRetail"],plotref_dict["chPrimarySchool"],plotref_dict["chSecondarySchool"]), title='Danger choropleths')
+# tab8 = Panel(child=row(plotref_dict["chRetail"],plotref_dict["chPrimarySchool"],plotref_dict["chSecondarySchool"]), title='Danger choropleths')
+
+tab8 = Panel(child=row(column(plotref_dict["chslRetail"],plotref_dict["chplRetail"]),column(plotref_dict["chslPrimarySchool"],plotref_dict["chplPrimarySchool"]),column(plotref_dict["chslSecondarySchool"],plotref_dict["chplSecondarySchool"])), title='Danger choropleths')
+
 
 # Put the Panels in a Tabs object
 tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8])
 show(tabs)
+
+
+
+
 
 
 
@@ -738,3 +827,11 @@ show(tabs)
 #     s5.circle(x = x3, y = y3, fill_color="black", size=5)
 
 # show(s5)
+
+
+
+
+
+
+
+    
