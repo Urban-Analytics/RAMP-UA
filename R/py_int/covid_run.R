@@ -23,12 +23,12 @@ library(dplyr)
 
 #beta1 <- current_risk /  danger <- 0.55
 #pop <- read.csv("~/Downloads/input_population100917.csv")
-
-devon_cases <- readRDS(paste0(getwd(),"/devon_cases.RDS"))
-devon_cases$cumulative_cases[84] <- 812 #type here I think
-devon_cases$new_cases <- c(0,diff(devon_cases$cumulative_cases))
-devon_cases$devon_date <- as.numeric(devon_cases$date)
-devon_cases <- as.data.frame(devon_cases)
+# 
+# devon_cases <- readRDS(paste0(getwd(),"/devon_cases.RDS"))
+# devon_cases$cumulative_cases[84] <- 812 #type here I think
+# devon_cases$new_cases <- c(0,diff(devon_cases$cumulative_cases))
+# devon_cases$devon_date <- as.numeric(devon_cases$date)
+# devon_cases <- as.data.frame(devon_cases)
 
 # gam_Devon <- mgcv::gam(new_cases ~ s(devon_date, bs = "cr"), data = devon_cases,family = nb())
 # plot(devon_cases$new_cases*20)
@@ -38,6 +38,8 @@ devon_cases <- as.data.frame(devon_cases)
 gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 # new_cases[new_cases == 0]<-1
 # new_cases <- new_cases*20
+baseline_risk <- readRDS(paste0(getwd(),"/baseline_risk.RDS")) # needs replacing with days beyond 40
+
 
 w <- NULL
 nick_cases <- NULL
@@ -45,13 +47,16 @@ run_status <- function(pop, timestep=1) {
   
   opt_switch <- FALSE
   output_switch <- TRUE
-  log_risk <- FALSE
-  logistic_risk <- FALSE
   beta0_fixed <- 0
   current_risk <- 0.004 #0.55 #1.5 #0.55
   rank_assign <- TRUE
-  rank_assign_days <- 10
+  seed_cases <- TRUE
+  seed_days <- 10
   normalizer_on <- TRUE
+  lockdown_on <- TRUE # at the moment need to tell nick's model this separately which isn't ideal 
+  lockdown_day <- 20  
+  
+  
   
   print(paste("R timestep:", timestep))
   
@@ -75,15 +80,7 @@ run_status <- function(pop, timestep=1) {
   }
 
   population <- clean_names(pop)
-  
-  if(log_risk==TRUE) {
-    population$current_risk <- log(population$current_risk)
-  }
-  
-  if(logistic_risk==TRUE) {
-    population$current_risk <- exp(population$current_risk) / (exp(population$current_risk) + 1)
-  }
-  
+
   num_sample <- nrow(population)
   
   #print(num_sample)
@@ -170,7 +167,12 @@ run_status <- function(pop, timestep=1) {
   #  df_msoa$new_status[seeds] <- 1
   }
   
-  df_prob <- covid_prob(df = df_msoa, betas = other_betas, risk_cap=FALSE, risk_cap_val=100, include_age_sex = FALSE, normalizer_on = normalizer_on)
+  df_prob <- covid_prob(df = df_msoa,
+                        betas = other_betas,
+                        risk_cap=FALSE,
+                        risk_cap_val=100,
+                        include_age_sex = FALSE,
+                        normalizer_on = normalizer_on)
   print("probabilities calculated")
  
   if(opt_switch==TRUE) {
@@ -179,29 +181,45 @@ run_status <- function(pop, timestep=1) {
   
 
   if(timestep > 1){
-    df_ass <- case_assign(df = df_prob, with_optimiser = opt_switch, timestep=timestep,
-                          tmp.dir=tmp.dir, save_output = output_switch)
+    df_ass <- case_assign(df = df_prob,
+                          with_optimiser = opt_switch, 
+                          timestep=timestep,
+                          tmp.dir=tmp.dir, 
+                          save_output = output_switch)
   } else {
     df_ass <- df_prob
+  }
+  print("cases assigned")
+  
+  
+  if(lockdown_on == TRUE & timestep > lockdown_day){
+    risk_ratio <- sum(df_prob$current_risk)/baseline_risk[timestep]
+    gam_cases[timestep] <- round(gam_cases[timestep] * risk_ratio)
   }
   
   nick_cases[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))
   print(paste0("model cases ", nick_cases[timestep]))
   print(paste0("PHE cases ", gam_cases[timestep]))
   
-  
   w[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))/gam_cases[timestep]
   print(paste0("w is ", w[timestep]))
   
-  if(rank_assign == TRUE){
-   if(timestep > 1 & (w[timestep] <= 0.95 | w[timestep] >= 1.05)){
-  #  if(timestep >1 & timestep <= rank_assign_days){
+  
+  if(timestep <= seed_days & seed_cases == TRUE){
+    df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], timestep=timestep)
+    print(paste0((sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))," cases reassigned"))
+  }
+  
+
+  
+  if((rank_assign == TRUE & seed_cases == FALSE) | (rank_assign == TRUE & seed_cases == TRUE & timestep > seed_days)){
+    if(timestep > 1 & (w[timestep] <= 0.9 | w[timestep] >= 1.1)){
       df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], timestep=timestep)
-    }
+      print(paste0((sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))," cases reassigned"))
+      }
   }
 
     
-  print("cases assigned")
   
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
@@ -250,10 +268,10 @@ run_status <- function(pop, timestep=1) {
       prob <<- cbind(prob, tmp5)
     }
     #ncase <- as.data.frame(ncase)
-    write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
-    write.csv(nb0, paste(tmp.dir,"/optim_b0.csv",sep=""))
+  #  write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
+ #   write.csv(nb0, paste(tmp.dir,"/optim_b0.csv",sep=""))
     write.csv(wo, paste(tmp.dir,"/w_out.csv",sep=""))
-    write.csv(prob, paste(tmp.dir, "/probabilities.csv", sep = ""))
+   # write.csv(prob, paste(tmp.dir, "/probabilities.csv", sep = ""))
   }
   
   return(df_out)
