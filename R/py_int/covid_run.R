@@ -207,7 +207,7 @@ run_status <- function(pop, timestep=1) {
   if(!is.finite(w[timestep])){
     w[timestep] <- 0
   }
-  
+
   if(timestep <= seed_days & seed_cases == TRUE){
     df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], timestep=timestep)
     print(paste0((sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))," cases reassigned"))
