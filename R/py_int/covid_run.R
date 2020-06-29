@@ -39,7 +39,8 @@ gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 # new_cases[new_cases == 0]<-1
 # new_cases <- new_cases*20
 baseline_risk <- readRDS(paste0(getwd(),"/baseline_risk.RDS")) # needs replacing with days beyond 40
-
+baseline_risk <- readRDS(paste0(getwd(), "/baseline_risk2.RDS"))
+risk_per_case <- 509.7954
 
 w <- NULL
 nick_cases <- NULL
@@ -53,23 +54,19 @@ run_status <- function(pop, timestep=1) {
   seed_cases <- TRUE
   seed_days <- 10
   normalizer_on <- TRUE
-  lockdown_on <- TRUE # at the moment need to tell nick's model this separately which isn't ideal 
-  lockdown_day <- 20  
+  lockdown_scenario <- TRUE # at the moment need to tell nick's model this separately which isn't ideal 
+  lockdown_day <- 32  
+  risk_cap_on <- TRUE
+  risk_cap <- 5
   
   
   
   print(paste("R timestep:", timestep))
   
   #pop <- vroom::vroom("R/py_int/input_pop_02.csv")
-  # if(timestep==1){
-  #     seeds <- sample(1:nrow(pop), size = new_cases[timestep])
-  #   pop$disease_status[seeds] <- 1
-  # }
+
   
-  #print("f")
-  
-  
-  if(output_switch==TRUE) {
+#  if(output_switch==TRUE) {
     if(timestep==1) {
       tmp.dir <<- paste(getwd(),"/output/",Sys.time(),sep="")
       if(!dir.exists(tmp.dir)){
@@ -77,7 +74,7 @@ run_status <- function(pop, timestep=1) {
       }
     }
     write.csv(pop, paste0(tmp.dir,"/input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
-  }
+  #}
 
   population <- clean_names(pop)
 
@@ -156,7 +153,7 @@ run_status <- function(pop, timestep=1) {
   df_risk <- list()
   
   
-  
+  #### seeding the first day in high risk MSOAs
   if(timestep==1){
     msoas <- read.csv(paste0(getwd(),"/msoa_danger_fn.csv"))
     msoas <- msoas[msoas$risk == "High",]
@@ -169,8 +166,8 @@ run_status <- function(pop, timestep=1) {
   
   df_prob <- covid_prob(df = df_msoa,
                         betas = other_betas,
-                        risk_cap=FALSE,
-                        risk_cap_val=100,
+                        risk_cap=risk_cap_on,
+                        risk_cap_val=risk_cap,
                         include_age_sex = FALSE,
                         normalizer_on = normalizer_on)
   print("probabilities calculated")
@@ -192,14 +189,17 @@ run_status <- function(pop, timestep=1) {
   print("cases assigned")
   
   
-  if(lockdown_on == TRUE & timestep > lockdown_day){
-    risk_ratio <- sum(df_prob$current_risk)/baseline_risk[timestep]
-    gam_cases[timestep] <- round(gam_cases[timestep] * risk_ratio)
+  print(paste0("PHE cases ", gam_cases[timestep]))
+  
+  if(lockdown_scenario == TRUE & timestep > lockdown_day){
+    sum_risk <- sum(df_prob$current_risk)
+    risk_base_cases <- sum_risk/risk_per_case
+    gam_cases[timestep] <-  round(risk_base_cases)
   }
   
   nick_cases[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))
   print(paste0("model cases ", nick_cases[timestep]))
-  print(paste0("PHE cases ", gam_cases[timestep]))
+  print(paste0("Adjusted PHE cases ", gam_cases[timestep]))
   
   w[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))/gam_cases[timestep]
   print(paste0("w is ", w[timestep]))
@@ -211,7 +211,6 @@ run_status <- function(pop, timestep=1) {
   }
   
 
-  
   if((rank_assign == TRUE & seed_cases == FALSE) | (rank_assign == TRUE & seed_cases == TRUE & timestep > seed_days)){
     if(timestep > 1 & (w[timestep] <= 0.9 | w[timestep] >= 1.1)){
       df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], timestep=timestep)
