@@ -47,15 +47,15 @@ nick_cases <- NULL
 run_status <- function(pop, timestep=1) {
   
   opt_switch <- FALSE
-  output_switch <- TRUE
+  output_switch <- FALSE
   beta0_fixed <- 0
-  current_risk <- 0.004 #0.55 #1.5 #0.55
+  current_risk <- 0.01 #0.004
   rank_assign <- TRUE
   seed_cases <- TRUE
   seed_days <- 10
   normalizer_on <- TRUE
   lockdown_scenario <- TRUE # at the moment need to tell nick's model this separately which isn't ideal 
-  lockdown_day <- 32  
+  lockdown_day <- 39  # day at which the scenario takes over
   risk_cap_on <- TRUE
   risk_cap <- 5
   
@@ -204,6 +204,9 @@ run_status <- function(pop, timestep=1) {
   w[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))/gam_cases[timestep]
   print(paste0("w is ", w[timestep]))
   
+  if(!is.finite(w[timestep])){
+    w[timestep] <- 0
+  }
   
   if(timestep <= seed_days & seed_cases == TRUE){
     df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], timestep=timestep)
