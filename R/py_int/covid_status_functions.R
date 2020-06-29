@@ -160,7 +160,7 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
   
   new_cases <- which((df$new_status-df$status==1) & df$status == 0)
   
-  if (save_output == TRUE){
+  #if (save_output == TRUE){
     if(timestep==1) {
       ncase <<- length(new_cases)
     } else {
@@ -170,7 +170,7 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
     }
     #ncase <- as.data.frame(ncase)
     write.csv(ncase, paste(tmp.dir,"/new_cases.csv",sep=""))
-  }
+ # }
 
   #new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
   
