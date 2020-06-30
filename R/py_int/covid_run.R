@@ -30,6 +30,7 @@ library(dplyr)
 # devon_cases$devon_date <- as.numeric(devon_cases$date)
 # devon_cases <- as.data.frame(devon_cases)
 
+
 # gam_Devon <- mgcv::gam(new_cases ~ s(devon_date, bs = "cr"), data = devon_cases,family = nb())
 # plot(devon_cases$new_cases*20)
 # lines(round(fitted.values(gam_Devon)*20), type = "l")
@@ -57,6 +58,7 @@ run_status <- function(pop, timestep=1, current_risk = 0.008) {
   lockdown_scenario <- FALSE # at the moment need to tell nick's model this separately which isn't ideal  
   risk_cap_on <- TRUE
   risk_cap <- 5
+
   
   
   
