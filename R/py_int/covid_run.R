@@ -23,13 +23,13 @@ library(dplyr)
 #beta1 <- current_risk /  danger <- 0.55
 #pop <- read.csv("~/Downloads/input_population100917.csv")
 
-cases <- getUKCovidTimeseries()
-ua_cases <- cases$tidyEnglandUnitAuth
-devon_cases <- ua_cases[as.character(ua_cases$CTYUA19NM)=="Devon",]
-devon_cases$cumulative_cases[84] <- 812 #type here I think
-new_cases <- diff(devon_cases$cumulative_cases)
-new_cases[new_cases == 0]<-1
-new_cases <- new_cases*20
+#cases <- getUKCovidTimeseries()
+#ua_cases <- cases$tidyEnglandUnitAuth
+#devon_cases <- ua_cases[as.character(ua_cases$CTYUA19NM)=="Devon",]
+#devon_cases$cumulative_cases[84] <- 812 #type here I think
+#new_cases <- diff(devon_cases$cumulative_cases)
+#new_cases[new_cases == 0]<-1
+#new_cases <- new_cases*20
 
 run_status <- function(pop, timestep=1) {
   
@@ -37,8 +37,11 @@ run_status <- function(pop, timestep=1) {
   output_switch <- TRUE
   log_risk <- FALSE
   logistic_risk <- TRUE
-  beta0_fixed <- -12
-  current_risk <- 10 #0.55 #1.5 #0.55
+  #best results so far
+  #beta0_fixed <- -13.5
+  #current_risk <- 10 #0.55 #1.5 #0.55
+  beta0_fixed <- 0.0 #-11.0 #-10.0
+  current_risk <- 1 #14.5 #0.55 #1.5 #0.55
   
   print(paste("R timestep:", timestep))
   
@@ -65,11 +68,18 @@ run_status <- function(pop, timestep=1) {
   
   if(log_risk==TRUE) {
     population$current_risk <- log(population$current_risk)
+    population$current_risk[population$current_risk==-Inf] <- 0
   }
   
   if(logistic_risk==TRUE) {
     population$current_risk <- exp(population$current_risk) / (exp(population$current_risk) + 1)
+    population$current_risk <- (population$current_risk-0.5)/(1-0.5)
+    population$current_risk <- (7 * (population$current_risk-1)) + 7
+    population$current_risk <- population$current_risk-12
   }
+  
+  #population$current_risk <- population$current_risk / (length(population$current_risk))
+  
   
   num_sample <- nrow(population)
   

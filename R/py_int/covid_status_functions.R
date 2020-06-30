@@ -65,6 +65,7 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE,
   }
   
   psi <- exp(lpsi) / (exp(lpsi) + 1)
+  #psi <- (psi-0.5)/(1-0.5)
   psi[df$status %in% c(3,4)] <- 0 # if they are not susceptible then their probability is 0 of getting it 
   psi[df$status %in% c(1,2)] <- 1 # this makes keeping track of who has it easier
   df$betaxs <- df$as_risk + beta_out_sums
@@ -124,7 +125,7 @@ case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir, save_output
     write.csv(current_risk, paste(tmp.dir,"/risk.csv",sep=""))
     
   }
-    
+  
   return(df)
 }
 
@@ -150,7 +151,7 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
     #ncase <- as.data.frame(ncase)
     write.csv(ncase, paste(tmp.dir,"/new_cases.csv",sep=""))
   }
-
+  
   #new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
   
   if (presymp_dist == "weibull"){
