@@ -1450,17 +1450,19 @@ class Microsim:
         """
         Call an R function to calculate the new disease status for all individuals.
         Update the indivdiuals dataframe in place
-        :return: None. Update the dataframe inplace
+        :return: . Update the dataframe inplace
         """
         # Remember the old status so that we can calculate whether it has changed
-        old_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS]
+        old_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
 
         # Calculate the new status (will return a new dataframe)
         self.individuals = self.r_int.calculate_disease_status(self.individuals, self.iteration)
 
         # Remember whose status has changed
-        new_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS]
+        new_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
         self.individuals[ColumnNames.DISEASE_STATUS_CHANGED] = list(new_status != old_status)
+
+        print(f"\t{len(new_status[new_status != old_status])} individuals have a different status")
 
     def change_behaviour_with_disease(self) -> None:
         """
@@ -1476,6 +1478,14 @@ class Microsim:
         self.individuals.loc[change_idx] = \
             self.individuals.loc[change_idx].swifter.progress_bar(True, desc="Changing behaviour of infected").\
                 apply(func=self._set_new_behaviour, axis=1)
+
+        print(f"\tCurrent statuses:"
+              f"\n\t\tSusceptible: {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_Susceptible])}"
+              f"\n\t\tPresymptomatic: {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_PreSymptomatic])}"
+              f"\n\t\tSymptomatic: {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_Symptomatic])}"
+              f"\n\t\tRecovered: {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_Recovered])}"
+              f"\n\t\tRemoved: {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_Removed])}")
+
         #self.individuals.loc[change_idx].apply(func=self._set_new_behaviour, axis=1)
         #print("... finished")
 
@@ -1562,6 +1572,7 @@ class Microsim:
 
             # Add to items to pickle for visualisations
             if self.output:
+                print("\tGenerating output ... ",)
                 # (Force column names to have leading zeros)
                 self.individuals_to_pickle[f"{ColumnNames.DISEASE_STATUS}{(i + 1):03d}"] = self.individuals[
                     ColumnNames.DISEASE_STATUS]
@@ -1586,6 +1597,7 @@ class Microsim:
                     # Also make a (compressed) csv file for others
                     self.activities_to_pickle[loc_name].to_csv(fname + ".csv.gz", compression='gzip')
                     # self.activities_to_pickle[loc_name].to_csv(fname+".csv")  # They not so big so don't compress
+                print(" ... finished ", )
 
             print(f"\tIteration {i} took {round(float(time.time() - iter_start_time), 2)}s")
 
