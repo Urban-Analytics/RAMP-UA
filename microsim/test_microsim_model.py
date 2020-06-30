@@ -238,11 +238,15 @@ def test_change_behaviour_with_disease(test_microsim):
     m.change_behaviour_with_disease()  # (this isn't called by default when testing)
 
     # First person should spend more time at home and less at work
-    assert m.individuals.loc[p1, f"Retail{ColumnNames.ACTIVITY_DURATION}"] < m.individuals.loc[p1, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
-    assert m.individuals.loc[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] > m.individuals.loc[p1, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p1, f"Retail{ColumnNames.ACTIVITY_DURATION}"] < m.individuals.loc[
+        p1, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] > m.individuals.loc[
+        p1, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
     # Second person should be unchanged
-    assert m.individuals.loc[p2, f"Retail{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[p2, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
-    assert m.individuals.loc[p2, f"Home{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[p2, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p2, f"Retail{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
+        p2, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p2, f"Home{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
+        p2, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
     # Mark behaviour changed then try again
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS_CHANGED] = True
@@ -271,7 +275,6 @@ def test_change_behaviour_with_disease(test_microsim):
         p1, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
     assert m.individuals.loc[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
         p1, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
-
 
 
 def test_update_venue_danger_and_risks(test_microsim):
@@ -528,3 +531,11 @@ def test__normalise():
     assert Microsim._normalise([40, 60]) == [0.4, 0.6]
     assert Microsim._normalise([6, 6, 6, 6, 6]) == [0.2, 0.2, 0.2, 0.2, 0.2]
 
+
+#def test_run_script():
+#    """Check that the correct combinations of input parameters throw the correct errors"""
+#    import microsim.microsim_model as mm
+#    base_args = { "iterations": 10, "data_dir": "devon_data", "output": True, "debug":False, "repetitions": 1, "lockdown_start": 0, "lockdown_from_file": True)}
+#    with pytest.raises(ValueError):
+#         mm.run_script
+#    assert False
