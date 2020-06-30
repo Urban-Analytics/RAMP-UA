@@ -44,18 +44,17 @@ risk_per_case <- 509.7954
 
 w <- NULL
 nick_cases <- NULL
-run_status <- function(pop, timestep=1) {
+run_status <- function(pop, timestep=1, current_risk = 0.008) {
   
   opt_switch <- FALSE
   output_switch <- FALSE
   beta0_fixed <- 0
-  current_risk <- 0.01 #0.004
-  rank_assign <- TRUE
+ # current_risk <- 0.01 #0.004
+  rank_assign <- FALSE
   seed_cases <- TRUE
-  seed_days <- 10
+  seed_days <- 20
   normalizer_on <- TRUE
-  lockdown_scenario <- TRUE # at the moment need to tell nick's model this separately which isn't ideal 
-  lockdown_day <- 39  # day at which the scenario takes over
+  lockdown_scenario <- FALSE # at the moment need to tell nick's model this separately which isn't ideal  
   risk_cap_on <- TRUE
   risk_cap <- 5
   
@@ -191,7 +190,7 @@ run_status <- function(pop, timestep=1) {
   
   print(paste0("PHE cases ", gam_cases[timestep]))
   
-  if(lockdown_scenario == TRUE & timestep > lockdown_day){
+  if(lockdown_scenario == TRUE){
     sum_risk <- sum(df_prob$current_risk)
     risk_base_cases <- sum_risk/risk_per_case
     gam_cases[timestep] <-  round(risk_base_cases)
@@ -254,27 +253,27 @@ run_status <- function(pop, timestep=1) {
   
   #print("new disease status calculated")
   
-  if(output_switch==TRUE) {
+ # if(output_switch==TRUE) {
     if(timestep==1) {
-      stat <<- df_out$disease_status
-      nb0 <<- unique(df_msoa$new_beta0)
+     stat <<- df_out$disease_status
+  #    nb0 <<- unique(df_msoa$new_beta0)
       wo <<- w[timestep[1]]
-      prob <<- df_msoa$probability
+   #   prob <<- df_msoa$probability
     } else {
       tmp3 <- df_out$disease_status
-      tmp4 <- unique(df_msoa$new_beta0)
-      tmp5 <- df_msoa$probability
-      stat <<- cbind(stat,tmp3)
-      nb0 <<- cbind(nb0, tmp4)
+     # tmp4 <- unique(df_msoa$new_beta0)
+    #  tmp5 <- df_msoa$probability
+     # stat <<- cbind(stat,tmp3)
+  #    nb0 <<- cbind(nb0, tmp4)
       wo <<- rbind(wo, w[timestep])
-      prob <<- cbind(prob, tmp5)
+   #   prob <<- cbind(prob, tmp5)
     }
     #ncase <- as.data.frame(ncase)
-  #  write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
+   write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
  #   write.csv(nb0, paste(tmp.dir,"/optim_b0.csv",sep=""))
     write.csv(wo, paste(tmp.dir,"/w_out.csv",sep=""))
    # write.csv(prob, paste(tmp.dir, "/probabilities.csv", sep = ""))
-  }
+ # }
   
   return(df_out)
 }
