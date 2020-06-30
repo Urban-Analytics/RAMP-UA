@@ -365,6 +365,7 @@ def plot_heatmap_condition(condition2plot):
 
 for key,value in conditions_dict.items():
     plot_heatmap_condition(key)
+
     
     
 
@@ -409,6 +410,7 @@ def plot_heatmap_danger(venue2plot):
 for key,value in dangers_msoa_dict.items():
     plot_heatmap_danger(key)
     
+
 
 
 # plot 2: disease conditions across time
@@ -884,6 +886,7 @@ tab7 = Panel(child=row(s5), title='Summary dangers')
 # old choropleth
 # tab8 = Panel(child=row(plotref_dict["chRetail"],plotref_dict["chPrimarySchool"],plotref_dict["chSecondarySchool"]), title='Danger choropleths')
 
+
 tab8 = Panel(child=row(plotref_dict["hmRetail"],column(plotref_dict["chslRetail"],plotref_dict["chplRetail"])), title='Danger retail')
 tab9 = Panel(child=row(plotref_dict["hmPrimarySchool"],column(plotref_dict["chslPrimarySchool"],plotref_dict["chplPrimarySchool"])), title='Danger primary school')
 tab10 = Panel(child=row(plotref_dict["hmSecondarySchool"],column(plotref_dict["chslSecondarySchool"],plotref_dict["chplSecondarySchool"])), title='Danger secondary school')
@@ -891,6 +894,7 @@ tab10 = Panel(child=row(plotref_dict["hmSecondarySchool"],column(plotref_dict["c
 
 # Put the Panels in a Tabs object
 tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10])
+
 show(tabs)
 
 
