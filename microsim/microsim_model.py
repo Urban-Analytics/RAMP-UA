@@ -66,6 +66,7 @@ class Microsim:
                  study_msoas: List[str] = [],
                  danger_multiplier: float = 1.0, risk_multiplier: float = 1.0,
                  lockdown_start: int = 0,
+                 lockdown_from_file: bool = True,
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
                  output: bool = True,
@@ -101,6 +102,7 @@ class Microsim:
         self.danger_multiplier = danger_multiplier
         self.risk_multiplier = risk_multiplier
         self.lockdown_start = lockdown_start
+        self.lockdown_from_file = lockdown_from_file
         self.random = random.Random(time.time() if random_seed is None else random_seed)
         self.output = output
         self.r_script_dir = r_script_dir
@@ -268,6 +270,10 @@ class Microsim:
 
         # Add some necessary columns for the disease
         self.individuals = Microsim.add_disease_columns(self.individuals)
+
+        # Read a file that tells us how much more time people should spend at home than normal (this is much greater
+        # after lockdown
+        self.time_activity_multiplier: pd.DataFrame = Microsim.read_time_activity_multiplier()
 
         print(" ... finished initialisation.")
 
@@ -1192,6 +1198,21 @@ class Microsim:
         return individuals
 
     @classmethod
+    def read_time_activity_multiplier(cls) -> pd.DataFrame:
+        """
+        Some times people should spend more time at home than normal. E.g. after lockdown. This function
+        reads a file that tells us how much more time should be spent at home on each day.
+        :return: A dataframe with 'day' and 'timeout_multiplier' columns
+        """
+        print("Reading time activity multiplier data...", )
+        time_activity = pd.read_csv(os.path.join(cls.DATA_DIR, "google_mobility_lockdown_daily.csv"))
+        # Cap at 1.0 (it's a curve so some times peaks above 1.0)=
+        time_activity["timeout_multiplier"] = time_activity.loc[:,"timeout_multiplier"].\
+            apply(lambda x: 1.0 if x > 1.0 else x)
+
+        return time_activity
+
+    @classmethod
     def _normalise(cls, l: List[float], decimals=3) -> List[float]:
         """
         Normalise a list so that it sums to almost 1.0. Rounding might cause it not to add exactly to 1
@@ -1262,26 +1283,41 @@ class Microsim:
 
     def update_behaviour_during_lockdown(self):
         """
-        Unilaterally alter the proportions of time spent on different activities after 'lockddown' (assuming
-        the user has set the 'lockdown_start' variable, otherwise this doesn't do anything
-        update_behaviour_during_lockdown
+        Unilaterally alter the proportions of time spent on different activities before and after 'lockddown'
+        (assuming the user has set the 'lockdown_start' or the 'lockdown_from_file' parameters.
+        Otherwise this doesn't do anything update_behaviour_during_lockdown
         """
-        if self.lockdown_start > 0:  # Is there any lockdown at all?
-            # Manually change people's activity durations after lockdown
-            if self.iteration > self.lockdown_start:
-                if self.iteration == self.lockdown_start:
-                    print(f"Iteration {self.iteration}: Entering lockdown")
-                # Reduce all activities, replacing the lost time with time spent at home
-                non_home_activities = set(self.activity_locations.keys())
-                non_home_activities.remove("Home")
-                total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
+        # Check that lockdown isn't set twice (can't set an iteration *and* read a file)
+        assert not (self.lockdown_start > 0 and self.lockdown_from_file)
+
+        # Are we doing any lockdown at all in this iteration?
+        if self.lockdown_from_file or self.iteration > self.lockdown_start:
+            if self.iteration == self.lockdown_start:
+                print(f"Iteration {self.iteration}: Entering lockdown")
+            # Reduce all activities, replacing the lost time with time spent at home
+            non_home_activities = set(self.activity_locations.keys())
+            non_home_activities.remove("Home")
+            total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
+
+            if self.lockdown_from_file:  # Reduce the initial activity proportion of time by a particular amount per day
+                timeout_multiplier = self.time_activity_multiplier.loc[
+                    self.time_activity_multiplier.day == self.iteration, "timeout_multiplier"].values[0]
                 for activity in non_home_activities:
-                    new_duration = self.individuals.loc[:, activity + ColumnNames.ACTIVITY_DURATION] * 0.33
+                    new_duration = self.individuals.loc[:, activity + ColumnNames.ACTIVITY_DURATION_INITIAL] * \
+                                   timeout_multiplier
                     total_duration += new_duration
                     self.individuals.loc[:, activity + ColumnNames.ACTIVITY_DURATION] = new_duration
 
-                # Now set home duration to fill in the time lost from doing other activities.
-                self.individuals.loc[:, 'Home' + ColumnNames.ACTIVITY_DURATION] = (1 - total_duration)
+            else:  # Reduce lockdown by a constant amount after a particular day
+                timeout_multiplier = 0.33
+                for activity in non_home_activities:
+                    new_duration = self.individuals.loc[:, activity + ColumnNames.ACTIVITY_DURATION] * timeout_multiplier
+                    total_duration += new_duration
+                    self.individuals.loc[:, activity + ColumnNames.ACTIVITY_DURATION] = new_duration
+
+            assert (total_duration < 1.0).all() and (new_duration < 1.0).all()
+            # Now set home duration to fill in the time lost from doing other activities.
+            self.individuals.loc[:, 'Home' + ColumnNames.ACTIVITY_DURATION] = (1 - total_duration)
 
     def update_venue_danger_and_risks(self, decimals=8):
         """
@@ -1432,12 +1468,16 @@ class Microsim:
         those changes inline to the individuals dataframe
         :return: None. Update the dataframe inplace
         """
+        #print("Changing behaviour of infected individuals ... ",)
         # Find out which people have changed status
         change_idx = self.individuals.index[self.individuals[ColumnNames.DISEASE_STATUS_CHANGED] == True]
 
         # Now set their new behaviour
         self.individuals.loc[change_idx] = \
-            self.individuals.loc[change_idx].apply(func=self._set_new_behaviour, axis=1)
+            self.individuals.loc[change_idx].swifter.progress_bar(True, desc="Changing behaviour of infected").\
+                apply(func=self._set_new_behaviour, axis=1)
+        #self.individuals.loc[change_idx].apply(func=self._set_new_behaviour, axis=1)
+        #print("... finished")
 
     def _set_new_behaviour(self, row: pd.Series):
         # Maybe put non-diseased people back to normal behaviour (or do nothing if they e.g. transfer from
@@ -1562,7 +1602,9 @@ class Microsim:
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
 @click.option('--repetitions', default=1, help="How many times to run the model (default 1)")
 @click.option('--lockdown_start', default=0, help="Optional day to start lockdown (default 0, no lockdown")
-def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start):
+@click.option('--lockdown_from_file/--no-lockdown_from_file', default=True,
+              help="Optionally read lockdown mobility data from a file (default True)")
+def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start, lockdown_from_file):
     # Check the parameters are sensible
     if iterations < 0:
         raise ValueError("Iterations must be > 0")
@@ -1570,6 +1612,11 @@ def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start)
         raise ValueError("Repetitions must be greater than 0")
     if lockdown_start < 0:
         raise ValueError("Start of lockdown must be 0 (no lockdown) or >= 1")
+    if lockdown_start > 0 and lockdown_from_file:
+        raise ValueError("Can't have 'lockdown_from_file' and a day to start lockdown on ('lockdown_start')")
+    if lockdown_start == 0 and not lockdown_from_file:
+        print("Not implelementing any lockdown (lockdown_start==0 and not lockdown_from_file==False)")
+    # XX CHECK 'lockdown_from_file' and then check lockdown_from_file and lockdown_start aren't both given
 
     print(f"Running model with the following parameters:\n"
           f"\tNumber of iterations: {iterations}\n"
@@ -1577,7 +1624,9 @@ def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start)
           f"\tOutputting results?: {output}\n"
           f"\tDebug mode?: {debug}\n"
           f"\tNumber of repetitions: {repetitions}\n"
-          f"\tStart Lockdown on day: {lockdown_start}")
+          f"\tStart Lockdown on day: {lockdown_start}\n"
+          f"\tLockdown from file? : {lockdown_from_file}")
+
 
     if iterations == 0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
@@ -1595,7 +1644,8 @@ def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start)
 
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir, "study_msoas": list(devon_msoas.Code),
-                 "output": output, "debug": debug, "lockdown_start": lockdown_start}
+                 "output": output, "debug": debug, "lockdown_start": lockdown_start,
+                 "lockdown_from_file": lockdown_from_file}
 
     # Temporily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")
