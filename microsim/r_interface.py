@@ -46,7 +46,7 @@ class RInterface():
         """
         print("\tCalculating new disease status...", end='')
         # It's expesive to convert large dataframes, only give the required columns to R.
-        individuals_reduced = individuals.loc[:, ["area", "House_ID", "ID", "age1", "sex", ColumnNames.CURRENT_RISK, "pnothome",
+        individuals_reduced = individuals.loc[:, ["area", "House_ID", "ID", "Age1", "Sex", ColumnNames.CURRENT_RISK, "pnothome",
                                                    ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP, ColumnNames.DISEASE_SYMP_DAYS] ]
         individuals_reduced["area"] = individuals_reduced.area.astype(str)
         individuals_reduced["id"] = individuals_reduced.ID
