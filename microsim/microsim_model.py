@@ -186,11 +186,12 @@ class Microsim:
         # Generate travel time columns and assign travel modes to some kind of risky activity (not doing this yet)
         # self.individuals = Microsim.generate_travel_time_colums(self.individuals)
         # One thing we do need to do (this would be done in the function) is replace NaNs in the time use data with 0
-        # for col in ["punknown", "phome", "pworkhome", "pwork", "_pschool", "pshop", "pservices", "pleisure",
-        #            "pescort", "ptransport", "pnothome", "phometot", "pmwalk", "pmcycle", "pmprivate",
-        #            "pmpublic", "pmunknown"]:
-        for col in ["pwork", "_pschool", "pshop", "pleisure", "ptransport", "pother"]:
+        # for col in ["pwork", "_pschool", "pshop", "pleisure", "ptransport", "pother"]:
+        for col in ["punknown", "phome", "pworkhome", "pwork", "_pschool", "pshop", "pservices", "pleisure",
+                   "pescort", "ptransport", "pnothome", "phometot", "pmwalk", "pmcycle", "pmprivate",
+                   "pmpublic", "pmunknown"]:
             self.individuals[col].fillna(0, inplace=True)
+
 
         # Read Retail flows data
         retail_name = "Retail"  # How to refer to this in data frame columns etc.
@@ -225,6 +226,7 @@ class Microsim:
         # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go
         # to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
         # Occupation is taken from column soc2010 in individuals df
+        self.individuals['soc2010'] = self.individuals['soc2010'].astype(str)  # These are integers but we need string
         possible_jobs = sorted(self.individuals.soc2010.unique())  # list of possible jobs in alphabetical order
         workplaces = pd.DataFrame({'ID': range(0, 0 + len(possible_jobs))})  # df with all possible 'virtual offices'
         Microsim._add_location_columns(workplaces, location_names=possible_jobs)
@@ -353,8 +355,8 @@ class Microsim:
         print("Reading time use and health data ... ", )
         # filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_health.txt")
         # filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_keyworker.txt")
-        filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_Complete.txt")
-        # filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_keyworker_health.txt")
+        # filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_Complete.txt")
+        filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_keyworker_health.csv")
 
         tuh = pd.read_csv(filename)
         tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.
@@ -468,8 +470,8 @@ class Microsim:
         tuh["pschool-primary"] = 0.0
         tuh["pschool-secondary"] = 0.0
         # TODO Assign to schools properly
-        children_idx = tuh.index[tuh["age1"] == 1]
-        teen_idx = tuh.index[tuh['age1'] == 2]
+        children_idx = tuh.index[tuh["Age1"] == 1]
+        teen_idx = tuh.index[tuh['Age1'] == 2]
         #children_idx = tuh.index[tuh["DC1117EW_C_AGE"] < 11]
         #teen_idx = tuh.index[(tuh["DC1117EW_C_AGE"] >= 11) & (tuh["DC1117EW_C_AGE"] < 19)]
 
@@ -478,7 +480,7 @@ class Microsim:
 
         # Check that people have been allocated correctly
         adults_in_school = tuh.loc[~(tuh["pschool-primary"] + tuh["pschool-secondary"] == tuh["pschool"]),
-                                   ["age1", "pschool", "pschool-primary", "pschool-secondary"]]
+                                   ["Age1", "pschool", "pschool-primary", "pschool-secondary"]]
         if len(adults_in_school) > 0:
             warnings.warn(f"{len(adults_in_school)} people > 18y/o go to school, but they are not being assigned to a "
                           f"primary or secondary school (so their schooling is ignored at the moment")
@@ -1144,7 +1146,7 @@ class Microsim:
                         danger_increase = (flow * duration * self.risk_multiplier)
                         warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
                         if activty_name == "Work":
-                            work_danger = float(danger_increase / 1500)
+                            work_danger = float(danger_increase / 1000)
                             loc_dangers[venue_idx] += work_danger
                         else:
                             loc_dangers[venue_idx] += danger_increase
@@ -1454,8 +1456,6 @@ def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start,
                 # Copy the model instance so we don't have to re-read the data each time
                 # (Use a generator so we don't need to store all the models in memory at once).
                 m = Microsim(**msim_args)
-                # TODO When copying, need to create new output directories.
-                #    self.r_int = RInterface(r_script_dir)
                 models = (Microsim._make_a_copy(m) for _ in range(repetitions))
                 # models = ( Microsim(msim_args) for _ in range(repetitions))
                 # Also need a list giving the number of iterations for each model (same for each model)
