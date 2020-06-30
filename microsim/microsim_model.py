@@ -63,7 +63,6 @@ class Microsim:
 
     def __init__(self,
                  data_dir: str = "./data/", r_script_dir: str = "./R/py_int/",
-                 study_msoas: List[str] = [],
                  danger_multiplier: float = 1.0, risk_multiplier: float = 1.0,
                  lockdown_start: int = 0,
                  lockdown_from_file: bool = True,
@@ -78,7 +77,6 @@ class Microsim:
         ----------
         :param data_dir: A data directory from which to read the source data
         :param r_script_dir: A directory with the required R scripts in (these are used to estimate disease status)
-        :param study_msoas: An optional list of MSOA codes to restrict the model to
         :param danger_multiplier: Danger assigned to a place if an infected individual visits it
         is calcuated as duration * flow * danger_multiplier.
         :param risk_multiplier: Risk that individuals get from a location is calculatd as
@@ -1146,7 +1144,7 @@ class Microsim:
                         danger_increase = (flow * duration * self.risk_multiplier)
                         warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
                         if activty_name == "Work":
-                            work_danger = float(danger_increase / 1000)
+                            work_danger = float(danger_increase / 125)
                             loc_dangers[venue_idx] += work_danger
                         else:
                             loc_dangers[venue_idx] += danger_increase
@@ -1440,7 +1438,7 @@ def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start,
                               names=["x", "y", "Num", "Code", "Desc"])
 
     # Use same arguments whether running 1 repetition or many
-    msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir, "study_msoas": list(devon_msoas.Code),
+    msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir,
                  "output": output, "debug": debug, "lockdown_start": lockdown_start,
                  "lockdown_from_file": lockdown_from_file}
 
