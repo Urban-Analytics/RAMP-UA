@@ -45,7 +45,7 @@ risk_per_case <- 509.7954
 
 w <- NULL
 nick_cases <- NULL
-run_status <- function(pop, timestep=1, current_risk = 0.008) {
+run_status <- function(pop, timestep=1, current_risk = 0.01) {
   
   opt_switch <- FALSE
   output_switch <- FALSE
@@ -59,9 +59,7 @@ run_status <- function(pop, timestep=1, current_risk = 0.008) {
   risk_cap_on <- TRUE
   risk_cap <- 5
 
-  
-  
-  
+
   print(paste("R timestep:", timestep))
   
   #pop <- vroom::vroom("R/py_int/input_pop_02.csv")
