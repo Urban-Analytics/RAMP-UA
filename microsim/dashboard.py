@@ -343,7 +343,7 @@ def plot_heatmap_condition(condition2plot):
     
     s1.rect(x="Day", y="MSOA", width=1, height=1, source=source,
            line_color=None, fill_color=transform('condition', mapper_1))
-    color_bar_1 = ColorBar(color_mapper=mapper_1, location=(0, 0), orientation = 'horizontal', ticker=BasicTicker(desired_num_ticks=len(colours_ch_cond["recovered"])))
+    color_bar_1 = ColorBar(color_mapper=mapper_1, location=(0, 0), orientation = 'horizontal', ticker=BasicTicker(desired_num_ticks=len(colours_ch_cond[condition2plot])))
     s1.add_layout(color_bar_1, 'below')
     s1.axis.axis_line_color = None
     s1.axis.major_tick_line_color = None
@@ -365,6 +365,50 @@ def plot_heatmap_condition(condition2plot):
 
 for key,value in conditions_dict.items():
     plot_heatmap_condition(key)
+    
+    
+
+# plot 1b: heatmap
+
+def plot_heatmap_danger(venue2plot):
+    """ Create heatmap plot: x axis = time, y axis = MSOAs, colour =danger score. """
+    
+    var2plot = dangers_msoa_dict[venue2plot]
+    var2plot.columns.name = 'Day'
+    # reshape to 1D array or rates with a month and year for each row.
+    df_var2plot = pd.DataFrame(var2plot.stack(), columns=['venue']).reset_index()
+    source = ColumnDataSource(df_var2plot)
+    
+    # add better colour 
+    mapper_1 = LinearColorMapper(palette=colours_ch_danger, low=0, high=var2plot.max().max())
+    s1 = figure(title="Heatmap",
+               x_range=list(var2plot.columns), y_range=list(var2plot.index), x_axis_location="above")
+    
+    s1.rect(x="Day", y="MSOA", width=1, height=1, source=source,
+           line_color=None, fill_color=transform('venue', mapper_1))
+    color_bar_1 = ColorBar(color_mapper=mapper_1, location=(0, 0), orientation = 'horizontal', ticker=BasicTicker(desired_num_ticks=len(colours_ch_danger)))
+    s1.add_layout(color_bar_1, 'below')
+    s1.axis.axis_line_color = None
+    s1.axis.major_tick_line_color = None
+    s1.axis.major_label_text_font_size = "7px"
+    s1.axis.major_label_standoff = 0
+    s1.xaxis.major_label_orientation = 1.0
+    
+    # Create hover tool
+    s1.add_tools(HoverTool(
+        tooltips=[
+            ( 'danger score',   '@venue'),
+            ( 'Day',  '@Day' ), 
+            ( 'MSOA', '@MSOA'),
+        ],
+    ))
+    s1.toolbar.autohide = False
+    
+    plotref_dict[f"hm{venue2plot}"] = s1
+
+for key,value in dangers_msoa_dict.items():
+    plot_heatmap_danger(key)
+    
 
 
 # plot 2: disease conditions across time
@@ -840,11 +884,13 @@ tab7 = Panel(child=row(s5), title='Summary dangers')
 # old choropleth
 # tab8 = Panel(child=row(plotref_dict["chRetail"],plotref_dict["chPrimarySchool"],plotref_dict["chSecondarySchool"]), title='Danger choropleths')
 
-tab8 = Panel(child=row(column(plotref_dict["chslRetail"],plotref_dict["chplRetail"]),column(plotref_dict["chslPrimarySchool"],plotref_dict["chplPrimarySchool"]),column(plotref_dict["chslSecondarySchool"],plotref_dict["chplSecondarySchool"])), title='Danger choropleths')
+tab8 = Panel(child=row(plotref_dict["hmRetail"],column(plotref_dict["chslRetail"],plotref_dict["chplRetail"])), title='Danger retail')
+tab9 = Panel(child=row(plotref_dict["hmPrimarySchool"],column(plotref_dict["chslPrimarySchool"],plotref_dict["chplPrimarySchool"])), title='Danger primary school')
+tab10 = Panel(child=row(plotref_dict["hmSecondarySchool"],column(plotref_dict["chslSecondarySchool"],plotref_dict["chplSecondarySchool"])), title='Danger secondary school')
 
 
 # Put the Panels in a Tabs object
-tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8])
+tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10])
 show(tabs)
 
 
