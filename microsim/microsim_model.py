@@ -1541,6 +1541,9 @@ class Microsim:
         :return:
         """
         self.iteration += 1
+        if self.iteration==5:
+            x=1 # BREAKPOINT - CHECK WHETHER INDIVIDUALS WITH THE DISEASE ARE AT HOME A LOT
+
         print(f"\nIteration: {self.iteration}\n")
 
         # Unilaterally adjust the proportions of time that people spend doing different activities after lockdown
