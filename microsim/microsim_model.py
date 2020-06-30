@@ -1490,9 +1490,15 @@ class Microsim:
         #print("... finished")
 
     def _set_new_behaviour(self, row: pd.Series):
-        # Maybe put non-diseased people back to normal behaviour (or do nothing if they e.g. transfer from
+        """
+        Define how someone with the disease should behave. This is called for every individual whose disease status
+        has changed between the current iteration and the previous one
+        :param row: A row of the individuals dataframe
+        :return: An updated row with new ACTIVITY_DURATION columns to reflect the changes in proportion of time that
+        the individual spends doing the different activities.
+        """
+        # Maybe need to put non-symptomatic people back to normal behaviour (or do nothing if they e.g. transfer from
         # Susceptible to Pre-symptomatic, which means they continue doing normal behaviour)
-        x = 1
         if row[ColumnNames.DISEASE_STATUS] in [ColumnNames.DISEASE_STATUS_Susceptible,
                                                ColumnNames.DISEASE_STATUS_PreSymptomatic,
                                                ColumnNames.DISEASE_STATUS_Recovered,
