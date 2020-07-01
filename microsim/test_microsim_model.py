@@ -12,7 +12,7 @@ from microsim.activity_location import ActivityLocation
 
 # arguments used when calling the Microsim constructor. Usually these are the same
 microsim_args = {"data_dir": "./dummy_data", "r_script_dir": "./R/py_int", "testing": True, "debug": True,
-                 "disable_disease_status": True}
+                 "disable_disease_status": True, 'lockdown_from_file':False}
 
 
 # This 'fixture' means that other functions (e.g. step) can use the object created here.
@@ -101,7 +101,7 @@ def test_microsim():
     # First person has these flows and venues to primary school
     # (we know this because, by coincidence, the first person lives in the area that has the
     # first area name if they were ordered alphabetically)
-    list(m.individuals.loc[0:0, "Area"])[0] == "E00101308"
+    list(m.individuals.loc[0:0, "area"])[0] == "E00101308"
     venue_ids = list(m.individuals.loc[0:0, f"PrimarySchool{ColumnNames.ACTIVITY_VENUES}"])[0]
     raw_venues = sorted([12, 110, 118, 151, 163, 180, 220, 249, 280])
     # Mark counts from 1, so these should be 1 greater than the ids
@@ -111,7 +111,7 @@ def test_microsim():
     assert primary_locs.loc[163:163, ColumnNames.LOCATION_NAME].values[0] == "Milton Abbot School"
 
     # Second to last person lives in 'E02004138' which will be the last area recorded in Mark's file
-    assert list(m.individuals.loc[9:9, "Area"])[0] == "E02004159"
+    assert list(m.individuals.loc[9:9, "area"])[0] == "E02004159"
     venue_ids = list(m.individuals.loc[9:9, f"SecondarySchool{ColumnNames.ACTIVITY_VENUES}"])[0]
     raw_venues = sorted([335, 346])
     # Mark counts from 1, so these should be 1 greater than the ids
@@ -195,7 +195,7 @@ def test_update_disease_counts(test_microsim):
     m.individuals.loc[13, ColumnNames.DISEASE_STATUS] = 1  # Lives with 3 people
     m.individuals.loc[11, ColumnNames.DISEASE_STATUS] = 1  # | Live
     m.individuals.loc[12, ColumnNames.DISEASE_STATUS] = 1  # | Together
-    # m.individuals.loc[:, ["PID", "HID", "Area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
+    # m.individuals.loc[:, ["PID", "HID", "area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
     m.update_disease_counts()
     # This person has the disease
     assert m.individuals.at[9, "MSOA_Cases"] == 1
@@ -296,7 +296,7 @@ def test_step(test_microsim):
     m = test_microsim  # For less typing and so as not to interfere with other functions use test_microsim
 
     # Note: the following is a useul way to get relevant info about the individuals
-    # m.individuals.loc[:, ["ID", "PID", "HID", "Area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
+    # m.individuals.loc[:, ["ID", "PID", "HID", "area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
 
     # Step 0 (initialisation):
 
@@ -429,19 +429,20 @@ def test_random():
 
 def test_extract_msoas_from_indiviuals():
     """Check that a list of areas can be successfully extracted from a DataFrame of indviduals"""
-    individuals = pd.DataFrame(data={"Area": ["C", "A", "F", "A", "A", "F"]})
+    individuals = pd.DataFrame(data={"area": ["C", "A", "F", "A", "A", "F"]})
     areas = Microsim.extract_msoas_from_indiviuals(individuals)
     assert len(areas) == 3
     # Check the order is correct too
     assert False not in [x == y for (x, y) in zip(areas, ["A", "C", "F"])]
 
 
+@pytest.mark.skip(reason="No longer running this test as the functionality to select by study area has been removed")
 def test_check_study_area():
     all_msoa_list = ["C", "A", "F", "B", "D", "E"]
     individuals = pd.DataFrame(
-        data={"PID": [1, 2, 3, 4, 5, 6], "HID": [1, 1, 2, 2, 2, 3], "Area": ["B", "B", "A", "A", "A", "D"],
+        data={"PID": [1, 2, 3, 4, 5, 6], "HID": [1, 1, 2, 2, 2, 3], "area": ["B", "B", "A", "A", "A", "D"],
               "House_OA": ["B", "B", "A", "A", "A", "D"]})
-    households = pd.DataFrame(data={"HID": [1, 2, 3], "Area": ["B", "A", "D"]})
+    households = pd.DataFrame(data={"HID": [1, 2, 3], "area": ["B", "A", "D"]})
 
     with pytest.raises(Exception):
         # Check that it catches duplicate areas
