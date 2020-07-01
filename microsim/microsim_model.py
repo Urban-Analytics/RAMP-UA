@@ -1129,14 +1129,14 @@ class Microsim:
                     # self.individuals as this will be missing out people who aren't infected so will have gaps
                     new_duration = pd.Series(list(self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION_INITIAL] * timeout_multiplier), name="NewDuration")
                     total_duration += new_duration
-                    self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION] = new_duration
+                    self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION] = list(new_duration)
 
             else:  # Should not be able to get here
                 assert False
 
             assert (total_duration <= 1.0).all() and (new_duration <= 1.0).all()
             # Now set home duration to fill in the time lost from doing other activities.
-            self.individuals.loc[uninfected, 'Home' + ColumnNames.ACTIVITY_DURATION] = (1 - total_duration)
+            self.individuals.loc[uninfected, 'Home' + ColumnNames.ACTIVITY_DURATION] = list(1 - total_duration)
 
             # Check they still sum correctly (if not then they probably need rounding)
             # (If you want to print the durations)
