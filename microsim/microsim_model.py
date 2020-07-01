@@ -64,7 +64,6 @@ class Microsim:
     def __init__(self,
                  data_dir: str = "./data/", r_script_dir: str = "./R/py_int/",
                  danger_multiplier: float = 1.0, risk_multiplier: float = 1.0,
-                 lockdown_start: int = 0,
                  lockdown_from_file: bool = True,
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
@@ -81,7 +80,6 @@ class Microsim:
         is calcuated as duration * flow * danger_multiplier.
         :param risk_multiplier: Risk that individuals get from a location is calculatd as
         duration * flow * * danger * risk_multiplier
-        :param lockdown_start: Optional day to start lockdown. Default 0 (no lockdown)
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
@@ -99,7 +97,6 @@ class Microsim:
         self.iteration = 0
         self.danger_multiplier = danger_multiplier
         self.risk_multiplier = risk_multiplier
-        self.lockdown_start = lockdown_start
         self.lockdown_from_file = lockdown_from_file
         self.random = random.Random(time.time() if random_seed is None else random_seed)
         self.output = output
@@ -234,20 +231,26 @@ class Microsim:
                                                               individuals=self.individuals, duration_col="pwork")
 
         ## Some flows will be very complicated numbers. Reduce the numbers of decimal places across the board.
-        ## This makes it easier to write out the files.
+        ## This makes it easier to write out the files and to make sure that the proportions add up properly
         ## Use multiprocessing because swifter doesn't work properly for some reason (wont paralelise)
-        # pool = Pool(processes=int(os.cpu_count()/2))
-        # try:
-        #    for name in tqdm(self.activity_locations.keys(), desc="Rounding all flows"):
-        #        rounded_flows = pool.map( Microsim._round_flows, list(self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"]))
-        #        self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = rounded_flows
-        #    # Use swifter, but for some reason it wont paralelise the problem. Not sure why.
-        #    #self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = \
-        #    #        self.individuals.loc[:,f"{name}{ColumnNames.ACTIVITY_FLOWS}"].\
-        #    #            swifter.allow_dask_on_strings(enable=True).progress_bar(True, desc=name).\
-        #    #            apply(lambda flows: [round(flow, 5) for flow in flows])
-        # finally:
-        #    pool.close()  # Make sure the child processes are killed even if there is an exception
+        #with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
+        #   for name in tqdm(self.activity_locations.keys(), desc="Rounding all flows"):
+        #       rounded_flows = pool.map( Microsim._round_flows, list(self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"]))
+        #       self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = rounded_flows
+        #   # Use swifter, but for some reason it wont paralelise the problem. Not sure why.
+        #   #self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = \
+        #   #        self.individuals.loc[:,f"{name}{ColumnNames.ACTIVITY_FLOWS}"].\
+        #   #            swifter.allow_dask_on_strings(enable=True).progress_bar(True, desc=name).\
+        #   #            apply(lambda flows: [round(flow, 5) for flow in flows])
+
+        # Round the durations
+        for name in tqdm(self.activity_locations.keys(), desc="Rounding all durations"):
+            self.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = \
+                self.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"].apply(lambda x: round(x, 5))
+
+        # Some people's activity durations will not add up to 1.0 because we don't model all their activities.
+        # Extend the amount of time at home to make up for this
+        self.individuals = Microsim.pad_durations(self.individuals, self.activity_locations)
 
         # Now that we have everone's initial activities, remember the proportions of times that they spend doing things
         # so that if these change (e.g. under lockdown) they can return to 'normality' later
@@ -727,16 +730,23 @@ class Microsim:
         # Need to do the flows in venues in 2 stages: first just add the venue, then turn that venu into a single-element
         # list (pandas complains about 'TypeError: unhashable type: 'list'' if you try to make the single-item lists
         # directly in the apply
-        venues = list(individuals["soc2010"].apply(
-            lambda job: workplaces.index[workplaces["Location_Name"] == job].values[0]))
+        with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
+            print("Assigning work venues ... ",)
+            venues = pool.starmap(Microsim._assign_work_flow,
+                                  zip(list(individuals["soc2010"]), (workplaces for _ in range(len(individuals))) ) )
+        #venues = list(individuals["soc2010"].swifter.progress_bar(True, desc="Assigning work venues").apply(
+        #    lambda job: workplaces.index[workplaces[ColumnNames.LOCATION_NAME] == job].values[0]))
         venues = [[x] for x in venues]
         individuals[venues_col] = venues
-        individuals[flows_col] = [[1.0] for _ in
-                                  range(len(individuals))]  # Flows are easy, [1.0] to the single work venue
+        individuals[flows_col] = [[1.0] for _ in range(len(individuals))]  # Flows are easy, [1.0] to the single venue
         # Later we also record the individual risks for each activity per individual. It's nice if the columns for
         # each activity are grouped together, so create that column now.
         individuals[f"{flow_type}{ColumnNames.ACTIVITY_RISK}"] = [-1] * len(individuals)
         return individuals
+
+    @staticmethod
+    def _assign_work_flow(job, workplaces):
+        return workplaces.index[workplaces[ColumnNames.LOCATION_NAME] == job].values[0]
 
     @classmethod
     def read_retail_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
@@ -972,6 +982,40 @@ class Microsim:
         return individuals
 
     @classmethod
+    def pad_durations(cls, individuals, activity_locations) -> pd.DataFrame:
+        """
+        Some indvidiuals' activity durations don't add up to 1. In these cases pad them out with extra time at home.
+        :param individuals:
+        :param activity_locations:
+        :return: The new individuals dataframe
+        """
+        total_duration = [0.0] * len(individuals)  # Add up all the different activity durations
+        for activity in activity_locations.keys():
+            total_duration = total_duration + individuals.loc[:, f"{activity}{ColumnNames.ACTIVITY_DURATION}"]
+        total_duration = total_duration.apply(lambda x: round(x, 5))
+        assert (total_duration <= 1.0).all()  # None should be more than 1.0 (after rounding)
+
+        missing_duration = 1.0 - total_duration  # Amount of activity time that needs to be added on to home
+        #missing_duration = missing_duration.apply(lambda x: round(x,5))
+        individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] = \
+            (individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] + missing_duration).apply(lambda x: round(x, 5))
+
+        Microsim.check_durations_sum_to_1(individuals, activity_locations.keys())
+
+        return individuals
+
+    @classmethod
+    def check_durations_sum_to_1(cls, individuals, activities):
+        total_duration = [0.0] * len(individuals)  # Add up all the different activity durations
+        for activity in activities:
+            total_duration = total_duration + individuals.loc[:, f"{activity}{ColumnNames.ACTIVITY_DURATION}"]
+        if not (total_duration.apply(lambda x: round(x, 5)) == 1.0).all():
+            print("Some activity durations don't sum to 1", flush=True)
+            print(total_duration[total_duration!=1.0], flush=True)
+            raise Exception("Some activity durations don't sum to 1")
+
+
+    @classmethod
     def read_time_activity_multiplier(cls) -> pd.DataFrame:
         """
         Some times people should spend more time at home than normal. E.g. after lockdown. This function
@@ -1058,40 +1102,47 @@ class Microsim:
     def update_behaviour_during_lockdown(self):
         """
         Unilaterally alter the proportions of time spent on different activities before and after 'lockddown'
-        (assuming the user has set the 'lockdown_start' or the 'lockdown_from_file' parameters.
-        Otherwise this doesn't do anything update_behaviour_during_lockdown
-        """
-        # Check that lockdown isn't set twice (can't set an iteration *and* read a file)
-        assert not (self.lockdown_start > 0 and self.lockdown_from_file)
+        Otherwise this doesn't do anything update_behaviour_during_lockdown.
 
-        # Are we doing any lockdown at all in this iteration?
-        if self.lockdown_from_file or self.iteration > self.lockdown_start:
-            if self.iteration == self.lockdown_start:
-                print(f"Iteration {self.iteration}: Entering lockdown")
+        Note: ignores people who are currently showing symptoms (`ColumnNames.DISEASE_STATUS_Symptomatic`)
+        """
+        # Are we doing any lockdown at all? in this iteration?
+        if self.lockdown_from_file:
+            # Only change the behaviour of people who aren't showing symptoms
+            uninfected = self.individuals.index[
+                self.individuals[ColumnNames.DISEASE_STATUS] != ColumnNames.DISEASE_STATUS_Symptomatic]
+            if len(uninfected) < len(self.individuals):
+                print(f"\t{len(self.individuals) - len(uninfected)} people are symptomatic so not affected by lockdown")
+
             # Reduce all activities, replacing the lost time with time spent at home
             non_home_activities = set(self.activity_locations.keys())
             non_home_activities.remove("Home")
-            total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
+            # Need to remember the total duration of time lost for non-home activities
+            total_duration = pd.Series(data=[0.0] * len(self.individuals.loc[uninfected]), name="TotalDuration")
 
             if self.lockdown_from_file:  # Reduce the initial activity proportion of time by a particular amount per day
                 timeout_multiplier = self.time_activity_multiplier.loc[
                     self.time_activity_multiplier.day == self.iteration, "timeout_multiplier"].values[0]
+                print(f"\tApplying regular (google mobility) multiplier {timeout_multiplier}")
                 for activity in non_home_activities:
-                    new_duration = self.individuals.loc[:, activity + ColumnNames.ACTIVITY_DURATION_INITIAL] * \
-                                   timeout_multiplier
+                    # Need to be careful with new_duration because we don't want to keep the index used in
+                    # self.individuals as this will be missing out people who aren't infected so will have gaps
+                    new_duration = pd.Series(list(self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION_INITIAL] * timeout_multiplier), name="NewDuration")
                     total_duration += new_duration
-                    self.individuals.loc[:, activity + ColumnNames.ACTIVITY_DURATION] = new_duration
+                    self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION] = new_duration
 
-            else:  # Reduce lockdown by a constant amount after a particular day
-                timeout_multiplier = 0.33
-                for activity in non_home_activities:
-                    new_duration = self.individuals.loc[:, activity + ColumnNames.ACTIVITY_DURATION] * timeout_multiplier
-                    total_duration += new_duration
-                    self.individuals.loc[:, activity + ColumnNames.ACTIVITY_DURATION] = new_duration
+            else:  # Should not be able to get here
+                assert False
 
-            assert (total_duration < 1.0).all() and (new_duration < 1.0).all()
+            assert (total_duration <= 1.0).all() and (new_duration <= 1.0).all()
             # Now set home duration to fill in the time lost from doing other activities.
-            self.individuals.loc[:, 'Home' + ColumnNames.ACTIVITY_DURATION] = (1 - total_duration)
+            self.individuals.loc[uninfected, 'Home' + ColumnNames.ACTIVITY_DURATION] = (1 - total_duration)
+
+            # Check they still sum correctly (if not then they probably need rounding)
+            # (If you want to print the durations)
+            # self.individuals.loc[:, [ x+ColumnNames.ACTIVITY_DURATION for x in self.activity_locations.keys() ]+
+            #     [ x+ColumnNames.ACTIVITY_DURATION_INITIAL for x in self.activity_locations.keys()   ]   ]
+            Microsim.check_durations_sum_to_1(self.individuals, self.activity_locations.keys())
 
     def update_venue_danger_and_risks(self, decimals=8):
         """
@@ -1144,7 +1195,7 @@ class Microsim:
                         danger_increase = (flow * duration * self.risk_multiplier)
                         warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
                         if activty_name == "Work":
-                            work_danger = float(danger_increase / 125)
+                            work_danger = float(danger_increase / 20)
                             loc_dangers[venue_idx] += work_danger
                         else:
                             loc_dangers[venue_idx] += danger_increase
@@ -1250,8 +1301,9 @@ class Microsim:
 
         # Now set their new behaviour
         self.individuals.loc[change_idx] = \
-            self.individuals.loc[change_idx].swifter.progress_bar(True, desc="Changing behaviour of infected").\
-                apply(func=self._set_new_behaviour, axis=1)
+            self.individuals.loc[change_idx].apply(
+                func=Microsim._set_new_behaviour, args=( list(self.activity_locations.keys()), ), axis=1)
+        # self.individuals.loc[change_idx].swifter.progress_bar(True, desc="Changing behaviour of infected"). \
 
         print(f"\tCurrent statuses:"
               f"\n\t\tSusceptible: {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_Susceptible])}"
@@ -1263,7 +1315,8 @@ class Microsim:
         #self.individuals.loc[change_idx].apply(func=self._set_new_behaviour, axis=1)
         #print("... finished")
 
-    def _set_new_behaviour(self, row: pd.Series):
+    @staticmethod
+    def _set_new_behaviour(row: pd.Series, activities: List[str]):
         """
         Define how someone with the disease should behave. This is called for every individual whose disease status
         has changed between the current iteration and the previous one
@@ -1277,14 +1330,14 @@ class Microsim:
                                                ColumnNames.DISEASE_STATUS_PreSymptomatic,
                                                ColumnNames.DISEASE_STATUS_Recovered,
                                                ColumnNames.DISEASE_STATUS_Removed]:
-            for activity in self.activity_locations.keys():
+            for activity in activities:
                 row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] = \
                     row[f"{activity}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
         # Put newly diseased people at home
         elif row[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_Symptomatic:
             # Reduce all activities, replacing the lost time with time spent at home
-            non_home_activities = set(self.activity_locations.keys())
+            non_home_activities = set(activities)
             non_home_activities.remove("Home")
             total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
             for activity in non_home_activities:
@@ -1315,8 +1368,6 @@ class Microsim:
         :return:
         """
         self.iteration += 1
-        if self.iteration==5:
-            x=1 # BREAKPOINT - CHECK WHETHER INDIVIDUALS WITH THE DISEASE ARE AT HOME A LOT
 
         print(f"\nIteration: {self.iteration}\n")
 
@@ -1396,22 +1447,14 @@ class Microsim:
               help='Whether to generate output data (default yes).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
 @click.option('--repetitions', default=1, help="How many times to run the model (default 1)")
-@click.option('--lockdown_start', default=0, help="Optional day to start lockdown (default 0, no lockdown")
 @click.option('--lockdown_from_file/--no-lockdown_from_file', default=True,
               help="Optionally read lockdown mobility data from a file (default True)")
-def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start, lockdown_from_file):
+def run_script(iterations, data_dir, output, debug, repetitions, lockdown_from_file):
     # Check the parameters are sensible
     if iterations < 0:
         raise ValueError("Iterations must be > 0")
     if repetitions < 1:
         raise ValueError("Repetitions must be greater than 0")
-    if lockdown_start < 0:
-        raise ValueError("Start of lockdown must be 0 (no lockdown) or >= 1")
-    if lockdown_start > 0 and lockdown_from_file:
-        raise ValueError("Can't have 'lockdown_from_file' and a day to start lockdown on ('lockdown_start')")
-    if lockdown_start == 0 and not lockdown_from_file:
-        print("Not implelementing any lockdown (lockdown_start==0 and not lockdown_from_file==False)")
-    # XX CHECK 'lockdown_from_file' and then check lockdown_from_file and lockdown_start aren't both given
 
     print(f"Running model with the following parameters:\n"
           f"\tNumber of iterations: {iterations}\n"
@@ -1419,7 +1462,6 @@ def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start,
           f"\tOutputting results?: {output}\n"
           f"\tDebug mode?: {debug}\n"
           f"\tNumber of repetitions: {repetitions}\n"
-          f"\tStart Lockdown on day: {lockdown_start}\n"
           f"\tLockdown from file? : {lockdown_from_file}")
 
 
@@ -1439,7 +1481,7 @@ def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start,
 
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir,
-                 "output": output, "debug": debug, "lockdown_start": lockdown_start,
+                 "output": output, "debug": debug,
                  "lockdown_from_file": lockdown_from_file}
 
     # Temporily use dummy data for testing
