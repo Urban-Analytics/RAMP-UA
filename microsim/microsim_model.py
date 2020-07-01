@@ -1326,6 +1326,8 @@ class Microsim:
         """
         # Maybe need to put non-symptomatic people back to normal behaviour (or do nothing if they e.g. transfer from
         # Susceptible to Pre-symptomatic, which means they continue doing normal behaviour)
+        # Minor bug: this will erode any changes caused by lockdown behaviour for the rest of this iteration, but this
+        # only affects people whose status has just changed so only a minor problem
         if row[ColumnNames.DISEASE_STATUS] in [ColumnNames.DISEASE_STATUS_Susceptible,
                                                ColumnNames.DISEASE_STATUS_PreSymptomatic,
                                                ColumnNames.DISEASE_STATUS_Recovered,
