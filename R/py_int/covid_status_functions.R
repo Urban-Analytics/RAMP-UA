@@ -30,7 +30,7 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE,
     df$beta0 <- 0
   }
   
-  print(sum(df$current_risk[df$current_risk>risk_cap_val]), " individual risks above cap of ", risk_cap_val)
+  print(sum(df$current_risk > risk_cap_val), " individual risks above cap of ", risk_cap_val)
   
   if(risk_cap==TRUE){
     df$current_risk[df$current_risk>risk_cap_val] <- risk_cap_val
