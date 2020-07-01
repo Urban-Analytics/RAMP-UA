@@ -39,8 +39,8 @@ library(dplyr)
 gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 # new_cases[new_cases == 0]<-1
 # new_cases <- new_cases*20
-baseline_risk <- readRDS(paste0(getwd(),"/baseline_risk.RDS")) # needs replacing with days beyond 40
-baseline_risk <- readRDS(paste0(getwd(), "/baseline_risk2.RDS"))
+#baseline_risk <- readRDS(paste0(getwd(),"/baseline_risk.RDS")) # needs replacing with days beyond 40
+#baseline_risk <- readRDS(paste0(getwd(), "/baseline_risk2.RDS"))
 risk_per_case <- 509.7954
 
 w <- NULL
