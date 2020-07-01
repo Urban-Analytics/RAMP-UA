@@ -64,7 +64,6 @@ class Microsim:
     def __init__(self,
                  data_dir: str = "./data/", r_script_dir: str = "./R/py_int/",
                  danger_multiplier: float = 1.0, risk_multiplier: float = 1.0,
-                 lockdown_start: int = 0,
                  lockdown_from_file: bool = True,
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
@@ -81,7 +80,6 @@ class Microsim:
         is calcuated as duration * flow * danger_multiplier.
         :param risk_multiplier: Risk that individuals get from a location is calculatd as
         duration * flow * * danger * risk_multiplier
-        :param lockdown_start: Optional day to start lockdown. Default 0 (no lockdown)
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
@@ -99,7 +97,6 @@ class Microsim:
         self.iteration = 0
         self.danger_multiplier = danger_multiplier
         self.risk_multiplier = risk_multiplier
-        self.lockdown_start = lockdown_start
         self.lockdown_from_file = lockdown_from_file
         self.random = random.Random(time.time() if random_seed is None else random_seed)
         self.output = output
@@ -1105,19 +1102,12 @@ class Microsim:
     def update_behaviour_during_lockdown(self):
         """
         Unilaterally alter the proportions of time spent on different activities before and after 'lockddown'
-        (assuming the user has set the 'lockdown_start' or the 'lockdown_from_file' parameters).
         Otherwise this doesn't do anything update_behaviour_during_lockdown.
 
         Note: ignores people who are currently showing symptoms (`ColumnNames.DISEASE_STATUS_Symptomatic`)
         """
-        # Check that lockdown isn't set twice (can't set an iteration *and* read a file)
-        assert not (self.lockdown_start < 9999 and self.lockdown_from_file)
-
-        # Are we doing any lockdown at all in this iteration?
-        if self.lockdown_from_file or (9999 > self.lockdown_start >= self.iteration):
-            if self.iteration == self.lockdown_start:
-                print(f"Iteration {self.iteration}: Entering lockdown")
-
+        # Are we doing any lockdown at all? in this iteration?
+        if self.lockdown_from_file:
             # Only change the behaviour of people who aren't showing symptoms
             uninfected = self.individuals.index[
                 self.individuals[ColumnNames.DISEASE_STATUS] != ColumnNames.DISEASE_STATUS_Symptomatic]
@@ -1135,15 +1125,9 @@ class Microsim:
                     self.time_activity_multiplier.day == self.iteration, "timeout_multiplier"].values[0]
                 print(f"\tApplying regular (google mobility) multiplier {timeout_multiplier}")
                 for activity in non_home_activities:
-                    new_duration = self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION_INITIAL] * timeout_multiplier
-                    total_duration += new_duration
-                    self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION] = new_duration
-
-            elif self.lockdown_start >= self.iteration:  # Reduce lockdown by a constant amount after a particular day
-                timeout_multiplier = 0.33
-                print(f"\tApplying static multiplier {timeout_multiplier}")
-                for activity in non_home_activities:
-                    new_duration = self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION] * timeout_multiplier
+                    # Need to be careful with new_duration because we don't want to keep the index used in
+                    # self.individuals as this will be missing out people who aren't infected so will have gaps
+                    new_duration = pd.Series(list(self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION_INITIAL] * timeout_multiplier), name="NewDuration")
                     total_duration += new_duration
                     self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION] = new_duration
 
@@ -1463,22 +1447,14 @@ class Microsim:
               help='Whether to generate output data (default yes).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
 @click.option('--repetitions', default=1, help="How many times to run the model (default 1)")
-@click.option('--lockdown_start', default=9999, help="Optional day to start lockdown (default 9999, no lockdown")
 @click.option('--lockdown_from_file/--no-lockdown_from_file', default=True,
               help="Optionally read lockdown mobility data from a file (default True)")
-def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start, lockdown_from_file):
+def run_script(iterations, data_dir, output, debug, repetitions, lockdown_from_file):
     # Check the parameters are sensible
     if iterations < 0:
         raise ValueError("Iterations must be > 0")
     if repetitions < 1:
         raise ValueError("Repetitions must be greater than 0")
-    if lockdown_start < 9999:
-        raise ValueError("Don't use lockdown_start, it will be removed soon")
-    if lockdown_start < 9999 and lockdown_from_file:
-        raise ValueError("Can't have 'lockdown_from_file' and a day to start lockdown on ('lockdown_start'). If using"
-                         "'lockdown_start' you also need to set '--no-lockdown_from_file'")
-    if lockdown_start == 9999 and not lockdown_from_file:
-        print("Not implelementing any lockdown (lockdown_start==9999 and not lockdown_from_file==False)")
 
     print(f"Running model with the following parameters:\n"
           f"\tNumber of iterations: {iterations}\n"
@@ -1486,7 +1462,6 @@ def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start,
           f"\tOutputting results?: {output}\n"
           f"\tDebug mode?: {debug}\n"
           f"\tNumber of repetitions: {repetitions}\n"
-          f"\tStart Lockdown on day: {lockdown_start}\n"
           f"\tLockdown from file? : {lockdown_from_file}")
 
 
@@ -1506,7 +1481,7 @@ def run_script(iterations, data_dir, output, debug, repetitions, lockdown_start,
 
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir,
-                 "output": output, "debug": debug, "lockdown_start": lockdown_start,
+                 "output": output, "debug": debug,
                  "lockdown_from_file": lockdown_from_file}
 
     # Temporily use dummy data for testing
