@@ -23,12 +23,14 @@
 # requires a dataframe list, a vector of betas, and a timestep
 
 covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, 
-                       risk_cap_val=100, include_age_sex = FALSE, normalizer_on = FALSE) {
+                       risk_cap_val=5, include_age_sex = FALSE, normalizer_on = FALSE) {
   #print("assign probabilities")
   
   if(normalizer_on){
     df$beta0 <- 0
   }
+  
+  print(sum(df$current_risk[df$current_risk>risk_cap_val]), " individual risks above cap of ", risk_cap_val)
   
   if(risk_cap==TRUE){
     df$current_risk[df$current_risk>risk_cap_val] <- risk_cap_val
