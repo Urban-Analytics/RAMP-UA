@@ -45,7 +45,7 @@ risk_per_case <- 509.7954
 
 w <- NULL
 nick_cases <- NULL
-run_status <- function(pop, timestep=1, current_risk = 0.01) {
+run_status <- function(pop, timestep=1, current_risk = 0.0095) {
   
   opt_switch <- FALSE
   output_switch <- FALSE
