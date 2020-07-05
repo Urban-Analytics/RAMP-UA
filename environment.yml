@@ -1,5 +1,6 @@
 name: ramp-ua
 channels:
+  - conda-forge
   - defaults
 dependencies:
   - numpy=1.18.5
