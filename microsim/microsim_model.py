@@ -1287,7 +1287,22 @@ class Microsim:
         new_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
         self.individuals[ColumnNames.DISEASE_STATUS_CHANGED] = list(new_status != old_status)
 
-        print(f"\t{len(new_status[new_status != old_status])} individuals have a different status")
+        # For info, find out how the statuses have changed.
+        # Make a dict with all possible changes, then loop through and count them.
+        change = dict()
+        for old in ColumnNames.DISEASE_STATUS_ALL:
+            for new in ColumnNames.DISEASE_STATUS_ALL:
+                change[ (old,new) ] = 0
+        for (old, new) in zip(old_status, new_status):
+            if new != old:
+                change[(old,new)] += 1
+
+        print(f"\t{len(new_status[new_status != old_status])} individuals have a different status. Status changes:")
+        for old in ColumnNames.DISEASE_STATUS_ALL:
+            print(f"\t\t{old} -> ", end="")
+            for new in ColumnNames.DISEASE_STATUS_ALL:
+                print(f" {new}:{change[(old,new)]} \t", end="")
+            print()
 
     def change_behaviour_with_disease(self) -> None:
         """
