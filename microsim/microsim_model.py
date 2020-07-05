@@ -1292,10 +1292,12 @@ class Microsim:
         change = dict()
         for old in ColumnNames.DISEASE_STATUS_ALL:
             for new in ColumnNames.DISEASE_STATUS_ALL:
-                change[ (old,new) ] = 0
+                change[(old, new)] = 0
         for (old, new) in zip(old_status, new_status):
             if new != old:
-                change[(old,new)] += 1
+                change[(old,  new)] += 1
+
+        assert sum(change.values()) == len(new_status[new_status != old_status])
 
         print(f"\t{len(new_status[new_status != old_status])} individuals have a different status. Status changes:")
         for old in ColumnNames.DISEASE_STATUS_ALL:
