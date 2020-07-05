@@ -4,6 +4,13 @@ This is the code repository for the RAMP Urban Analytics project.
 
 The microsimulation model that ties the different components together is in the [microsim](./microsim) folder.
 
+After cloning the repository, you will need to use [Git Large File Storage](https://git-lfs.github.com/) to download the input data. First install git-lfs, then run: 
+```
+git lfs fetch
+git lfs checkout
+``` 
+to download the data.
+
 Once you have the required libraries (see [microsim/README](./microsim/README.md)) you can run the model with:
 
 ```
