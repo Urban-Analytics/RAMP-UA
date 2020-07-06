@@ -88,23 +88,35 @@ def create_counts_dict_3d():
         pickle_in.close()
         # if first ever run, keep copy and initialise 3D frame for aggregating
         if r == 0:
-            individuals = individuals_tmp
+            individuals = individuals_tmp.copy()
             #msoas = sorted(individuals.area.unique())
             msoas.extend(sorted(individuals.area.unique()))
             area_individuals = individuals['area']
             start_col = individuals.shape[1] - nr_days + start_day
             end_col = individuals.shape[1] - nr_days + end_day + 1
-            uniqcounts = np.zeros((individuals.shape[0],len(conditions_dict),nr_runs))   # empty dictionary to store results: total nr, each person assigned to highest condition: 0<1<2<(3==4)           
+            
+            individuals['age0'] = np.zeros((len(individuals),1))
+            for a in range(age_cat.shape[0]):
+                individuals['age0'] = np.where((individuals['DC1117EW_C_AGE'] >= age_cat[a,0]) & (individuals['DC1117EW_C_AGE'] <= age_cat[a,1]), a+1, individuals['age0'])   
+            age_cat_col = individuals['age0'].values
+            
+            #uniqcounts = np.zeros((individuals.shape[0],len(conditions_dict),nr_runs))   # empty dictionary to store results: total nr, each person assigned to highest condition: 0<1<2<(3==4)           
             
             # # to normalise counts, need to know total nr people per MSOA
             # nrpeople_msoa = individuals[['ID','area']].groupby(['area']).count()
             # nrpeople_msoa.rename(columns={'ID':'nr_people'}, inplace=True)
-            
+          
+        # add age brackets column to individuals_tmp (not at end as this messes up counting days with disease conditions backwards!)
+        individuals_tmp.insert(4, 'age0', age_cat_col)
+        
         for key, value in conditions_dict.items():
+            print(key)
             if r == 0:
                 msoacounts_dict_3d[key] = np.zeros((len(msoas),nr_days,nr_runs))        
+                agecounts_dict_3d[key] = np.zeros((age_cat.shape[0],nr_days,nr_runs))
                 totalcounts_dict_3d[key] = np.zeros((nr_days,nr_runs))  
                 cumcounts_dict_3d[key] = np.zeros((len(msoas),nr_runs))
+                
             # cumulative counts
             # select right columns
             tmp = individuals_tmp.iloc[:,start_col:end_col]  
@@ -113,7 +125,7 @@ def create_counts_dict_3d():
             # create new df of zeros and replace with 1 at indices
             cumcounts_run = pd.DataFrame(np.zeros((tmp.shape[0], 1)))
             cumcounts_run.loc[indices] = 1
-            uniqcounts[:,value,r] = cumcounts_run.values[:,0]
+            #uniqcounts[:,value,r] = cumcounts_run.values[:,0]
             # merge with MSOA df
             cumcounts_run = cumcounts_run.merge(area_individuals, left_index=True, right_index=True)
             cumcounts_msoa_run = cumcounts_run.groupby(['area']).sum()
@@ -121,26 +133,39 @@ def create_counts_dict_3d():
     
             # loop aroud days
             msoacounts_run = np.zeros((len(msoas),nr_days))
-            for d in range(0, nr_days):
+            agecounts_run = np.zeros((age_cat.shape[0],nr_days))
+            for day in range(0, nr_days):
+                print(day)
                 # count nr for this condition per area
-                msoa_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+d] == conditions_dict[key]].groupby(['Area']).agg({individuals_tmp.columns[-nr_days+d]: ['count']})  
+                msoa_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['Area']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
                 msoa_count_temp = msoa_count_temp.values
                 # add new column
-                msoacounts_run[:,d] = msoa_count_temp[:, 0]
+                msoacounts_run[:,day] = msoa_count_temp[:, 0]
+                
+                # count nr for this condition per age bracket
+                age_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['age0']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
+                
+                if age_count_temp.empty == False:
+                    age_count_temp = age_count_temp.values
+                    agecounts_run[:,day] = age_count_temp[:, 0]
                 
             # get current values from dict
             msoacounts = msoacounts_dict_3d[key]
+            agecounts = agecounts_dict_3d[key]
             totalcounts = totalcounts_dict_3d[key]
             cumcounts = cumcounts_dict_3d[key]
             # add current run's values
             msoacounts[:,:,r] = msoacounts_run
+            agecounts[:,:,r] = agecounts_run
             totalcounts[:,r] = msoacounts_run.sum(axis=0)
             cumcounts[:,r] = cumcounts_msoa_run[:, 0]
             # write out to dict
             msoacounts_dict_3d[key] = msoacounts
+            agecounts_dict_3d[key] = agecounts
             totalcounts_dict_3d[key] = totalcounts
             cumcounts_dict_3d[key] = cumcounts
-
+            
+    
    
 def create_counts_dict_mean_std():
     '''
@@ -167,14 +192,6 @@ def create_counts_dict_mean_std():
         cumcounts_dict[key] = pd.Series(data=cumcounts, index=msoas)
         cumcounts_dict_std[key] = pd.Series(data=cumcounts_std, index=msoas)
      
-        
-    # TO BE COMPLETED - calculate unique nr people per condition 
-    # uniqcounts_dict_3d = {}
-    # for r in range(nr_runs):
-    #     tmp = uniqcounts[:,4,r]
-    #     result = np.where(tmp == 1)
-    #     indices = result[0]
-    #     # set other values on row to zero
     
     
 # plot 1a: heatmap condition
@@ -590,12 +607,16 @@ create_msoa_dangers_dict()
 # counts per condition
 # start with empty dictionaries
 msoacounts_dict_3d = {}  # to store mean nr per msoa and day
-totalcounts_dict_3d = {}  # empty dictionary to store results: nr per day
-cumcounts_dict_3d = {}  # empty dictionary to store results: total nr across time period
+totalcounts_dict_3d = {}  # to store results: nr per day
+cumcounts_dict_3d = {}  # to store results: total nr across time period
+agecounts_dict_3d = {}  # to store mean nr per age category and day
+
 # time range for cumulative counts
 start_day = 0
 end_day = nr_days-1 # last 'named' day - nrs starts from 0
 msoas = []
+# age brackets
+age_cat = np.array([[0, 19], [20, 29], [30,44], [45,59], [60,74], [75,200]])           
 create_counts_dict_3d()
     
 dict_days = [] # empty list for column names 'Day0' etc
@@ -610,6 +631,23 @@ msoacounts_dict_std = {}
 totalcounts_dict_std = {}
 cumcounts_dict_std = {}
 create_counts_dict_mean_std()
+
+# total cumulative count per condition
+cumtotal_counts = np.zeros((5,nr_runs))
+for r in range(nr_runs):
+    nr_dead = cumcounts_dict_3d["dead"][:,r].sum()
+    nr_recovered = cumcounts_dict_3d["recovered"][:,r].sum()
+    nr_symptomatic = cumcounts_dict_3d["symptomatic"][:,r].sum() - nr_dead - nr_recovered
+    nr_presymptomatic = cumcounts_dict_3d["presymptomatic"][:,r].sum() - nr_dead - nr_recovered - nr_symptomatic
+    nr_susceptible = cumcounts_dict_3d["susceptible"][:,r].sum() - nr_dead - nr_recovered - nr_symptomatic - nr_presymptomatic
+    cumtotal_counts[0,r] = nr_susceptible
+    cumtotal_counts[1,r] = nr_presymptomatic
+    cumtotal_counts[2,r] = nr_symptomatic
+    cumtotal_counts[3,r] = nr_recovered
+    cumtotal_counts[4,r] = nr_dead
+
+cumtotal_counts.mean(axis=1)
+cumtotal_counts.std(axis=1)      
 
 
 
@@ -687,3 +725,13 @@ tab10 = Panel(child=row(plotref_dict["hmSecondarySchool"],column(plotref_dict["c
 tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10])
 
 show(tabs)
+
+
+
+
+
+
+
+
+
+
