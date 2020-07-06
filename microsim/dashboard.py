@@ -41,13 +41,21 @@ def create_venue_dangers_dict():
             pickle_in = open(data_file,"rb")
             dangers = pickle.load(pickle_in)
             pickle_in.close()
-            # set row index to ID
-            dangers.set_index('ID', inplace = True)
-            dangers_colnames = dangers.columns
+            
+            filter_col = [col for col in dangers if col.startswith('Danger')]
+            # don't use the column simply called 'Danger'
+            filter_col = filter_col[1:len(filter_col)]
+            nr_days = len(filter_col)
+
+            # # set row index to ID
+            # dangers.set_index('ID', inplace = True)
+            dangers_colnames = filter_col
             dangers_rownames = dangers.index
+            dangers_values = dangers[filter_col]
+            
             if r == 0:
-                dangers_3d = np.zeros((dangers.shape[0],dangers.shape[1],nr_runs))        
-            dangers_3d[:,:,r] = dangers.values
+                dangers_3d = np.zeros((dangers.shape[0],dangers_values.shape[1],nr_runs))        
+            dangers_3d[:,:,r] = dangers_values
         dangers_dict_3d[key] = dangers_3d
         dangers_dict[key] = pd.DataFrame(data=dangers_3d.mean(axis=2), index=dangers_rownames, columns=dangers_colnames)
         dangers_dict_std[key] = pd.DataFrame(data=dangers_3d.std(axis=2), index=dangers_rownames, columns=dangers_colnames)
@@ -95,10 +103,10 @@ def create_counts_dict_3d():
             start_col = individuals.shape[1] - nr_days + start_day
             end_col = individuals.shape[1] - nr_days + end_day + 1
             
-            individuals['age0'] = np.zeros((len(individuals),1))
-            for a in range(age_cat.shape[0]):
-                individuals['age0'] = np.where((individuals['DC1117EW_C_AGE'] >= age_cat[a,0]) & (individuals['DC1117EW_C_AGE'] <= age_cat[a,1]), a+1, individuals['age0'])   
-            age_cat_col = individuals['age0'].values
+            # individuals['age0'] = np.zeros((len(individuals),1))
+            # for a in range(age_cat.shape[0]):
+            #     individuals['age0'] = np.where((individuals['DC1117EW_C_AGE'] >= age_cat[a,0]) & (individuals['DC1117EW_C_AGE'] <= age_cat[a,1]), a+1, individuals['age0'])   
+            # age_cat_col = individuals['age0'].values
             
             #uniqcounts = np.zeros((individuals.shape[0],len(conditions_dict),nr_runs))   # empty dictionary to store results: total nr, each person assigned to highest condition: 0<1<2<(3==4)           
             
@@ -107,10 +115,10 @@ def create_counts_dict_3d():
             # nrpeople_msoa.rename(columns={'ID':'nr_people'}, inplace=True)
           
         # add age brackets column to individuals_tmp (not at end as this messes up counting days with disease conditions backwards!)
-        individuals_tmp.insert(4, 'age0', age_cat_col)
+        # individuals_tmp.insert(4, 'age0', age_cat_col)
         
         for key, value in conditions_dict.items():
-            print(key)
+            #print(key)
             if r == 0:
                 msoacounts_dict_3d[key] = np.zeros((len(msoas),nr_days,nr_runs))        
                 agecounts_dict_3d[key] = np.zeros((age_cat.shape[0],nr_days,nr_runs))
@@ -135,19 +143,39 @@ def create_counts_dict_3d():
             msoacounts_run = np.zeros((len(msoas),nr_days))
             agecounts_run = np.zeros((age_cat.shape[0],nr_days))
             for day in range(0, nr_days):
-                print(day)
+                #print(day)
                 # count nr for this condition per area
-                msoa_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['Area']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
-                msoa_count_temp = msoa_count_temp.values
-                # add new column
-                msoacounts_run[:,day] = msoa_count_temp[:, 0]
+                msoa_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['area']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
                 
+                if msoa_count_temp.shape[0] == len(msoas):
+                    msoa_count_temp = msoa_count_temp.values
+                    msoacounts_run[:,day] = msoa_count_temp[:, 0]
+                elif msoa_count_temp.empty == False:
+                    print('check MSOAs')
+                    # in case some entries don't exist
+                    # start with empty dataframe
+                    tmp_df =  pd.DataFrame(np.zeros(len(msoas)), columns = ['tmp'], index=msoas)   
+                    # merge with obtained counts - NaN will appear
+                    tmp_df = pd.merge(tmp_df, msoa_count_temp, how='left', left_index=True,right_index=True)
+                    # replace NaN by 0
+                    tmp_df.fillna(0)
+                    msoacounts_run[:,day] = tmp_df.iloc[:,1].values
+                    
+
                 # count nr for this condition per age bracket
-                age_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['age0']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
+                # age_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['age0']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
                 
-                if age_count_temp.empty == False:
-                    age_count_temp = age_count_temp.values
-                    agecounts_run[:,day] = age_count_temp[:, 0]
+                # if age_count_temp.empty == False:
+                #     if age_count_temp.shape[0] == 6:
+                #         age_count_temp = age_count_temp.values
+                #         agecounts_run[:,day] = age_count_temp[:, 0]
+                        
+                #     for a in range(age_cat.shape[0]):
+                #         age_cat[index=2]
+                        
+                #         age_count_temp.loc['2'].count
+                #         a
+                        
                 
             # get current values from dict
             msoacounts = msoacounts_dict_3d[key]
@@ -389,7 +417,7 @@ def plot_choropleth_condition_slider(condition2plot):
         }
         source.change.emit();
     """)
-    slider = Slider(start=0, end=20, value=0, step=1, title="Day")
+    slider = Slider(start=0, end=nr_days-1, value=0, step=1, title="Day")
     slider.js_on_change('value', callback)
     plotref_dict[f"chpl{condition2plot}"] = s4
     plotref_dict[f"chsl{condition2plot}"] = slider
@@ -446,7 +474,7 @@ def plot_choropleth_danger_slider(venue2plot):
         }
         source.change.emit();
     """)
-    slider = Slider(start=0, end=20, value=0, step=1, title="Day")
+    slider = Slider(start=0, end=nr_days-1, value=0, step=1, title="Day")
     slider.js_on_change('value', callback)
     plotref_dict[f"chpl{venue2plot}"] = s4
     plotref_dict[f"chsl{venue2plot}"] = slider    
@@ -574,7 +602,7 @@ postcode_lu = pd.read_csv(data_file, encoding = "ISO-8859-1", usecols = ["pcds",
 
 # multiple runs: create mean and std dev
 # we assume all directories in the ouput directory are runs (alternatively we could ask user to supply number of runs)
-nr_runs = len(next(os.walk(os.path.join(data_dir, "output")))[1])  
+nr_runs = len(next(os.walk(os.path.join(data_dir, "output")))[1]) 
 
 # read in and process pickle files location/venue dangers
 # start with empty dictionaries
@@ -597,7 +625,7 @@ retail = pd.merge(retail, dangers_dict["Retail"], left_index=True, right_index=T
 # creat LUT
 lookup = dict(zip(postcode_lu.pcds, postcode_lu.msoa11cd)) # zip together the lists and make a dict from it
 # use LUT and add column to retail variable
-msoa_code = [lookup.get(retail.postcode[i]) for i in range(1, len(retail.postcode)+1, 1)]
+msoa_code = [lookup.get(retail.postcode[i]) for i in range(0, len(retail.postcode), 1)]
 retail.insert(2, 'MSOA_code', msoa_code)
 
 # normalised danger scores per msoa for schools and retail (for choropleth)
