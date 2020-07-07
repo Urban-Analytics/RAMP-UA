@@ -103,10 +103,13 @@ def create_counts_dict_3d():
             start_col = individuals.shape[1] - nr_days + start_day
             end_col = individuals.shape[1] - nr_days + end_day + 1
             
+            # TO BE ADDED SO USER CAN DEFINE AGE BRACKETS - FOR NOW JUST USING PREDEFINED CATEGORIES
             # individuals['age0'] = np.zeros((len(individuals),1))
             # for a in range(age_cat.shape[0]):
             #     individuals['age0'] = np.where((individuals['DC1117EW_C_AGE'] >= age_cat[a,0]) & (individuals['DC1117EW_C_AGE'] <= age_cat[a,1]), a+1, individuals['age0'])   
             # age_cat_col = individuals['age0'].values
+            # temporary workaround
+            age_cat_col = individuals['Age1'].values 
             
             #uniqcounts = np.zeros((individuals.shape[0],len(conditions_dict),nr_runs))   # empty dictionary to store results: total nr, each person assigned to highest condition: 0<1<2<(3==4)           
             
@@ -114,8 +117,8 @@ def create_counts_dict_3d():
             # nrpeople_msoa = individuals[['ID','area']].groupby(['area']).count()
             # nrpeople_msoa.rename(columns={'ID':'nr_people'}, inplace=True)
           
-        # add age brackets column to individuals_tmp (not at end as this messes up counting days with disease conditions backwards!)
-        # individuals_tmp.insert(4, 'age0', age_cat_col)
+        # add age brackets column to individuals_tmp
+        individuals_tmp.insert(8, 'age0', age_cat_col)
         
         for key, value in conditions_dict.items():
             #print(key)
@@ -163,18 +166,26 @@ def create_counts_dict_3d():
                     
 
                 # count nr for this condition per age bracket
-                # age_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['age0']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
+                age_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['age0']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
                 
-                # if age_count_temp.empty == False:
-                #     if age_count_temp.shape[0] == 6:
-                #         age_count_temp = age_count_temp.values
-                #         agecounts_run[:,day] = age_count_temp[:, 0]
-                        
-                #     for a in range(age_cat.shape[0]):
-                #         age_cat[index=2]
-                        
-                #         age_count_temp.loc['2'].count
-                #         a
+                
+                
+                if age_count_temp.shape[0] == 6:
+                    age_count_temp = age_count_temp.values
+                    agecounts_run[:,day] = age_count_temp[:, 0]
+                elif age_count_temp.empty == False:
+                    # in case some entries don't exist
+                    # start with empty dataframe
+                    tmp_df =  pd.DataFrame(np.zeros(age_cat.shape[0]), columns = ['tmp'], index=list(range(1,age_cat.shape[0]+1)))   
+                           
+                    # merge with obtained counts - NaN will appear
+                    tmp_df = pd.merge(tmp_df, age_count_temp, how='left', left_index=True,right_index=True)
+                    # replace NaN by 0
+                    tmp_df = tmp_df.fillna(0)
+                    agecounts_run[:,day] = tmp_df.iloc[:,1].values
+                
+                    #age_count_temp.loc['2'].count
+
                         
                 
             # get current values from dict
@@ -203,11 +214,14 @@ def create_counts_dict_mean_std():
     for key, value in conditions_dict.items():
         # get current values from dict
         msoacounts = msoacounts_dict_3d[key]
+        agecounts = agecounts_dict_3d[key]
         totalcounts = totalcounts_dict_3d[key]
         cumcounts = cumcounts_dict_3d[key]
         # aggregate
         msoacounts_std = msoacounts.std(axis=2)
         msoacounts = msoacounts.mean(axis=2)
+        agecounts_std = agecounts.std(axis=2)
+        agecounts = agecounts.mean(axis=2)
         totalcounts_std = totalcounts.std(axis=1)
         totalcounts = totalcounts.mean(axis=1)
         cumcounts_std = cumcounts.std(axis=1)
@@ -215,6 +229,8 @@ def create_counts_dict_mean_std():
         # write out to dict
         msoacounts_dict[key] = pd.DataFrame(data=msoacounts, index=msoas, columns=dict_days)
         msoacounts_dict_std[key] = pd.DataFrame(data=msoacounts_std, index=msoas, columns=dict_days)
+        agecounts_dict[key] = pd.DataFrame(data=agecounts, index=age_cat_str, columns=dict_days)
+        agecounts_dict_std[key] = pd.DataFrame(data=agecounts_std, index=age_cat_str, columns=dict_days)
         totalcounts_dict[key] = pd.Series(data=totalcounts, index=dict_days)
         totalcounts_dict_std[key] = pd.Series(data=totalcounts_std, index=dict_days)
         cumcounts_dict[key] = pd.Series(data=cumcounts, index=msoas)
@@ -515,6 +531,55 @@ def plot_danger_time():
 
 
 
+
+def plot_cond_time_age():
+    # 1 plot per condition, nr of lines = nr age brackets
+    colour_dict_age = {
+      0: "red",
+      1: "orange",
+      2: "yellow",
+      3: "green",
+      4: "teal",
+      5: "blue",
+      6: "purple",
+      7: "pink",
+      8: "gray",
+      9: "black",
+    }
+    
+    for key, value in totalcounts_dict.items():
+        data_s2= dict()
+        data_s2["days"] = days
+        tooltips = []
+        for a in range(len(age_cat_str)):
+            age_cat_str[a]
+            data_s2[f"c{a}"] = agecounts_dict[key].iloc[a]
+            data_s2[f"{age_cat_str[a]}_std_upper"] = agecounts_dict[key].iloc[a] + agecounts_dict_std[key].iloc[a]
+            data_s2[f"{age_cat_str[a]}_std_lower"] = agecounts_dict[key].iloc[a] - agecounts_dict_std[key].iloc[a]
+        source_2 = ColumnDataSource(data=data_s2)
+        # Create fig
+        s2 = figure(background_fill_color="#fafafa",title=f"{key}", x_axis_label='Time', y_axis_label=f'Nr of people - {key}',toolbar_location='above')
+        legend_it = []
+        for a in range(len(age_cat_str)):
+            c1 = s2.line(x = 'days', y = f"c{a}", source = source_2, line_width=2, line_color=colour_dict_age[a],muted_color="grey", muted_alpha=0.2)   
+            c2 = s2.square(x = 'days', y = f"c{a}", source = source_2, fill_color=colour_dict_age[a], line_color=colour_dict_age[a], size=5, muted_color="grey", muted_alpha=0.2)
+            c5 = s2.segment('days', f"{age_cat_str[a]}_std_lower", 'days', f"{age_cat_str[a]}_std_upper", source = source_2, line_color="black",muted_color="grey", muted_alpha=0.2)
+            legend_it.append((f"nr {age_cat_str[a]}", [c1,c2,c5]))
+            tooltips.append(tuple(( f"{age_cat_str[a]}",  f"@c{a}" )))
+            
+        legend = Legend(items=legend_it)
+        legend.click_policy="hide"
+        # Misc    
+        tooltips.append(tuple(( 'Day',  '@days' )))
+        s2.add_tools(HoverTool(
+            tooltips=tooltips,
+        ))
+        s2.add_layout(legend, 'right')
+        s2.toolbar.autohide = False
+        plotref_dict[f"cond_time_age_{key}"] = s2    
+
+
+
 # Set parameters
 # --------------
 
@@ -646,6 +711,12 @@ msoas = []
 # age brackets
 age_cat = np.array([[0, 19], [20, 29], [30,44], [45,59], [60,74], [75,200]])           
 create_counts_dict_3d()
+
+# label for plotting age categories
+age_cat_str = []
+for a in range(age_cat.shape[0]):
+    age_cat_str.append(f"{age_cat[a,0]}-{age_cat[a,1]}")
+    
     
 dict_days = [] # empty list for column names 'Day0' etc
 for d in range(0, nr_days):
@@ -653,9 +724,11 @@ for d in range(0, nr_days):
   
 # aggregate counts across runs (means and std) from 3d data
 msoacounts_dict = {}  
+agecounts_dict = {}  
 totalcounts_dict = {}
 cumcounts_dict = {}
 msoacounts_dict_std = {}  
+agecounts_dict_std = {}
 totalcounts_dict_std = {}
 cumcounts_dict_std = {}
 create_counts_dict_mean_std()
@@ -726,6 +799,9 @@ for key,value in dangers_msoa_dict.items():
 plot_danger_time()   
 
 
+# conditions across time per age category
+plot_cond_time_age()
+
 
 # Layout and output
 
@@ -749,8 +825,11 @@ tab9 = Panel(child=row(plotref_dict["hmPrimarySchool"],column(plotref_dict["chsl
 
 tab10 = Panel(child=row(plotref_dict["hmSecondarySchool"],column(plotref_dict["chslSecondarySchool"],plotref_dict["chplSecondarySchool"])), title='Danger secondary school')
 
+tab11 = Panel(child=row(plotref_dict["cond_time_age_susceptible"],plotref_dict["cond_time_age_presymptomatic"],plotref_dict["cond_time_age_symptomatic"],plotref_dict["cond_time_age_recovered"],plotref_dict["cond_time_age_dead"]), title='Breakdown by age')
+
+
 # Put the Panels in a Tabs object
-tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10])
+tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11])
 
 show(tabs)
 
