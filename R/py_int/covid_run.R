@@ -45,7 +45,7 @@ risk_per_case <- 509.7954
 
 w <- NULL
 nick_cases <- NULL
-run_status <- function(pop, timestep=1, current_risk = 0.0095) {
+run_status <- function(pop, timestep=1, current_risk = 0.0045, risk_cap = 5, symptomatic_length_mean = 14, symptomatic_length_sd = 2) {
   
   opt_switch <- FALSE
   output_switch <- FALSE
@@ -53,11 +53,11 @@ run_status <- function(pop, timestep=1, current_risk = 0.0095) {
  # current_risk <- 0.01 #0.004
   rank_assign <- FALSE
   seed_cases <- TRUE
-  seed_days <- 20
+  seed_days <- 1
   normalizer_on <- TRUE
-  lockdown_scenario <- FALSE # at the moment need to tell nick's model this separately which isn't ideal  
-  risk_cap_on <- TRUE
-  risk_cap <- 5
+ # lockdown_scenario <- FALSE # at the moment need to tell nick's model this separately which isn't ideal  
+  risk_cap_on <- FALSE
+  risk_cap <- risk_cap
 
 
   print(paste("R timestep:", timestep))
@@ -190,15 +190,15 @@ run_status <- function(pop, timestep=1, current_risk = 0.0095) {
   
   print(paste0("PHE cases ", gam_cases[timestep]))
   
-  if(lockdown_scenario == TRUE){
-    sum_risk <- sum(df_prob$current_risk)
-    risk_base_cases <- sum_risk/risk_per_case
-    gam_cases[timestep] <-  round(risk_base_cases)
-  }
+  # if(lockdown_scenario == TRUE){
+  #   sum_risk <- sum(df_prob$current_risk)
+  #   risk_base_cases <- sum_risk/risk_per_case
+  #   gam_cases[timestep] <-  round(risk_base_cases)
+  # }
   
   nick_cases[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))
   print(paste0("model cases ", nick_cases[timestep]))
-  print(paste0("Adjusted PHE cases ", gam_cases[timestep]))
+  #print(paste0("Adjusted PHE cases ", gam_cases[timestep]))
   
   w[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))/gam_cases[timestep]
   print(paste0("w is ", w[timestep]))
@@ -227,8 +227,8 @@ run_status <- function(pop, timestep=1, current_risk = 0.0095) {
                              presymp_mean = 6.4,
                              presymp_sd = 2.3,
                              infection_dist = "normal",
-                             infection_mean =  14,
-                             infection_sd = 2,
+                             infection_mean =  symptomatic_length_mean,
+                             infection_sd = symptomatic_length_sd,
                              timestep=timestep,
                              tmp.dir=tmp.dir,
                              save_output = output_switch)
