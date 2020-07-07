@@ -53,7 +53,7 @@ run_status <- function(pop, timestep=1, current_risk = 0.0045, risk_cap = 5, sym
  # current_risk <- 0.01 #0.004
   rank_assign <- FALSE
   seed_cases <- TRUE
-  seed_days <- 1
+  seed_days <- 20
   normalizer_on <- TRUE
  # lockdown_scenario <- FALSE # at the moment need to tell nick's model this separately which isn't ideal  
   risk_cap_on <- FALSE
@@ -207,7 +207,7 @@ run_status <- function(pop, timestep=1, current_risk = 0.0045, risk_cap = 5, sym
     w[timestep] <- 0
   }
 
-  if(timestep <= seed_days & seed_cases == TRUE){
+  if(timestep > 1 & timestep <= seed_days & seed_cases == TRUE){
     df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], timestep=timestep)
     print(paste0((sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))," cases reassigned"))
   }
