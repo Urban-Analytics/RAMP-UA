@@ -29,6 +29,8 @@ class ColumnNames:
     DISEASE_STATUS_Symptomatic = 2
     DISEASE_STATUS_Recovered = 3
     DISEASE_STATUS_Removed = 4
+    DISEASE_STATUS_ALL = [ DISEASE_STATUS_Susceptible, DISEASE_STATUS_PreSymptomatic,
+                           DISEASE_STATUS_Symptomatic, DISEASE_STATUS_Recovered, DISEASE_STATUS_Removed]
     DISEASE_STATUS = "disease_status"  # Which one it is
     DISEASE_STATUS_CHANGED = "status_changed"  # Whether it has changed between the current iteration and the last
     DISEASE_PRESYMP = "presymp_days"

@@ -23,8 +23,14 @@
 # requires a dataframe list, a vector of betas, and a timestep
 
 covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, 
-                       risk_cap_val=100, include_age_sex = FALSE) {
+                       risk_cap_val=5, include_age_sex = FALSE, normalizer_on = FALSE) {
   #print("assign probabilities")
+  
+  if(normalizer_on){
+    df$beta0 <- 0
+  }
+  
+  print(paste0(sum(df$current_risk > 5), " individual risks above cap of ", risk_cap_val))
   
   if(risk_cap==TRUE){
     df$current_risk[df$current_risk>risk_cap_val] <- risk_cap_val
@@ -65,6 +71,11 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE,
   }
   
   psi <- exp(lpsi) / (exp(lpsi) + 1)
+  
+  if(normalizer_on == TRUE){
+    psi <- normalizer(psi, 0,1,0.5,1)
+  }
+  
   psi[df$status %in% c(3,4)] <- 0 # if they are not susceptible then their probability is 0 of getting it 
   psi[df$status %in% c(1,2)] <- 1 # this makes keeping track of who has it easier
   df$betaxs <- df$as_risk + beta_out_sums
@@ -102,31 +113,43 @@ case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir, save_output
   #}
   #ncase <- as.data.frame(ncase)
   #write.csv(ncase, "new_cases.csv")
-  
-  if (save_output == TRUE){
-    if(timestep==1) {
-      nsus <<- length(susceptible)
-      prob <<- df$probability
-      current_risk <<- df$current_risk
-      dir.create(tmp.dir)
-    } else {
-      tmp <- length(susceptible)
-      nsus <<- rbind(nsus,tmp)
-      rownames(nsus) <<- seq(1,nrow(nsus))
-      prob.tmp <<- df$probability
-      prob <<- cbind(prob,prob.tmp)
-      risk.tmp <<- df$current_risk
-      current_risk <<- cbind(current_risk,risk.tmp)
-    }
-    #ncase <- as.data.frame(ncase)
-    write.csv(nsus, paste(tmp.dir,"/susceptible_cases.csv",sep=""))
-    write.csv(prob, paste(tmp.dir,"/probability.csv",sep=""))
-    write.csv(current_risk, paste(tmp.dir,"/risk.csv",sep=""))
-    
-  }
+
+  # if (save_output == TRUE){
+  #   if(timestep==1) {
+  #     nsus <<- length(susceptible)
+  #     prob <<- df$probability
+  #     current_risk <<- df$current_risk
+  #     dir.create(tmp.dir)
+  #   } else {
+  #     tmp <- length(susceptible)
+  #     nsus <<- rbind(nsus,tmp)
+  #     rownames(nsus) <<- seq(1,nrow(nsus))
+  #     prob.tmp <<- df$probability
+  #     prob <<- cbind(prob,prob.tmp)
+  #     risk.tmp <<- df$current_risk
+  #     current_risk <<- cbind(current_risk,risk.tmp)
+  #   }
+  #   #ncase <- as.data.frame(ncase)
+  #   write.csv(nsus, paste(tmp.dir,"/susceptible_cases.csv",sep=""))
+  #   write.csv(prob, paste(tmp.dir,"/probability.csv",sep=""))
+  #   write.csv(current_risk, paste(tmp.dir,"/risk.csv",sep=""))
+  #
+  # }
     
   return(df)
 }
+
+rank_assign <- function(df, daily_case , timestep){
+  
+  dfw <- data.frame(id = df$id, current_risk = df$current_risk, status = df$status)
+  dfw <- dfw[dfw$status == 0,]
+  rank_inf <- dfw[order(-dfw$current_risk),][1:daily_case,"id"]
+  inf_ind <- which(df$id %in% rank_inf)
+  df$new_status[inf_ind] <- 1 
+  return(df)
+}
+
+
 
 
 #########################################
@@ -139,7 +162,7 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
   
   new_cases <- which((df$new_status-df$status==1) & df$status == 0)
   
-  if (save_output == TRUE){
+  #if (save_output == TRUE){
     if(timestep==1) {
       ncase <<- length(new_cases)
     } else {
@@ -149,7 +172,8 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
     }
     #ncase <- as.data.frame(ncase)
     write.csv(ncase, paste(tmp.dir,"/new_cases.csv",sep=""))
-  }
+
+  #}
 
   #new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
   
@@ -242,7 +266,7 @@ new_beta0_probs <- function(df, daily_case){
   susceptible <- which(df$status == 0)
   
   new_beta0 <- optim(par = -1, beta0_optim,  n = length(susceptible), betaX=df$betaxs[susceptible], Y=daily_case, 
-                     method="Brent",  lower  =-30, upper = 0)$par
+                     method="Brent",  lower =-30, upper = 0)$par
   
   df$new_beta0 <- new_beta0
   tot_risk_new <- df$new_beta0  + df$betaxs
@@ -256,4 +280,11 @@ new_beta0_probs <- function(df, daily_case){
 
 
 #}
+
+
+normalizer <- function(x ,lower_bound, upper_bound, xmin, xmax){
+  
+  normx <-  (upper_bound - lower_bound)*(x - xmin)/(xmax-xmin) + lower_bound
+  return(normx)
+}
 
