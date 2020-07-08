@@ -5,3 +5,4 @@ devon_data/devon-schools/** filter=lfs diff=lfs merge=lfs -text
 devon_data/devon-tu_health/** filter=lfs diff=lfs merge=lfs -text
 devon_data/msm_data/** filter=lfs diff=lfs merge=lfs -text
 devon_data/MSOAS_shp/** filter=lfs diff=lfs merge=lfs -text
+devon_data/PCD_OA_LSOA_MSOA_LAD_AUG19_UK_LU.csv filter=lfs diff=lfs merge=lfs -text
