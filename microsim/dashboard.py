@@ -6,6 +6,7 @@ Created on Thu Jun  4 16:22:57 2020
 """
 
 import os
+import click
 import pickle
 import pandas as pd
 import numpy as np
@@ -27,16 +28,115 @@ from bokeh.transform import transform
 
 
 
+# Set parameters (optional to overwrite defaults)
+# -----------------------------------------------
+# Set to None to use defaults
+
+# directory with data (default "data")
+data_dir_user = "devon_data"
+
+# start and end to include in data visualisation and aggregation
+start_day_user = None    # default = 0
+end_day_user = None      # default = last day simulated
+
+# runs
+start_run_user = 0   # default = 0
+end_run_user = 0     # default: nr directories in output folder - 1
+
+# # list of scenarios, each scenario is a list of start and end run directory nr e.g. scenarios_runs_user = [[0,2][3,5]] means 2 scenarios, scenario 1 includes directories named 0,1 and 2, and scenario 2 includes directories named 3,4 and 5
+# scenarios_runs_user = [[0,2],[3,5],[6,8]] 
+# scenarios_runs_user = None #­ default 1 scenario, runs = all directories in output folder
+
+            
+            
+    
+
+# Set parameters (advanced)
+# -------------------------
+
+# dictionaries with condition and venue names
+# conditions are coded as numbers in microsim output
+conditions_dict = {
+  "susceptible": 0,
+  "presymptomatic": 1,
+  "symptomatic": 2,
+  "recovered": 3,
+  "dead": 4,
+}
+# venues are coded as strings - redefined here so script works as standalone, could refer to ActivityLocations instead
+locations_dict = {
+  "PrimarySchool": "PrimarySchool",
+  "SecondarySchool": "SecondarySchool",
+  "Retail": "Retail",
+  "Work": "Work",
+  "Home": "Home",
+}
+
+# determine where/how the visualization will be rendered
+html_output = 'dashboard.html'
+output_file(html_output, title='RAMP-UA microsim output') # Render to static HTML
+#output_notebook()  # To tender inline in a Jupyter Notebook
+
+# default list of tools for plots
+tools = "crosshair,hover,pan,wheel_zoom,box_zoom,reset,box_select,lasso_select"
+
+# colour schemes for plots
+# colours for line plots
+colour_dict = {
+  "susceptible": "blue",
+  "presymptomatic": "orange",
+  "symptomatic": "red",
+  "recovered": "green",
+  "dead": "black",
+  "Retail": "blue",
+  "PrimarySchool": "orange",
+  "SecondarySchool": "red",
+  "Work": "black",
+  "Home": "green",
+}
+# colours for heatmaps and choropleths for conditions (colours_ch_cond) and venues/danger scores (colours_ch_danger)
+colours_ch_cond = {
+  "susceptible": brewer['Blues'][8][::-1],
+  "presymptomatic": brewer['YlOrRd'][8][::-1],
+  "symptomatic": brewer['YlOrRd'][8][::-1],
+  "recovered": brewer['Greens'][8][::-1],
+  "dead": brewer['YlOrRd'][8][::-1],
+}
+colours_ch_danger = brewer['YlOrRd'][8][::-1]
+# other good palettes / way to define:
+# palette = brewer['BuGn'][8][::-1]    # -1 reverses the order
+# palette = = ["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41", "#550b1d"]
+
+
+
+
 # Functions
 # ---------
 
-def create_venue_dangers_dict():
+
+def calc_nr_days():
+    # figure out nr days by reading in the retail dangers pickle file of run 0
+    data_file = os.path.join(data_dir, "output","0","Retail.pickle")
+    pickle_in = open(data_file,"rb")
+    dangers = pickle.load(pickle_in)
+    pickle_in.close()
+            
+    filter_col = [col for col in dangers if col.startswith('Danger')]
+    # don't use the column simply called 'Danger'
+    filter_col = filter_col[1:len(filter_col)]
+    nr_days = len(filter_col)
+    return nr_days
+
+
+def create_venue_dangers_dict(r_range):
     '''
     Reads in venue pickle files (venues from locations_dict) and populates dangers_dict_3d (raw data: venue, day, run), dangers_dict (mean across runs) and dangers_dict_std (standard deviation across runs)
     '''
     
     for key, value in locations_dict.items():
-        for r in range(nr_runs):
+        #for r in range(nr_runs):
+        for r in r_range:
+            
             data_file = os.path.join(data_dir, "output",f"{r}",f"{locations_dict[key]}.pickle")
             pickle_in = open(data_file,"rb")
             dangers = pickle.load(pickle_in)
@@ -45,7 +145,7 @@ def create_venue_dangers_dict():
             filter_col = [col for col in dangers if col.startswith('Danger')]
             # don't use the column simply called 'Danger'
             filter_col = filter_col[1:len(filter_col)]
-            nr_days = len(filter_col)
+            #nr_days = len(filter_col)
 
             # # set row index to ID
             # dangers.set_index('ID', inplace = True)
@@ -80,7 +180,7 @@ def create_msoa_dangers_dict():
         dangers_msoa_dict[key] = msoa_avg
         
 
-def create_counts_dict_3d():
+def create_counts_dict_3d(r_range):
     '''
     Counts per condition. Produces 3 types of counts:
     msoacounts: nr per msoa and day
@@ -88,7 +188,7 @@ def create_counts_dict_3d():
     cumcounts: nr per MSOA (across given time period)
     '''
     
-    for r in range(nr_runs):
+    for r in r_range:
         # read in pickle file individuals (disease status)
         data_file = os.path.join(data_dir, "output", f"{r}", "Individuals.pickle")
         pickle_in = open(data_file,"rb")
@@ -580,65 +680,34 @@ def plot_cond_time_age():
 
 
 
-# Set parameters
-# --------------
+# Nr days, runs, scenarios
+# ------------------------    
+# check user input or revert to default
 
 # directory to read data from
+data_dir = "data" if (data_dir_user is None) else data_dir_user
 base_dir = os.getcwd()  # get current directory (usually RAMP-UA)
-data_dir = os.path.join(base_dir, "devon_data") # go to data dir
+data_dir = os.path.join(base_dir, data_dir) # update data dir
+# directory to write dashboard
+html_output = os.path.join(data_dir, html_output)
 
-# dictionaries with condition and venue names
-# conditions are coded as numbers in microsim output
-conditions_dict = {
-  "susceptible": 0,
-  "presymptomatic": 1,
-  "symptomatic": 2,
-  "recovered": 3,
-  "dead": 4,
-}
-# venues are coded as strings - redefined here so script works as standalone, could refer to ActivityLocations instead
-locations_dict = {
-  "PrimarySchool": "PrimarySchool",
-  "SecondarySchool": "SecondarySchool",
-  "Retail": "Retail",
-  "Work": "Work",
-  "Home": "Home",
-}
+# start and end day
+start_day = 0 if (start_day_user is None) else start_day_user
+end_day = calc_nr_days()-1 if (end_day_user is None) else end_day_user
+nr_days = end_day - start_day + 1
 
-# determine where/how the visualization will be rendered
-html_output = os.path.join(data_dir, 'dashboard.html')
-output_file(html_output, title='RAMP-UA microsim output') # Render to static HTML
-#output_notebook()  # To tender inline in a Jupyter Notebook
+# start and end run
+start_run = 0 if (start_run_user is None) else start_run_user
+end_run = len(next(os.walk(os.path.join(data_dir, "output")))[1]) -1 if (end_run_user is None) else end_run_user
+nr_runs = end_run - start_run + 1
+r_range = range(start_run, start_run+1)
 
-# default list of tools for plots
-tools = "crosshair,hover,pan,wheel_zoom,box_zoom,reset,box_select,lasso_select"
-
-# colour schemes for plots
-# colours for line plots
-colour_dict = {
-  "susceptible": "blue",
-  "presymptomatic": "orange",
-  "symptomatic": "red",
-  "recovered": "green",
-  "dead": "black",
-  "Retail": "blue",
-  "PrimarySchool": "orange",
-  "SecondarySchool": "red",
-  "Work": "black",
-  "Home": "green",
-}
-# colours for heatmaps and choropleths for conditions (colours_ch_cond) and venues/danger scores (colours_ch_danger)
-colours_ch_cond = {
-  "susceptible": brewer['Blues'][8][::-1],
-  "presymptomatic": brewer['YlOrRd'][8][::-1],
-  "symptomatic": brewer['YlOrRd'][8][::-1],
-  "recovered": brewer['Greens'][8][::-1],
-  "dead": brewer['YlOrRd'][8][::-1],
-}
-colours_ch_danger = brewer['YlOrRd'][8][::-1]
-# other good palettes / way to define:
-# palette = brewer['BuGn'][8][::-1]    # -1 reverses the order
-# palette = = ["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41", "#550b1d"]
+# # runs and scenarios
+# if scenarios_runs_user is None:
+#     # we assume all directories in the ouput directory are runs 
+#     nr_runs = len(next(os.walk(os.path.join(data_dir, "output")))[1]) 
+#     scenarios_runs_user = [[0,nr_runs-1]] 
+# nr_scenarios = len(scenarios_runs_user)
 
 
 # Read in third party data
@@ -665,22 +734,14 @@ postcode_lu = pd.read_csv(data_file, encoding = "ISO-8859-1", usecols = ["pcds",
 # Read in and process pickled output from microsim
 # ------------------------------------------------
 
-# multiple runs: create mean and std dev
-# we assume all directories in the ouput directory are runs (alternatively we could ask user to supply number of runs)
-nr_runs = len(next(os.walk(os.path.join(data_dir, "output")))[1]) 
-
 # read in and process pickle files location/venue dangers
 # start with empty dictionaries
 dangers_dict = {}  # to store mean (value to be plotted)
 dangers_dict_std = {}  # to store std (error bars)
 dangers_dict_3d = {} # to store full 3D data
 # fill dictionaries
-create_venue_dangers_dict()
+create_venue_dangers_dict(r_range)
    
-# how many days have we got
-nr_days = dangers_dict["Retail"].shape[1]
-days = [i for i in range(0,nr_days)]
-
 # Add additional info about schools and retail including spatial coordinates
 # merge
 primaryschools = pd.merge(schools, dangers_dict["PrimarySchool"], left_index=True, right_index=True)
@@ -710,7 +771,7 @@ end_day = nr_days-1 # last 'named' day - nrs starts from 0
 msoas = []
 # age brackets
 age_cat = np.array([[0, 19], [20, 29], [30,44], [45,59], [60,74], [75,200]])           
-create_counts_dict_3d()
+create_counts_dict_3d(r_range)
 
 # label for plotting age categories
 age_cat_str = []
@@ -735,7 +796,7 @@ create_counts_dict_mean_std()
 
 # total cumulative count per condition
 cumtotal_counts = np.zeros((5,nr_runs))
-for r in range(nr_runs):
+for r in r_range:
     nr_dead = cumcounts_dict_3d["dead"][:,r].sum()
     nr_recovered = cumcounts_dict_3d["recovered"][:,r].sum()
     nr_symptomatic = cumcounts_dict_3d["symptomatic"][:,r].sum() - nr_dead - nr_recovered
@@ -757,6 +818,9 @@ cumtotal_counts.std(axis=1)
 
 # MSOA nrs (needs nrs not strings to plot)
 msoas_nr = [i for i in range(0,len(msoas))]
+
+# days (needs list to plot)
+days = [i for i in range(0,nr_days)]
 
 # optional: threshold map to only use MSOAs currently in the study or selection
 map_df = map_df[map_df['Area'].isin(msoas)]
@@ -832,8 +896,6 @@ tab11 = Panel(child=row(plotref_dict["cond_time_age_susceptible"],plotref_dict["
 tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11])
 
 show(tabs)
-
-
 
 
 
