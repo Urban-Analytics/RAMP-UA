@@ -1,6 +1,8 @@
 library(dplyr)
 library(ggplot2)
 library(patchwork)
+library(mgcv)
+library(tidyr)
 
 gam_cases <- readRDS("gam_fitted_PHE_cases.RDS")
 gam_cases_df <- data.frame(day = 1:80, cases = gam_cases[1:80])
@@ -96,6 +98,47 @@ comparison <- ggplot()+
   ggtitle("Comparison")
 
 baseline/lock_down_early
+
+
+
+##### PHE cases
+
+
+devon_cases <- readRDS(paste0(getwd(),"/devon_cases.RDS"))
+devon_cases$cumulative_cases[84] <- 812 #type here I think
+devon_cases$new_cases <- c(0,diff(devon_cases$cumulative_cases))
+devon_cases$devon_date <- as.numeric(devon_cases$date)
+devon_cases <- as.data.frame(devon_cases)
+devon_df <- data.frame(case_type = "PHE",day = 1:80, cases = devon_cases$new_cases[1:80]*20)
+
+
+gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
+
+gam_df <- data.frame(case_type = "Smoothed", day = 1:80, cases = gam_cases[1:80])
+
+all_cases <- rbind(devon_df, gam_df)
+
+
+
+ggplot()+
+  geom_point(data = devon_df, aes(x = day, y = cases))+
+  geom_line(data = gam_df, aes(x = day, y = cases), colour = "red", size = 1)+
+  ylab("Daily Cases")+
+  xlab("Day")+
+  theme_bw()
+
+
+ggplot()+
+  geom_point(data = devon_df, aes(x = day, y = cumsum(cases)))+
+  geom_line(data = gam_df, aes(x = day, y = cumsum(cases)), colour = "red", size = 1)+
+  ylab("Total Cases")+
+  xlab("Day")+
+  theme_bw()
+
+  
+
+
+
 
 
 
