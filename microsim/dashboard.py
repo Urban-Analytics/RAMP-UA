@@ -36,12 +36,12 @@ from bokeh.transform import transform
 data_dir_user = "devon_data"
 
 # start and end to include in data visualisation and aggregation
-start_day_user = None    # default = 0
-end_day_user = None      # default = last day simulated
+start_day_user = 60    # default = 0
+end_day_user = 80      # default = last day simulated
 
 # runs
 start_run_user = 0   # default = 0
-end_run_user = 0     # default: nr directories in output folder - 1
+end_run_user = 1     # default: nr directories in output folder - 1
 
 # # list of scenarios, each scenario is a list of start and end run directory nr e.g. scenarios_runs_user = [[0,2][3,5]] means 2 scenarios, scenario 1 includes directories named 0,1 and 2, and scenario 2 includes directories named 3,4 and 5
 # scenarios_runs_user = [[0,2],[3,5],[6,8]] 
@@ -149,13 +149,13 @@ def create_venue_dangers_dict(r_range):
 
             # # set row index to ID
             # dangers.set_index('ID', inplace = True)
-            dangers_colnames = filter_col
+            dangers_colnames = filter_col[start_day:end_day+1]
             dangers_rownames = dangers.index
-            dangers_values = dangers[filter_col]
+            dangers_values = dangers[filter_col[start_day:end_day+1]]
             
-            if r == 0:
+            if r == start_run:
                 dangers_3d = np.zeros((dangers.shape[0],dangers_values.shape[1],nr_runs))        
-            dangers_3d[:,:,r] = dangers_values
+            dangers_3d[:,:,r-start_run] = dangers_values
         dangers_dict_3d[key] = dangers_3d
         dangers_dict[key] = pd.DataFrame(data=dangers_3d.mean(axis=2), index=dangers_rownames, columns=dangers_colnames)
         dangers_dict_std[key] = pd.DataFrame(data=dangers_3d.std(axis=2), index=dangers_rownames, columns=dangers_colnames)
@@ -182,8 +182,9 @@ def create_msoa_dangers_dict():
 
 def create_counts_dict_3d(r_range):
     '''
-    Counts per condition. Produces 3 types of counts:
+    Counts per condition. Produces 4 types of counts:
     msoacounts: nr per msoa and day
+    agecounts: nr per age category and day
     totalcounts: nr per day (across all areas)
     cumcounts: nr per MSOA (across given time period)
     '''
@@ -195,13 +196,23 @@ def create_counts_dict_3d(r_range):
         individuals_tmp = pickle.load(pickle_in)
         pickle_in.close()
         # if first ever run, keep copy and initialise 3D frame for aggregating
-        if r == 0:
+        if r == start_run:
             individuals = individuals_tmp.copy()
-            #msoas = sorted(individuals.area.unique())
-            msoas.extend(sorted(individuals.area.unique()))
-            area_individuals = individuals['area']
-            start_col = individuals.shape[1] - nr_days + start_day
-            end_col = individuals.shape[1] - nr_days + end_day + 1
+            msoas.extend(sorted(individuals.area.unique())) # populate list of msoas (previously empty outside this function)
+            area_individuals = individuals['area'] # keep area per person to use later
+            
+            # next bit of code is to restrict to user specified day range
+            # first, find all columns starting with disease_status
+            filter_col = [col for col in individuals if col.startswith('disease_status')]
+            # don't use the column simply called 'disease_status'
+            filter_col = filter_col[1:len(filter_col)]
+            counts_colnames = filter_col[start_day:end_day+1]
+            
+            
+            
+            
+            #start_col = individuals.shape[1] - nr_days + start_day
+            #end_col = individuals.shape[1] - nr_days + end_day + 1
             
             # TO BE ADDED SO USER CAN DEFINE AGE BRACKETS - FOR NOW JUST USING PREDEFINED CATEGORIES
             # individuals['age0'] = np.zeros((len(individuals),1))
@@ -211,18 +222,12 @@ def create_counts_dict_3d(r_range):
             # temporary workaround
             age_cat_col = individuals['Age1'].values 
             
-            #uniqcounts = np.zeros((individuals.shape[0],len(conditions_dict),nr_runs))   # empty dictionary to store results: total nr, each person assigned to highest condition: 0<1<2<(3==4)           
-            
-            # # to normalise counts, need to know total nr people per MSOA
-            # nrpeople_msoa = individuals[['ID','area']].groupby(['area']).count()
-            # nrpeople_msoa.rename(columns={'ID':'nr_people'}, inplace=True)
-          
         # add age brackets column to individuals_tmp
         individuals_tmp.insert(8, 'age0', age_cat_col)
         
         for key, value in conditions_dict.items():
             #print(key)
-            if r == 0:
+            if r == start_run:
                 msoacounts_dict_3d[key] = np.zeros((len(msoas),nr_days,nr_runs))        
                 agecounts_dict_3d[key] = np.zeros((age_cat.shape[0],nr_days,nr_runs))
                 totalcounts_dict_3d[key] = np.zeros((nr_days,nr_runs))  
@@ -230,7 +235,8 @@ def create_counts_dict_3d(r_range):
                 
             # cumulative counts
             # select right columns
-            tmp = individuals_tmp.iloc[:,start_col:end_col]  
+            tmp = individuals_tmp[counts_colnames]
+            #tmp = individuals_tmp.iloc[:,start_col:end_col]  
             # find all rows with condition (dict value)
             indices = tmp[tmp.eq(value).any(1)].index
             # create new df of zeros and replace with 1 at indices
@@ -248,7 +254,10 @@ def create_counts_dict_3d(r_range):
             for day in range(0, nr_days):
                 #print(day)
                 # count nr for this condition per area
-                msoa_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['area']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
+                #msoa_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['area']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
+                
+                msoa_count_temp = individuals_tmp[tmp.iloc[:,day] == conditions_dict[key]].groupby(['area']).agg({tmp.columns[day]: ['count']})  
+                
                 
                 if msoa_count_temp.shape[0] == len(msoas):
                     msoa_count_temp = msoa_count_temp.values
@@ -265,8 +274,8 @@ def create_counts_dict_3d(r_range):
                     msoacounts_run[:,day] = tmp_df.iloc[:,1].values
                     
 
-                # count nr for this condition per age bracket
-                age_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['age0']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
+                # count nr for this condition per age bracket             
+                age_count_temp = individuals_tmp[tmp.iloc[:,day] == conditions_dict[key]].groupby(['age0']).agg({tmp.columns[day]: ['count']})  
                 
                 
                 
@@ -294,10 +303,10 @@ def create_counts_dict_3d(r_range):
             totalcounts = totalcounts_dict_3d[key]
             cumcounts = cumcounts_dict_3d[key]
             # add current run's values
-            msoacounts[:,:,r] = msoacounts_run
-            agecounts[:,:,r] = agecounts_run
-            totalcounts[:,r] = msoacounts_run.sum(axis=0)
-            cumcounts[:,r] = cumcounts_msoa_run[:, 0]
+            msoacounts[:,:,r-start_run] = msoacounts_run
+            agecounts[:,:,r-start_run] = agecounts_run
+            totalcounts[:,r-start_run] = msoacounts_run.sum(axis=0)
+            cumcounts[:,r-start_run] = cumcounts_msoa_run[:, 0]
             # write out to dict
             msoacounts_dict_3d[key] = msoacounts
             agecounts_dict_3d[key] = agecounts
@@ -523,17 +532,24 @@ def plot_choropleth_condition_slider(condition2plot):
     s4.axis.visible = False
     s4.toolbar.autohide = True
     # Slider 
-    callback = CustomJS(args=dict(source=geosource), code="""
+    # create dummy data source to store start value slider
+    slider_val = {}
+    slider_val["s"] = [start_day]
+    source_slider = ColumnDataSource(data=slider_val)
+    callback = CustomJS(args=dict(source=geosource,sliderval=source_slider), code="""
         var data = source.data;
-        var f = cb_obj.value
-        var y = data['y']
-        var toreplace = data[f]
+        var startday = sliderval.data;
+        var s = startday['s'];
+        var f = cb_obj.value -s;
+        console.log(f);
+        var y = data['y'];
+        var toreplace = data[f];
         for (var i = 0; i < y.length; i++) {
             y[i] = toreplace[i]
         }
         source.change.emit();
     """)
-    slider = Slider(start=0, end=nr_days-1, value=0, step=1, title="Day")
+    slider = Slider(start=start_day, end=end_day, value=start_day, step=1, title="Day")
     slider.js_on_change('value', callback)
     plotref_dict[f"chpl{condition2plot}"] = s4
     plotref_dict[f"chsl{condition2plot}"] = slider
@@ -580,17 +596,24 @@ def plot_choropleth_danger_slider(venue2plot):
     s4.axis.visible = False
     s4.toolbar.autohide = True
     # Slider
-    callback = CustomJS(args=dict(source=geosource2), code="""
+    # create dummy data source to store start value slider
+    slider_val = {}
+    slider_val["s"] = [start_day]
+    source_slider = ColumnDataSource(data=slider_val)
+    callback = CustomJS(args=dict(source=geosource2,sliderval=source_slider), code="""
         var data = source.data;
-        var f = cb_obj.value
-        var y = data['y']
-        var toreplace = data[f]
+        var startday = sliderval.data;
+        var s = startday['s'];
+        var f = cb_obj.value -s;
+        console.log(f);
+        var y = data['y'];
+        var toreplace = data[f];
         for (var i = 0; i < y.length; i++) {
             y[i] = toreplace[i]
         }
         source.change.emit();
     """)
-    slider = Slider(start=0, end=nr_days-1, value=0, step=1, title="Day")
+    slider = Slider(start=start_day, end=end_day, value=start_day, step=1, title="Day")
     slider.js_on_change('value', callback)
     plotref_dict[f"chpl{venue2plot}"] = s4
     plotref_dict[f"chsl{venue2plot}"] = slider    
@@ -766,8 +789,8 @@ cumcounts_dict_3d = {}  # to store results: total nr across time period
 agecounts_dict_3d = {}  # to store mean nr per age category and day
 
 # time range for cumulative counts
-start_day = 0
-end_day = nr_days-1 # last 'named' day - nrs starts from 0
+# start_day = 0
+# end_day = nr_days-1 # last 'named' day - nrs starts from 0
 msoas = []
 # age brackets
 age_cat = np.array([[0, 19], [20, 29], [30,44], [45,59], [60,74], [75,200]])           
@@ -780,7 +803,7 @@ for a in range(age_cat.shape[0]):
     
     
 dict_days = [] # empty list for column names 'Day0' etc
-for d in range(0, nr_days):
+for d in range(start_day, end_day+1):
     dict_days.append(f'Day{d}')
   
 # aggregate counts across runs (means and std) from 3d data
@@ -797,16 +820,16 @@ create_counts_dict_mean_std()
 # total cumulative count per condition
 cumtotal_counts = np.zeros((5,nr_runs))
 for r in r_range:
-    nr_dead = cumcounts_dict_3d["dead"][:,r].sum()
-    nr_recovered = cumcounts_dict_3d["recovered"][:,r].sum()
-    nr_symptomatic = cumcounts_dict_3d["symptomatic"][:,r].sum() - nr_dead - nr_recovered
-    nr_presymptomatic = cumcounts_dict_3d["presymptomatic"][:,r].sum() - nr_dead - nr_recovered - nr_symptomatic
-    nr_susceptible = cumcounts_dict_3d["susceptible"][:,r].sum() - nr_dead - nr_recovered - nr_symptomatic - nr_presymptomatic
-    cumtotal_counts[0,r] = nr_susceptible
-    cumtotal_counts[1,r] = nr_presymptomatic
-    cumtotal_counts[2,r] = nr_symptomatic
-    cumtotal_counts[3,r] = nr_recovered
-    cumtotal_counts[4,r] = nr_dead
+    nr_dead = cumcounts_dict_3d["dead"][:,r-start_run].sum()
+    nr_recovered = cumcounts_dict_3d["recovered"][:,r-start_run].sum()
+    nr_symptomatic = cumcounts_dict_3d["symptomatic"][:,r-start_run].sum() - nr_dead - nr_recovered
+    nr_presymptomatic = cumcounts_dict_3d["presymptomatic"][:,r-start_run].sum() - nr_dead - nr_recovered - nr_symptomatic
+    nr_susceptible = cumcounts_dict_3d["susceptible"][:,r-start_run].sum() - nr_dead - nr_recovered - nr_symptomatic - nr_presymptomatic
+    cumtotal_counts[0,r-start_run] = nr_susceptible
+    cumtotal_counts[1,r-start_run] = nr_presymptomatic
+    cumtotal_counts[2,r-start_run] = nr_symptomatic
+    cumtotal_counts[3,r-start_run] = nr_recovered
+    cumtotal_counts[4,r-start_run] = nr_dead
 
 cumtotal_counts.mean(axis=1)
 cumtotal_counts.std(axis=1)      
@@ -820,7 +843,7 @@ cumtotal_counts.std(axis=1)
 msoas_nr = [i for i in range(0,len(msoas))]
 
 # days (needs list to plot)
-days = [i for i in range(0,nr_days)]
+days = [i for i in range(start_day,end_day+1)]
 
 # optional: threshold map to only use MSOAs currently in the study or selection
 map_df = map_df[map_df['Area'].isin(msoas)]
