@@ -131,8 +131,8 @@ all_cases <- rbind(devon_df, gam_df)
 
 
 ggplot()+
-  geom_point(data = devon_df, aes(x = day, y = cases))+
   geom_line(data = gam_df, aes(x = day, y = cases), colour = "red", size = 2)+
+    geom_point(data = devon_df, aes(x = day, y = cases))+
   ylab("Daily Cases")+
   xlab("Day")+
   theme_bw()+
@@ -141,8 +141,8 @@ ggplot()+
 
 
 ggplot()+
-  geom_point(data = devon_df, aes(x = day, y = cumsum(cases)))+
   geom_line(data = gam_df, aes(x = day, y = cumsum(cases)), colour = "red", size = 2)+
+   geom_point(data = devon_df, aes(x = day, y = cumsum(cases)))+
   ylab("Total Cases")+
   xlab("Day")+
   theme_bw()+
