@@ -31,7 +31,9 @@ baseline <- ggplot()+
 #  geom_vline(xintercept = 38, linetype = "dashed")+
   ggtitle("Baseline")+
   theme_bw()+
-  ylim(0,700)
+  ylim(0,750)+
+  ggsave("Baseline.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
+
 
 lf <- list.dirs("~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Lockdown_Early/", full.names = TRUE)
 lf <- lf[grepl("2020", lf)]
@@ -85,17 +87,21 @@ lock_down_early <- ggplot()+
   #  geom_vline(xintercept = 31, linetype = "dashed")+
   ggtitle("Lockdown a Week Earlier")+
   theme_bw()+
-  ylim(0, 700)
+  ylim(0, 750)+
+  ggsave("Early_Lockdown.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
+
 
 
 comparison <- ggplot()+
   geom_line(data = all_reps_median%>% filter(day >= 10), aes(x = day, y = mean_cases), col = "black", size = 1, linetype = "dashed")+
   geom_line(data = all_reps_median_base%>% filter(day >= 10), aes(x = day, y = mean_cases), col = "black", size = 1)+
   theme_bw()+
-  ylim(0, 700)+
+  ylim(0, 750)+
   ylab("Daily Cases")+
   xlab("Day")+
-  ggtitle("Comparison")
+  ggtitle("Comparison")+
+  ggsave("Comparison.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
+
 
 baseline/lock_down_early
 
@@ -105,7 +111,7 @@ baseline/lock_down_early
 
 
 devon_cases <- readRDS(paste0(getwd(),"/devon_cases.RDS"))
-devon_cases$cumulative_cases[84] <- 812 #type here I think
+devon_cases$cumulative_cases[84] <- 812 #typo here I think
 devon_cases$new_cases <- c(0,diff(devon_cases$cumulative_cases))
 devon_cases$devon_date <- as.numeric(devon_cases$date)
 devon_cases <- as.data.frame(devon_cases)
@@ -125,7 +131,8 @@ ggplot()+
   geom_line(data = gam_df, aes(x = day, y = cases), colour = "red", size = 1)+
   ylab("Daily Cases")+
   xlab("Day")+
-  theme_bw()
+  theme_bw()+
+  ggsave("PHE_daily_cases.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
 
 
 ggplot()+
@@ -133,7 +140,9 @@ ggplot()+
   geom_line(data = gam_df, aes(x = day, y = cumsum(cases)), colour = "red", size = 1)+
   ylab("Total Cases")+
   xlab("Day")+
-  theme_bw()
+  theme_bw()+
+  ggsave("PHE_cumulative_cases.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
+
 
   
 
