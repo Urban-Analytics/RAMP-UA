@@ -25,15 +25,16 @@ all_reps_median_base <- all_reps_base %>%
 
 baseline <- ggplot()+
   geom_line(data = all_reps_base%>% filter(day >= 10 & day <= 60), aes(x = day, y = cases, group = run),alpha = 0.3)+
-  geom_line(data = all_reps_median_base%>% filter(day >= 10 & day <= 60), aes(x = day, y = median_cases), col = "black", size = 1)+
+  geom_line(data = all_reps_median_base%>% filter(day >= 10 & day <= 60), aes(x = day, y = median_cases), col = "black", size = 2)+
  # geom_line(data = gam_cases_df, aes(x = day, y = cases), col = "red")+
   ylab("Daily Cases")+
   xlab("Day")+
 #  geom_vline(xintercept = 38, linetype = "dashed")+
-  ggtitle("Baseline")+
+#  ggtitle("Baseline")+
   theme_bw()+
   ylim(0,750)+
-  ggsave("Baseline.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
+  theme(text = element_text(size=20))+
+  ggsave("Baseline.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/", width = 12, height = 8)
 
 
 lf <- list.dirs("~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Lockdown_Early/", full.names = TRUE)
@@ -81,27 +82,29 @@ all_reps_median <- all_reps_all %>%
 
 lock_down_early <- ggplot()+
   geom_line(data = all_reps_all %>% filter(day >= 10 & day <= 60), aes(x = day, y = cases, group = run),alpha = 0.3)+
-  geom_line(data = all_reps_median%>% filter(day >= 10 & day <= 60), aes(x = day, y = median_cases), col = "black", size = 1)+
+  geom_line(data = all_reps_median%>% filter(day >= 10 & day <= 60), aes(x = day, y = median_cases), col = "black", size = 2)+
   # geom_line(data = gam_cases_df, aes(x = day, y = cases), col = "red")+
   ylab("Daily Cases")+
   xlab("Day")+
   #  geom_vline(xintercept = 31, linetype = "dashed")+
-  ggtitle("Lockdown a Week Earlier")+
+#  ggtitle("Lockdown a Week Earlier")+
   theme_bw()+
   ylim(0, 750)+
-  ggsave("Early_Lockdown.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
+  theme(text = element_text(size=20))+
+  ggsave("Early_Lockdown.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/", width = 12, height = 8)
 
 
 
 comparison <- ggplot()+
-  geom_line(data = all_reps_median%>% filter(day >= 10), aes(x = day, y = median_cases), col = "black", size = 1, linetype = "dashed")+
-  geom_line(data = all_reps_median_base%>% filter(day >= 10), aes(x = day, y = median_cases), col = "black", size = 1)+
+  geom_line(data = all_reps_median%>% filter(day >= 10), aes(x = day, y = median_cases), col = "black", size = 2, linetype = "dashed")+
+  geom_line(data = all_reps_median_base%>% filter(day >= 10), aes(x = day, y = median_cases), col = "black", size = 2)+
   theme_bw()+
   ylim(0, 420)+
   ylab("Daily Cases")+
   xlab("Day")+
-  ggtitle("Comparison")+
-  ggsave("Comparison.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
+  theme(text = element_text(size=20))+
+#  ggtitle("Comparison")+
+  ggsave("Comparison.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/", width = 12, height = 8)
 
 
 baseline/lock_down_early
@@ -129,25 +132,27 @@ all_cases <- rbind(devon_df, gam_df)
 
 ggplot()+
   geom_point(data = devon_df, aes(x = day, y = cases))+
-  geom_line(data = gam_df, aes(x = day, y = cases), colour = "red", size = 1)+
+  geom_line(data = gam_df, aes(x = day, y = cases), colour = "red", size = 2)+
   ylab("Daily Cases")+
   xlab("Day")+
   theme_bw()+
-  ggsave("PHE_daily_cases.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
+  theme(text = element_text(size=20))+
+  ggsave("PHE_daily_cases.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/", width = 12, height = 8)
 
 
 ggplot()+
   geom_point(data = devon_df, aes(x = day, y = cumsum(cases)))+
-  geom_line(data = gam_df, aes(x = day, y = cumsum(cases)), colour = "red", size = 1)+
+  geom_line(data = gam_df, aes(x = day, y = cumsum(cases)), colour = "red", size = 2)+
   ylab("Total Cases")+
   xlab("Day")+
   theme_bw()+
-  ggsave("PHE_cumulative_cases.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
+  theme(text = element_text(size=20))+
+  ggsave("PHE_cumulative_cases.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/", width = 12, height = 8)
 
 
 ##### Google Mobility Plots
 
-population <- read_csv("devon_data/devon-tu_health/Devon_simulated_TU_keyworker_health.csv")
+population <- read_csv("devon_data/devon-tu_health/Devon_Complete.txt")
 
 ###downloading latest file from google mobility
 download.file("https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv", 
@@ -190,9 +195,9 @@ lock_down_reducer   # a reduction of about 2/3
 
 plot(lock_down_reducer, ylab = "Proportion of Time Outside Compared to Baseline", type = "l")
 
-daily_lock_down_multiplier <-  data.frame(day = 1:80, multiplier = lock_down_reducer[1:80], location = "Outside")
+daily_lock_down_multiplier <-  data.frame(day = seq(as.Date("2020-02-15"), as.Date("2020-02-15")+79, "day"), multiplier = lock_down_reducer[1:80], location = "Outside")
 
-daily_time_at_home <- data.frame(day = 1:80, multiplier = sr[1:80], location = "Home")
+daily_time_at_home <- data.frame(day = seq(as.Date("2020-02-15"), as.Date("2020-02-15")+79, "day"), multiplier = sr[1:80], location = "Home")
 
 
 home_out <- rbind(daily_lock_down_multiplier, daily_time_at_home)
@@ -200,15 +205,16 @@ home_out <- rbind(daily_lock_down_multiplier, daily_time_at_home)
 
 
 ggplot(data = home_out, aes(x = day, y = multiplier, group = location, colour = location))+
-  geom_line(size = 1)+
+  geom_line(size = 2)+
   ylab("Time in Location Relative to Baseline")+
   xlab("Day")+
-  geom_hline(yintercept = 1, linetype = "dashed")+
-  geom_vline(xintercept = 38, linetype = "dashed")+
+  geom_hline(yintercept = 1)+
+  geom_vline(xintercept = as.Date("2020-03-23"), linetype = "dashed")+
   theme_bw()+
   scale_colour_discrete(name = "Location")+
-  ggtitle("Google Community Mobility - Devon")+
-  ggsave("Google_Mobility.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
+  theme(text = element_text(size=20))+
+#  ggtitle("Google Community Mobility - Devon")+
+  ggsave("Google_Mobility.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/", width= 12, height = 8)
 
 
 
