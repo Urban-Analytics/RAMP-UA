@@ -3,6 +3,7 @@ library(ggplot2)
 library(patchwork)
 library(mgcv)
 library(tidyr)
+library(readr)
 
 gam_cases <- readRDS("gam_fitted_PHE_cases.RDS")
 gam_cases_df <- data.frame(day = 1:80, cases = gam_cases[1:80])
@@ -93,10 +94,10 @@ lock_down_early <- ggplot()+
 
 
 comparison <- ggplot()+
-  geom_line(data = all_reps_median%>% filter(day >= 10), aes(x = day, y = mean_cases), col = "black", size = 1, linetype = "dashed")+
-  geom_line(data = all_reps_median_base%>% filter(day >= 10), aes(x = day, y = mean_cases), col = "black", size = 1)+
+  geom_line(data = all_reps_median%>% filter(day >= 10), aes(x = day, y = median_cases), col = "black", size = 1, linetype = "dashed")+
+  geom_line(data = all_reps_median_base%>% filter(day >= 10), aes(x = day, y = median_cases), col = "black", size = 1)+
   theme_bw()+
-  ylim(0, 750)+
+  ylim(0, 420)+
   ylab("Daily Cases")+
   xlab("Day")+
   ggtitle("Comparison")+
@@ -144,7 +145,73 @@ ggplot()+
   ggsave("PHE_cumulative_cases.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
 
 
-  
+##### Google Mobility Plots
+
+population <- read_csv("devon_data/devon-tu_health/Devon_simulated_TU_keyworker_health.csv")
+
+###downloading latest file from google mobility
+download.file("https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv", 
+              destfile = "Google_Global_Mobility_Report.csv")
+
+gm <- read_csv("Google_Global_Mobility_Report.csv") %>% 
+  filter(country_region == "United Kingdom") %>% 
+  dplyr::select( -c(country_region_code, country_region,  sub_region_2)) %>% 
+  filter(sub_region_1 == "Devon")%>% 
+  pivot_longer(., contains("percent"))
+
+
+# Plotting change from baseline.
+# The baseline is the median value, for the corresponding day of the week, 
+# during the 5-week period Jan 3–Feb 6, 2020
+ggplot(gm, aes(x  = date, y = value, group = name, colour = name))+
+  geom_line() +
+ # geom_vline(xintercept = lock_down_start, linetype = "dashed", col = "black")+
+#  geom_vline(xintercept = lock_down_14, linetype = "dashed", col = "black")+
+  labs(colour = "", y = "Percent change from baseline", x = "Date")
+
+
+
+residential_pcnt <- gm %>% 
+  filter(
+    name == "residential_percent_change_from_baseline"
+  ) %>% 
+  mutate(day = as.numeric(date) - 18306)
+
+
+smooth_residential <- mgcv::gam(value ~ s(day, bs = "cr"), data = residential_pcnt)
+sr <- fitted.values(smooth_residential)
+sr <- (sr/100) + 1
+
+
+new_out <- 1 - (mean(population$phome) * sr) # During the first two weeks of lockdown people spent 21% more time at home - the average person from devon spent ~ 75% of their time at home before lockdow, during lockdown this increases to 92% - meaning about 8% of time outside the home on average
+
+lock_down_reducer <-  new_out/mean(population$pnothome) # percentage of time spent outside of compared to pre-lockdown
+lock_down_reducer   # a reduction of about 2/3
+
+plot(lock_down_reducer, ylab = "Proportion of Time Outside Compared to Baseline", type = "l")
+
+daily_lock_down_multiplier <-  data.frame(day = 1:80, multiplier = lock_down_reducer[1:80], location = "Outside")
+
+daily_time_at_home <- data.frame(day = 1:80, multiplier = sr[1:80], location = "Home")
+
+
+home_out <- rbind(daily_lock_down_multiplier, daily_time_at_home)
+
+
+
+ggplot(data = home_out, aes(x = day, y = multiplier, group = location, colour = location))+
+  geom_line(size = 1)+
+  ylab("Time in Location Relative to Baseline")+
+  xlab("Day")+
+  geom_hline(yintercept = 1, linetype = "dashed")+
+  geom_vline(xintercept = 38, linetype = "dashed")+
+  theme_bw()+
+  scale_colour_discrete(name = "Location")+
+  ggtitle("Google Community Mobility - Devon")+
+  ggsave("Google_Mobility.png",path = "~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Model_Output_New/Plots/")
+
+
+
 
 
 
