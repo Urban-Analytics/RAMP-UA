@@ -1,3 +1,4 @@
+import os
 import pytest
 import multiprocessing
 import pandas as pd
@@ -10,8 +11,10 @@ from microsim.activity_location import ActivityLocation
 # These tests run through a whole dummy model process
 # ********************************************************
 
+test_dir = os.path.dirname(os.path.abspath(__file__))
+
 # arguments used when calling the Microsim constructor. Usually these are the same
-microsim_args = {"data_dir": "./dummy_data", "r_script_dir": "./R/py_int", "testing": True, "debug": True,
+microsim_args = {"data_dir": os.path.join(test_dir,"dummy_data"), "r_script_dir": "./R/py_int", "testing": True, "debug": True,
                  "disable_disease_status": True, 'lockdown_from_file':False}
 
 
