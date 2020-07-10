@@ -2,7 +2,6 @@ name: ramp-ua
 channels:
   - conda-forge
   - defaults
-  - conda-forge
 dependencies:
   - numpy=1.18.5
   - tqdm
