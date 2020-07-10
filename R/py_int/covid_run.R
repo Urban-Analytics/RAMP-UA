@@ -29,13 +29,14 @@ library(dplyr)
 # devon_cases$new_cases <- c(0,diff(devon_cases$cumulative_cases))
 # devon_cases$devon_date <- as.numeric(devon_cases$date)
 # devon_cases <- as.data.frame(devon_cases)
-
-
+# 
+# 
 # gam_Devon <- mgcv::gam(new_cases ~ s(devon_date, bs = "cr"), data = devon_cases,family = nb())
-# plot(devon_cases$new_cases*20)
-# lines(round(fitted.values(gam_Devon)*20), type = "l")
-# gam_cases <- round(fitted.values(gam_Devon)*20)
-
+# plot(devon_cases$new_cases*20,  ylab="Cases", xlab = "Day")
+# points(round(fitted.values(gam_Devon)*20), col = "red")
+# abline(v = 38, lty = "dashed")
+# # gam_cases <- round(fitted.values(gam_Devon)*20)
+# 
 gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 # new_cases[new_cases == 0]<-1
 # new_cases <- new_cases*20
@@ -72,7 +73,7 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042) {
       dir.create(tmp.dir, recursive = TRUE)
     }
   }
-  write.csv(pop, paste0(tmp.dir,"/input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
+  #write.csv(pop, paste0(tmp.dir,"/input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
   #}
   
   population <- clean_names(pop)
