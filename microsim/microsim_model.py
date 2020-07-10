@@ -38,6 +38,7 @@ import click  # command-line interface
 import pickle  # to save data
 import swifter  # For speeding up apply functions (e.g. df.swifter.apply)
 import rpy2.robjects as ro  # For calling R scripts
+from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
 
 
 # import pandas.rpy.common as com
@@ -1471,21 +1472,45 @@ class Microsim:
             self.activities_to_pickle[loc_name].to_csv(fname + ".csv.gz", compression='gzip')
 
 
-
 # ********
 # PROGRAM ENTRY POINT
 # Uses 'click' library so that it can be run from the command line
 # ********
 @click.command()
-@click.option('--iterations', default=10, help='Number of model iterations. 0 means just run the initialisation')
-@click.option('--data_dir', default="devon_data", help='Root directory to load data from')
+@click.option('-p', '--parameters_file', default="./model_parameters/default.yml", type=click.Path(exists=True),
+              help="Parameters file to use to configure the model. Default: ./model_parameters.yml")
+@click.option('-npf', '--no-parameters-file', is_flag=True,
+              help="Don't read a parameters file, use command line arguments instead")
+@click.option('-i', '--iterations', default=10, help='Number of model iterations. 0 means just run the initialisation')
+@click.option('--data-dir', default="devon_data", help='Root directory to load data from')
 @click.option('--output/--no-output', default=True,
               help='Whether to generate output data (default yes).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
-@click.option('--repetitions', default=1, help="How many times to run the model (default 1)")
-@click.option('--lockdown_from_file/--no-lockdown_from_file', default=True,
+@click.option('-r', '--repetitions', default=1, help="How many times to run the model (default 1)")
+@click.option('-l', '--lockdown-from-file/--no-lockdown-from-file', default=True,
               help="Optionally read lockdown mobility data from a file (default True)")
-def run_script(iterations, data_dir, output, debug, repetitions, lockdown_from_file):
+def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, debug, repetitions, lockdown_from_file):
+
+    # First see if we're reading a parameters file or using command-line arguments.
+    if no_parameters_file:
+        print("Not reading a parameters file")
+    else:
+        print(f"Reading parameters file: {parameters_file}. Any other command-line arguments are being ignored")
+        with open(parameters_file, 'r') as f:
+            parameters = load(f, Loader=SafeLoader)
+            sim_params = parameters["microsim"]  # Parameters for the dynamic microsim (python)
+            disease_params = parameters["disease"]  # Parameters for the disease model (r)
+            # TODO Implement a more elegant way to set the parameters and pass them to the model. E.g.:
+            #         self.params, self.params_changed = Model._init_kwargs(params, kwargs)
+            #         [setattr(self, key, value) for key, value in self.params.items()]
+            iterations = sim_params["iterations"]
+            data_dir = sim_params["data-dir"]
+            output = sim_params["output"]
+            debug = sim_params["debug"]
+            repetitions = sim_params["repetitions"]
+            lockdown_from_file = sim_params["lockdown-from-file"]
+
+
     # Check the parameters are sensible
     if iterations < 0:
         raise ValueError("Iterations must be > 0")
@@ -1493,6 +1518,7 @@ def run_script(iterations, data_dir, output, debug, repetitions, lockdown_from_f
         raise ValueError("Repetitions must be greater than 0")
 
     print(f"Running model with the following parameters:\n"
+          f"\tParameters file: {parameters_file}\n"
           f"\tNumber of iterations: {iterations}\n"
           f"\tData dir: {data_dir}\n"
           f"\tOutputting results?: {output}\n"
