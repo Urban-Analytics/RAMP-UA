@@ -16,3 +16,10 @@ __pycache__
 # Others
 *.swp
 *.Rhistory
+
+# coverage files
+.coverage
+**/htmlcov/*
+
+# scrapbook 
+**/scrapbook/*
