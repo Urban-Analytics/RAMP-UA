@@ -1,6 +1,7 @@
 microsim: # Parameters for the microsimulation (python) part
   iterations: 10 # Number of model iterations. 0 means just run the initialisation.
   data-dir: devon_data # Root directory to load data from
+  output: true # Whether to generate output or not
   debug: false # Whether to run some more expensive checks
   repetitions: 1 # How many times to run the model
   lockdown-from-file: true #Read lockdown mobility data from a file?
