@@ -13,21 +13,16 @@ w <- NULL
 nick_cases <- NULL
 run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14) {
   
-  opt_switch <- FALSE
   output_switch <- FALSE
-  # current_risk <- 0.01 #0.004
   rank_assign <- FALSE
   seed_cases <- TRUE
   seed_days <- 10
-  normalizer_on <- TRUE
   risk_cap_on <- TRUE
   risk_cap <- 5
-  
-  
-  
+
   print(paste("R timestep:", timestep))
   
-  #pop <- vroom::vroom("R/py_int/input_pop_02.csv")
+  #pop <- vroom::vroom("R/py_int/output/2020-06-19 09:42:15/input_pop_02.csv")
   
   
   #  if(output_switch==TRUE) {
@@ -40,80 +35,32 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14
   #write.csv(pop, paste0(tmp.dir,"/input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
   #}
   
-  population <- clean_names(pop)
-  
   num_sample <- nrow(population)
-  
-  #print(num_sample)
-  
-  # the stuff below here should be loaded only once in python i guess and
-  # passed as columns in the dataframe
-  # ive removed them for now because im not sure if we want to keep
-  # msoa and population density in here since it might be accounted for
-  # in nics code. for now we are just including age, sex, and nics "risk"
-  
-  #pop_dens <- read_csv("~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Population_Data_Devon/msoa_population_density.csv")
-  
-  #connectivity <- janitor::clean_names(read_csv("~/University of Exeter/COVID19 Modelling - Documents/Micro_Simulation/Data/Processed_Data/Transport_Data/msoa_connectedness_closest_three.csv")) %>% 
-  #  filter(!is.na(msoa_sum_connected_ann))
-  #colnames(connectivity)[3:4] <- c("connectedness", "log_connectedness") 
-  #connectivity$connectivity_index <- normalizer(connectivity$log_connectedness, 0.01, 1, min(connectivity$log_connectedness), max(connectivity$log_connectedness))
   
   area <- "area"
   hid <- "house_id"
-  #pid <- "pid"
-  age <- "age1"
-  sex <- "sex"
   id <- "id"
   
-  population_in <- population #%>% 
-  #left_join(., pop_dens, by =  c("area" = "msoa_area_codes")) %>% 
-  #dplyr::left_join(.,connectivity, by = c("area" = "msoa11cd")) %>% 
-  #mutate(log_pop_dens = log10(pop_dens_km2)) 
-  
-  population_in$cases_per_area <- 0
-  #population_in$disease_status <- 0
-  
-  #print("c")
+
   
   df_cr_in <-create_input(micro_sim_pop  = population_in,
                           num_sample = num_sample,
-                          pnothome_multiplier = 0.6,   # 0.1 = a 60% reduction in time people not home
                           vars = c(area,   # must match columns in the population data.frame
                                    hid,
-                                   #pid,
                                    id,
-                                   age,
-                                   sex,
                                    "current_risk"))
   
-  df_in <- as_betas_devon(population_sample = df_cr_in, 
-                          id = id,
-                          age = age, 
-                          sex = sex, 
-                          beta0_fixed = beta0_fixed, #-9, #0.19, #-9.5,
-                          divider = 4)  # adding in the age/sex betas 
-  
-  #print("e")
-  
-  #pnothome <-  0.25 #0.35
-  #connectivity_index <- 0.25#0.3 doesn't work
-  #log_pop_dens <- 0#0.2#0.4#0.3 #0.175
-  #cases_per_area <- 10 #2.5
-  
-  origin <- factor(c(0,0,0,0,0))
-  names(origin) <- c("1", "2", "3", "4", "5") #1 = white, 2 = black, 3 = asian, 4 = mixed, 5 = other
-  qimd1 <- factor(c(0,0,0,0,0))
-  names(qimd1) <- c("1", "2", "3", "4", "5")# 1  = Least Deprived ... 5 = Most Deprived
-  underlining <- factor(c(0,0))
-  names(underlining) <- c("0","1") #1 = has underlying health conditions
-  hid_infected <- 0
-  
-  ### any betas included must link to columns/data.frames in df_in 
+  # df_in <- as_betas_devon(population_sample = df_cr_in, 
+  #                         id = id,
+  #                         age = age, 
+  #                         sex = sex, 
+  #                         beta0_fixed = beta0_fixed, #-9, #0.19, #-9.5,
+  #                         divider = 4)  # adding in the age/sex betas 
   
   other_betas <- list(current_risk = current_risk)
   
-  df_msoa <- df_in
+  #df_msoa <- df_in
+  df_msoa <- df_cr_in
   df_risk <- list()
   
   
@@ -132,14 +79,9 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14
                         betas = other_betas,
                         risk_cap=risk_cap_on,
                         risk_cap_val=risk_cap,
-                        include_age_sex = FALSE,
-                        normalizer_on = normalizer_on)
+                        include_age_sex = FALSE)
+  
   print("probabilities calculated")
-  
-  if(opt_switch==TRUE) {
-    df_prob <- new_beta0_probs(df = df_prob, daily_case = gam_cases[timestep])
-  }
-  
   
   if(timestep > 1){
     df_ass <- case_assign(df = df_prob,
@@ -151,8 +93,6 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14
     df_ass <- df_prob
   }
   print("cases assigned")
-  
-  
   print(paste0("PHE cases ", gam_cases[timestep]))
   
   nick_cases[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))
@@ -180,7 +120,6 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14
   }
   
   
-  
   df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
                              presymp_mean = 6.4,
@@ -197,11 +136,6 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14
   print("recoveries and deaths assigned")
   
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
-  
-  #print("h")
-  
-  #colSums(df_msoa$had_covid)
-  #colMeans(df_msoa$cases_per_area)
   
   df_out <- data.frame(area=df_msoa$area,
                        ID=df_msoa$id,
