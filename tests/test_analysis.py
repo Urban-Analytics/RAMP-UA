@@ -6,118 +6,20 @@ Created on Tue May 19 12:01:02 2020
 """
 
 
-# test version, needs adapting to work across platform
-
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.pylab as pylab
-import seaborn as sns
-import geopandas as gpd
+import pytest
 import os
 import pickle
 import imageio
 from shapely.geometry import Point
 import numpy as np
-from scipy import ndimage
-import pickle
-
-
-# Read in data
-# ------------
-
-# To fix file path issues, use absolute/full path at all times
-# Pick either: get working directory (if user starts this script in place, or set working directory
-# Option A: copy current working directory:
-base_dir = os.getcwd()  # get current directory (assume RAMP-UA)
-data_dir = os.path.join(base_dir, "data") # go to output dir
-# Option B: specific directory
-#data_dir = 'C:\\Users\\Toshiba\\git_repos\\RAMP-UA\\dummy_data'
-
-# read in details about venues
-data_file = os.path.join(data_dir, "devon-schools","exeter schools.csv")
-schools = pd.read_csv(data_file)
-data_file = os.path.join(data_dir, "devon-retail","devon smkt.csv")
-retail = pd.read_csv(data_file)
-
-# read in pickle files
-data_file = os.path.join(data_dir, "output","Individuals.pickle")
-pickle_in = open(data_file,"rb")
-individuals = pickle.load(pickle_in)
-pickle_in.close()
-
-data_file = os.path.join(data_dir, "output","PrimarySchool.pickle")
-pickle_in = open(data_file,"rb")
-primaryschool_dangers = pickle.load(pickle_in)
-pickle_in.close()
-
-data_file = os.path.join(data_dir, "output","SecondarySchool.pickle")
-pickle_in = open(data_file,"rb")
-secondaryschool_dangers = pickle.load(pickle_in)
-pickle_in.close()
-
-data_file = os.path.join(data_dir, "output","Retail.pickle")
-pickle_in = open(data_file,"rb")
-retail_dangers = pickle.load(pickle_in)
-pickle_in.close()
-
-data_file = os.path.join(data_dir, "output","Work.pickle")
-pickle_in = open(data_file,"rb")
-work_dangers = pickle.load(pickle_in)
-pickle_in.close()
-
-data_file = os.path.join(data_dir, "output","Home.pickle")
-pickle_in = open(data_file,"rb")
-home_dangers = pickle.load(pickle_in)
-pickle_in.close()
 
 
 
+# Do the directories and data files exist
 
+# Do the input files contain the right information eg nr days/ranges/msoas/disease conditions etc
 
-
-# Preprocess data
-# ---------------
-
-# how many days have we got
-nr_days = retail_dangers.shape[1] - 1
-days = [i for i in range(0,nr_days)]
-
-# total cases (SEIR) per area across time, and summed across MSOAs
-
-# initialise variables
-nrs_S = [0 for i in range(nr_days)] 
-nrs_E = [0 for i in range(nr_days)] 
-nrs_I = [0 for i in range(nr_days)] 
-nrs_R = [0 for i in range(nr_days)] 
-msoas = sorted(individuals.area.unique())
-msoa_counts_S = pd.DataFrame(index=msoas)
-msoa_counts_E = pd.DataFrame(index=msoas)
-msoa_counts_I = pd.DataFrame(index=msoas)
-msoa_counts_R = pd.DataFrame(index=msoas)
-
-# loop aroud days
-for d in range(0, nr_days):
-    nrs = individuals.iloc[:,-nr_days+d].value_counts() 
-    nrs_S[d] = nrs.get(0)  # susceptible?
-    nrs_E[d] = nrs.get(1)  # exposed?
-    nrs_I[d] = nrs.get(2)  # infectious?
-    nrs_R[d] = nrs.get(3)  # recovered/removed?
-    # S
-    msoa_count_temp = individuals[individuals.iloc[:, -nr_days+d] == 0].groupby(['Area']).agg({individuals.columns[-nr_days+d]: ['count']})  
-    msoa_counts_S = pd.merge(msoa_counts_S,msoa_count_temp,left_index = True, right_index=True)
-    msoa_counts_S.rename(columns={ msoa_counts_S.columns[d]: 'Day'+str(d) }, inplace = True)
-    # E
-    msoa_count_temp = individuals[individuals.iloc[:, 73+d] == 1].groupby(['Area']).agg({individuals.columns[73+d]: ['count']})  
-    msoa_counts_E = pd.merge(msoa_counts_E,msoa_count_temp,left_index = True, right_index=True)
-    msoa_counts_E.rename(columns={ msoa_counts_E.columns[d]: 'Day'+str(d) }, inplace = True)
-    # I
-    msoa_count_temp = individuals[individuals.iloc[:, 73+d] == 2].groupby(['Area']).agg({individuals.columns[73+d]: ['count']})  
-    msoa_counts_I = pd.merge(msoa_counts_I,msoa_count_temp,left_index = True, right_index=True)
-    msoa_counts_I.rename(columns={ msoa_counts_I.columns[d]: 'Day'+str(d) }, inplace = True)
-    # R
-    msoa_count_temp = individuals[individuals.iloc[:, 73+d] == 3].groupby(['Area']).agg({individuals.columns[73+d]: ['count']})  
-    msoa_counts_R = pd.merge(msoa_counts_R,msoa_count_temp,left_index = True, right_index=True)
-    msoa_counts_R.rename(columns={ msoa_counts_R.columns[d]: 'Day'+str(d) }, inplace = True)
+# Are the counts correct - cross checks
     
     # # sanity check: sum across MSOAs should be same as nrs_*
     # assert (msoa_counts_S.iloc[:,d].sum() == nrs_S[d])
@@ -125,99 +27,10 @@ for d in range(0, nr_days):
     # assert (msoa_counts_I.iloc[:,d].sum() == nrs_I[d])
     # assert (msoa_counts_R.iloc[:,d].sum() == nrs_R[d])
 
-
-
-
-# !!! TEMPORARY - DELETE ONCE MICROSIM FIXED
-# for now, original script not fully working (everyone is S so randomly make up some nrs and overwrite previous variables)
-import random
-random.seed()
-for d in range(0, nr_days):
-    for m in range(0,len(msoas)):
-        total_msoa = msoa_counts_S.iloc[m,d]
-        msoa_counts_E.iloc[m,d] = random.randrange(int(0.15*total_msoa), int(0.25*total_msoa), 1)
-        msoa_counts_I.iloc[m,d] = random.randrange(int(0.1*total_msoa), int(0.2*total_msoa), 1)
-        msoa_counts_R.iloc[m,d] = random.randrange(int(0.05*total_msoa), int(0.1*total_msoa), 1)
-        msoa_counts_S.iloc[m,d] = total_msoa - msoa_counts_E.iloc[m,d] - msoa_counts_I.iloc[m,d] - msoa_counts_R.iloc[m,d]
-        #assert (msoa_counts_S.iloc[m,d] + msoa_counts_E.iloc[m,d] + msoa_counts_I.iloc[m,d] + msoa_counts_R.iloc[m,d] == total_msoa)
-    total_day = nrs_S[d]
-    nrs_E[d] = msoa_counts_E.iloc[:,d].sum()
-    nrs_I[d] = msoa_counts_I.iloc[:,d].sum()
-    nrs_R[d] = msoa_counts_R.iloc[:,d].sum()
-    nrs_S[d] = msoa_counts_S.iloc[:,d].sum()
-    assert(total_day == nrs_S[d] + nrs_E[d] + nrs_I[d] + nrs_R[d])
+#    assert(total_day == nrs_S[d] + nrs_E[d] + nrs_I[d] + nrs_R[d])
     
 
 
-# create (if first run, takes a while) or read in existing
-# create
-# for d in range(0, nr_days):
-#     print(d)
-#     for v in range(0, len(home_dangers)):
-#         if d == 0:
-#             # set seed
-#             home_dangers.iloc[v,d+1] = 0
-#         else:
-#             home_dangers.iloc[v,d+1] = home_dangers.iloc[v,d] + random.randrange(-5, 5, 1)
-#             if home_dangers.iloc[v,d+1] < 0:
-#                 home_dangers.iloc[v,d+1] = 0
-# data_file = os.path.join(data_dir, "output","Fake_home_dangers.pickle")
-# pickle_out = open(data_file,"wb")
-# pickle.dump(home_dangers, pickle_out)
-# pickle_out.close() 
-# read
-data_file = os.path.join(data_dir, "output","Fake_home_dangers.pickle")
-pickle_in = open(data_file,"rb")
-home_dangers = pickle.load(pickle_in)
-pickle_in.close()
-        
-for d in range(0, nr_days):
-    print(d)
-    for v in range(0, len(work_dangers)):
-        if d == 0:
-            # set seed
-            work_dangers.iloc[v,d+1] = 0
-        else:
-            work_dangers.iloc[v,d+1] = work_dangers.iloc[v,d] + random.randrange(-5, 5, 1)
-            if work_dangers.iloc[v,d+1] < 0:
-                work_dangers.iloc[v,d+1] = 0
-    
-    for v in range(0, len(primaryschool_dangers)):
-        if d == 0:
-            # set seed
-            primaryschool_dangers.iloc[v,d+1] = 0
-            secondaryschool_dangers.iloc[v,d+1] = 0
-        else:
-            primaryschool_dangers.iloc[v,d+1] = primaryschool_dangers.iloc[v,d] + random.randrange(-5, 5, 1)
-            if primaryschool_dangers.iloc[v,d+1] < 0:
-                primaryschool_dangers.iloc[v,d+1] = 0
-            secondaryschool_dangers.iloc[v,d+1] = secondaryschool_dangers.iloc[v,d] + random.randrange(-5, 5, 1)
-            if secondaryschool_dangers.iloc[v,d+1] < 0:
-                secondaryschool_dangers.iloc[v,d+1] = 0
-        
-    for v in range(0, len(retail_dangers)):
-        if d == 0:
-            # set seed
-            retail_dangers.iloc[v,d+1] = 0
-        else:
-            retail_dangers.iloc[v,d+1] = retail_dangers.iloc[v,d] + random.randrange(-5, 5, 1)
-            if retail_dangers.iloc[v,d+1] < 0:
-                retail_dangers.iloc[v,d+1] = 0
-        
-     
-
-
-
-   
-
-    
-
-
-# Add additional info about schools and retail including spatial coordinates
-# merge
-primaryschools = pd.merge(schools, primaryschool_dangers, left_index=True, right_index=True)
-secondaryschools = pd.merge(schools, secondaryschool_dangers, left_index=True, right_index=True)
-retail = pd.merge(retail, retail_dangers, left_index=True, right_index=True)
 
 
 # Plot data
