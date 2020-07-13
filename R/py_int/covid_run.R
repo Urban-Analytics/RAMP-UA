@@ -1,5 +1,4 @@
 library(tidyr)
-library(janitor)
 library(readr)
 library(mixdist)
 library(dplyr)
@@ -36,33 +35,17 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14
   #}
   
   num_sample <- nrow(population)
-  
-  area <- "area"
-  hid <- "house_id"
-  id <- "id"
-  
 
-  
-  df_cr_in <-create_input(micro_sim_pop  = population_in,
+  df_cr_in <-create_input(micro_sim_pop  = pop,
                           num_sample = num_sample,
-                          vars = c(area,   # must match columns in the population data.frame
-                                   hid,
-                                   id,
+                          vars = c("area",   # must match columns in the population data.frame
+                                   "house_id",
+                                   "id",
                                    "current_risk"))
-  
-  # df_in <- as_betas_devon(population_sample = df_cr_in, 
-  #                         id = id,
-  #                         age = age, 
-  #                         sex = sex, 
-  #                         beta0_fixed = beta0_fixed, #-9, #0.19, #-9.5,
-  #                         divider = 4)  # adding in the age/sex betas 
-  
+
   other_betas <- list(current_risk = current_risk)
   
-  #df_msoa <- df_in
   df_msoa <- df_cr_in
-  df_risk <- list()
-  
   
   #### seeding the first day in high risk MSOAs
   if(timestep==1){
@@ -72,7 +55,7 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14
     seeds <- sample(1:nrow(pop_hr), size = gam_cases[timestep])
     seeds_id <- pop_hr$id[seeds]
     df_msoa$new_status[df_msoa$id %in% seeds_id] <- 1
-    #  df_msoa$new_status[seeds] <- 1
+    print("First day seeded")
   }
   
   df_prob <- covid_prob(df = df_msoa,
@@ -85,7 +68,6 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14
   
   if(timestep > 1){
     df_ass <- case_assign(df = df_prob,
-                          with_optimiser = opt_switch, 
                           timestep=timestep,
                           tmp.dir=tmp.dir, 
                           save_output = output_switch)
