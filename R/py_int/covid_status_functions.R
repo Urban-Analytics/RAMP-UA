@@ -56,7 +56,7 @@ create_input <-
 
 
 covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, 
-                       risk_cap_val=5, include_age_sex = FALSE) {
+                       risk_cap_val=5) {
   
   df$beta0 <- 0
 
@@ -107,20 +107,13 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE,
 
 #########################################
 # assigns covid based on probabilities
-case_assign <- function(df, with_optimiser = FALSE, timestep, tmp.dir, save_output = TRUE) {
-  #print("assign cases")
-  
+case_assign <- function(df, timestep, tmp.dir, save_output = TRUE) {
+ 
   susceptible <- which(df$status == 0)
   
-  if (with_optimiser) {
-    df$new_status[susceptible] <- rbinom(n = length(susceptible),
-                                         size = 1,
-                                         prob = df$optim_probability[susceptible])
-  } else{
-    df$new_status[susceptible] <- rbinom(n = length(susceptible),
+  df$new_status[susceptible] <- rbinom(n = length(susceptible),
                                          size = 1,
                                          prob = df$probability[susceptible])
-  }
   
   if(file.exists("new_cases.csv")==FALSE) {
    ncase <- sum(df$new_status[susceptible])
@@ -133,29 +126,6 @@ case_assign <- function(df, with_optimiser = FALSE, timestep, tmp.dir, save_outp
   }
   ncase <- as.data.frame(ncase)
   write.csv(ncase, "new_cases.csv")
-
-  # if (save_output == TRUE){
-  #   if(timestep==1) {
-  #     nsus <<- length(susceptible)
-  #     prob <<- df$probability
-  #     current_risk <<- df$current_risk
-  #     dir.create(tmp.dir)
-  #   } else {
-  #     tmp <- length(susceptible)
-  #     nsus <<- rbind(nsus,tmp)
-  #     rownames(nsus) <<- seq(1,nrow(nsus))
-  #     prob.tmp <<- df$probability
-  #     prob <<- cbind(prob,prob.tmp)
-  #     risk.tmp <<- df$current_risk
-  #     current_risk <<- cbind(current_risk,risk.tmp)
-  #   }
-  #   #ncase <- as.data.frame(ncase)
-  #   write.csv(nsus, paste(tmp.dir,"/susceptible_cases.csv",sep=""))
-  #   write.csv(prob, paste(tmp.dir,"/probability.csv",sep=""))
-  #   write.csv(current_risk, paste(tmp.dir,"/risk.csv",sep=""))
-  #
-  # }
-    
   return(df)
 }
 
@@ -168,8 +138,6 @@ rank_assign <- function(df, daily_case , timestep){
   df$new_status[inf_ind] <- 1 
   return(df)
 }
-
-
 
 
 #########################################
@@ -195,9 +163,7 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
 
   #}
 
-  #new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
-  
-  if (presymp_dist == "weibull"){
+   if (presymp_dist == "weibull"){
     wpar <- mixdist::weibullpar(mu = presymp_mean, sigma = presymp_sd, loc = 0) 
     df$presymp_days[new_cases] <- round(rweibull(1:length(new_cases), shape = as.numeric(wpar["shape"]), scale = as.numeric(wpar["scale"])),) 
   }
@@ -230,8 +196,6 @@ removed <- function(df, chance_recovery = 0.95){
   
   return(df)
 }
-
-
 
 
 #########################################
