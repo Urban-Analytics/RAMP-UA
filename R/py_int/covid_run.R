@@ -61,8 +61,7 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14
   df_prob <- covid_prob(df = df_msoa,
                         betas = other_betas,
                         risk_cap=risk_cap_on,
-                        risk_cap_val=risk_cap,
-                        include_age_sex = FALSE)
+                        risk_cap_val=risk_cap)
   
   print("probabilities calculated")
   
@@ -152,7 +151,3 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14
   
   return(df_out)
 }
-
-
-#out <- run_status(pop)
-
