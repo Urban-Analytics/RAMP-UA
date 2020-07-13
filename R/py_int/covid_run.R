@@ -3,62 +3,26 @@ library(janitor)
 library(readr)
 library(mixdist)
 library(dplyr)
-#library(mgcv)
-#library(arrow)
-#library(dplyr)
-#library(ggplot2)
-#library(sf)
-#library(viridisLite)
-
-# set wd is done by parent python class
-#setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
-
-# Working directory set automatically by python
-#setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
-
-#setwd("/Users/JA610/Documents/GitHub/RAMP-UA/")
 
 #source("R/py_int/covid_status_functions.R")
 #source("R/py_int/initialize_and_helper_functions.R")
-
-#beta1 <- current_risk /  danger <- 0.55
-#pop <- read.csv("~/Downloads/input_population100917.csv")
-# 
-# devon_cases <- readRDS(paste0(getwd(),"/devon_cases.RDS"))
-# devon_cases$cumulative_cases[84] <- 812 #type here I think
-# devon_cases$new_cases <- c(0,diff(devon_cases$cumulative_cases))
-# devon_cases$devon_date <- as.numeric(devon_cases$date)
-# devon_cases <- as.data.frame(devon_cases)
-# 
-# 
-# gam_Devon <- mgcv::gam(new_cases ~ s(devon_date, bs = "cr"), data = devon_cases,family = nb())
-# plot(devon_cases$new_cases*20,  ylab="Cases", xlab = "Day")
-# points(round(fitted.values(gam_Devon)*20), col = "red")
-# abline(v = 38, lty = "dashed")
-# # gam_cases <- round(fitted.values(gam_Devon)*20)
-# 
+ 
 gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
-# new_cases[new_cases == 0]<-1
-# new_cases <- new_cases*20
-#baseline_risk <- readRDS(paste0(getwd(),"/baseline_risk.RDS")) # needs replacing with days beyond 40
-#baseline_risk <- readRDS(paste0(getwd(), "/baseline_risk2.RDS"))
-risk_per_case <- 509.7954
 
 w <- NULL
 nick_cases <- NULL
-run_status <- function(pop, timestep=1, current_risk = 0.0042) {
+run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14) {
   
   opt_switch <- FALSE
   output_switch <- FALSE
-  beta0_fixed <- 0
   # current_risk <- 0.01 #0.004
   rank_assign <- FALSE
   seed_cases <- TRUE
   seed_days <- 10
   normalizer_on <- TRUE
-  lockdown_scenario <- FALSE # at the moment need to tell nick's model this separately which isn't ideal  
   risk_cap_on <- TRUE
   risk_cap <- 5
+  
   
   
   print(paste("R timestep:", timestep))
@@ -191,12 +155,6 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042) {
   
   print(paste0("PHE cases ", gam_cases[timestep]))
   
-  if(lockdown_scenario == TRUE){
-    sum_risk <- sum(df_prob$current_risk)
-    risk_base_cases <- sum_risk/risk_per_case
-    gam_cases[timestep] <-  round(risk_base_cases)
-  }
-  
   nick_cases[timestep] <- (sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))
   print(paste0("model cases ", nick_cases[timestep]))
   print(paste0("Adjusted PHE cases ", gam_cases[timestep]))
@@ -228,7 +186,7 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042) {
                              presymp_mean = 6.4,
                              presymp_sd = 2.3,
                              infection_dist = "normal",
-                             infection_mean =  14,
+                             infection_mean =  sympt_length,
                              infection_sd = 2,
                              timestep=timestep,
                              tmp.dir=tmp.dir,
