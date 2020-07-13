@@ -2,7 +2,6 @@ name: ramp-ua
 channels:
   - conda-forge
   - defaults
-  - conda-forge
 dependencies:
   - numpy=1.18.5
   - tqdm
@@ -25,3 +24,4 @@ dependencies:
   - r-janitor=2.0.1
   - r-stringi=1.4.6
   - coverage
+  - pyyaml
