@@ -260,11 +260,13 @@ removed <- function(df, chance_recovery = 0.95){
 #' @param x A number or vector of numbers
 #' @param lower_bound Desired lower_bound of values
 #' @param upper_bound Desired upper_bound of values
+#' @param xmin Expected minimum value of x
+#' @param xmax Expected maximum value of x
 #' @return A number or vector of numbers between the lower and upper bounds
 #' @export
-normalizer <- function(x ,lower_bound, upper_bound){
+normalizer <- function(x ,lower_bound, upper_bound, xmin, xmax){
   
-  normx <-  (upper_bound - lower_bound)*(x - min(x))/(max(x)-min(x)) + lower_bound
+  normx <-  (upper_bound - lower_bound) * (x - xmin)/(xmax - xmin) + lower_bound
   return(normx)
 }
 
