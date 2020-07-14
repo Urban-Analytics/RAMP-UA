@@ -116,9 +116,17 @@ covid_prob <- function(df, betas, risk_cap_val=NA) {
   return(df)
 }
 
-#########################################
-# assigns covid based on probabilities
-case_assign <- function(df, timestep, tmp.dir, save_output = TRUE) {
+
+#' Assigns COVID cases based on individual probabilities
+#'
+#' Susceptible individuals are assigned COVID through a Bernoulli draw (rbinom)
+#' based on their probability of becoming a COVID case.
+#' 
+#' @param df Input list of the model - output of covid_prob function
+#' @param tmp.dir Directory for saving a csv recording the number 
+#' of new cases each day
+#' @save_output Logical. Should the number of new cases be saved as output.
+case_assign <- function(df, tmp.dir, save_output = TRUE) {
  
   susceptible <- which(df$status == 0)
   
@@ -136,11 +144,21 @@ case_assign <- function(df, timestep, tmp.dir, save_output = TRUE) {
    rownames(ncase) <- seq(1,nrow(ncase))
   }
   ncase <- as.data.frame(ncase)
-  write.csv(ncase, "new_cases.csv")
+  write.csv(ncase, paste0(tmp.dir, "/new_cases.csv"))
   return(df)
 }
 
-rank_assign <- function(df, daily_case , timestep){
+#' Assign COVID cases by ranking individuals current risk
+#'
+#' Used to assign cases for the time period in which the model is being seeded.
+#' Individuals are ranked in descending order by current risk and then desired number
+#' of cases are assigned to the highest ranking individuals.
+#' 
+#' Will be run in place of the case_assign function when the model is being seeded.
+#'
+#' @param df Input list of the model - output of covid_prob function
+#' @param daily_case The desired number of cases that should be assigned on this day
+rank_assign <- function(df, daily_case){
   
   dfw <- data.frame(id = df$id, current_risk = df$current_risk, status = df$status)
   dfw <- dfw[dfw$status == 0,]
