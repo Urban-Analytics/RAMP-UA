@@ -168,12 +168,23 @@ rank_assign <- function(df, daily_case){
   return(df)
 }
 
-
-#########################################
-# calculate the infection length of new cases
-infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,presymp_sd = NULL,
+#' Assigns the infection length of new cases
+#' 
+#' Each new case is assigned a number of days an individual is both 
+#' presymptomatic and symptomatic for.
+#' 
+#' @param df Input list of the function - output of an ____assign function
+#' @param presymp_dist The distribution of the length of the presymptomatic stage
+#' @param presymp_mean The mean length of the presymptomatic stage
+#' @param presymp_sd The standard deviation of the length of the presymptomatic stage
+#' @param infection_dist The distribution of the length of the symptomatic stage
+#' @param infection_mean The mean length of the symptomatic stage
+#' @param infection_sd The standard deviation of the length of the symptomatic stage
+#' @param tmp.dir Directory for saving output
+#' @param save_output Logical. Should output be saved.
+infection_length <- function(df, presymp_dist = "weibull", presymp_mean = NULL,presymp_sd = NULL,
                              infection_dist = "normal", infection_mean = NULL, infection_sd = NULL,
-                             timestep,tmp.dir, save_output = TRUE){
+                             tmp.dir, save_output = TRUE){
   
   susceptible <- which(df$status == 0)
   
@@ -209,8 +220,10 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
 }
 
 
-#########################################
-# determines if someone has been removed and if that removal is recovery or death
+#' Determines whether removed individuals recover or die
+#' 
+#' @param df Input list of the function - output of the infection_length function
+#' @param chance_recovery Probability of an infected individual recovering
 removed <- function(df, chance_recovery = 0.95){
   
   removed_cases <- which(df$presymp_days == 0 & df$symp_days == 1)
