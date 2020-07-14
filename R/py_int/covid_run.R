@@ -10,14 +10,13 @@ gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 
 w <- NULL
 nick_cases <- NULL
-run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14) {
+run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length = 14) {
   
   output_switch <- FALSE
   rank_assign <- FALSE
   seed_cases <- TRUE
   seed_days <- 10
-  risk_cap_on <- TRUE
-  risk_cap <- 5
+  risk_cap <- 5 #set to NA or omit if no cap
 
   print(paste("R timestep:", timestep))
   
@@ -33,17 +32,14 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14
   }
   #write.csv(pop, paste0(tmp.dir,"/input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
   #}
-  
-  num_sample <- nrow(population)
 
   df_cr_in <-create_input(micro_sim_pop  = pop,
-                          num_sample = num_sample,
                           vars = c("area",   # must match columns in the population data.frame
                                    "house_id",
                                    "id",
                                    "current_risk"))
 
-  other_betas <- list(current_risk = current_risk)
+  other_betas <- list(current_risk = current_risk_beta)
   
   df_msoa <- df_cr_in
   
@@ -60,7 +56,6 @@ run_status <- function(pop, timestep=1, current_risk = 0.0042, sympt_length = 14
   
   df_prob <- covid_prob(df = df_msoa,
                         betas = other_betas,
-                        risk_cap=risk_cap_on,
                         risk_cap_val=risk_cap)
   
   print("probabilities calculated")
