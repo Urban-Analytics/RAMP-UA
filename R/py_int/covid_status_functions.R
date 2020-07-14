@@ -22,9 +22,17 @@
 # calculate the probability of becoming infect
 # requires a dataframe list, a vector of betas, and a timestep
 
+
+#' Formatting data for infection model
+#' 
+#' Formatting the output of the spatial interaction model for use in the 
+#' infection model and selecting which variables should be included
+#' 
+#' @param microm_sim_pop The output of the spatial interaction model
+#' @param vars Variables to be kept for use in the infection model
+#' @return A list of data to be used in the infection model
 create_input <-
   function(micro_sim_pop,
-           num_sample,
            vars = NULL) {
     
     if (!all(vars %in% colnames(micro_sim_pop))) {
@@ -39,12 +47,12 @@ create_input <-
     names(var_list) <- vars
     
     constant_list <- list(
-      beta0 = rep(0, num_sample),
-      betaxs = rep(0, num_sample),
-      hid_status = rep(0, num_sample),
+      beta0 = rep(0, nrow(micro_sim_pop)),
+      betaxs = rep(0, nrow(micro_sim_pop)),
+      hid_status = rep(0, nrow(micro_sim_pop)),
       presymp_days = micro_sim_pop$presymp_days,
       symp_days = micro_sim_pop$symp_days,
-      probability = rep(0, num_sample),
+      probability = rep(0, nrow(micro_sim_pop)),
       status = micro_sim_pop$disease_status,
       new_status = micro_sim_pop$disease_status
     )
@@ -55,15 +63,23 @@ create_input <-
   }
 
 
-covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, 
-                       risk_cap_val=5) {
-  
-  df$beta0 <- 0
+#' Calculating probabilities of becoming a COVID case
+#' 
+#' Calculating probabilities of becoming a COVID case based on each individuals 
+#' 'current_risk'
+#' 
+#' @param df The input list - the output from the create_input function
+#' @param betas List of betas associated with variables to be used in 
+#' calculating probability of becoming a COVID case
+#' @param risk_cap_val The value at which current_risk will be capped
+#'
+
+covid_prob <- function(df, betas, risk_cap_val=NA) {
 
   print(paste0(sum(df$current_risk > 5), " individuals with risk above  ", risk_cap_val))
 
   
-  if(risk_cap==TRUE){
+  if(!is.na(risk_cap_val)){
     df$current_risk[df$current_risk>risk_cap_val] <- risk_cap_val
   }
   
@@ -87,12 +103,7 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE,
     beta_out_sums <- 0
   }
   
-
-    if (length(interaction_terms) > 0 ){
-      lpsi <- df$beta0 +  beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
-    } else{
-      lpsi <- df$beta0 + beta_out_sums
-    }
+  lpsi <- df$beta0 + beta_out_sums
   
   psi <- exp(lpsi) / (exp(lpsi) + 1)
   psi <- normalizer(psi, 0,1,0.5,1)  # stretching out the probabilities to be between 0 and 1 rather than 0.5 and 1
@@ -198,6 +209,15 @@ removed <- function(df, chance_recovery = 0.95){
 }
 
 
+
+normalizer <- function(x ,lower_bound, upper_bound, xmin, xmax){
+  
+  normx <-  (upper_bound - lower_bound)*(x - xmin)/(xmax-xmin) + lower_bound
+  return(normx)
+}
+
+
+
 #########################################
 beta0_optim <- function(beta0new, n, betaX, Y){ 
   tmp_mu <-  tmp_prob <- rep(NA, n)
@@ -228,12 +248,4 @@ new_beta0_probs <- function(df, daily_case){
 }
 
 
-#}
-
-
-normalizer <- function(x ,lower_bound, upper_bound, xmin, xmax){
-  
-  normx <-  (upper_bound - lower_bound)*(x - xmin)/(xmax-xmin) + lower_bound
-  return(normx)
-}
 
