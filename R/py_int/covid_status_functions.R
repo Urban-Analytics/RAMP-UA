@@ -3,9 +3,9 @@
 # Functions for Covid simulation code
 # Jesse F. Abrams and Fiona Spooner
 ##################################
-##################################
 # There are three main functions that 
 # 1. calculate covid probability
+# 2. assign covid and take a random draw to determine how long a person is infectius
 # 2. assign covid and take a random draw to determine how long a person is infectius
 # 3. take random draw to determine length of sickness and whether the person recovers or dies at the end
 ##################################
@@ -31,6 +31,7 @@
 #' @param microm_sim_pop The output of the spatial interaction model
 #' @param vars Variables to be kept for use in the infection model
 #' @return A list of data to be used in the infection model
+#' @export
 create_input <-
   function(micro_sim_pop,
            vars = NULL) {
@@ -72,8 +73,8 @@ create_input <-
 #' @param betas List of betas associated with variables to be used in 
 #' calculating probability of becoming a COVID case
 #' @param risk_cap_val The value at which current_risk will be capped
-#'
-
+#' @return An updated version of the input list with the probabilties updated
+#' @export
 covid_prob <- function(df, betas, risk_cap_val=NA) {
 
   print(paste0(sum(df$current_risk > 5), " individuals with risk above  ", risk_cap_val))
@@ -126,6 +127,8 @@ covid_prob <- function(df, betas, risk_cap_val=NA) {
 #' @param tmp.dir Directory for saving a csv recording the number 
 #' of new cases each day
 #' @save_output Logical. Should the number of new cases be saved as output.
+#' @return An updated version of the input list with the new cases assigned
+#' @export
 case_assign <- function(df, tmp.dir, save_output = TRUE) {
  
   susceptible <- which(df$status == 0)
@@ -158,6 +161,9 @@ case_assign <- function(df, tmp.dir, save_output = TRUE) {
 #'
 #' @param df Input list of the model - output of covid_prob function
 #' @param daily_case The desired number of cases that should be assigned on this day
+#' @return An updated version of the in put list with new rank assigned cases 
+#' added
+#' @export
 rank_assign <- function(df, daily_case){
   
   dfw <- data.frame(id = df$id, current_risk = df$current_risk, status = df$status)
@@ -182,6 +188,9 @@ rank_assign <- function(df, daily_case){
 #' @param infection_sd The standard deviation of the length of the symptomatic stage
 #' @param tmp.dir Directory for saving output
 #' @param save_output Logical. Should output be saved.
+#' @return An updated version of the input list with the new cases having 
+#' infection lengths assigned 
+#' @export
 infection_length <- function(df, presymp_dist = "weibull", presymp_mean = NULL,presymp_sd = NULL,
                              infection_dist = "normal", infection_mean = NULL, infection_sd = NULL,
                              tmp.dir, save_output = TRUE){
@@ -224,6 +233,9 @@ infection_length <- function(df, presymp_dist = "weibull", presymp_mean = NULL,p
 #' 
 #' @param df Input list of the function - output of the infection_length function
 #' @param chance_recovery Probability of an infected individual recovering
+#' @return An updated version of the input list with the status updates for those 
+#' days left in stage = 0.
+#' @export
 removed <- function(df, chance_recovery = 0.95){
   
   removed_cases <- which(df$presymp_days == 0 & df$symp_days == 1)
@@ -248,6 +260,8 @@ removed <- function(df, chance_recovery = 0.95){
 #' @param x A number or vector of numbers
 #' @param lower_bound Desired lower_bound of values
 #' @param upper_bound Desired upper_bound of values
+#' @return A number or vector of numbers between the lower and upper bounds
+#' @export
 normalizer <- function(x ,lower_bound, upper_bound){
   
   normx <-  (upper_bound - lower_bound)*(x - min(x))/(max(x)-min(x)) + lower_bound
