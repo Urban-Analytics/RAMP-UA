@@ -240,10 +240,17 @@ removed <- function(df, chance_recovery = 0.95){
 }
 
 
-
-normalizer <- function(x ,lower_bound, upper_bound, xmin, xmax){
+#' Changing the spread of values to be between two set values
+#' 
+#' For use in the covid_prob function to change the probabilities 
+#' to be 0-1 rather than 0.5-1
+#' 
+#' @param x A number or vector of numbers
+#' @param lower_bound Desired lower_bound of values
+#' @param upper_bound Desired upper_bound of values
+normalizer <- function(x ,lower_bound, upper_bound){
   
-  normx <-  (upper_bound - lower_bound)*(x - xmin)/(xmax-xmin) + lower_bound
+  normx <-  (upper_bound - lower_bound)*(x - min(x))/(max(x)-min(x)) + lower_bound
   return(normx)
 }
 
