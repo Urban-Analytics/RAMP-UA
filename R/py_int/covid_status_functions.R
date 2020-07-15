@@ -115,7 +115,7 @@ covid_prob <- function(df, betas, risk_cap_val=NA) {
 #' @param df Input list of the model - output of covid_prob function
 #' @param tmp.dir Directory for saving a csv recording the number 
 #' of new cases each day
-#' @save_output Logical. Should the number of new cases be saved as output.
+#' @param save_output Logical. Should the number of new cases be saved as output.
 #' @return An updated version of the input list with the new cases assigned
 #' @export
 case_assign <- function(df, tmp.dir, save_output = TRUE) {
@@ -228,19 +228,18 @@ infection_length <- function(df, presymp_dist = "weibull", presymp_mean = NULL,p
 #' @export
 removed <- function(df, chance_recovery = 0.95){
   
-  removed_cases <- which(df$presymp_days == 0 & df$symp_days == 1)
+  removed_cases <- which(df$presymp_days == 0 & df$symp_days == 1 & (df$status == 2 | df$new_status ==2))
   
   df$new_status[removed_cases] <- 3 + rbinom(n = length(removed_cases),
                                              size = 1,
                                              prob = (1-chance_recovery))
   
   df$symp_days[removed_cases] <- 0
-  df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] <- df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] - 1
-  df$symp_days[df$new_status == 2 & df$symp_days > 0] <- df$symp_days[df$new_status == 2 & df$symp_days>0] - 1
+  df$presymp_days[df$presymp_days > 0 ] <- df$presymp_days[df$presymp_days > 0] - 1
+  df$symp_days[df$symp_days > 0] <- df$symp_days[df$symp_days > 0] - 1
   
   return(df)
 }
-
 
 #' Changing the spread of values to be between two set values
 #' 
