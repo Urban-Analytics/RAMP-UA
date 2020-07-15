@@ -19,19 +19,15 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
   risk_cap <- 5 #set to NA or omit if no cap
 
   print(paste("R timestep:", timestep))
-  
-  #pop <- vroom::vroom("R/py_int/output/2020-06-19 09:42:15/input_pop_02.csv")
-  
-  
-  #  if(output_switch==TRUE) {
+
+if(output_switch==TRUE) {
   if(timestep==1) {
     tmp.dir <<- paste(getwd(),"/output/",Sys.time(),sep="")
     if(!dir.exists(tmp.dir)){
       dir.create(tmp.dir, recursive = TRUE)
     }
   }
-  #write.csv(pop, paste0(tmp.dir,"/input_pop_", stringr::str_pad(timestep, 2, pad = "0"), ".csv"), row.names = FALSE)
-  #}
+   }
 
   df_cr_in <-create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
@@ -67,6 +63,7 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
   } else {
     df_ass <- df_prob
   }
+  
   print("cases assigned")
   print(paste0("PHE cases ", gam_cases[timestep]))
   
