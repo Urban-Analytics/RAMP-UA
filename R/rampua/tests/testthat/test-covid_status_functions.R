@@ -126,6 +126,63 @@ test_that("rank_assign works", {
 })
 
 
+infection_length(df, timestep = 1)
+
+test_that("infection_length works", {
+
+  df <- list(id = sample(1:100, 10, replace = FALSE),
+             current_risk = runif(10, 0, 1),
+             beta0 = rep(0, 10),
+             betaxs = runif(10, 0, 1),
+             hid_status = rep(0, 10),
+             presymp_days = rep(0,10),
+             symp_days = rep(0,10),
+             status = c(rep(0,5), 1, 2, 3, 4, 0),
+             new_status = c(rep(1,5), 2, 3, 4, 4, 0),
+             probability = runif(10, 0, 1))
+
+  timestep <- 1
+
+  expect_type(infection_length(df, timestep = timestep), "list")
+
+  expect_true(all(infection_length(df, timestep = timestep)[["new_status"]] >= df$new_status))
+  expect_true(all(infection_length(df, timestep = timestep)[["new_status"]] >= df$status))
+
+  expect_equal(rank_assign(df, daily_case = daily_case)[["id"]], df$id)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["current_risk"]], df$current_risk)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["beta0"]], df$beta0)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["betaxs"]], df$betaxs)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["hid_status"]], df$hid_status)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["status"]], df$status)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["probability"]], df$probability)
+  expect_equal(sum(infection_length(df, timestep = timestep)[["presymp_days"]] >0) - sum(df$presymp_days > 0),sum(df$status == 0 & df$new_status == 1))
+
+})
+
+removed(df)
+
+test_that("removed works", {
+
+  df <- list(id = sample(1:100, 10, replace = FALSE),
+             current_risk = runif(10, 0, 1),
+             beta0 = rep(0, 10),
+             betaxs = runif(10, 0, 1),
+             hid_status = rep(0, 10),
+             presymp_days = rep(0,10),
+             symp_days = rep(1,10),
+             status = c(rep(0,5), rep(2, 5)),
+             new_status =c(rep(0,5), rep(2, 5)),
+             probability = runif(10, 0, 1))
+
+  expect_type(infection_length(df, timestep = timestep), "list")
+
+  expect_true(all(removed(df)[["new_status"]] >= df$new_status))
+  expect_true(all(removed(df)[["new_status"]] >= df$status))
+
+
+
+})
+
 test_that("normalizer works", {
   expect_equal(normalizer(0.5, 0,1,0.5,1), 0)
   expect_equal(normalizer(0.75, 0,1,0.5,1), 0.5)

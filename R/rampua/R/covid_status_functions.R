@@ -181,13 +181,13 @@ rank_assign <- function(df, daily_case){
 #' @return An updated version of the input list with the new cases having
 #' infection lengths assigned
 #' @export
-infection_length <- function(df, presymp_dist = "weibull", presymp_mean = NULL,presymp_sd = NULL,
-                             infection_dist = "normal", infection_mean = NULL, infection_sd = NULL,
-                             timestep, tmp.dir, save_output = TRUE){
+infection_length <- function(df, presymp_dist = "weibull", presymp_mean = 6.4 ,presymp_sd = 2,
+                             infection_dist = "normal", infection_mean = 14, infection_sd = 2,
+                             timestep, tmp.dir = getwd(), save_output = TRUE){
 
   susceptible <- which(df$status == 0)
 
-  new_cases <- which((df$new_status-df$status ==1) & df$status == 0)
+  new_cases <- which((df$new_status - df$status ==1) & df$status == 0)
 
   #if (save_output == TRUE){
   if(timestep==1) {
@@ -228,15 +228,15 @@ infection_length <- function(df, presymp_dist = "weibull", presymp_mean = NULL,p
 #' @export
 removed <- function(df, chance_recovery = 0.95){
 
-  removed_cases <- which(df$presymp_days == 0 & df$symp_days == 1)
+  removed_cases <- which(df$presymp_days == 0 & df$symp_days == 1 & (df$status == 2 | df$new_status ==2))
 
   df$new_status[removed_cases] <- 3 + rbinom(n = length(removed_cases),
                                              size = 1,
                                              prob = (1-chance_recovery))
 
   df$symp_days[removed_cases] <- 0
-  df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] <- df$presymp_days[df$presymp_days>0 & !is.na(df$presymp_days)] - 1
-  df$symp_days[df$new_status == 2 & df$symp_days > 0] <- df$symp_days[df$new_status == 2 & df$symp_days>0] - 1
+  df$presymp_days[df$presymp_days > 0 ] <- df$presymp_days[df$presymp_days > 0] - 1
+  df$symp_days[df$symp_days > 0] <- df$symp_days[df$symp_days > 0] - 1
 
   return(df)
 }
