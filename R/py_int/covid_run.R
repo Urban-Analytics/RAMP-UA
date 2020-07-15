@@ -20,14 +20,12 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
 
   print(paste("R timestep:", timestep))
 
-if(output_switch==TRUE) {
   if(timestep==1) {
     tmp.dir <<- paste(getwd(),"/output/",Sys.time(),sep="")
     if(!dir.exists(tmp.dir)){
       dir.create(tmp.dir, recursive = TRUE)
     }
   }
-   }
 
   df_cr_in <-create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
