@@ -186,6 +186,7 @@ rank_assign <- function(df, daily_case){
 #' @param infection_dist The distribution of the length of the symptomatic stage
 #' @param infection_mean The mean length of the symptomatic stage
 #' @param infection_sd The standard deviation of the length of the symptomatic stage
+#' @param timestep The day counter
 #' @param tmp.dir Directory for saving output
 #' @param save_output Logical. Should output be saved.
 #' @return An updated version of the input list with the new cases having 
@@ -193,7 +194,7 @@ rank_assign <- function(df, daily_case){
 #' @export
 infection_length <- function(df, presymp_dist = "weibull", presymp_mean = NULL,presymp_sd = NULL,
                              infection_dist = "normal", infection_mean = NULL, infection_sd = NULL,
-                             tmp.dir, save_output = TRUE){
+                             timestep, tmp.dir, save_output = TRUE){
   
   susceptible <- which(df$status == 0)
   

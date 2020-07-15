@@ -62,7 +62,6 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
   
   if(timestep > 1){
     df_ass <- case_assign(df = df_prob,
-                          timestep=timestep,
                           tmp.dir=tmp.dir, 
                           save_output = output_switch)
   } else {
@@ -83,14 +82,14 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
   }
   
   if(timestep > 1 & timestep <= seed_days & seed_cases == TRUE){
-    df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], timestep=timestep)
+    df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep])
     print(paste0((sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))," cases reassigned"))
   }
   
   
   if((rank_assign == TRUE & seed_cases == FALSE) | (rank_assign == TRUE & seed_cases == TRUE & timestep > seed_days)){
     if(timestep > 1 & (w[timestep] <= 0.9 | w[timestep] >= 1.1)){
-      df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], timestep=timestep)
+      df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep])
       print(paste0((sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))," cases reassigned"))
     }
   }
@@ -103,7 +102,7 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
                              infection_dist = "normal",
                              infection_mean =  sympt_length,
                              infection_sd = 2,
-                             timestep=timestep,
+                             timestep = timestep,
                              tmp.dir=tmp.dir,
                              save_output = output_switch)
   print("infection and recovery lengths assigned")
