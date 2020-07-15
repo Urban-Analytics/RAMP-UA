@@ -54,8 +54,8 @@ create_input <-
       presymp_days = micro_sim_pop$presymp_days,
       symp_days = micro_sim_pop$symp_days,
       probability = rep(0, nrow(micro_sim_pop)),
-      status = as.integer(micro_sim_pop$disease_status),
-      new_status = as.integer(micro_sim_pop$disease_status)
+      status = micro_sim_pop$disease_status,
+      new_status = micro_sim_pop$disease_status
     )
 
     df <- c(var_list, constant_list)
@@ -92,7 +92,7 @@ covid_prob <- function(df, betas, risk_cap_val=NA) {
   }
 
   beta_names <- beta_names[beta_names %in% names(df)]
-  beta_out_sums <- df[[beta_names]] * betas[[name]]
+  beta_out_sums <- df[[beta_names]] * betas[[beta_names]]
 
   lpsi <- df$beta0 + beta_out_sums
 
@@ -106,7 +106,6 @@ covid_prob <- function(df, betas, risk_cap_val=NA) {
 
   return(df)
 }
-
 
 #' Assigns COVID cases based on individual probabilities
 #'
@@ -124,17 +123,17 @@ case_assign <- function(df, tmp.dir, save_output = TRUE) {
   susceptible <- which(df$status == 0)
 
   df$new_status[susceptible] <- rbinom(n = length(susceptible),
-                                         size = 1,
-                                         prob = df$probability[susceptible])
+                                       size = 1,
+                                       prob = df$probability[susceptible])
 
   if(file.exists("new_cases.csv")==FALSE) {
-   ncase <- sum(df$new_status[susceptible])
+    ncase <- sum(df$new_status[susceptible])
   } else {
-   ncase <- read.csv("new_cases.csv")
-   ncase$X <- NULL
-   tmp <- sum(df$new_status[susceptible])
-   ncase <- rbind(ncase,tmp)
-   rownames(ncase) <- seq(1,nrow(ncase))
+    ncase <- read.csv("new_cases.csv")
+    ncase$X <- NULL
+    tmp <- sum(df$new_status[susceptible])
+    ncase <- rbind(ncase,tmp)
+    rownames(ncase) <- seq(1,nrow(ncase))
   }
   ncase <- as.data.frame(ncase)
   write.csv(ncase, paste0(tmp.dir, "/new_cases.csv"))
@@ -191,19 +190,19 @@ infection_length <- function(df, presymp_dist = "weibull", presymp_mean = NULL,p
   new_cases <- which((df$new_status-df$status ==1) & df$status == 0)
 
   #if (save_output == TRUE){
-    if(timestep==1) {
-      ncase <<- length(new_cases)
-    } else {
-      tmp2 <- length(new_cases)
-      ncase <<- rbind(ncase,tmp2)
-      rownames(ncase) <<- seq(1,nrow(ncase))
-    }
-    #ncase <- as.data.frame(ncase)
-    write.csv(ncase, paste(tmp.dir,"/new_cases.csv",sep=""))
+  if(timestep==1) {
+    ncase <<- length(new_cases)
+  } else {
+    tmp2 <- length(new_cases)
+    ncase <<- rbind(ncase,tmp2)
+    rownames(ncase) <<- seq(1,nrow(ncase))
+  }
+  #ncase <- as.data.frame(ncase)
+  write.csv(ncase, paste(tmp.dir,"/new_cases.csv",sep=""))
 
   #}
 
-   if (presymp_dist == "weibull"){
+  if (presymp_dist == "weibull"){
     wpar <- mixdist::weibullpar(mu = presymp_mean, sigma = presymp_sd, loc = 0)
     df$presymp_days[new_cases] <- round(rweibull(1:length(new_cases), shape = as.numeric(wpar["shape"]), scale = as.numeric(wpar["scale"])),)
   }
