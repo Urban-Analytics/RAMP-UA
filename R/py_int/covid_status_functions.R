@@ -92,7 +92,7 @@ covid_prob <- function(df, betas, risk_cap_val=NA) {
   }
   
   beta_names <- beta_names[beta_names %in% names(df)]
-  beta_out_sums <- df[[beta_names]] * betas[[name]]
+  beta_out_sums <- df[[beta_names]] * betas[[beta_names]]
   
   lpsi <- df$beta0 + beta_out_sums
   
