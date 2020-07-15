@@ -7,9 +7,9 @@
 create_input(micro_sim_pop, vars = NULL)
 }
 \arguments{
-\item{vars}{Variables to be kept for use in the infection model}
+\item{micro_sim_pop}{The output of the spatial interaction model}
 
-\item{microm_sim_pop}{The output of the spatial interaction model}
+\item{vars}{Variables to be kept for use in the infection model}
 }
 \value{
 A list of data to be used in the infection model

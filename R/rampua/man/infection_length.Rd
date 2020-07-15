@@ -7,13 +7,13 @@
 infection_length(
   df,
   presymp_dist = "weibull",
-  presymp_mean = NULL,
-  presymp_sd = NULL,
+  presymp_mean = 6.4,
+  presymp_sd = 2,
   infection_dist = "normal",
-  infection_mean = NULL,
-  infection_sd = NULL,
+  infection_mean = 14,
+  infection_sd = 2,
   timestep,
-  tmp.dir,
+  tmp.dir = getwd(),
   save_output = TRUE
 )
 }

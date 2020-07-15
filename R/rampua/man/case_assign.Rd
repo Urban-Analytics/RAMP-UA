@@ -4,7 +4,7 @@
 \alias{case_assign}
 \title{Assigns COVID cases based on individual probabilities}
 \usage{
-case_assign(df, tmp.dir, save_output = TRUE)
+case_assign(df, tmp.dir = getwd(), save_output = TRUE)
 }
 \arguments{
 \item{df}{Input list of the model - output of covid_prob function}

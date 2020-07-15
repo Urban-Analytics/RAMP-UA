@@ -28,7 +28,7 @@
 #' Formatting the output of the spatial interaction model for use in the
 #' infection model and selecting which variables should be included
 #'
-#' @param microm_sim_pop The output of the spatial interaction model
+#' @param micro_sim_pop The output of the spatial interaction model
 #' @param vars Variables to be kept for use in the infection model
 #' @return A list of data to be used in the infection model
 #' @export
@@ -54,8 +54,8 @@ create_input <-
       presymp_days = micro_sim_pop$presymp_days,
       symp_days = micro_sim_pop$symp_days,
       probability = rep(0, nrow(micro_sim_pop)),
-      status = micro_sim_pop$disease_status,
-      new_status = micro_sim_pop$disease_status
+      status = as.integer(micro_sim_pop$disease_status),
+      new_status = as.integer(micro_sim_pop$disease_status)
     )
 
     df <- c(var_list, constant_list)
@@ -122,21 +122,21 @@ case_assign <- function(df, tmp.dir = getwd(), save_output = TRUE) {
 
   susceptible <- which(df$status == 0)
 
-  df$new_status[susceptible] <- rbinom(n = length(susceptible),
+  df$new_status[susceptible] <- stats::rbinom(n = length(susceptible),
                                        size = 1,
                                        prob = df$probability[susceptible])
 
   if(file.exists("new_cases.csv")==FALSE) {
     ncase <- sum(df$new_status[susceptible])
   } else {
-    ncase <- read.csv("new_cases.csv")
+    ncase <- utils::read.csv("new_cases.csv")
     ncase$X <- NULL
     tmp <- sum(df$new_status[susceptible])
     ncase <- rbind(ncase,tmp)
     rownames(ncase) <- seq(1,nrow(ncase))
   }
   ncase <- as.data.frame(ncase)
-  write.csv(ncase, paste0(tmp.dir, "/new_cases.csv"))
+  utils::write.csv(ncase, paste0(tmp.dir, "/new_cases.csv"))
   return(df)
 }
 
@@ -189,26 +189,13 @@ infection_length <- function(df, presymp_dist = "weibull", presymp_mean = 6.4 ,p
 
   new_cases <- which((df$new_status - df$status ==1) & df$status == 0)
 
-  #if (save_output == TRUE){
-  if(timestep==1) {
-    ncase <<- length(new_cases)
-  } else {
-    tmp2 <- length(new_cases)
-    ncase <<- rbind(ncase,tmp2)
-    rownames(ncase) <<- seq(1,nrow(ncase))
-  }
-  #ncase <- as.data.frame(ncase)
-  write.csv(ncase, paste(tmp.dir,"/new_cases.csv",sep=""))
-
-  #}
-
   if (presymp_dist == "weibull"){
     wpar <- mixdist::weibullpar(mu = presymp_mean, sigma = presymp_sd, loc = 0)
-    df$presymp_days[new_cases] <- round(rweibull(1:length(new_cases), shape = as.numeric(wpar["shape"]), scale = as.numeric(wpar["scale"])),)
+    df$presymp_days[new_cases] <- round(stats::rweibull(1:length(new_cases), shape = as.numeric(wpar["shape"]), scale = as.numeric(wpar["scale"])),)
   }
 
   if (infection_dist == "normal"){
-    df$symp_days[new_cases] <- round(rnorm(1:length(new_cases), mean = infection_mean, sd = infection_sd))
+    df$symp_days[new_cases] <- round(stats::rnorm(1:length(new_cases), mean = infection_mean, sd = infection_sd))
   }
 
   #switching people from being pre symptomatic to symptomatic and infected
@@ -230,7 +217,7 @@ removed <- function(df, chance_recovery = 0.95){
 
   removed_cases <- which(df$presymp_days == 0 & df$symp_days == 1 & (df$status == 2 | df$new_status ==2))
 
-  df$new_status[removed_cases] <- 3 + rbinom(n = length(removed_cases),
+  df$new_status[removed_cases] <- 3 + stats::rbinom(n = length(removed_cases),
                                              size = 1,
                                              prob = (1-chance_recovery))
 
@@ -259,37 +246,3 @@ normalizer <- function(x ,lower_bound, upper_bound, xmin, xmax){
   normx <-  (upper_bound - lower_bound) * (x - xmin)/(xmax - xmin) + lower_bound
   return(normx)
 }
-
-
-
-#########################################
-beta0_optim <- function(beta0new, n, betaX, Y){
-  tmp_mu <-  tmp_prob <- rep(NA, n)
-  for (i in 1:n) {
-    tmp_mu[i] <- beta0new + betaX[i]
-    tmp_prob[i] <- exp(tmp_mu[i])/(1+exp(tmp_mu[i]))
-  }
-  tmp_sum <- abs(Y-sum(tmp_prob))
-  tmp_sum
-}
-
-#########################################
-new_beta0_probs <- function(df, daily_case){
-
-  susceptible <- which(df$status == 0)
-
-  new_beta0 <- optim(par = -1, beta0_optim,  n = length(susceptible), betaX=df$betaxs[susceptible], Y=daily_case,
-                     method="Brent",  lower =-30, upper = 0)$par
-
-  df$new_beta0 <- new_beta0
-  tot_risk_new <- df$new_beta0  + df$betaxs
-  df$optim_probability <- exp(tot_risk_new)/(1+exp(tot_risk_new))
-
-  case_YN <- rbinom(n=length(df$optim_probability[susceptible]), size=1, prob =   df$optim_probability[susceptible])
-  print(paste0("optim cases ",sum(case_YN)))
-
-  return(df)
-}
-
-
-

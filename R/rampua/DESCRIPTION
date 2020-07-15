@@ -6,14 +6,16 @@ Author: Fiona Spooner & Jesse Abrams
 Maintainer: The package maintainer <yourself@somewhere.net>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
     tidyr (>= 1.1.0), 
     readr, 
     mixdist,
-    dplyr
+    dplyr,
+    stats, 
+    utils
 RoxygenNote: 7.1.0
 Suggests: 
     testthat
