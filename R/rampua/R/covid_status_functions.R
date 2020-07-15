@@ -118,7 +118,7 @@ covid_prob <- function(df, betas, risk_cap_val=NA) {
 #' @param save_output Logical. Should the number of new cases be saved as output.
 #' @return An updated version of the input list with the new cases assigned
 #' @export
-case_assign <- function(df, tmp.dir, save_output = TRUE) {
+case_assign <- function(df, tmp.dir = getwd(), save_output = TRUE) {
 
   susceptible <- which(df$status == 0)
 
