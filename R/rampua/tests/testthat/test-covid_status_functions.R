@@ -1,7 +1,3 @@
-test_that("multiplication works", {
-  expect_equal(2 * 2, 4)
-})
-
 
 
 test_that("create_input works",{
@@ -38,7 +34,8 @@ covid_prob(df = dfl, betas = list(current_risk = 0.42), risk_cap_val = 5)
 
 test_that("covid_prob", {
 
-  df <- list(current_risk = runif(10, 0, 1),
+  df <- list(id = sample(1:100, 10, replace = FALSE),
+              current_risk = runif(10, 0, 1),
               beta0 = rep(0, 10),
               betaxs = rep(0, 10),
               hid_status = rep(0, 10),
@@ -49,6 +46,7 @@ test_that("covid_prob", {
 
   expect_type(covid_prob(df = df,betas = list(current_risk = 0.42), risk_cap_val = 5), "list")
 
+  expect_equal(covid_prob(df = df,betas = list(current_risk = 0.42), risk_cap_val = 5)[["id"]], df$id)
   expect_equal(covid_prob(df = df,betas = list(current_risk = 0.42), risk_cap_val = 5)[["current_risk"]], df$current_risk)
   expect_equal(covid_prob(df = df,betas = list(current_risk = 0.42), risk_cap_val = 5)[["beta0"]], df$beta0)
   expect_equal(covid_prob(df = df,betas = list(current_risk = 0.42), risk_cap_val = 5)[["hid_status"]], df$hid_status)
@@ -69,7 +67,8 @@ test_that("covid_prob", {
 
 test_that("case_assign works", {
 
-  df <- list(current_risk = runif(10, 0, 1),
+  df <- list(id = sample(1:100, 10, replace = FALSE),
+             current_risk = runif(10, 0, 1),
              beta0 = rep(0, 10),
              betaxs = runif(10, 0, 1),
              hid_status = rep(0, 10),
@@ -84,6 +83,7 @@ test_that("case_assign works", {
 
   expect_type(case_assign(df), "list")
 
+  expect_equal(case_assign(df)[["id"]], df$id)
   expect_equal(case_assign(df)[["current_risk"]], df$current_risk)
   expect_equal(case_assign(df)[["beta0"]], df$beta0)
   expect_equal(case_assign(df)[["betaxs"]], df$betaxs)
@@ -92,6 +92,37 @@ test_that("case_assign works", {
   expect_equal(case_assign(df)[["symp_days"]], df$symp_days)
   expect_equal(case_assign(df)[["status"]], df$status)
   expect_equal(case_assign(df)[["probability"]], df$probability)
+})
+
+
+test_that("rank_assign works", {
+  df <- list(id = sample(1:100, 10, replace = FALSE),
+             current_risk = runif(10, 0, 1),
+             beta0 = rep(0, 10),
+             betaxs = runif(10, 0, 1),
+             hid_status = rep(0, 10),
+             presymp_days = sample(1:10, size = 10, replace = TRUE),
+             symp_days = sample(5:15, size = 10, replace = TRUE),
+             status = c(rep(0,5), 1, 2, 3, 4, 0),
+             new_status = c(rep(0,5), 1, 2, 3, 4, 0),
+             probability = runif(10, 0, 1))
+
+  daily_case <- 10
+
+  expect_true(all(rank_assign(df, daily_case = daily_case)[["new_status"]] >= df$new_status))
+  expect_true(all(rank_assign(df, daily_case = daily_case)[["new_status"]] >= df$status))
+
+  expect_type(rank_assign(df, daily_case = daily_case), "list")
+
+  expect_equal(rank_assign(df, daily_case = daily_case)[["id"]], df$id)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["current_risk"]], df$current_risk)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["beta0"]], df$beta0)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["betaxs"]], df$betaxs)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["hid_status"]], df$hid_status)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["presymp_days"]], df$presymp_days)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["symp_days"]], df$symp_days)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["status"]], df$status)
+  expect_equal(rank_assign(df, daily_case = daily_case)[["probability"]], df$probability)
 })
 
 
