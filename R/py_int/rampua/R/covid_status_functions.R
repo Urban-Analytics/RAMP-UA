@@ -64,48 +64,6 @@ create_input <-
   }
 
 
-#' Combining betas for different types of variables
-#'
-#' Can be used to create beta * var for both variables
-#' that change on a daily basis and fixed variables
-#'
-#' @param name Name of the variable - must match a column name in dataset
-#' @param betas Betas of the named variables - should have a matching name
-#' @param df Dataset containing variables
-beta_make <- function(name, betas, df) {
-  #dynamic betas with linear multiplier
-  if (is.matrix(df[[name]]) &
-      length(betas[[name]]) == 1) {
-    #dynamic betas will be a matrix from the create_input function
-    y <- df[[name]] * betas[[name]]
-  }
-  #fixed betas with linear multiplier
-  if (!is.matrix(df[[name]]) & length(betas[[name]]) == 1) {
-    y <- df[[name]] * betas[[name]]
-  }
-  #dynamic betas with class multiplier
-  if (is.matrix(df[[name]]) & length(betas[[name]]) > 1) {
-    classes <- names(betas[[name]])
-    y <- numeric(length(df[[name]]))
-    for (cls in classes) {
-      y[which(df[[name]] == cls)] <-
-        as.numeric(as.character(betas[[name]][[cls]]))
-    }
-  }
-
-  #fixed betas with class multiplier
-  if (!is.matrix(df[[name]]) & length(betas[[name]]) > 1) {
-    classes <- names(betas[[name]])
-    y <- numeric(length(df[[name]]))
-    for (cls in classes) {
-      y[which(df[[name]] == cls)] <-
-        as.numeric(as.character(betas[[name]][[cls]]))
-    }
-  }
-  return(y)
-}
-
-
 #' Calculating probabilities of becoming a COVID case
 #'
 #' Calculating probabilities of becoming a COVID case based on each individuals
@@ -119,10 +77,8 @@ beta_make <- function(name, betas, df) {
 #' @export
 covid_prob <- function(df, betas, risk_cap_val=NA) {
 
-  print(paste0(sum(df$current_risk > 5), " individuals with risk above  ", risk_cap_val))
-
-
   if(!is.na(risk_cap_val)){
+    print(paste0(sum(df$current_risk > 5), " individuals with risk above  ", risk_cap_val))
     df$current_risk[df$current_risk>risk_cap_val] <- risk_cap_val
   }
 
@@ -136,15 +92,7 @@ covid_prob <- function(df, betas, risk_cap_val=NA) {
   }
 
   beta_names <- beta_names[beta_names %in% names(df)]
-
-  if (length(beta_names) > 0 ){
-    beta_out <- lapply(X = beta_names, FUN = beta_make, betas=betas, df=df)
-    beta_out <- do.call(cbind, beta_out)
-    colnames(beta_out) <- beta_names
-    beta_out_sums <- rowSums(beta_out)
-  } else{
-    beta_out_sums <- 0
-  }
+  beta_out_sums <- df[[beta_names]] * betas[[name]]
 
   lpsi <- df$beta0 + beta_out_sums
 
