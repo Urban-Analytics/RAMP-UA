@@ -1,6 +1,4 @@
 
-
-
 ##################################
 # Functions for Covid simulation code
 # Jesse F. Abrams and Fiona Spooner
@@ -11,9 +9,8 @@
 create_input <-
   function(micro_sim_pop,
            num_sample,
-           vars = NULL,
-           lockdown_date = NULL,
-           pnothome_multiplier = 1) {
+           vars = NULL) {
+    
     if (!all(vars %in% colnames(micro_sim_pop))) {
       print(paste0(vars[!vars %in% colnames(micro_sim_pop)], " not in population column names"))
     }
@@ -42,14 +39,6 @@ create_input <-
     )
     
     df <- c(var_list, constant_list)
-    
-    df$pnothome <- df$pnothome
-    
-    if (!is.null(lockdown_date)) {
-      li <- as.numeric(lockdown_date - start_date)
-      df$pnothome[, (li + 1)] <-
-        df$pnothome[, 1] * pnothome_multiplier
-    }
     
     return(df)
   }

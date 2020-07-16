@@ -3,9 +3,9 @@
 # Functions for Covid simulation code
 # Jesse F. Abrams and Fiona Spooner
 ##################################
-##################################
 # There are three main functions that 
 # 1. calculate covid probability
+# 2. assign covid and take a random draw to determine how long a person is infectius
 # 2. assign covid and take a random draw to determine how long a person is infectius
 # 3. take random draw to determine length of sickness and whether the person recovers or dies at the end
 ##################################
@@ -22,18 +22,63 @@
 # calculate the probability of becoming infect
 # requires a dataframe list, a vector of betas, and a timestep
 
-covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE, 
-                       risk_cap_val=5, include_age_sex = FALSE, normalizer_on = FALSE) {
-  #print("assign probabilities")
-  
-  if(normalizer_on){
-    df$beta0 <- 0
-  }
-  
-  print(paste0(sum(df$current_risk > 5), " individuals with risk above  ", risk_cap_val))
 
+#' Formatting data for infection model
+#' 
+#' Formatting the output of the spatial interaction model for use in the 
+#' infection model and selecting which variables should be included
+#' 
+#' @param microm_sim_pop The output of the spatial interaction model
+#' @param vars Variables to be kept for use in the infection model
+#' @return A list of data to be used in the infection model
+#' @export
+create_input <-
+  function(micro_sim_pop,
+           vars = NULL) {
+    
+    if (!all(vars %in% colnames(micro_sim_pop))) {
+      print(paste0(vars[!vars %in% colnames(micro_sim_pop)], " not in population column names"))
+    }
+    
+    var_list <- list()
+    for (i in 1:length(vars)) {
+      var_list[[i]] <- micro_sim_pop[, vars[i]]
+    }
+    
+    names(var_list) <- vars
+    
+    constant_list <- list(
+      beta0 = rep(0, nrow(micro_sim_pop)),
+      betaxs = rep(0, nrow(micro_sim_pop)),
+      hid_status = rep(0, nrow(micro_sim_pop)),
+      presymp_days = micro_sim_pop$presymp_days,
+      symp_days = micro_sim_pop$symp_days,
+      probability = rep(0, nrow(micro_sim_pop)),
+      status = micro_sim_pop$disease_status,
+      new_status = micro_sim_pop$disease_status
+    )
+    
+    df <- c(var_list, constant_list)
+    
+    return(df)
+  }
+
+
+#' Calculating probabilities of becoming a COVID case
+#'
+#' Calculating probabilities of becoming a COVID case based on each individuals
+#' 'current_risk'
+#'
+#' @param df The input list - the output from the create_input function
+#' @param betas List of betas associated with variables to be used in
+#' calculating probability of becoming a COVID case
+#' @param risk_cap_val The value at which current_risk will be capped
+#' @return An updated version of the input list with the probabilties updated
+#' @export
+covid_prob <- function(df, betas, risk_cap_val=NA) {
   
-  if(risk_cap==TRUE){
+  if(!is.na(risk_cap_val)){
+    print(paste0(sum(df$current_risk > 5), " individuals with risk above  ", risk_cap_val))
     df$current_risk[df$current_risk>risk_cap_val] <- risk_cap_val
   }
   
@@ -47,100 +92,68 @@ covid_prob <- function(df, betas, interaction_terms = NULL, risk_cap=FALSE,
   }
   
   beta_names <- beta_names[beta_names %in% names(df)]
+  beta_out_sums <- df[[beta_names]] * betas[[beta_names]]
   
-  if (length(beta_names) > 0 ){
-    beta_out <- lapply(X = beta_names, FUN = beta_make, betas=betas, df=df)
-    beta_out <- do.call(cbind, beta_out)
-    colnames(beta_out) <- beta_names
-    beta_out_sums <- rowSums(beta_out)
-  } else{
-    beta_out_sums <- 0
-  }
-  
-  if(include_age_sex){
-    if (length(interaction_terms) > 0 ){
-      lpsi <- df$beta0 + df$as_risk + beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
-    } else{
-      lpsi <- df$beta0 + df$as_risk + beta_out_sums
-    }
-  } else{
-    if (length(interaction_terms) > 0 ){
-      lpsi <- df$beta0 +  beta_out_sums + apply(beta_out[,interaction_terms], 1, prod)
-    } else{
-      lpsi <- df$beta0 + beta_out_sums
-    }
-  }
+  lpsi <- df$beta0 + beta_out_sums
   
   psi <- exp(lpsi) / (exp(lpsi) + 1)
+  psi <- normalizer(psi, 0,1,0.5,1)  # stretching out the probabilities to be between 0 and 1 rather than 0.5 and 1
   
-  if(normalizer_on == TRUE){
-    psi <- normalizer(psi, 0,1,0.5,1)
-  }
-  
-  psi[df$status %in% c(3,4)] <- 0 # if they are not susceptible then their probability is 0 of getting it 
+  psi[df$status %in% c(3,4)] <- 0 # if they are not susceptible then their probability is 0 of getting it
   psi[df$status %in% c(1,2)] <- 1 # this makes keeping track of who has it easier
-  df$betaxs <- df$as_risk + beta_out_sums
+  df$betaxs <- beta_out_sums
   df$probability <- psi
   
   return(df)
 }
 
-#########################################
-# assigns covid based on probabilities
-case_assign <- function(df, with_optimiser = FALSE,timestep,tmp.dir, save_output = TRUE) {
-  #print("assign cases")
-  
+#' Assigns COVID cases based on individual probabilities
+#'
+#' Susceptible individuals are assigned COVID through a Bernoulli draw (rbinom)
+#' based on their probability of becoming a COVID case.
+#' 
+#' @param df Input list of the model - output of covid_prob function
+#' @param tmp.dir Directory for saving a csv recording the number 
+#' of new cases each day
+#' @save_output Logical. Should the number of new cases be saved as output.
+#' @return An updated version of the input list with the new cases assigned
+#' @export
+case_assign <- function(df, tmp.dir, save_output = TRUE) {
+ 
   susceptible <- which(df$status == 0)
   
-  if (with_optimiser) {
-    df$new_status[susceptible] <- rbinom(n = length(susceptible),
-                                         size = 1,
-                                         prob = df$optim_probability[susceptible])
-  } else{
-    #print("nop")
-    df$new_status[susceptible] <- rbinom(n = length(susceptible),
+  df$new_status[susceptible] <- rbinom(n = length(susceptible),
                                          size = 1,
                                          prob = df$probability[susceptible])
-  }
   
-  #if(file.exists("new_cases.csv")==FALSE) {
-  #  ncase <- sum(df$new_status[susceptible])
-  #} else {
-  #  ncase <- read.csv("new_cases.csv")
-  #  ncase$X <- NULL
-  #  tmp <- sum(df$new_status[susceptible])
-  #  ncase <- rbind(ncase,tmp)
-  #  rownames(ncase) <- seq(1,nrow(ncase))
-  #}
-  #ncase <- as.data.frame(ncase)
-  #write.csv(ncase, "new_cases.csv")
-
-  # if (save_output == TRUE){
-  #   if(timestep==1) {
-  #     nsus <<- length(susceptible)
-  #     prob <<- df$probability
-  #     current_risk <<- df$current_risk
-  #     dir.create(tmp.dir)
-  #   } else {
-  #     tmp <- length(susceptible)
-  #     nsus <<- rbind(nsus,tmp)
-  #     rownames(nsus) <<- seq(1,nrow(nsus))
-  #     prob.tmp <<- df$probability
-  #     prob <<- cbind(prob,prob.tmp)
-  #     risk.tmp <<- df$current_risk
-  #     current_risk <<- cbind(current_risk,risk.tmp)
-  #   }
-  #   #ncase <- as.data.frame(ncase)
-  #   write.csv(nsus, paste(tmp.dir,"/susceptible_cases.csv",sep=""))
-  #   write.csv(prob, paste(tmp.dir,"/probability.csv",sep=""))
-  #   write.csv(current_risk, paste(tmp.dir,"/risk.csv",sep=""))
-  #
-  # }
-    
+  if(file.exists("new_cases.csv")==FALSE) {
+   ncase <- sum(df$new_status[susceptible])
+  } else {
+   ncase <- read.csv("new_cases.csv")
+   ncase$X <- NULL
+   tmp <- sum(df$new_status[susceptible])
+   ncase <- rbind(ncase,tmp)
+   rownames(ncase) <- seq(1,nrow(ncase))
+  }
+  ncase <- as.data.frame(ncase)
+  write.csv(ncase, paste0(tmp.dir, "/new_cases.csv"))
   return(df)
 }
 
-rank_assign <- function(df, daily_case , timestep){
+#' Assign COVID cases by ranking individuals current risk
+#'
+#' Used to assign cases for the time period in which the model is being seeded.
+#' Individuals are ranked in descending order by current risk and then desired number
+#' of cases are assigned to the highest ranking individuals.
+#' 
+#' Will be run in place of the case_assign function when the model is being seeded.
+#'
+#' @param df Input list of the model - output of covid_prob function
+#' @param daily_case The desired number of cases that should be assigned on this day
+#' @return An updated version of the in put list with new rank assigned cases 
+#' added
+#' @export
+rank_assign <- function(df, daily_case){
   
   dfw <- data.frame(id = df$id, current_risk = df$current_risk, status = df$status)
   dfw <- dfw[dfw$status == 0,]
@@ -150,18 +163,31 @@ rank_assign <- function(df, daily_case , timestep){
   return(df)
 }
 
-
-
-
-#########################################
-# calculate the infection length of new cases
-infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,presymp_sd = NULL,
+#' Assigns the infection length of new cases
+#' 
+#' Each new case is assigned a number of days an individual is both 
+#' presymptomatic and symptomatic for.
+#' 
+#' @param df Input list of the function - output of an ____assign function
+#' @param presymp_dist The distribution of the length of the presymptomatic stage
+#' @param presymp_mean The mean length of the presymptomatic stage
+#' @param presymp_sd The standard deviation of the length of the presymptomatic stage
+#' @param infection_dist The distribution of the length of the symptomatic stage
+#' @param infection_mean The mean length of the symptomatic stage
+#' @param infection_sd The standard deviation of the length of the symptomatic stage
+#' @param timestep The day counter
+#' @param tmp.dir Directory for saving output
+#' @param save_output Logical. Should output be saved.
+#' @return An updated version of the input list with the new cases having 
+#' infection lengths assigned 
+#' @export
+infection_length <- function(df, presymp_dist = "weibull", presymp_mean = NULL,presymp_sd = NULL,
                              infection_dist = "normal", infection_mean = NULL, infection_sd = NULL,
-                             timestep,tmp.dir, save_output = TRUE){
+                             timestep, tmp.dir, save_output = TRUE){
   
   susceptible <- which(df$status == 0)
   
-  new_cases <- which((df$new_status-df$status==1) & df$status == 0)
+  new_cases <- which((df$new_status-df$status ==1) & df$status == 0)
   
   #if (save_output == TRUE){
     if(timestep==1) {
@@ -176,9 +202,7 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
 
   #}
 
-  #new_cases <- which(df$new_status[susceptible]-df$status[susceptible]==1)
-  
-  if (presymp_dist == "weibull"){
+   if (presymp_dist == "weibull"){
     wpar <- mixdist::weibullpar(mu = presymp_mean, sigma = presymp_sd, loc = 0) 
     df$presymp_days[new_cases] <- round(rweibull(1:length(new_cases), shape = as.numeric(wpar["shape"]), scale = as.numeric(wpar["scale"])),) 
   }
@@ -186,8 +210,6 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
   if (infection_dist == "normal"){
     df$symp_days[new_cases] <- round(rnorm(1:length(new_cases), mean = infection_mean, sd = infection_sd))
   }
-  
-  
   
   #switching people from being pre symptomatic to symptomatic and infected
   becoming_sympt <- which((df$status == 1 | df$new_status == 1) & df$presymp_days == 0) ### maybe should be status rather than new_status
@@ -197,8 +219,13 @@ infection_length <- function(df,presymp_dist = "weibull",presymp_mean = NULL,pre
 }
 
 
-#########################################
-# determines if someone has been removed and if that removal is recovery or death
+#' Determines whether removed individuals recover or die
+#' 
+#' @param df Input list of the function - output of the infection_length function
+#' @param chance_recovery Probability of an infected individual recovering
+#' @return An updated version of the input list with the status updates for those 
+#' days left in stage = 0.
+#' @export
 removed <- function(df, chance_recovery = 0.95){
   
   removed_cases <- which(df$presymp_days == 0 & df$symp_days == 1)
@@ -215,38 +242,23 @@ removed <- function(df, chance_recovery = 0.95){
 }
 
 
-
-#########################################
-# below is commented out because we are not doing this for now
-# this will be accounted for in nics code as far as i know
-
-# separates by msoa and household
-#area_cov <- function(df, area, hid){
-#  
-#  df_msoa_hid <- data.frame(msoa = df[[area]],hid = df[[hid]],
-#                            pop_dens_km2 = df$pop_dens_km2,
-#                            msoa_area = df$msoa_area,symp =  df$symp, 
-#                            presymp = df$presymp)
-#  
-#  df_gr <-  data.frame(df_msoa_hid %>%
-#                         group_by(msoa) %>%
-#                         add_count(msoa, name = "msoa_size") %>%
-#                         mutate(
-#                           msoa_presymp = sum(presymp == 1),
-#                           msoa_symp = sum(symp == 1),
-#                           msoa_infected = msoa_presymp + msoa_symp
-#                         ) 
-#                       )
-
-#  df$msoa_presymp <- df_gr$msoa_presymp
-#  df$msoa_symp <- df_gr$msoa_symp
-#  df$msoa_infected <- df_gr$msoa_infected
-#  
-#  if("cases_per_area" %in% colnames(df)){
-#    df$cases_per_area <- log10(df_gr$msoa_infected)/df_gr$msoa_area
-#  }
-#
-#  return(df)
+#' Changing the spread of values to be between two set values
+#' 
+#' For use in the covid_prob function to change the probabilities 
+#' to be 0-1 rather than 0.5-1
+#' 
+#' @param x A number or vector of numbers
+#' @param lower_bound Desired lower_bound of values
+#' @param upper_bound Desired upper_bound of values
+#' @param xmin Expected minimum value of x
+#' @param xmax Expected maximum value of x
+#' @return A number or vector of numbers between the lower and upper bounds
+#' @export
+normalizer <- function(x ,lower_bound, upper_bound, xmin, xmax){
+  
+  normx <-  (upper_bound - lower_bound) * (x - xmin)/(xmax - xmin) + lower_bound
+  return(normx)
+}
 
 
 
@@ -280,12 +292,4 @@ new_beta0_probs <- function(df, daily_case){
 }
 
 
-#}
-
-
-normalizer <- function(x ,lower_bound, upper_bound, xmin, xmax){
-  
-  normx <-  (upper_bound - lower_bound)*(x - xmin)/(xmax-xmin) + lower_bound
-  return(normx)
-}
 
