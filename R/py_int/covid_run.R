@@ -1,11 +1,11 @@
+devtools::install_github("Urban-Analytics/rampuaR", force = TRUE)
+
 library(tidyr)
 library(readr)
 library(mixdist)
 library(dplyr)
+library(rampuaR)
 
-#source("R/py_int/covid_status_functions.R")
-#source("R/py_int/initialize_and_helper_functions.R")
- 
 gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 
 w <- NULL
@@ -17,22 +17,22 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
   seed_cases <- TRUE
   seed_days <- 10
   risk_cap <- 5 #set to NA or omit if no cap
-
+  
   print(paste("R timestep:", timestep))
-
+  
   if(timestep==1) {
     tmp.dir <<- paste(getwd(),"/output/",Sys.time(),sep="")
     if(!dir.exists(tmp.dir)){
       dir.create(tmp.dir, recursive = TRUE)
     }
   }
-
+  
   df_cr_in <-create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
                                    "house_id",
                                    "id",
                                    "current_risk"))
-
+  
   other_betas <- list(current_risk = current_risk_beta)
   
   df_msoa <- df_cr_in
@@ -48,14 +48,16 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
     print("First day seeded")
   }
   
-  df_prob <- covid_prob(df = df_msoa,
-                        betas = other_betas,
-                        risk_cap_val=risk_cap)
+  df_sum_betas <- sum_betas(df = df_msoa,
+                            betas = other_betas, 
+                            risk_cap_val = risk_cap)
+  
+  df_prob <- rampuaR::covid_prob(df = df_sum_betas)
   
   print("probabilities calculated")
   
   if(timestep > 1){
-    df_ass <- case_assign(df = df_prob,
+    df_ass <- rampuaR::case_assign(df = df_prob,
                           tmp.dir=tmp.dir, 
                           save_output = output_switch)
   } else {
@@ -77,20 +79,20 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
   }
   
   if(timestep > 1 & timestep <= seed_days & seed_cases == TRUE){
-    df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep])
+    df_ass <- rampuaR::rank_assign(df = df_prob, daily_case = gam_cases[timestep])
     print(paste0((sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))," cases reassigned"))
   }
   
   
   if((rank_assign == TRUE & seed_cases == FALSE) | (rank_assign == TRUE & seed_cases == TRUE & timestep > seed_days)){
     if(timestep > 1 & (w[timestep] <= 0.9 | w[timestep] >= 1.1)){
-      df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep])
+      df_ass <- rampuaR::rank_assign(df = df_prob, daily_case = gam_cases[timestep])
       print(paste0((sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))," cases reassigned"))
     }
   }
   
   
-  df_inf <- infection_length(df = df_ass,
+  df_inf <- rampuaR::infection_length(df = df_ass,
                              presymp_dist = "weibull",
                              presymp_mean = 6.4,
                              presymp_sd = 2.3,
@@ -102,7 +104,13 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
                              save_output = output_switch)
   print("infection and recovery lengths assigned")
   
-  df_rec <- removed(df = df_inf, chance_recovery = 0.95)
+  removed_cases <- rampuaR::determine_removal(df_inf)
+  
+  df_rem <- rampuaR::removed(df_inf, removed_cases = removed_cases, chance_recovery = 0.95)
+  
+  df_rec <- rampuaR::recalc_sympdays(df_rem, removed_cases) 
+  
+ # df_rec <- removed(df = df_inf, chance_recovery = 0.95)
   print("recoveries and deaths assigned")
   
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
@@ -113,30 +121,6 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
                        disease_status=df_msoa$new_status,
                        presymp_days=df_msoa$presymp_days,
                        symp_days=df_msoa$symp_days)
-  
-  #print("new disease status calculated")
-  
-  # if(output_switch==TRUE) {
-  if(timestep==1) {
-    stat <<- df_out$disease_status
-    #    nb0 <<- unique(df_msoa$new_beta0)
-    wo <<- w[timestep[1]]
-    #   prob <<- df_msoa$probability
-  } else {
-    tmp3 <- df_out$disease_status
-    # tmp4 <- unique(df_msoa$new_beta0)
-    #  tmp5 <- df_msoa$probability
-    # stat <<- cbind(stat,tmp3)
-    #    nb0 <<- cbind(nb0, tmp4)
-    wo <<- rbind(wo, w[timestep])
-    #   prob <<- cbind(prob, tmp5)
-  }
-  #ncase <- as.data.frame(ncase)
-  write.csv(stat, paste(tmp.dir,"/disease_status.csv",sep=""))
-  #   write.csv(nb0, paste(tmp.dir,"/optim_b0.csv",sep=""))
-  write.csv(wo, paste(tmp.dir,"/w_out.csv",sep=""))
-  # write.csv(prob, paste(tmp.dir, "/probabilities.csv", sep = ""))
-  # }
   
   return(df_out)
 }
