@@ -1,4 +1,5 @@
 ![python-testing](https://github.com/Urban-Analytics/RAMP-UA/workflows/python-testing/badge.svg)
+[![codecov](https://codecov.io/gh/Urban-Analytics/RAMP-UA/branch/master/graph/badge.svg)](https://codecov.io/gh/Urban-Analytics/RAMP-UA)
 # RAMP-UA
 
 This is the code repository for the RAMP Urban Analytics project.
