@@ -124,3 +124,7 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
   
   return(df_out)
 }
+
+
+
+
