@@ -747,11 +747,12 @@ class Microsim:
  
             # Read the primary school flows
             threshold = 0.2 # explain 20%
-            primary_flow_matrix = qa.get_flows("PrimarySchool", study_msoas,threshold)
+            thresholdtype = "prob" # threshold based on sum of top probabities
+            primary_flow_matrix = qa.get_flows("PrimarySchool", study_msoas,threshold,thresholdtype)
             
             # Read the secondary school flows
-            threshold = 0.2 # explain 20%
-            secondary_flow_matrix = qa.get_flows("SecondarySchool", study_msoas,threshold)
+            # same thresholds as before
+            secondary_flow_matrix = qa.get_flows("SecondarySchool", study_msoas,threshold,thresholdtype)
             
             
 
@@ -908,7 +909,8 @@ class Microsim:
     
             # Read the flows
             threshold = 0.2 # explain 20%
-            flow_matrix = qa.get_flows("Retail", study_msoas,threshold)
+            thresholdtype = "prob" # threshold based on sum of top probabities
+            flow_matrix = qa.get_flows("Retail", study_msoas,threshold,thresholdtype)
             
 
         return stores, flow_matrix
