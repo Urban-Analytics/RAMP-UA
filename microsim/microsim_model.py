@@ -746,8 +746,8 @@ class Microsim:
             Microsim._add_location_columns(secondary_schools, location_names=secondary_school_names, location_ids=secondary_school_ids)
  
             # Read the primary school flows
-            threshold = 0.2 # explain 20%
-            thresholdtype = "prob" # threshold based on sum of top probabities
+            threshold = 5 # top 5
+            thresholdtype = "nr" # threshold based on nr venues
             primary_flow_matrix = qa.get_flows("PrimarySchool", study_msoas,threshold,thresholdtype)
             
             # Read the secondary school flows
@@ -908,8 +908,8 @@ class Microsim:
             Microsim._add_location_columns(stores, location_names=store_names, location_ids=stores_ids)
     
             # Read the flows
-            threshold = 0.2 # explain 20%
-            thresholdtype = "prob" # threshold based on sum of top probabities
+            threshold = 10 # top 10
+            thresholdtype = "nr" # threshold based on nr venues
             flow_matrix = qa.get_flows("Retail", study_msoas,threshold,thresholdtype)
             
 
