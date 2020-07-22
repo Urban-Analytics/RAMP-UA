@@ -203,6 +203,60 @@ def get_flows(venue, msoa_list, threshold, thresholdtype):
     for n in range(0,nr_venues):
         col_names.append(f"Loc_{n}")
     df = pd.DataFrame.from_dict(dic,orient='index')
+    df.columns = col_names   
+    df.insert(loc=0, column='Area_ID', value=[*range(1, len(msoa_list)+1, 1)])
+    df.insert(loc=1, column='Area_Code', value=df.index)
+    df.reset_index(drop=True, inplace=True)
+    return df
+
+
+
+
+
+
+
+
+
+def get_flows_test(venue, msoa_list, threshold, thresholdtype):
+    
+    # get all probabilities so they sum to at least threshold value
+    dic = {} # appending to dictionary is faster than dataframe
+    for m in msoa_list:
+        print(m)
+        # get all probabilities for this MSOA (threshold set to 0)
+        if venue == "PrimarySchool":
+            result_tmp = getProbablePrimarySchoolsByMSOAIZ(m,0)
+        elif venue == "SecondarySchool":
+            result_tmp = getProbableSecondarySchoolsByMSOAIZ(m,0)
+        elif venue == "Retail":
+            result_tmp = getProbableRetailByMSOAIZ(m,0)
+        else:
+            sys.exit("unknown venue type") 
+        # keep only values that sum to at least the specified threshold
+        sort_index = np.argsort(result_tmp) # index from lowest to highest value
+        result = [0.0] * len(result_tmp) # initialise
+        i = len(result_tmp)-1 # start with last of sorted (highest prob)
+        if thresholdtype == "prob":
+            sum_p = 0 # initialise
+            while sum_p < threshold:
+              result[sort_index[i]] = result_tmp[sort_index[i]]
+              sum_p = sum_p + result_tmp[sort_index[i]]
+              #print(sum_p)
+              i = i - 1
+        elif thresholdtype == "nr":
+            for t in range(0,threshold):
+                result[sort_index[i]] = result_tmp[sort_index[i]]
+                i = i - 1
+        else:
+             sys.exit("unknown threshold type")
+        dic[m] = result
+    
+    # now turn this into a dataframe with the right columns etc compatible with _flows variable
+    nr_venues = len(dic[msoa_list[0]])
+    col_names = []
+    for n in range(0,nr_venues):
+        col_names.append(f"Loc_{n}")
+    df = pd.DataFrame.from_dict(dic,orient='index')
     df.columns = col_names
     
     # optional: check
@@ -218,85 +272,85 @@ def get_flows(venue, msoa_list, threshold, thresholdtype):
 
 
 
+# # testing only
+# import geopandas as gpd
+# import random
+# import matplotlib.pyplot as plt
+# # load in shapefile with England MSOAs
+# sh_file = os.path.join("C:\\Users\Toshiba\git_repos\RAMP-UA\devon_data","MSOAS_shp","bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp")
+# map_df = gpd.read_file(sh_file)
+# # rename column to get ready for merging
+# msoas_england = map_df.msoa11cd[0:6791].tolist()
+# msoas_england = random.sample(msoas_england, 100)
 
-import geopandas as gpd
-import random
-import matplotlib.pyplot as plt
-# load in shapefile with England MSOAs
-sh_file = os.path.join("C:\\Users\Toshiba\git_repos\RAMP-UA\devon_data","MSOAS_shp","bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp")
-map_df = gpd.read_file(sh_file)
-# rename column to get ready for merging
-msoas_england = map_df.msoa11cd[0:6791].tolist()
-msoas_england = random.sample(msoas_england, 30)
 
+# # to call, use something like:
+# msoa_list = msoas_england #['E02002559', 'E02002560']
 
-# to call, use something like:
-msoa_list = msoas_england # ['E02002559', 'E02002560']
+# threshold = 5 # explain 20%
+# thresholdtype = "nr"
+# venue = "SecondarySchool" #PrimarySchool, SecondarySchool, Retail
+# df_sec_nr,test_sec_nr = get_flows_test(venue, msoa_list,threshold,thresholdtype)
 
-threshold = 5 # explain 20%
-thresholdtype = "nr"
-venue = "SecondarySchool" #PrimarySchool, SecondarySchool, Retail
-df_sec_nr,test_sec_nr = get_flows(venue, msoa_list,threshold,thresholdtype)
+# plt.hist(test_sec_nr)
+# plt.title(f'Secondary Schools probability top {threshold} venues')
+# plt.ylabel('Nr MSOAs')
+# plt.xlabel('Summed probability venues')
+# plt.savefig("test_sec_nr.pdf")
+# plt.clf()
 
-plt.hist(test_sec_nr)
-plt.title(f'Secondary Schools probability top {threshold} venues')
-plt.xlabel('Nr MSOAs')
-plt.ylabel('Summed probability venues')
-plt.savefig("test_sec_nr.pdf")
-plt.clf()
+# venue = "PrimarySchool"
+# df_prim_nr,test_prim_nr = get_flows_test(venue, msoa_list,threshold,thresholdtype)
 
-venue = "PrimarySchool"
-df_prim_nr,test_prim_nr = get_flows(venue, msoa_list,threshold,thresholdtype)
-
-plt.hist(test_prim_nr)
-plt.title(f'Primary Schools probability top {threshold} venues')
-plt.xlabel('Nr MSOAs')
-plt.ylabel('Summed probability venues')
-plt.savefig("test_prim_nr.pdf")
-plt.clf()
+# plt.hist(test_prim_nr)
+# plt.title(f'Primary Schools probability top {threshold} venues')
+# plt.ylabel('Nr MSOAs')
+# plt.xlabel('Summed probability venues')
+# plt.savefig("test_prim_nr.pdf")
+# plt.clf()
     
-threshold = 10
-venue = "Retail"
-df_shop_nr,test_shop_nr = get_flows(venue, msoa_list,threshold,thresholdtype)
+# threshold = 10
+# venue = "Retail"
+# df_shop_nr,test_shop_nr = get_flows_test(venue, msoa_list,threshold,thresholdtype)
 
-plt.hist(test_shop_nr)
-plt.title(f'Retail probability top {threshold} venues')
-plt.xlabel('Nr MSOAs')
-plt.ylabel('Summed probability venues')
-plt.savefig("test_shop_nr.pdf")
-plt.clf()
+# plt.hist(test_shop_nr)
+# plt.title(f'Retail probability top {threshold} venues')
+# plt.ylabel('Nr MSOAs')
+# plt.xlabel('Summed probability venues')
+# plt.savefig("test_shop_nr.pdf")
+# plt.clf()
 
 
-threshold = 0.1
-thresholdtype = "prob"
-venue = "SecondarySchool" #PrimarySchool, SecondarySchool, Retail
-df_sec_prob,test_sec_prob = get_flows(venue, msoa_list,threshold,thresholdtype)
+# threshold = 0.1
+# thresholdtype = "prob"
+# venue = "SecondarySchool" #PrimarySchool, SecondarySchool, Retail
+# df_sec_prob,test_sec_prob = get_flows_test(venue, msoa_list,threshold,thresholdtype)
 
-plt.hist(test_sec_prob)
-plt.title(f'Secondary Schools nr venues prob > {threshold}')
-plt.xlabel('Nr MSOAs')
-plt.ylabel('Nr venues')
-plt.savefig("test_sec_prob.pdf")
-plt.clf()
+# plt.hist(test_sec_prob)
+# plt.title(f'Secondary Schools nr venues prob > {threshold}')
+# plt.ylabel('Nr MSOAs')
+# plt.xlabel('Nr venues')
+# plt.savefig("test_sec_prob.pdf")
+# plt.clf()
 
-venue = "PrimarySchool"
-df_prim_prob,test_prim_prob = get_flows(venue, msoa_list,threshold,thresholdtype)
+# venue = "PrimarySchool"
+# df_prim_prob,test_prim_prob = get_flows_test(venue, msoa_list,threshold,thresholdtype)
 
-plt.hist(test_prim_prob)
-plt.title(f'Primary Schools nr venues prob > {threshold}')
-plt.xlabel('Nr MSOAs')
-plt.ylabel('Nr venues')
-plt.savefig("test_prim_prob.pdf")
-plt.clf()
+# plt.hist(test_prim_prob)
+# plt.title(f'Primary Schools nr venues prob > {threshold}')
+# plt.ylabel('Nr MSOAs')
+# plt.xlabel('Nr venues')
+# plt.savefig("test_prim_prob.pdf")
+# plt.clf()
     
-venue = "Retail"
-df_shop_prob,test_shop_prob = get_flows(venue, msoa_list,threshold,thresholdtype)
+# venue = "Retail"
+# df_shop_prob,test_shop_prob = get_flows_test(venue, msoa_list,threshold,thresholdtype)
     
-plt.hist(test_shop_prob)
-plt.title(f'Retail nr venues prob > {threshold}')
-plt.xlabel('Nr MSOAs')
-plt.ylabel('Nr venues')
-plt.savefig("test_shop_prob.pdf")
-plt.clf()
+# plt.hist(test_shop_prob)
+# plt.title(f'Retail nr venues prob > {threshold}')
+# plt.ylabel('Nr MSOAs')
+# plt.xlabel('Nr venues')
+# plt.savefig("test_shop_prob.pdf")
+# plt.clf()
     
     
