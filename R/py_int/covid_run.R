@@ -10,11 +10,11 @@ gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 
 w <- NULL
 nick_cases <- NULL
-run_status <- function(pop, timestep=1, current_risk_beta = 0.008, sympt_length = 19, risk_cap = 5, seed_days = 0) {
+run_status <- function(pop, timestep=1, current_risk_beta = 0.006, sympt_length = 19, risk_cap = 5, seed_days = 5) {
   
   output_switch <- TRUE
   rank_assign <- FALSE
-  seed_cases <- FALSE
+  seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
   
   print(paste("R timestep:", timestep))
   
