@@ -18,13 +18,13 @@ import json
 from bokeh.io import output_file
 from bokeh.plotting import figure, show
 from bokeh.models import (BasicTicker, CDSView, ColorBar, ColumnDataSource,
-                          CustomJS, CustomJSFilter, 
+                          CustomJS, CustomJSFilter, FactorRange, 
                           GeoJSONDataSource, HoverTool, Legend,
                           LinearColorMapper, PrintfTickFormatter, Slider)
 from bokeh.layouts import row, column, gridplot, grid, widgetbox
 from bokeh.models.widgets import Tabs, Panel
 from bokeh.palettes import brewer
-from bokeh.transform import transform
+from bokeh.transform import transform, factor_cmap
 
 import click  # command-line interface
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
@@ -78,7 +78,15 @@ def create_dashboard(parameters_file):
     def create_venue_dangers_dict(r_range, outputdir):
         '''
         Reads in venue pickle files (venues from locations_dict) and populates dangers_dict_3d (raw data: venue, day, run), dangers_dict (mean across runs) and dangers_dict_std (standard deviation across runs)
+        Possible output includes:
+        dangers_dict       # mean (value to be plotted)
+        dangers_dict_std   # standard deviation (could plot as error bars)
+        dangers_dict_3d    # full 3D data (for debugging)
         '''
+        
+        dangers_dict = {} 
+        dangers_dict_std = {} 
+        dangers_dict_3d = {} 
         
         for key, value in locations_dict.items():
             #for r in range(nr_runs):
@@ -107,6 +115,8 @@ def create_dashboard(parameters_file):
             dangers_dict[key] = pd.DataFrame(data=dangers_3d.mean(axis=2), index=dangers_rownames, columns=dangers_colnames)
             dangers_dict_std[key] = pd.DataFrame(data=dangers_3d.std(axis=2), index=dangers_rownames, columns=dangers_colnames)
             
+        return dangers_dict, dangers_dict_std, dangers_dict_3d
+            
             
     def create_difference_dict(dict_sc0,dict_sc1,lookup_dict):
         dict_out = {}
@@ -118,8 +128,10 @@ def create_dashboard(parameters_file):
     def create_msoa_dangers_dict():
         '''
         Converts dangers_dict to MSOA level data for the appropriate venue types. Produces average danger score (sum dangers in MSOA / total nr venues in MSOA)
+        Output: dangers_msoa_dict
         '''
         
+        dangers_msoa_dict = {}
         for key in ['Retail','PrimarySchool','SecondarySchool']:
             dangers = dangers_dict[key]
             if key == 'Retail':
@@ -132,17 +144,53 @@ def create_dashboard(parameters_file):
             msoa_count = dangers.groupby(['MSOA']).agg('count')  
             msoa_avg =  msoa_sum.div(msoa_count, axis='index')
             dangers_msoa_dict[key] = msoa_avg
+        return dangers_msoa_dict
             
     
-    def create_counts_dict_3d(r_range, outputdir):
+    def create_counts_dict(r_range, outputdir):
         '''
-        Counts per condition. Produces 4 types of counts:
+        Counts per condition (3D, mean and standard deviation)
+        Produces 4 types of counts:
         msoacounts: nr per msoa and day
         agecounts: nr per age category and day
         totalcounts: nr per day (across all areas)
         cumcounts: nr per MSOA (across given time period)
+        Output: 
+        msoas                   # list of msoas
+        msoacounts_dict
+        totalcounts_dict
+        cumcounts_dict
+        agecounts_dict
+        msoacounts_dict_std
+        totalcounts_dict_std
+        cumcounts_dict_std
+        agecounts_dict_std
+        msoacounts_dict_3d
+        totalcounts_dict_3d
+        cumcounts_dict_3d
+        agecounts_dict_3d
         '''
         
+        # start with empty dictionaries
+        msoas = []
+        msoacounts_dict_3d = {} 
+        totalcounts_dict_3d = {}  
+        cumcounts_dict_3d = {}  
+        agecounts_dict_3d = {}  
+        uniquecounts_dict_3d = {} 
+        msoacounts_dict = {}  
+        agecounts_dict = {}  
+        totalcounts_dict = {}
+        cumcounts_dict = {}
+        uniquecounts_dict = {}
+        msoacounts_dict_std = {}  
+        agecounts_dict_std = {}
+        totalcounts_dict_std = {}
+        cumcounts_dict_std = {}
+        uniquecounts_dict_std = {}
+        
+        
+        # first, create 3d dictionaries
         for r in r_range:
             # read in pickle file individuals (disease status)
             data_file = os.path.join(data_dir, outputdir, f"{r}", "Individuals.pickle")
@@ -163,11 +211,6 @@ def create_dashboard(parameters_file):
                 counts_colnames = filter_col[start_day:end_day+1]
                 
                 
-                
-                
-                #start_col = individuals.shape[1] - nr_days + start_day
-                #end_col = individuals.shape[1] - nr_days + end_day + 1
-                
                 # TO BE ADDED SO USER CAN DEFINE AGE BRACKETS - FOR NOW JUST USING PREDEFINED CATEGORIES
                 # individuals['age0'] = np.zeros((len(individuals),1))
                 # for a in range(age_cat.shape[0]):
@@ -179,6 +222,9 @@ def create_dashboard(parameters_file):
             # add age brackets column to individuals_tmp
             individuals_tmp.insert(8, 'age0', age_cat_col)
             
+            
+            uniquecounts_df = pd.DataFrame()
+            
             for key, value in conditions_dict.items():
                 #print(key)
                 if r == start_run:
@@ -186,6 +232,7 @@ def create_dashboard(parameters_file):
                     agecounts_dict_3d[key] = np.zeros((age_cat.shape[0],nr_days,nr_runs))
                     totalcounts_dict_3d[key] = np.zeros((nr_days,nr_runs))  
                     cumcounts_dict_3d[key] = np.zeros((len(msoas),nr_runs))
+                    uniquecounts_dict_3d[key] = np.zeros(nr_runs)
                     
                 # cumulative counts
                 # select right columns
@@ -196,6 +243,9 @@ def create_dashboard(parameters_file):
                 # create new df of zeros and replace with 1 at indices
                 cumcounts_run = pd.DataFrame(np.zeros((tmp.shape[0], 1)))
                 cumcounts_run.loc[indices] = 1
+                
+                uniquecounts_df[key] = cumcounts_run.values[:,0]
+                
                 #uniqcounts[:,value,r] = cumcounts_run.values[:,0]
                 # merge with MSOA df
                 cumcounts_run = cumcounts_run.merge(area_individuals, left_index=True, right_index=True)
@@ -231,8 +281,6 @@ def create_dashboard(parameters_file):
                     # count nr for this condition per age bracket             
                     age_count_temp = individuals_tmp[tmp.iloc[:,day] == conditions_dict[key]].groupby(['age0']).agg({tmp.columns[day]: ['count']})  
                     
-                    
-                    
                     if age_count_temp.shape[0] == 6:
                         age_count_temp = age_count_temp.values
                         agecounts_run[:,day] = age_count_temp[:, 0]
@@ -249,8 +297,6 @@ def create_dashboard(parameters_file):
                     
                         #age_count_temp.loc['2'].count
     
-                            
-                    
                 # get current values from dict
                 msoacounts = msoacounts_dict_3d[key]
                 agecounts = agecounts_dict_3d[key]
@@ -267,19 +313,32 @@ def create_dashboard(parameters_file):
                 totalcounts_dict_3d[key] = totalcounts
                 cumcounts_dict_3d[key] = cumcounts
                 
+                uniquecounts_df[key] = uniquecounts_df[key]*(value+1)
+                
+            # uniquecounts['presymptomatic'] = uniquecounts['presymptomatic']*2
+            # uniquecounts['symptomatic'] = uniquecounts['symptomatic']*3
+            # uniquecounts['recovered'] = uniquecounts['recovered']*4
+            # uniquecounts['dead'] = uniquecounts['dead']*5
+            uniquecounts_df['maxval'] = uniquecounts_df.max(axis = 1)
+            
+            for key, value in conditions_dict.items():
+                
+                # get current values from dict
+                uniquecounts = uniquecounts_dict_3d[key]
+                # add current run's values
+                uniquecounts[r-start_run] = uniquecounts_df[uniquecounts_df.maxval == (value+1)].shape[0]
+                # write out to dict
+                uniquecounts_dict_3d[key] = uniquecounts
         
-       
-    def create_counts_dict_mean_std():
-        '''
-        Summarize data in 3d counts dictionaries into mean and standard deviation across runs
-        '''
         
+        # next, create mean and std
         for key, value in conditions_dict.items():
             # get current values from dict
             msoacounts = msoacounts_dict_3d[key]
             agecounts = agecounts_dict_3d[key]
             totalcounts = totalcounts_dict_3d[key]
             cumcounts = cumcounts_dict_3d[key]
+            uniquecounts = uniquecounts_dict_3d[key]
             # aggregate
             msoacounts_std = msoacounts.std(axis=2)
             msoacounts = msoacounts.mean(axis=2)
@@ -289,6 +348,8 @@ def create_dashboard(parameters_file):
             totalcounts = totalcounts.mean(axis=1)
             cumcounts_std = cumcounts.std(axis=1)
             cumcounts = cumcounts.mean(axis = 1)
+            uniquecounts_std = uniquecounts.std()
+            uniquecounts = uniquecounts.mean()
             # write out to dict
             msoacounts_dict[key] = pd.DataFrame(data=msoacounts, index=msoas, columns=dict_days)
             msoacounts_dict_std[key] = pd.DataFrame(data=msoacounts_std, index=msoas, columns=dict_days)
@@ -298,9 +359,34 @@ def create_dashboard(parameters_file):
             totalcounts_dict_std[key] = pd.Series(data=totalcounts_std, index=dict_days)
             cumcounts_dict[key] = pd.Series(data=cumcounts, index=msoas)
             cumcounts_dict_std[key] = pd.Series(data=cumcounts_std, index=msoas)
-         
+            uniquecounts_dict[key] = pd.Series(data=uniquecounts, index=["total"])
+            uniquecounts_dict_std[key] = pd.Series(data=uniquecounts_std, index=["total"])
         
         
+        return msoas, totalcounts_dict, cumcounts_dict, agecounts_dict,  msoacounts_dict, cumcounts_dict_3d, totalcounts_dict_std, cumcounts_dict_std, agecounts_dict_std, msoacounts_dict_std, totalcounts_dict_3d, agecounts_dict_3d, msoacounts_dict_3d, uniquecounts_dict_3d, uniquecounts_dict_std, uniquecounts_dict
+    
+    
+    
+    
+    # def calc_cumtotal_counts(cumcounts_dict_3d):
+    #     """ Calculate cumulative total across time and space, returned as mean and std nr susceptible, presymptomatic, symptomatic, recovered and dead"""
+    #     cumtotal_counts = np.zeros((5,nr_runs))
+    #     for r in r_range:
+    #         nr_dead = cumcounts_dict_3d["dead"][:,r-start_run].sum()
+    #         nr_recovered = cumcounts_dict_3d["recovered"][:,r-start_run].sum()
+    #         nr_symptomatic = cumcounts_dict_3d["symptomatic"][:,r-start_run].sum() - nr_dead - nr_recovered
+    #         nr_presymptomatic = cumcounts_dict_3d["presymptomatic"][:,r-start_run].sum() - nr_dead - nr_recovered - nr_symptomatic
+    #         nr_susceptible = cumcounts_dict_3d["susceptible"][:,r-start_run].sum() - nr_dead - nr_recovered - nr_symptomatic - nr_presymptomatic
+    #         cumtotal_counts[0,r-start_run] = nr_susceptible
+    #         cumtotal_counts[1,r-start_run] = nr_presymptomatic
+    #         cumtotal_counts[2,r-start_run] = nr_symptomatic
+    #         cumtotal_counts[3,r-start_run] = nr_recovered
+    #         cumtotal_counts[4,r-start_run] = nr_dead
+    #     cumtotal_counts_mean = cumtotal_counts.mean(axis=1)
+    #     cumtotal_counts_std = cumtotal_counts.std(axis=1)      
+    #     return cumtotal_counts_mean, cumtotal_counts_std
+    
+   
     # plot 1a: heatmap condition
     
     def plot_heatmap_condition(condition2plot):
@@ -656,8 +742,70 @@ def create_dashboard(parameters_file):
             plotref_dict[f"cond_time_age_{key}"] = s2    
 
 
+    def plot_scenario_hist(scen_hist,category,label):
+        max_plot = 0
+        for s in sc_nam:
+            if max_plot < max(scen_hist[s]):
+                max_plot = max(scen_hist[s])
+        data = scen_hist
+        Categories = scen_hist[category]
+        Scenarios = sc_nam    
+        x = []
+        counts = []
+        v = 0
+        for c in Categories:
+            for s in Scenarios:
+                x.append((c,s))
+                counts.append(scen_hist[s][v])
+            v = v + 1
+        counts = tuple(counts)
+        source = ColumnDataSource(data=dict(x=x, counts=counts))
+        p = figure(x_range=FactorRange(*x), plot_height=350, title=f"{label} across scenarios",y_axis_label=f"{label}")
+        p.vbar(x='x', top='counts', width=0.9, source=source, line_color="white",
+                   fill_color=factor_cmap('x', palette=scen_palette, factors=Scenarios, start=1, end=2))
+        p.y_range.start = 0
+        p.x_range.range_padding = 0.1
+        p.xaxis.major_label_orientation = 1
+        p.xgrid.grid_line_color = None
+        
+        #plotref_dict[f"cond_time_age_{key}"] = s2   
+        tooltips = [(f'{label}','@counts'),]
+        p.add_tools(HoverTool(
+                tooltips=tooltips,
+            ))
+        #show(p)
+        plotref_dict[f"scen_hist_{category}"] = p
+        
+        
+        
+    def plot_scenario_time(scen_time,category,label,dkey):
+        # build ColumnDataSource
+        data_s5 = scen_time[dkey].copy()
+        data_s5["days"] = days
+        # add standard dev?
+        source_5 = ColumnDataSource(data=data_s5)
+        # Build figure
+        s5 = figure(background_fill_color="#fafafa",title=f"{dkey}", x_axis_label='Time', y_axis_label=f"{label}", toolbar_location='above')
+        legend_it = []
+        snr = 0
+        tooltips=[]
+        for s in sc_nam:  
+            c1 = s5.line(x = 'days', y = s, source = source_5, line_width=2, line_color=scen_palette[snr], muted_color="grey", muted_alpha=0.2)
+            c2 = s5.circle(x = 'days', y = s, source = source_5, fill_color=scen_palette[snr], line_color=scen_palette[snr], size=5)
+            legend_it.append((s, [c1,c2]))
+            tooltips.append(tuple(( f"{s}",   f"@{s}")))
+            snr = snr + 1
+        legend = Legend(items=legend_it)
+        legend.click_policy="hide"
+        # Misc
+        s5.add_tools(HoverTool(
+                tooltips=tooltips,
+            ))
+        s5.add_layout(legend, 'right')
+        s5.toolbar.autohide = False
+        plotref_dict[f"scen_time_{category}_{dkey}"] = s5 
 
-
+        
 
 
     # MAIN SCRIPT
@@ -708,11 +856,6 @@ def create_dashboard(parameters_file):
       "Home": "Home",
     }
     
-    # determine where/how the visualization will be rendered
-    html_output = 'dashboard.html'
-    output_file(html_output, title='RAMP-UA microsim output') # Render to static HTML
-    #output_notebook()  # To tender inline in a Jupyter Notebook
-    
     # default list of tools for plots
     tools = "crosshair,hover,pan,wheel_zoom,box_zoom,reset,box_select,lasso_select"
     
@@ -759,8 +902,7 @@ def create_dashboard(parameters_file):
     # directory to read data from
     data_dir = "data" if (data_dir_user is None) else data_dir_user
     data_dir = os.path.join(base_dir, data_dir) # update data dir
-    # directory to write dashboard
-    html_output = os.path.join(data_dir, html_output)
+
     
     # start and end day
     start_day = 0 if (start_day_user is None) else start_day_user
@@ -771,7 +913,12 @@ def create_dashboard(parameters_file):
     start_run = 0 if (start_run_user is None) else start_run_user
     end_run = len(next(os.walk(os.path.join(data_dir, "output")))[1]) -1 if (end_run_user is None) else end_run_user
     nr_runs = end_run - start_run + 1
-    r_range = range(start_run, start_run+1)
+    r_range = range(start_run, end_run+1)
+    
+    
+    dict_days = [] # empty list for column names 'Day0' etc
+    for d in range(start_day, end_day+1):
+        dict_days.append(f'Day{d}')
     
     
     # Read in third party data
@@ -799,152 +946,117 @@ def create_dashboard(parameters_file):
     # ------------------------------------------------
     
     # read in and process pickle files location/venue dangers
-    # start with empty dictionaries
-    dangers_dict = {}  # to store mean (value to be plotted)
-    dangers_dict_std = {}  # to store std (error bars)
-    dangers_dict_3d = {} # to store full 3D data
-    # fill dictionaries
-    create_venue_dangers_dict(r_range,sc_dir[0])
+    # create one or more dangers_dict (only using means i.e. first output of function for now)
+
+    # if there is only 1 scenario, plot as usual
+    if nr_scenarios == 1:
+        dangers_dict = create_venue_dangers_dict(r_range,sc_dir[0])[0]
     
-    # if there is at least one other scenario, replace dangers_dict by the difference between scenario 0 and 1
-    if nr_scenarios > 1:
-        # rename existing
-        dangers_dict_sc0 = dangers_dict.copy()
-        dangers_dict_std_sc0 = dangers_dict_std.copy()
-        dangers_dict_3d_sc0 = dangers_dict_3d.copy()
-        # reset
-        dangers_dict = {}  # to store mean (value to be plotted)
-        dangers_dict_std = {}  # to store std (error bars)
-        dangers_dict_3d = {} # to store full 3D data
-        # fill dictionaries based on scenario 1
-        create_venue_dangers_dict(r_range,sc_dir[1])
-        # rename 
-        dangers_dict_sc1 = dangers_dict.copy()
-        dangers_dict_std_sc1 = dangers_dict_std.copy()
-        dangers_dict_3d_sc1 = dangers_dict_3d.copy()
+    # if there are 2 scenarios, replace dangers_dict by the difference between scenario 0 and 1
+    elif nr_scenarios == 2:
+        dangers_dict_sc0 = create_venue_dangers_dict(r_range,sc_dir[0])[0]
+        dangers_dict_sc1 = create_venue_dangers_dict(r_range,sc_dir[1])[0]
         # calculate difference between 2 scenarios
-        dangers_dict = {} # reset, this is used for plotting
-        dangers_dict_std = {}
+        dangers_dict = {} # this is used for plotting
         dangers_dict = create_difference_dict(dangers_dict_sc0,dangers_dict_sc1,locations_dict)
         
+    if nr_scenarios >= 2:
+        scen_hist_venues = {}
+        scen_hist_venues["Venues"] = []
+        scen_time_venues = {}
+        
+        for s in range(0,nr_scenarios):
+            dangers_dict_tmp = create_venue_dangers_dict(r_range,sc_dir[s])[0]
+            scen_hist_venues[sc_nam[s]] = []
+        
+            for key, value in dangers_dict.items():
+                if s == 0:
+                    scen_hist_venues["Venues"].append(key)
+                    scen_time_venues[key] =  dict({"Day":dict_days, sc_nam[0]:dangers_dict_tmp[key].mean(axis=0)})
+                else:
+                    scen_time_venues[key][sc_nam[s]] = dangers_dict_tmp[key].mean(axis=0)
+                scen_hist_venues[sc_nam[s]].append(dangers_dict_tmp[key].mean(axis=0).mean())
+                
+
+        # retrieve data
+        #tmp = scen_time_data["Retail"]
+
     
-       
-    # Add additional info about schools and retail including spatial coordinates
-    # merge
-    primaryschools = pd.merge(schools, dangers_dict["PrimarySchool"], left_index=True, right_index=True)
-    secondaryschools = pd.merge(schools, dangers_dict["SecondarySchool"], left_index=True, right_index=True)
-    retail = pd.merge(retail, dangers_dict["Retail"], left_index=True, right_index=True)
+    if nr_scenarios <= 2:
+        # Add additional info about schools and retail including spatial coordinates
+        # merge
+        primaryschools = pd.merge(schools, dangers_dict["PrimarySchool"], left_index=True, right_index=True)
+        secondaryschools = pd.merge(schools, dangers_dict["SecondarySchool"], left_index=True, right_index=True)
+        retail = pd.merge(retail, dangers_dict["Retail"], left_index=True, right_index=True)
+        
+        # creat LUT
+        lookup = dict(zip(postcode_lu.pcds, postcode_lu.msoa11cd)) # zip together the lists and make a dict from it
+        # use LUT and add column to retail variable
+        msoa_code = [lookup.get(retail.postcode[i]) for i in range(0, len(retail.postcode), 1)]
+        retail.insert(2, 'MSOA_code', msoa_code)
+        
+        # normalised danger scores per msoa for schools and retail (for choropleth)
+        dangers_msoa_dict = create_msoa_dangers_dict()  
     
-    # creat LUT
-    lookup = dict(zip(postcode_lu.pcds, postcode_lu.msoa11cd)) # zip together the lists and make a dict from it
-    # use LUT and add column to retail variable
-    msoa_code = [lookup.get(retail.postcode[i]) for i in range(0, len(retail.postcode), 1)]
-    retail.insert(2, 'MSOA_code', msoa_code)
     
-    # normalised danger scores per msoa for schools and retail (for choropleth)
-    dangers_msoa_dict = {}
-    create_msoa_dangers_dict()  
-    
-    # counts per condition
-    # start with empty dictionaries
-    msoacounts_dict_3d = {}  # to store mean nr per msoa and day
-    totalcounts_dict_3d = {}  # to store results: nr per day
-    cumcounts_dict_3d = {}  # to store results: total nr across time period
-    agecounts_dict_3d = {}  # to store mean nr per age category and day
-    
-    # time range for cumulative counts
-    # start_day = 0
-    # end_day = nr_days-1 # last 'named' day - nrs starts from 0
-    msoas = []
     # age brackets
-    age_cat = np.array([[0, 19], [20, 29], [30,44], [45,59], [60,74], [75,200]])           
-    create_counts_dict_3d(r_range,sc_dir[0])
-    
+    age_cat = np.array([[0, 19], [20, 29], [30,44], [45,59], [60,74], [75,200]])    
     # label for plotting age categories
     age_cat_str = []
     for a in range(age_cat.shape[0]):
         age_cat_str.append(f"{age_cat[a,0]}-{age_cat[a,1]}")
         
+
+    
+    
+    
+    
+    
+    # counts per condition
+    if nr_scenarios == 1:
+        results_tmp = create_counts_dict(r_range,sc_dir[0]) # get all
+        #only pick results variables needed
+        msoas, totalcounts_dict, cumcounts_dict, agecounts_dict,  msoacounts_dict, cumcounts_dict_3d, totalcounts_dict_std, cumcounts_dict_std, agecounts_dict_std = results_tmp[0:9] 
+        uniquecounts_dict_std, uniquecounts_dict = results_tmp[14:16] 
         
-    dict_days = [] # empty list for column names 'Day0' etc
-    for d in range(start_day, end_day+1):
-        dict_days.append(f'Day{d}')
-      
-    # aggregate counts across runs (means and std) from 3d data
-    msoacounts_dict = {}  
-    agecounts_dict = {}  
-    totalcounts_dict = {}
-    cumcounts_dict = {}
-    msoacounts_dict_std = {}  
-    agecounts_dict_std = {}
-    totalcounts_dict_std = {}
-    cumcounts_dict_std = {}
-    create_counts_dict_mean_std()
-    
-    
-    # if there is at least one other scenario, replace the counts dictionaries by the difference between scenario 0 and 1
-    if nr_scenarios > 1:
-        # rename existing
-        msoacounts_dict_3d_sc0 = msoacounts_dict_3d.copy()
-        totalcounts_dict_3d_sc0 = totalcounts_dict_3d.copy()
-        cumcounts_dict_3d_sc0 = cumcounts_dict_3d.copy()
-        agecounts_dict_3d_sc0 = agecounts_dict_3d.copy()
-        msoacounts_dict_sc0 = msoacounts_dict.copy()
-        agecounts_dict_sc0 = agecounts_dict.copy()
-        totalcounts_dict_sc0 = totalcounts_dict.copy()
-        cumcounts_dict_sc0 = cumcounts_dict.copy()
-        msoacounts_dict_std_sc0 = msoacounts_dict_std.copy()
-        agecounts_dict_std_sc0 = agecounts_dict_std.copy()
-        totalcounts_dict_std_sc0 = totalcounts_dict_std.copy()
-        cumcounts_dict_std_sc0 = cumcounts_dict_std.copy()
-        # reset
-        msoacounts_dict_3d = {} 
-        totalcounts_dict_3d = {} 
-        cumcounts_dict_3d = {}
-        agecounts_dict_3d = {}
-        msoas = []     
-        msoacounts_dict = {}  
-        agecounts_dict = {}  
-        totalcounts_dict = {}
-        cumcounts_dict = {}
-        msoacounts_dict_std = {}  
-        agecounts_dict_std = {}
-        totalcounts_dict_std = {}
-        cumcounts_dict_std = {}
-        # run
-        create_counts_dict_3d(r_range,sc_dir[1])
-        create_counts_dict_mean_std()
-        # calculate difference between 2 scenarios      
-        msoacounts_dict = create_difference_dict(msoacounts_dict_sc0,msoacounts_dict,conditions_dict)  
-        agecounts_dict = create_difference_dict(agecounts_dict_sc0,agecounts_dict,conditions_dict)   
-        totalcounts_dict = create_difference_dict(totalcounts_dict_sc0,totalcounts_dict,conditions_dict)  
-        cumcounts_dict = create_difference_dict(cumcounts_dict_sc0,cumcounts_dict,conditions_dict)  
+    elif nr_scenarios == 2:
+    # if there is one other scenario, replace the counts dictionaries by the difference between scenario 0 and 1
+        results_tmp = create_counts_dict(r_range,sc_dir[0]) # get all
+        msoas, totalcounts_dict_sc0, cumcounts_dict_sc0, agecounts_dict_sc0,  msoacounts_dict_sc0, cumcounts_dict_3d_sc0 = results_tmp[0:6] 
+        results_tmp = create_counts_dict(r_range,sc_dir[1]) # get all
+        totalcounts_dict_sc1, cumcounts_dict_sc1, agecounts_dict_sc1,  msoacounts_dict_sc1, cumcounts_dict_3d_sc1 = results_tmp[1:6] 
+        # calculate differenes
+        msoacounts_dict = create_difference_dict(msoacounts_dict_sc0,msoacounts_dict_sc1,conditions_dict)  
+        agecounts_dict = create_difference_dict(agecounts_dict_sc0,agecounts_dict_sc1,conditions_dict)   
+        totalcounts_dict = create_difference_dict(totalcounts_dict_sc0,totalcounts_dict_sc1,conditions_dict)  
+        cumcounts_dict = create_difference_dict(cumcounts_dict_sc0,cumcounts_dict_sc1,conditions_dict)
         # make sure std are zero, subtract from itself
-        msoacounts_dict_std =   create_difference_dict(msoacounts_dict_std,msoacounts_dict_std,conditions_dict) 
-        agecounts_dict_std = create_difference_dict(agecounts_dict_std,agecounts_dict_std,conditions_dict) 
-        totalcounts_dict_std = create_difference_dict(totalcounts_dict_std,totalcounts_dict_std,conditions_dict) 
-        cumcounts_dict_std = create_difference_dict(cumcounts_dict_std,cumcounts_dict_std,conditions_dict) 
-    
-    
-    
-    # total cumulative count per condition
-    cumtotal_counts = np.zeros((5,nr_runs))
-    for r in r_range:
-        nr_dead = cumcounts_dict_3d["dead"][:,r-start_run].sum()
-        nr_recovered = cumcounts_dict_3d["recovered"][:,r-start_run].sum()
-        nr_symptomatic = cumcounts_dict_3d["symptomatic"][:,r-start_run].sum() - nr_dead - nr_recovered
-        nr_presymptomatic = cumcounts_dict_3d["presymptomatic"][:,r-start_run].sum() - nr_dead - nr_recovered - nr_symptomatic
-        nr_susceptible = cumcounts_dict_3d["susceptible"][:,r-start_run].sum() - nr_dead - nr_recovered - nr_symptomatic - nr_presymptomatic
-        cumtotal_counts[0,r-start_run] = nr_susceptible
-        cumtotal_counts[1,r-start_run] = nr_presymptomatic
-        cumtotal_counts[2,r-start_run] = nr_symptomatic
-        cumtotal_counts[3,r-start_run] = nr_recovered
-        cumtotal_counts[4,r-start_run] = nr_dead
-    
-    cumtotal_counts.mean(axis=1)
-    cumtotal_counts.std(axis=1)      
-    
-    
+        agecounts_dict_std = create_difference_dict(agecounts_dict_sc0,agecounts_dict_sc0,conditions_dict) 
+        totalcounts_dict_std = create_difference_dict(totalcounts_dict_sc0,totalcounts_dict_sc0,conditions_dict) 
+        cumcounts_dict_std = create_difference_dict(cumcounts_dict_sc0,cumcounts_dict_sc0,conditions_dict) 
+        
+        
+
+    if nr_scenarios >= 2:
+        scen_hist_conditions = {}
+        scen_hist_conditions["Condition"] = []
+        scen_time_conditions = {}
+        
+        for s in range(0,nr_scenarios):
+            result_tmp =  create_counts_dict(r_range,sc_dir[s])
+            totalcounts_dict_tmp = result_tmp[1]
+            uniquecounts_dict_tmp = result_tmp[-1]
+ 
+            scen_hist_conditions[sc_nam[s]] = []
+        
+            for key, value in conditions_dict.items():
+                if s == 0:
+                    scen_hist_conditions["Condition"].append(key)
+                    scen_time_conditions[key] =  dict({"Day":dict_days, sc_nam[0]:totalcounts_dict_tmp[key]})
+                else:
+                    scen_time_conditions[key][sc_nam[s]] = totalcounts_dict_tmp[key]
+                scen_hist_conditions[sc_nam[s]].append(uniquecounts_dict_tmp[key].values[0])
+        
     
     # Plotting
     # --------
@@ -955,80 +1067,129 @@ def create_dashboard(parameters_file):
     # days (needs list to plot)
     days = [i for i in range(start_day,end_day+1)]
     
-    # optional: threshold map to only use MSOAs currently in the study or selection
-    map_df = map_df[map_df['Area'].isin(msoas)]
     
-    # basic tool tip for condition plots
-    tooltips_cond_basic=[]
-    for key, value in totalcounts_dict.items():
-        tooltips_cond_basic.append(tuple(( f"Nr {key}",   f"@{key}")))
     
-    tooltips_venue_basic=[]
-    for key, value in dangers_dict.items():
-        tooltips_venue_basic.append(tuple(( f"Danger {key}",   f"@{key}")))
-       
-    # empty dictionary to track condition and venue specific plots
-    plotref_dict = {}
-    
-    # create heatmaps condition
-    for key,value in conditions_dict.items():
-        plot_heatmap_condition(key)
-    
-    # create heatmaps venue dangers
-    for key,value in dangers_msoa_dict.items():
-        plot_heatmap_danger(key)
+    if nr_scenarios <= 2:
         
-    # disease conditions across time
-    plot_cond_time()
+        # determine where/how the visualization will be rendered
+        html_output = os.path.join(data_dir, 'dashboard.html')
+        output_file(html_output, title='RAMP-UA microsim output') # Render to static HTML
+        #output_notebook()  # To tender inline in a Jupyter Notebook
     
-    # disease conditions across msoas
-    plot_cond_msoas()    
+        # optional: threshold map to only use MSOAs currently in the study or selection
+        map_df = map_df[map_df['Area'].isin(msoas)]
+        
+        # basic tool tip for condition plots
+        tooltips_cond_basic=[]
+        for key, value in totalcounts_dict.items():
+            tooltips_cond_basic.append(tuple(( f"Nr {key}",   f"@{key}")))
+        
+        tooltips_venue_basic=[]
+        for key, value in dangers_dict.items():
+            tooltips_venue_basic.append(tuple(( f"Danger {key}",   f"@{key}")))
+           
+        # empty dictionary to track condition and venue specific plots
+        plotref_dict = {}
+        
+        # create heatmaps condition
+        for key,value in conditions_dict.items():
+            plot_heatmap_condition(key)
+        
+        # create heatmaps venue dangers
+        for key,value in dangers_msoa_dict.items():
+            plot_heatmap_danger(key)
+            
+        # disease conditions across time
+        plot_cond_time()
+        
+        # disease conditions across msoas
+        plot_cond_msoas()    
+        
+        # choropleth conditions
+        for key,value in conditions_dict.items():
+            plot_choropleth_condition_slider(key)
+        
+        # choropleth dangers
+        for key,value in dangers_msoa_dict.items():
+            plot_choropleth_danger_slider(key)
+        
+        # danger scores across time per venue type
+        plot_danger_time()   
+        
+        
+        # conditions across time per age category
+        plot_cond_time_age()
+        
+        
+        # Layout and output
+        
+        tab1 = Panel(child=row(plotref_dict["cond_time"], plotref_dict["cond_msoas"]), title='Summary conditions')
+        
+        tab2 = Panel(child=row(plotref_dict["hmsusceptible"],column(plotref_dict["chslsusceptible"],plotref_dict["chplsusceptible"])), title='Susceptible')
+        
+        tab3 = Panel(child=row(plotref_dict["hmpresymptomatic"],column(plotref_dict["chslpresymptomatic"],plotref_dict["chplpresymptomatic"])), title='Presymptomatic')
+        
+        tab4 = Panel(child=row(plotref_dict["hmsymptomatic"],column(plotref_dict["chslsymptomatic"],plotref_dict["chplsymptomatic"])), title='Symptomatic')
+        
+        tab5 = Panel(child=row(plotref_dict["hmrecovered"],column(plotref_dict["chslrecovered"],plotref_dict["chplrecovered"])), title='Recovered')
+        
+        tab6 = Panel(child=row(plotref_dict["hmdead"],column(plotref_dict["chsldead"],plotref_dict["chpldead"])), title='Dead')
+        
+        tab7 = Panel(child=row(plotref_dict["danger_time"]), title='Summary dangers')
+        
+        tab8 = Panel(child=row(plotref_dict["hmRetail"],column(plotref_dict["chslRetail"],plotref_dict["chplRetail"])), title='Danger retail')
+        
+        tab9 = Panel(child=row(plotref_dict["hmPrimarySchool"],column(plotref_dict["chslPrimarySchool"],plotref_dict["chplPrimarySchool"])), title='Danger primary school')
+        
+        tab10 = Panel(child=row(plotref_dict["hmSecondarySchool"],column(plotref_dict["chslSecondarySchool"],plotref_dict["chplSecondarySchool"])), title='Danger secondary school')
+        
+        tab11 = Panel(child=row(plotref_dict["cond_time_age_susceptible"],plotref_dict["cond_time_age_presymptomatic"],plotref_dict["cond_time_age_symptomatic"],plotref_dict["cond_time_age_recovered"],plotref_dict["cond_time_age_dead"]), title='Breakdown by age')
+        
+        
+        # Put the Panels in a Tabs object
+        tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11])
+        
+        show(tabs)
     
-    # choropleth conditions
-    for key,value in conditions_dict.items():
-        plot_choropleth_condition_slider(key)
-    
-    # choropleth dangers
-    for key,value in dangers_msoa_dict.items():
-        plot_choropleth_danger_slider(key)
-    
-    # danger scores across time per venue type
-    plot_danger_time()   
-    
-    
-    # conditions across time per age category
-    plot_cond_time_age()
-    
-    
-    # Layout and output
-    
-    tab1 = Panel(child=row(plotref_dict["cond_time"], plotref_dict["cond_msoas"]), title='Summary conditions')
-    
-    tab2 = Panel(child=row(plotref_dict["hmsusceptible"],column(plotref_dict["chslsusceptible"],plotref_dict["chplsusceptible"])), title='Susceptible')
-    
-    tab3 = Panel(child=row(plotref_dict["hmpresymptomatic"],column(plotref_dict["chslpresymptomatic"],plotref_dict["chplpresymptomatic"])), title='Presymptomatic')
-    
-    tab4 = Panel(child=row(plotref_dict["hmsymptomatic"],column(plotref_dict["chslsymptomatic"],plotref_dict["chplsymptomatic"])), title='Symptomatic')
-    
-    tab5 = Panel(child=row(plotref_dict["hmrecovered"],column(plotref_dict["chslrecovered"],plotref_dict["chplrecovered"])), title='Recovered')
-    
-    tab6 = Panel(child=row(plotref_dict["hmdead"],column(plotref_dict["chsldead"],plotref_dict["chpldead"])), title='Dead')
-    
-    tab7 = Panel(child=row(plotref_dict["danger_time"]), title='Summary dangers')
-    
-    tab8 = Panel(child=row(plotref_dict["hmRetail"],column(plotref_dict["chslRetail"],plotref_dict["chplRetail"])), title='Danger retail')
-    
-    tab9 = Panel(child=row(plotref_dict["hmPrimarySchool"],column(plotref_dict["chslPrimarySchool"],plotref_dict["chplPrimarySchool"])), title='Danger primary school')
-    
-    tab10 = Panel(child=row(plotref_dict["hmSecondarySchool"],column(plotref_dict["chslSecondarySchool"],plotref_dict["chplSecondarySchool"])), title='Danger secondary school')
-    
-    tab11 = Panel(child=row(plotref_dict["cond_time_age_susceptible"],plotref_dict["cond_time_age_presymptomatic"],plotref_dict["cond_time_age_symptomatic"],plotref_dict["cond_time_age_recovered"],plotref_dict["cond_time_age_dead"]), title='Breakdown by age')
-    
-    
-    # Put the Panels in a Tabs object
-    tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11])
-    
-    show(tabs)
+    if nr_scenarios >= 2:
+        # determine where/how the visualization will be rendered
+        html_output = os.path.join(data_dir, 'dashboard_scenarios.html')
+        output_file(html_output, title='RAMP-UA microsim output scenario comparison') # Render to static HTML
+        #output_notebook()  # To tender inline in a Jupyter Notebook
+        
+        scen_palette = ["#c9d9d3", "#718dbf", "#e84d60"]
+        scen_hist_conditions
+        scen_hist_venues
+        scen_time_conditions
+        scen_time_venues
+        
+        plot_scenario_hist(scen_hist_venues,"Venues","Danger scores")
+        
+        plot_scenario_hist(scen_hist_conditions,"Condition","Nr people")
+        
+        
+        for key,value in conditions_dict.items():
+            plot_scenario_time(scen_time_conditions,"Conditions","Nr people",key)
+        
+        for key,value in dangers_dict.items():
+            plot_scenario_time(scen_time_venues,"Venues","Danger scores",key)
+            
+        # Layout and output
+        
+        
+        #"scen_time_Venues_Retail"
+        
+        tab1 = Panel(child=row(plotref_dict["scen_hist_Condition"], plotref_dict["scen_hist_Venues"]), title='Histograms')
+        
+        tab2 = Panel(child=row(plotref_dict["scen_time_Conditions_susceptible"], plotref_dict["scen_time_Conditions_presymptomatic"], plotref_dict["scen_time_Conditions_symptomatic"], plotref_dict["scen_time_Conditions_recovered"], plotref_dict["scen_time_Conditions_dead"]), title='Conditions')
+        
+        tab3 = Panel(child=row(plotref_dict["scen_time_Venues_Retail"], plotref_dict["scen_time_Venues_PrimarySchool"], plotref_dict["scen_time_Venues_SecondarySchool"], plotref_dict["scen_time_Venues_Work"], plotref_dict["scen_time_Venues_Home"]), title='Venues')      
+        
+        # Put the Panels in a Tabs object
+        tabs = Tabs(tabs=[tab1, tab2, tab3])
+        
+        show(tabs)
+        
 
 
 if __name__ == "__main__":
