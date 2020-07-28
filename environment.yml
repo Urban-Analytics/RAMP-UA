@@ -26,3 +26,4 @@ dependencies:
   - coverage
   - pyyaml
   - r-devtools=2.0.2
+  - r-data.table
