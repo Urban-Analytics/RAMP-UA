@@ -10,7 +10,13 @@ gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 
 w <- NULL
 nick_cases <- NULL
-run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length = 19, risk_cap = 5, seed_days = 5) {
+run_status <- function(pop, 
+                       timestep=1, 
+                       current_risk_beta = 0.0042,
+                       sympt_length = 19,
+                       risk_cap = 5,
+                       seed_days = 5,
+                       asymp_rate = 0.5) {
   
 
   
@@ -102,19 +108,21 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
                              infection_dist = "normal",
                              infection_mean =  sympt_length,
                              infection_sd = 2,
+                             asymp_rate = asymp_rate,
                              timestep = timestep,
                              tmp.dir=tmp.dir,
                              save_output = output_switch)
+  
   print("infection and recovery lengths assigned")
   
   removed_cases <- determine_removal(df_inf)
+  print("removed cases determined")
   
   df_rem <- removed(df_inf, removed_cases = removed_cases, chance_recovery = 0.95)
+  print("individuals removed")
   
   df_rec <- recalc_sympdays(df_rem, removed_cases) 
-  
- # df_rec <- removed(df = df_inf, chance_recovery = 0.95)
-  print("recoveries and deaths assigned")
+  print("updating infection lengths")
   
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
   
