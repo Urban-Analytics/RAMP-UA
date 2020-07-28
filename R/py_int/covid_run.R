@@ -10,7 +10,7 @@ gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 
 w <- NULL
 nick_cases <- NULL
-run_status <- function(pop, timestep=1, current_risk_beta = 0.006, sympt_length = 19, risk_cap = 5, seed_days = 5) {
+run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length = 19, risk_cap = 5, seed_days = 5) {
   
   output_switch <- TRUE
   rank_assign <- FALSE
@@ -119,6 +119,8 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.006, sympt_length 
                        disease_status=df_msoa$new_status,
                        presymp_days=df_msoa$presymp_days,
                        symp_days=df_msoa$symp_days)
+  
+  write.csv(df_out, paste0(tmp.dir, "/daily_out_", timestep, ".csv"))
   
   return(df_out)
 }
