@@ -1,4 +1,4 @@
-devtools::install_github("Urban-Analytics/rampuaR")
+devtools::install_github("Urban-Analytics/rampuaR", ref = "split-asymp")
 
 library(tidyr)
 library(readr)
