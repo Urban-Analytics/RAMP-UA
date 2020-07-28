@@ -1,4 +1,4 @@
-devtools::install_github("Urban-Analytics/rampuaR", ref = "split-asymp")
+devtools::install_github("Urban-Analytics/rampuaR", force = TRUE)
 
 library(tidyr)
 library(readr)
@@ -12,6 +12,8 @@ w <- NULL
 nick_cases <- NULL
 run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length = 19, risk_cap = 5, seed_days = 5) {
   
+
+  
   output_switch <- TRUE
   rank_assign <- FALSE
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
@@ -24,6 +26,8 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
       dir.create(tmp.dir, recursive = TRUE)
     }
   }
+  
+  write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))
   
   df_cr_in <-create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
@@ -49,6 +53,7 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
   df_sum_betas <- sum_betas(df = df_msoa,
                             betas = other_betas, 
                             risk_cap_val = risk_cap)
+  print("betas calculated")
   
   df_prob <- covid_prob(df = df_sum_betas)
   
