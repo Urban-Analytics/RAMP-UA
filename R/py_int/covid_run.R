@@ -1,4 +1,4 @@
-devtools::install_github("Urban-Analytics/rampuaR", force = TRUE)
+devtools::install_github("Urban-Analytics/rampuaR")
 
 library(tidyr)
 library(readr)
@@ -50,12 +50,12 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
                             betas = other_betas, 
                             risk_cap_val = risk_cap)
   
-  df_prob <- rampuaR::covid_prob(df = df_sum_betas)
+  df_prob <- covid_prob(df = df_sum_betas)
   
   print("probabilities calculated")
   
   if(timestep > 1){
-    df_ass <- rampuaR::case_assign(df = df_prob,
+    df_ass <- case_assign(df = df_prob,
                           tmp.dir=tmp.dir, 
                           save_output = output_switch)
   } else {
@@ -77,20 +77,20 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
   }
   
   if(timestep > 1 & timestep <= seed_days & seed_cases == TRUE){
-    df_ass <- rampuaR::rank_assign(df = df_prob, daily_case = gam_cases[timestep])
+    df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep])
     print(paste0((sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))," cases reassigned"))
   }
   
   
   if((rank_assign == TRUE & seed_cases == FALSE) | (rank_assign == TRUE & seed_cases == TRUE & timestep > seed_days)){
     if(timestep > 1 & (w[timestep] <= 0.9 | w[timestep] >= 1.1)){
-      df_ass <- rampuaR::rank_assign(df = df_prob, daily_case = gam_cases[timestep])
+      df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep])
       print(paste0((sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))," cases reassigned"))
     }
   }
   
   
-  df_inf <- rampuaR::infection_length(df = df_ass,
+  df_inf <- infection_length(df = df_ass,
                              presymp_dist = "weibull",
                              presymp_mean = 6.4,
                              presymp_sd = 2.3,
@@ -102,11 +102,11 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
                              save_output = output_switch)
   print("infection and recovery lengths assigned")
   
-  removed_cases <- rampuaR::determine_removal(df_inf)
+  removed_cases <- determine_removal(df_inf)
   
-  df_rem <- rampuaR::removed(df_inf, removed_cases = removed_cases, chance_recovery = 0.95)
+  df_rem <- removed(df_inf, removed_cases = removed_cases, chance_recovery = 0.95)
   
-  df_rec <- rampuaR::recalc_sympdays(df_rem, removed_cases) 
+  df_rec <- recalc_sympdays(df_rem, removed_cases) 
   
  # df_rec <- removed(df = df_inf, chance_recovery = 0.95)
   print("recoveries and deaths assigned")
@@ -120,7 +120,7 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
                        presymp_days=df_msoa$presymp_days,
                        symp_days=df_msoa$symp_days)
   
-  write.csv(df_out, paste0(tmp.dir, "/daily_out_", timestep, ".csv"))
+  #write.csv(df_out, paste0(tmp.dir, "/daily_out_", timestep, ".csv"))
   
   return(df_out)
 }
