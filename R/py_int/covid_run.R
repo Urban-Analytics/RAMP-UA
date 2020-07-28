@@ -1,4 +1,4 @@
-devtools::install_github("Urban-Analytics/rampuaR", force = TRUE)
+devtools::install_github("Urban-Analytics/rampuaR")
 
 library(tidyr)
 library(readr)
