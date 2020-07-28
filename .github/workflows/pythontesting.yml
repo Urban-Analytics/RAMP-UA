@@ -25,8 +25,13 @@ jobs:
         activate-environment: ramp-ua
 
     # run pytest within conda environment
-    - name: Run pytest
+    - name: Run pytest and generate coverage report
       shell: bash -l {0}
       run: |
         conda activate ramp-ua
-        pytest
+        pip install pytest-cov
+        pytest --cov=microsim tests/ --cov-report=xml
+    - name: Upload coverage report to codecov
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml
