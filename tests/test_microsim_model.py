@@ -188,32 +188,33 @@ def test_read_msm_data(test_microsim):
         assert num_homeless == 15
 
 
-def test_update_disease_counts(test_microsim):
-    """Check that disease counts for MSOAs and households are updated properly"""
-    m = test_microsim  # less typing
-    # Make sure no one has the disease to start with
-    m.individuals[ColumnNames.DISEASE_STATUS] = 0
-    # (Shouldn't use _PID any more, this is a hangover to old version, but works OK with dummy data)
-    m.individuals.loc[9, ColumnNames.DISEASE_STATUS] = 1  # lives alone
-    m.individuals.loc[13, ColumnNames.DISEASE_STATUS] = 1  # Lives with 3 people
-    m.individuals.loc[11, ColumnNames.DISEASE_STATUS] = 1  # | Live
-    m.individuals.loc[12, ColumnNames.DISEASE_STATUS] = 1  # | Together
-    # m.individuals.loc[:, ["PID", "HID", "area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
-    m.update_disease_counts()
-    # This person has the disease
-    assert m.individuals.at[9, "MSOA_Cases"] == 1
-    assert m.individuals.at[9, "HID_Cases"] == 1
-    # These people live with someone who has the disease
-    for p in [13, 14, 15]:
-        assert m.individuals.at[p, "MSOA_Cases"] == 1
-        assert m.individuals.at[p, "HID_Cases"] == 1
-    # Two people in this house have the disease
-    for p in [11, 12]:
-        assert m.individuals.at[p, "MSOA_Cases"] == 2
-        assert m.individuals.at[p, "HID_Cases"] == 2
-
-    # Note: Can't fully test MSOA cases because I don't have any examples of people from different
-    # households living in the same MSOA in the test data
+# No longer updating disease counts. This can be removed.
+# def test_update_disease_counts(test_microsim):
+#     """Check that disease counts for MSOAs and households are updated properly"""
+#     m = test_microsim  # less typing
+#     # Make sure no one has the disease to start with
+#     m.individuals[ColumnNames.DISEASE_STATUS] = 0
+#     # (Shouldn't use _PID any more, this is a hangover to old version, but works OK with dummy data)
+#     m.individuals.loc[9, ColumnNames.DISEASE_STATUS] = 1  # lives alone
+#     m.individuals.loc[13, ColumnNames.DISEASE_STATUS] = 1  # Lives with 3 people
+#     m.individuals.loc[11, ColumnNames.DISEASE_STATUS] = 1  # | Live
+#     m.individuals.loc[12, ColumnNames.DISEASE_STATUS] = 1  # | Together
+#     # m.individuals.loc[:, ["PID", "HID", "area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
+#     m.update_disease_counts()
+#     # This person has the disease
+#     assert m.individuals.at[9, "MSOA_Cases"] == 1
+#     assert m.individuals.at[9, "HID_Cases"] == 1
+#     # These people live with someone who has the disease
+#     for p in [13, 14, 15]:
+#         assert m.individuals.at[p, "MSOA_Cases"] == 1
+#         assert m.individuals.at[p, "HID_Cases"] == 1
+#     # Two people in this house have the disease
+#     for p in [11, 12]:
+#         assert m.individuals.at[p, "MSOA_Cases"] == 2
+#         assert m.individuals.at[p, "HID_Cases"] == 2
+#
+#     # Note: Can't fully test MSOA cases because I don't have any examples of people from different
+#     # households living in the same MSOA in the test data
 
 
 def test_change_behaviour_with_disease(test_microsim):
@@ -222,8 +223,8 @@ def test_change_behaviour_with_disease(test_microsim):
     # Give some people the disease (these two chosen because they both spend a bit of time in retail
     p1 = 1
     p2 = 6
-    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DISEASE_STATUS_Symptomatic  # Behaviour change
-    m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DISEASE_STATUS_PreSymptomatic  # No change
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC  # Behaviour change
+    m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.PRESYMPTOMATIC  # No change
 
     m.step()
     m.change_behaviour_with_disease()  # (this isn't called by default when testing)
@@ -271,7 +272,7 @@ def test_change_behaviour_with_disease(test_microsim):
         p2, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
     # First person no longer infectious, behaviour should go back to normal
-    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DISEASE_STATUS_Recovered
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.RECOVERED
     m.step()
     m.change_behaviour_with_disease()  # (this isn't called by default when testing)
     assert m.individuals.loc[p1, f"Retail{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[

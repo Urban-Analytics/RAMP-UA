@@ -25,3 +25,4 @@ dependencies:
   - r-stringi=1.4.6
   - coverage
   - pyyaml
+  - r-devtools=2.0.2
