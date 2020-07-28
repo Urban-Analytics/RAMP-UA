@@ -41,5 +41,7 @@ class ColumnNames:
 
     #DAYS_WITH_STATUS = "Days_With_Status"  # The number of days that have elapsed with this status
     CURRENT_RISK = "current_risk"  # This is the risk that people get when visiting locations.
-    MSOA_CASES = "MSOA_Cases"  # The number of cases per MSOA
-    HID_CASES = "HID_Cases"  # The number of cases in the individual's house
+
+    # No longer update disease counts per MSOA etc. Not needed
+    #MSOA_CASES = "MSOA_Cases"  # The number of cases per MSOA
+    #HID_CASES = "HID_Cases"  # The number of cases in the individual's house
