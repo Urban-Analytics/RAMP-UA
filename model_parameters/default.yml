@@ -1,3 +1,5 @@
+scenario_name: default # A name describing the scenario. Output data will be stored in a subdirectory with this name.
+
 microsim: # Parameters for the microsimulation (python) part
   iterations: 10 # Number of model iterations. 0 means just run the initialisation.
   data-dir: devon_data # Root directory to load data from
