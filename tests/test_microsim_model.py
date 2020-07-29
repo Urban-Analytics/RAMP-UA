@@ -305,7 +305,7 @@ def test_step(test_microsim):
     # Step 0 (initialisation):
 
     # Everyone should start without the disease (they will have been assigned a status as part of initialisation)
-    m.individuals[ColumnNames.DISEASE_STATUS] = 0
+    m.individuals[ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SUSCEPTIBLE
 
     # Set understandable multipliers
     m.risk_multiplier = 1.0
@@ -317,7 +317,7 @@ def test_step(test_microsim):
     p1 = 0
     p2 = 1
 
-    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = 1  # Give them the disease
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC  # Give them the disease
     for p in [p1, p2]:  # Set their activity durations to 0
         for name, activity in m.activity_locations.items():
             m.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
@@ -355,7 +355,7 @@ def test_step(test_microsim):
         assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     # But if they both get sick then they should be 2.0 (double danger and risk)
-    m.individuals.loc[p1:p2, ColumnNames.DISEASE_STATUS] = 1  # Give them the disease
+    m.individuals.loc[p1:p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC  # Give them the disease
     m.individuals.at[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] = 1.0  # Make the duration normal again
     m.step()
     for p in [p1, p2]:
@@ -370,8 +370,8 @@ def test_step(test_microsim):
     del p1, p2
     p1 = 4  # The infected person is index 1
     # Make everyone better except for that one person
-    m.individuals[ColumnNames.DISEASE_STATUS] = 0
-    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = 1
+    m.individuals[ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SUSCEPTIBLE
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC
     # Assign everyone equal time doing all activities
     for name, activity in m.activity_locations.items():
         m.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 1.0 / len(m.activity_locations)
