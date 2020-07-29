@@ -6,8 +6,8 @@ library(mixdist)
 library(dplyr)
 library(rampuaR)
 
-#pop <- read.csv("R/py_int/output/2020-07-29 13:32:02/daily_3.csv")
-#pop$exposed_days <- -1
+pop <- read.csv("R/py_int/output/2020-07-29 16:48:20/daily_7.csv")
+pop$exposed_days <- -1
 
 gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 
@@ -15,11 +15,20 @@ w <- NULL
 nick_cases <- NULL
 run_status <- function(pop, 
                        timestep = 1, 
-                       current_risk_beta = 0.0042,
-                       sympt_length = 19,
+                       current_risk_beta = 0.006,
                        risk_cap = 5,
                        seed_days = 5,
-                       asymp_rate = 0.5) {
+                       exposed_dist = "weibull",
+                       exposed_mean = 6.2,
+                       exposed_sd = 1,
+                       presymp_dist = "weibull",
+                       presymp_mean = 3.2,
+                       presymp_sd = 1,
+                       infection_dist = "normal",
+                       infection_mean =  19,
+                       infection_sd = 2,
+                       asymp_rate = 0.5,
+                       chance_recovery = 0.95) {
   
   output_switch <- TRUE
   rank_assign <- FALSE
@@ -34,7 +43,7 @@ run_status <- function(pop,
     }
   }
   
-# write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))
+ write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))
   
   df_cr_in <-create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
@@ -103,20 +112,20 @@ run_status <- function(pop,
   
   
   df_inf <- infection_length(df = df_ass,
-                             exposed_dist = "weibull",
-                             exposed_mean = 3.2,
-                             exposed_sd = 1,
-                             presymp_dist = "weibull",
-                             presymp_mean = 3.2,
-                             presymp_sd = 1,
-                             infection_dist = "normal",
-                             infection_mean =  sympt_length,
-                             infection_sd = 2,
+                             exposed_dist = exposed_dist,
+                             exposed_mean = exposed_mean,
+                             exposed_sd = exposed_sd,
+                             presymp_dist = presymp_dist,
+                             presymp_mean = presymp_mean,
+                             presymp_sd = presymp_sd,
+                             infection_dist = infection_dist,
+                             infection_mean =  infection_mean,
+                             infection_sd = infection_sd,
                              asymp_rate = asymp_rate)
   
   print("infection and recovery lengths assigned")
   
-  df_rem <- removed(df_inf, chance_recovery = 0.95)
+  df_rem <- removed(df_inf, chance_recovery = chance_recovery)
   print("individuals removed")
   
   df_rec <- recalc_sympdays(df_rem) 
@@ -132,7 +141,7 @@ run_status <- function(pop,
                        presymp_days = df_msoa$presymp_days,
                        symp_days = df_msoa$symp_days)
   
-#  write.csv(df_out, paste0(tmp.dir, "/daily_out_", timestep, ".csv"))
+  write.csv(df_out, paste0(tmp.dir, "/daily_out_", timestep, ".csv"))
   
   return(df_out)
 }
