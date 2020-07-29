@@ -1,4 +1,4 @@
-devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "add_exposed", force = T)
+devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
 library(tidyr)
 library(readr)
@@ -34,7 +34,7 @@ run_status <- function(pop,
     }
   }
   
-  write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))
+ # write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))
   
   df_cr_in <-create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
