@@ -21,7 +21,7 @@ w <- NULL
 nick_cases <- NULL
 run_status <- function(pop, 
                        timestep = 1, 
-                       current_risk_beta = 0.01,
+                       current_risk_beta = 0.008,
                        risk_cap = 5,
                        seed_days = 5,
                        exposed_dist = "weibull",
