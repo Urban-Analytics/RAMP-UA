@@ -6,7 +6,7 @@ library(mixdist)
 library(dplyr)
 library(rampuaR)
 
-#pop <- read.csv("R/py_int/output/2020-07-13 15:05:19/input_pop_01.csv")
+#pop <- read.csv("R/py_int/output/2020-07-29 13:32:02/daily_3.csv")
 #pop$exposed_days <- -1
 
 gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
@@ -34,7 +34,7 @@ run_status <- function(pop,
     }
   }
   
- # write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))
+# write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))
   
   df_cr_in <-create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
@@ -129,10 +129,10 @@ run_status <- function(pop,
                        house_id=df_msoa$house_id,
                        disease_status=df_msoa$new_status,
                        exposed_days = df_msoa$exposed_days,
-                       presymp_days=df_msoa$presymp_days,
-                       symp_days=df_msoa$symp_days)
+                       presymp_days = df_msoa$presymp_days,
+                       symp_days = df_msoa$symp_days)
   
-  #write.csv(df_out, paste0(tmp.dir, "/daily_out_", timestep, ".csv"))
+#  write.csv(df_out, paste0(tmp.dir, "/daily_out_", timestep, ".csv"))
   
   return(df_out)
 }
