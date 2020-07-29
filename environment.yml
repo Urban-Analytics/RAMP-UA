@@ -31,3 +31,4 @@ dependencies:
   - r-mgcv
   - r-RecordLinkage
   - r-tidyselect
+  - r-rvcheck
