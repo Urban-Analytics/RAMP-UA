@@ -1,4 +1,4 @@
-devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "add_exposed")
+devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "add_exposed", force = T)
 
 library(tidyr)
 library(readr)
@@ -6,8 +6,8 @@ library(mixdist)
 library(dplyr)
 library(rampuaR)
 
-pop <- read.csv("R/py_int/output/2020-07-13 15:05:19/input_pop_01.csv")
-pop$exposed_days <- -1
+#pop <- read.csv("R/py_int/output/2020-07-13 15:05:19/input_pop_01.csv")
+#pop$exposed_days <- -1
 
 gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 
@@ -112,10 +112,7 @@ run_status <- function(pop,
                              infection_dist = "normal",
                              infection_mean =  sympt_length,
                              infection_sd = 2,
-                             asymp_rate = asymp_rate,
-                             timestep = timestep,
-                             tmp.dir=tmp.dir,
-                             save_output = output_switch)
+                             asymp_rate = asymp_rate)
   
   print("infection and recovery lengths assigned")
   
@@ -131,6 +128,7 @@ run_status <- function(pop,
                        ID=df_msoa$id,
                        house_id=df_msoa$house_id,
                        disease_status=df_msoa$new_status,
+                       exposed_days = df_msoa$exposed_days,
                        presymp_days=df_msoa$presymp_days,
                        symp_days=df_msoa$symp_days)
   
