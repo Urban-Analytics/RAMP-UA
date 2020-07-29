@@ -1112,7 +1112,8 @@ class Microsim:
         """
         # Are we doing any lockdown at all? in this iteration?
         if self.lockdown_from_file:
-            # Only change the behaviour of people who aren't showing symptoms
+            # Only change the behaviour of people who aren't showing symptoms. If you are showing symptoms then you
+            # will be mostly at home anyway, so don't want your behaviour overridden by lockdown.
             uninfected = self.individuals.index[
                 self.individuals[ColumnNames.DISEASE_STATUS] != ColumnNames.DiseaseStatuses.SYMPTOMATIC]
             if len(uninfected) < len(self.individuals):
@@ -1191,7 +1192,7 @@ class Microsim:
             durations = self.individuals.loc[:, durations_col]
             assert len(venues) == len(flows) and len(venues) == len(statuses)
             for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)):  # For each individual
-                # Only people with the disease will add danger to a place
+                # Only people with the disease who are infectious will add danger to a place
                 if s == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC \
                         or s == ColumnNames.DiseaseStatuses.SYMPTOMATIC \
                         or s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
@@ -1332,6 +1333,7 @@ class Microsim:
 
         print(f"\tCurrent statuses:"
               f"\n\t\tSusceptible ({ColumnNames.DiseaseStatuses.SUSCEPTIBLE}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.SUSCEPTIBLE])}"
+              f"\n\t\tExposed ({ColumnNames.DiseaseStatuses.EXPOSED}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.EXPOSED])}"
               f"\n\t\tPresymptomatic ({ColumnNames.DiseaseStatuses.PRESYMPTOMATIC}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC])}"
               f"\n\t\tSymptomatic ({ColumnNames.DiseaseStatuses.SYMPTOMATIC}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.SYMPTOMATIC])}"
               f"\n\t\tAsymptomatic ({ColumnNames.DiseaseStatuses.ASYMPTOMATIC}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.ASYMPTOMATIC])}"
@@ -1355,6 +1357,7 @@ class Microsim:
         # Minor bug: this will erode any changes caused by lockdown behaviour for the rest of this iteration, but this
         # only affects people whose status has just changed so only a minor problem
         if row[ColumnNames.DISEASE_STATUS] in [ColumnNames.DiseaseStatuses.SUSCEPTIBLE,
+                                               ColumnNames.DiseaseStatuses.EXPOSED,
                                                ColumnNames.DiseaseStatuses.PRESYMPTOMATIC,
                                                ColumnNames.DiseaseStatuses.ASYMPTOMATIC,
                                                ColumnNames.DiseaseStatuses.RECOVERED,
@@ -1363,7 +1366,7 @@ class Microsim:
                 row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] = \
                     row[f"{activity}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
-        # Put newly diseased people at home
+        # Put newly symptomatic people at home
         elif row[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
             # Reduce all activities, replacing the lost time with time spent at home
             non_home_activities = set(activities)
