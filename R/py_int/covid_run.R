@@ -1,4 +1,4 @@
-list.of.packages <- c("rampuaR",)
+list.of.packages <- c("rampuaR")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
