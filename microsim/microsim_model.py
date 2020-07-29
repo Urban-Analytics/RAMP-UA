@@ -1101,6 +1101,7 @@ class Microsim:
 
         individuals[ColumnNames.DISEASE_PRESYMP] = -1
         individuals[ColumnNames.DISEASE_SYMP_DAYS] = -1
+        individuals[ColumnNames.DISEASE_EXPOSED_DAYS] = -1
         return individuals
 
     def update_behaviour_during_lockdown(self):

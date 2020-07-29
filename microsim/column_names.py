@@ -39,6 +39,7 @@ class ColumnNames:
     DISEASE_STATUS_CHANGED = "status_changed"  # Whether it has changed between the current iteration and the last
     DISEASE_PRESYMP = "presymp_days"
     DISEASE_SYMP_DAYS = "symp_days"
+    DISEASE_EXPOSED_DAYS = "exposed_days"
 
     #DAYS_WITH_STATUS = "Days_With_Status"  # The number of days that have elapsed with this status
     CURRENT_RISK = "current_risk"  # This is the risk that people get when visiting locations.
