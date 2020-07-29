@@ -26,13 +26,14 @@ class ColumnNames:
     # Disease status is one of the following:
     class DiseaseStatuses:
         SUSCEPTIBLE = 0
-        PRESYMPTOMATIC = 1
-        SYMPTOMATIC = 2
-        ASYMPTOMATIC = 3
-        RECOVERED = 4
-        DEAD = 5
-        ALL = [SUSCEPTIBLE, PRESYMPTOMATIC, SYMPTOMATIC, ASYMPTOMATIC, RECOVERED, DEAD]
-        assert len(ALL) == 6
+        EXPOSED = 1
+        PRESYMPTOMATIC = 2
+        SYMPTOMATIC = 3
+        ASYMPTOMATIC = 4
+        RECOVERED = 5
+        DEAD = 6
+        ALL = [SUSCEPTIBLE, EXPOSED, PRESYMPTOMATIC, SYMPTOMATIC, ASYMPTOMATIC, RECOVERED, DEAD]
+        assert len(ALL) == 7
 
     DISEASE_STATUS = "disease_status"  # Which one it is
     DISEASE_STATUS_CHANGED = "status_changed"  # Whether it has changed between the current iteration and the last
