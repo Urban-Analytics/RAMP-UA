@@ -1,4 +1,4 @@
-devtools::install_github("Urban-Analytics/rampuaR", force = TRUE)
+devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
 library(tidyr)
 library(readr)
@@ -6,13 +6,20 @@ library(mixdist)
 library(dplyr)
 library(rampuaR)
 
+#pop <- read.csv("R/py_int/output/2020-07-13 15:05:19/input_pop_01.csv")
+#pop$exposed_days <- -1
+
 gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 
 w <- NULL
 nick_cases <- NULL
-run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length = 19, risk_cap = 5, seed_days = 5) {
-  
-
+run_status <- function(pop, 
+                       timestep = 1, 
+                       current_risk_beta = 0.0042,
+                       sympt_length = 19,
+                       risk_cap = 5,
+                       seed_days = 5,
+                       asymp_rate = 0.5) {
   
   output_switch <- TRUE
   rank_assign <- FALSE
@@ -27,7 +34,7 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
     }
   }
   
-  write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))
+ # write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))
   
   df_cr_in <-create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
@@ -96,25 +103,24 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
   
   
   df_inf <- infection_length(df = df_ass,
+                             exposed_dist = "weibull",
+                             exposed_mean = 3.2,
+                             exposed_sd = 1,
                              presymp_dist = "weibull",
-                             presymp_mean = 6.4,
-                             presymp_sd = 2.3,
+                             presymp_mean = 3.2,
+                             presymp_sd = 1,
                              infection_dist = "normal",
                              infection_mean =  sympt_length,
                              infection_sd = 2,
-                             timestep = timestep,
-                             tmp.dir=tmp.dir,
-                             save_output = output_switch)
+                             asymp_rate = asymp_rate)
+  
   print("infection and recovery lengths assigned")
   
-  removed_cases <- determine_removal(df_inf)
+  df_rem <- removed(df_inf, chance_recovery = 0.95)
+  print("individuals removed")
   
-  df_rem <- removed(df_inf, removed_cases = removed_cases, chance_recovery = 0.95)
-  
-  df_rec <- recalc_sympdays(df_rem, removed_cases) 
-  
- # df_rec <- removed(df = df_inf, chance_recovery = 0.95)
-  print("recoveries and deaths assigned")
+  df_rec <- recalc_sympdays(df_rem) 
+  print("updating infection lengths")
   
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
   
@@ -122,6 +128,7 @@ run_status <- function(pop, timestep=1, current_risk_beta = 0.0042, sympt_length
                        ID=df_msoa$id,
                        house_id=df_msoa$house_id,
                        disease_status=df_msoa$new_status,
+                       exposed_days = df_msoa$exposed_days,
                        presymp_days=df_msoa$presymp_days,
                        symp_days=df_msoa$symp_days)
   

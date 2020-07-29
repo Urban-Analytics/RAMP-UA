@@ -27,3 +27,7 @@ dependencies:
   - pyyaml
   - r-devtools=2.0.2
   - r-data.table
+  - r-mixdist
+  - r-mgcv
+  - r-RecordLinkage
+  - r-tidyselect
