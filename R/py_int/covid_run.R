@@ -6,8 +6,7 @@ library(mixdist)
 library(dplyr)
 library(rampuaR)
 
-pop <- read.csv("R/py_int/output/2020-07-29 16:48:20/daily_7.csv")
-pop$exposed_days <- -1
+#pop <- read.csv("R/py_int/output/2020-07-29 16:48:20/daily_7.csv")
 
 gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 
@@ -15,19 +14,19 @@ w <- NULL
 nick_cases <- NULL
 run_status <- function(pop, 
                        timestep = 1, 
-                       current_risk_beta = 0.006,
+                       current_risk_beta = 0.01,
                        risk_cap = 5,
                        seed_days = 5,
                        exposed_dist = "weibull",
-                       exposed_mean = 6.2,
-                       exposed_sd = 1,
+                       exposed_mean = 2.56,
+                       exposed_sd = 0.72,
                        presymp_dist = "weibull",
-                       presymp_mean = 3.2,
-                       presymp_sd = 1,
+                       presymp_mean = 2.3,
+                       presymp_sd = 0.35,
                        infection_dist = "normal",
-                       infection_mean =  19,
-                       infection_sd = 2,
-                       asymp_rate = 0.5,
+                       infection_mean =  16,
+                       infection_sd = 3,
+                       asymp_rate = 0.7,
                        chance_recovery = 0.95) {
   
   output_switch <- TRUE
