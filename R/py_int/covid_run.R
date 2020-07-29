@@ -1,10 +1,24 @@
-devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
+list.of.packages <- c("rampuaR",)
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
+
+list.of.packages <- c("rvcheck",)
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages("rvcheck", dependencies = F)
+
+library(rvcheck)
+
+rampr_version <- check_github("Urban-Analytics/rampuaR")
+if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
 library(tidyr)
 library(readr)
 library(mixdist)
 library(dplyr)
 library(rampuaR)
+
+
+
 
 #pop <- read.csv("R/py_int/output/2020-07-29 13:32:02/daily_3.csv")
 #pop$exposed_days <- -1
