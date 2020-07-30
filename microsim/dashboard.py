@@ -155,20 +155,10 @@ def create_dashboard(parameters_file):
         agecounts: nr per age category and day
         totalcounts: nr per day (across all areas)
         cumcounts: nr per MSOA (across given time period)
+        uniquecounts: nr with 'final' disease status across time period e.g. someone who is presymptomatic, symptomatic and recoverd is only counted once as recovered
         Output: 
         msoas                   # list of msoas
-        msoacounts_dict
-        totalcounts_dict
-        cumcounts_dict
-        agecounts_dict
-        msoacounts_dict_std
-        totalcounts_dict_std
-        cumcounts_dict_std
-        agecounts_dict_std
-        msoacounts_dict_3d
-        totalcounts_dict_3d
-        cumcounts_dict_3d
-        agecounts_dict_3d
+        totalcounts_dict, cumcounts_dict, agecounts_dict,  msoacounts_dict, cumcounts_dict_3d, totalcounts_dict_std, cumcounts_dict_std, agecounts_dict_std, msoacounts_dict_std, totalcounts_dict_3d, agecounts_dict_3d, msoacounts_dict_3d, uniquecounts_dict_3d, uniquecounts_dict_std, uniquecounts_dict
         '''
         
         # start with empty dictionaries
@@ -842,10 +832,12 @@ def create_dashboard(parameters_file):
     # conditions are coded as numbers in microsim output
     conditions_dict = {
       "susceptible": 0,
-      "presymptomatic": 1,
-      "symptomatic": 2,
-      "recovered": 3,
-      "dead": 4,
+      "exposed": 1,
+      "presymptomatic": 2,
+      "symptomatic": 3,
+      "asymptomatic": 4,
+      "recovered": 5,
+      "dead": 6,
     }
     # venues are coded as strings - redefined here so script works as standalone, could refer to ActivityLocations instead
     locations_dict = {
@@ -862,9 +854,11 @@ def create_dashboard(parameters_file):
     # colour schemes for plots
     # colours for line plots
     colour_dict = {
-      "susceptible": "blue",
+      "susceptible": "grey",
+      "exposed": "blue",
       "presymptomatic": "orange",
       "symptomatic": "red",
+      "asymptomatic": "magenta",
       "recovered": "green",
       "dead": "black",
       "Retail": "blue",
@@ -876,8 +870,10 @@ def create_dashboard(parameters_file):
     # colours for heatmaps and choropleths for conditions (colours_ch_cond) and venues/danger scores (colours_ch_danger)
     colours_ch_cond = {
       "susceptible": brewer['Blues'][8][::-1],
+      "exposed": brewer['YlOrRd'][8][::-1],
       "presymptomatic": brewer['YlOrRd'][8][::-1],
       "symptomatic": brewer['YlOrRd'][8][::-1],
+      "asymptomatic": brewer['YlOrRd'][8][::-1],
       "recovered": brewer['Greens'][8][::-1],
       "dead": brewer['YlOrRd'][8][::-1],
     }
@@ -1157,11 +1153,7 @@ def create_dashboard(parameters_file):
         output_file(html_output, title='RAMP-UA microsim output scenario comparison') # Render to static HTML
         #output_notebook()  # To tender inline in a Jupyter Notebook
         
-        scen_palette = ["#c9d9d3", "#718dbf", "#e84d60"]
-        scen_hist_conditions
-        scen_hist_venues
-        scen_time_conditions
-        scen_time_venues
+        scen_palette = ["darkgrey","royalblue","olive","orange","darkviolet","firebrick","tomato","deeppink","lightseagreen","limegreen"]
         
         plot_scenario_hist(scen_hist_venues,"Venues","Danger scores")
         
@@ -1175,9 +1167,6 @@ def create_dashboard(parameters_file):
             plot_scenario_time(scen_time_venues,"Venues","Danger scores",key)
             
         # Layout and output
-        
-        
-        #"scen_time_Venues_Retail"
         
         tab1 = Panel(child=row(plotref_dict["scen_hist_Condition"], plotref_dict["scen_hist_Venues"]), title='Histograms')
         
