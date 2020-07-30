@@ -62,8 +62,8 @@ def create_dashboard(parameters_file):
     
     
     def calc_nr_days():
-        # figure out nr days by reading in the retail dangers pickle file of run 0
-        data_file = os.path.join(data_dir, "output","0","Retail.pickle")
+        # figure out nr days by reading in the retail dangers pickle file of run 0    
+        data_file = os.path.join(data_dir, sc_dir[0],"0","Retail.pickle")
         pickle_in = open(data_file,"rb")
         dangers = pickle.load(pickle_in)
         pickle_in.close()
