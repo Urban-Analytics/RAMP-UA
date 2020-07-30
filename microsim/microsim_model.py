@@ -64,23 +64,23 @@ class Microsim:
 
     def __init__(self,
                  data_dir: str = "./data/", r_script_dir: str = "./R/py_int/",
-                 danger_multiplier: float = 1.0, risk_multiplier: float = 1.0,
+                 hazard_multiplier_presymptomatic: float = 1.0,
+                 hazard_multiplier_asymptomatic: float = 1.0,
+                 hazard_multiplier_symptomatic: float = 1.0,
+                 risk_multiplier: float = 1.0,
                  lockdown_from_file: bool = True,
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
                  output: bool = True,
                  debug=False,
                  disable_disease_status=False
+
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
         ----------
         :param data_dir: A data directory from which to read the source data
         :param r_script_dir: A directory with the required R scripts in (these are used to estimate disease status)
-        :param danger_multiplier: Danger assigned to a place if an infected individual visits it
-        is calcuated as duration * flow * danger_multiplier.
-        :param risk_multiplier: Risk that individuals get from a location is calculatd as
-        duration * flow * * danger * risk_multiplier
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
@@ -96,7 +96,9 @@ class Microsim:
         Microsim.DATA_DIR = data_dir  # TODO (minor) pass the data_dir to class functions directly so no need to have it defined at class level
         self.DATA_DIR = data_dir
         self.iteration = 0
-        self.danger_multiplier = danger_multiplier
+        self.hazard_multiplier_presymptomatic = hazard_multiplier_presymptomatic
+        self.hazard_multiplier_asymptomatic = hazard_multiplier_asymptomatic
+        self.hazard_multiplier_symptomatic = hazard_multiplier_symptomatic
         self.risk_multiplier = risk_multiplier
         self.lockdown_from_file = lockdown_from_file
         self.random = random.Random(time.time() if random_seed is None else random_seed)
@@ -1197,11 +1199,20 @@ class Microsim:
                 if s == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC \
                         or s == ColumnNames.DiseaseStatuses.SYMPTOMATIC \
                         or s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
+                    # The hazard multiplier depends on the type of disease status that this person has
+                    hazard_multiplier = None
+                    if s == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC:
+                        hazard_multiplier = self.hazard_multiplier_presymptomatic
+                    elif s == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
+                        hazard_multiplier = self.hazard_multiplier_symptomatic
+                    elif s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
+                        hazard_multiplier = self.hazard_multiplier_asymptomatic
+                    assert hazard_multiplier is not None
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue_idx, flow in zip(v, f):
                         # print(i, venue_idx, flow, duration)
                         # Increase the danger by the flow multiplied by some disease risk
-                        danger_increase = (flow * duration * self.risk_multiplier)
+                        danger_increase = (flow * duration * hazard_multiplier)
                         warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
                         if activty_name == "Work":
                             work_danger = float(danger_increase / 20)
@@ -1221,8 +1232,9 @@ class Microsim:
                 for venue_idx, flow in zip(v, f):
                     #  Danger associated with the location (we just created these updated dangers in the previous loop)
                     danger = loc_dangers[venue_idx]
-                    current_risk[i] += (flow * danger * duration * self.danger_multiplier)
-                    activity_specific_risk[i] += (flow * danger * duration * self.danger_multiplier)
+                    risk_increase = flow * danger * duration * self.risk_multiplier
+                    current_risk[i] += risk_increase
+                    activity_specific_risk[i] += risk_increase
 
             # Remember the (rounded) risk for this activity
             if decimals is not None:
@@ -1513,17 +1525,23 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
         with open(parameters_file, 'r') as f:
             parameters = load(f, Loader=SafeLoader)
             sim_params = parameters["microsim"]  # Parameters for the dynamic microsim (python)
+            calibration_params = parameters["microsim_calibration"]
             disease_params = parameters["disease"]  # Parameters for the disease model (r)
             # TODO Implement a more elegant way to set the parameters and pass them to the model. E.g.:
             #         self.params, self.params_changed = Model._init_kwargs(params, kwargs)
             #         [setattr(self, key, value) for key, value in self.params.items()]
+            # Utility parameters
             iterations = sim_params["iterations"]
             data_dir = sim_params["data-dir"]
             output = sim_params["output"]
             debug = sim_params["debug"]
             repetitions = sim_params["repetitions"]
             lockdown_from_file = sim_params["lockdown-from-file"]
-
+            ## Calibration parameters
+            #hazard_multiplier_presymptomatic = calibration_params["hazard_multiplier_presymptomatic"]
+            #hazard_multiplier_asymptomatic = calibration_params["hazard_multiplier_asymptomatic"]
+            #hazard_multiplier_symptomatic = calibration_params["hazard_multiplier_symptomatic"]
+            #risk_multiplier = calibration_params["risk_multiplier"]
 
     # Check the parameters are sensible
     if iterations < 0:
@@ -1538,8 +1556,12 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
           f"\tOutputting results?: {output}\n"
           f"\tDebug mode?: {debug}\n"
           f"\tNumber of repetitions: {repetitions}\n"
-          f"\tLockdown from file? : {lockdown_from_file}")
-
+          f"\tLockdown from file? : {lockdown_from_file}\n"
+          f"\tCalibration parameters: {str(calibration_params)}\n")
+          #f"\thazard_multiplier_presymptomatic: {hazard_multiplier_presymptomatic}\n"
+          #f"\thazard_multiplier_asymptomatic: {hazard_multiplier_asymptomatic}\n"
+          #f"\thazard_multiplier_symptomatic: {hazard_multiplier_symptomatic}\n"
+          #f"\trisk_multiplier: {risk_multiplier}\n")
 
     if iterations == 0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
@@ -1558,7 +1580,9 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir,
                  "output": output, "debug": debug,
-                 "lockdown_from_file": lockdown_from_file}
+                 "lockdown_from_file": lockdown_from_file,
+                 **calibration_params  # Calibration parameters can be passed directly as named arguments
+                 }
 
     # Temporily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")
