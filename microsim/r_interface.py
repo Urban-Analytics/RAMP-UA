@@ -24,7 +24,7 @@ class RInterface():
     #    R.source('initialize_and_helper_functions.R')
    #     R.source('covid_status_functions.R')
         try:
-            R.source("covid_run.R")
+            R.source("covid_libraries.R")
         except rpy2.rinterface.embedded.RRuntimeError as e:
             # R libraries probably need installing. THe lines below *should* do this, but it's probably better
             # to install them manually.
