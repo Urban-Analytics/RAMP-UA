@@ -1,11 +1,13 @@
-list.of.packages <- c("rampuaR")
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
+# list.of.packages <- c("rampuaR")
+# new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+# if(length(new.packages)) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
+# 
+# library(rvcheck)
+# 
+# rampr_version <- check_github("Urban-Analytics/rampuaR")
+# if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
-library(rvcheck)
-
-rampr_version <- check_github("Urban-Analytics/rampuaR")
-if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
+devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "wrapper")
 
 library(tidyr)
 library(readr)
