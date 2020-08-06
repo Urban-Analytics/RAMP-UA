@@ -43,7 +43,7 @@ run_status <- function(pop,
   print(paste("R timestep:", timestep))
   
   if(timestep==1) {
-    tmp.dir <<- paste(getwd(),"/output/",Sys.time(),sep="")
+    tmp.dir <<- paste0(getwd(), "/output/", gsub(" ","-",Sys.time()))
     if(!dir.exists(tmp.dir)){
       dir.create(tmp.dir, recursive = TRUE)
     }
