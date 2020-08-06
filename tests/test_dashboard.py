@@ -40,6 +40,17 @@ import microsim.dashboard as dash
 # check parameter file input
 
 
+# # code to create pickle files from csv
+# retail = pd.read_csv("Retail1.csv")
+# pickle_out = open("Retail.pickle", "wb")
+# pickle.dump(retail, pickle_out)
+# pickle_out.close()
+# individuals = pd.read_csv("Individuals1.csv")
+# pickle_out = open("Individuals.pickle", "wb")
+# pickle.dump(individuals, pickle_out)
+# pickle_out.close()
+
+
 # create parameters used in later tests
 @pytest.fixture
 def example_input_params():
@@ -116,23 +127,20 @@ def test_create_difference_dict(example_input_params, test_create_venue_dangers_
     assert result2["Retail"].iloc[0,0] == 1
 
 
-# def test_create_msoa_dangers_dict(example_input_params, test_create_venue_dangers_dict):
-    
-#     dangers_msoa_dict = dash.create_msoa_dangers_dict(dangers_dict,keys,msoa_codes):
-    
-    # dangers_msoa_dict = {}
-    # for k in range(0,len(keys)):
-    #     dangers = dangers_dict[keys[k]]
-    #     msoa_code = msoa_codes[k]
-    #     dangers['MSOA'] = msoa_code
-    #     # count nr for this condition per area
-    #     msoa_sum = dangers.groupby(['MSOA']).agg('sum')  
-    #     msoa_count = dangers.groupby(['MSOA']).agg('count')  
-    #     msoa_avg =  msoa_sum.div(msoa_count, axis='index')
-    #     dangers_msoa_dict[keys[k]] = msoa_avg
-    # return dangers_msoa_dict
+def test_create_msoa_dangers_dict(example_input_params, test_create_venue_dangers_dict):
+
+    msoa_codes = pd.Series(["E02004164","E02004164","E02004164","E02004164","E02004164","E02004164","E02004165","E02004165","E02004165","E02004165","E02004165","E02004165","E02004165","E02004169","E02004169","E02004169","E02004169", "E02004169","E02004169","E02004169"])
+
+    dangers_msoa_dict = dash.create_msoa_dangers_dict(test_create_venue_dangers_dict,["Retail"],[msoa_codes])
+    assert dangers_msoa_dict['Retail'].shape == (3, 11)
+    assert dangers_msoa_dict['Retail'].iloc[2,10] == test_create_venue_dangers_dict['Retail'].iloc[13:20,10].mean()
 
 
+
+def test_create_msoa_dangers_dict(example_input_params):
+    
+    age_cat = np.array([[0, 19], [20, 29], [30,44], [45,59], [60,74], [75,200]])   
+    msoas, totalcounts_dict, cumcounts_dict, agecounts_dict,  msoacounts_dict, cumcounts_dict_3d, totalcounts_dict_std, cumcounts_dict_std, agecounts_dict_std, msoacounts_dict_std, totalcounts_dict_3d, agecounts_dict_3d, msoacounts_dict_3d, uniquecounts_dict_3d, uniquecounts_dict_std, uniquecounts_dict = dash.create_counts_dict(example_input_params["conditions_dict"],example_input_params["r_range"],os.path.join(example_input_params["data_dir"], example_input_params["sc_dir"]),example_input_params["start_day"],example_input_params["end_day"],example_input_params["start_run"],example_input_params["nr_runs"],age_cat)
 
 
 
