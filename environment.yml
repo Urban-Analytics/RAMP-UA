@@ -32,3 +32,4 @@ dependencies:
   - r-RecordLinkage
   - r-tidyselect
   - r-rvcheck
+  - r-stringdist
