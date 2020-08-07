@@ -7,7 +7,7 @@
 # rampr_version <- check_github("Urban-Analytics/rampuaR")
 #if(!rampr_version$up_to_date){devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)}
 
-devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, force = TRUE, ref = "wrapper")
+devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, force = TRUE, ref = "no_ff")
 
 library(tidyr)
 library(readr)
@@ -17,7 +17,9 @@ library(rampuaR)
 
 #pop <- read.csv("R/py_int/output/2020-07-29 16:48:20/daily_7.csv")
 
-gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
+#gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
+data(gam_cases)
+data(msoas)
 
 w <- NULL
 model_cases <- NULL
@@ -67,7 +69,7 @@ if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
 
   #### seeding the first day in high risk MSOAs
   if(timestep==1){
-    msoas <- read.csv(paste0(getwd(),"/msoa_danger_fn.csv"))
+  #  msoas <- read.csv(paste0(getwd(),"/msoa_danger_fn.csv"))
     msoas <- msoas[msoas$risk == "High",]
     pop_hr <- pop %>% filter(area %in% msoas$area & pnothome > 0.3)
     seeds <- sample(1:nrow(pop_hr), size = gam_cases[timestep])
