@@ -127,7 +127,7 @@ def create_msoa_dangers_dict(dangers_dict,keys,msoa_codes):
 def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_run,nr_runs,age_cat):
     '''
     Counts per condition (3D, mean and standard deviation)
-    Produces 4 types of counts:
+    Produces 5 types of counts:
     msoacounts: nr per msoa and day
     agecounts: nr per age category and day
     totalcounts: nr per day (across all areas)
@@ -241,14 +241,14 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
                     msoa_count_temp = msoa_count_temp.values
                     msoacounts_run[:,day] = msoa_count_temp[:, 0]
                 elif msoa_count_temp.empty == False:
-                    print('check MSOAs')
+                    #print('check MSOAs')
                     # in case some entries don't exist
                     # start with empty dataframe
                     tmp_df =  pd.DataFrame(np.zeros(len(msoas)), columns = ['tmp'], index=msoas)   
                     # merge with obtained counts - NaN will appear
                     tmp_df = pd.merge(tmp_df, msoa_count_temp, how='left', left_index=True,right_index=True)
                     # replace NaN by 0
-                    tmp_df.fillna(0)
+                    tmp_df = tmp_df.fillna(0)
                     msoacounts_run[:,day] = tmp_df.iloc[:,1].values
                     
 
