@@ -217,58 +217,58 @@ def get_flows(venue, msoa_list, threshold, thresholdtype):
 
 
 
-def get_flows_test(venue, msoa_list, threshold, thresholdtype):
+# def get_flows_test(venue, msoa_list, threshold, thresholdtype):
     
-    # get all probabilities so they sum to at least threshold value
-    dic = {} # appending to dictionary is faster than dataframe
-    for m in msoa_list:
-        print(m)
-        # get all probabilities for this MSOA (threshold set to 0)
-        if venue == "PrimarySchool":
-            result_tmp = getProbablePrimarySchoolsByMSOAIZ(m,0)
-        elif venue == "SecondarySchool":
-            result_tmp = getProbableSecondarySchoolsByMSOAIZ(m,0)
-        elif venue == "Retail":
-            result_tmp = getProbableRetailByMSOAIZ(m,0)
-        else:
-            sys.exit("unknown venue type") 
-        # keep only values that sum to at least the specified threshold
-        sort_index = np.argsort(result_tmp) # index from lowest to highest value
-        result = [0.0] * len(result_tmp) # initialise
-        i = len(result_tmp)-1 # start with last of sorted (highest prob)
-        if thresholdtype == "prob":
-            sum_p = 0 # initialise
-            while sum_p < threshold:
-              result[sort_index[i]] = result_tmp[sort_index[i]]
-              sum_p = sum_p + result_tmp[sort_index[i]]
-              #print(sum_p)
-              i = i - 1
-        elif thresholdtype == "nr":
-            for t in range(0,threshold):
-                result[sort_index[i]] = result_tmp[sort_index[i]]
-                i = i - 1
-        else:
-             sys.exit("unknown threshold type")
-        dic[m] = result
+#     # get all probabilities so they sum to at least threshold value
+#     dic = {} # appending to dictionary is faster than dataframe
+#     for m in msoa_list:
+#         print(m)
+#         # get all probabilities for this MSOA (threshold set to 0)
+#         if venue == "PrimarySchool":
+#             result_tmp = getProbablePrimarySchoolsByMSOAIZ(m,0)
+#         elif venue == "SecondarySchool":
+#             result_tmp = getProbableSecondarySchoolsByMSOAIZ(m,0)
+#         elif venue == "Retail":
+#             result_tmp = getProbableRetailByMSOAIZ(m,0)
+#         else:
+#             sys.exit("unknown venue type") 
+#         # keep only values that sum to at least the specified threshold
+#         sort_index = np.argsort(result_tmp) # index from lowest to highest value
+#         result = [0.0] * len(result_tmp) # initialise
+#         i = len(result_tmp)-1 # start with last of sorted (highest prob)
+#         if thresholdtype == "prob":
+#             sum_p = 0 # initialise
+#             while sum_p < threshold:
+#               result[sort_index[i]] = result_tmp[sort_index[i]]
+#               sum_p = sum_p + result_tmp[sort_index[i]]
+#               #print(sum_p)
+#               i = i - 1
+#         elif thresholdtype == "nr":
+#             for t in range(0,threshold):
+#                 result[sort_index[i]] = result_tmp[sort_index[i]]
+#                 i = i - 1
+#         else:
+#              sys.exit("unknown threshold type")
+#         dic[m] = result
     
-    # now turn this into a dataframe with the right columns etc compatible with _flows variable
-    nr_venues = len(dic[msoa_list[0]])
-    col_names = []
-    for n in range(0,nr_venues):
-        col_names.append(f"Loc_{n}")
-    df = pd.DataFrame.from_dict(dic,orient='index')
-    df.columns = col_names
+#     # now turn this into a dataframe with the right columns etc compatible with _flows variable
+#     nr_venues = len(dic[msoa_list[0]])
+#     col_names = []
+#     for n in range(0,nr_venues):
+#         col_names.append(f"Loc_{n}")
+#     df = pd.DataFrame.from_dict(dic,orient='index')
+#     df.columns = col_names
     
-    # optional: check
-    if thresholdtype == "prob": # check nr of venues
-        test = pd.Series(np.count_nonzero(df, axis=1))
-    elif thresholdtype == "nr": # check total probability
-        test = df.sum(axis=1)
+#     # optional: check
+#     if thresholdtype == "prob": # check nr of venues
+#         test = pd.Series(np.count_nonzero(df, axis=1))
+#     elif thresholdtype == "nr": # check total probability
+#         test = df.sum(axis=1)
         
-    df.insert(loc=0, column='Area_ID', value=[*range(1, len(msoa_list)+1, 1)])
-    df.insert(loc=1, column='Area_Code', value=df.index)
-    df.reset_index(drop=True, inplace=True)
-    return df, test
+#     df.insert(loc=0, column='Area_ID', value=[*range(1, len(msoa_list)+1, 1)])
+#     df.insert(loc=1, column='Area_Code', value=df.index)
+#     df.reset_index(drop=True, inplace=True)
+#     return df, test
 
 
 
