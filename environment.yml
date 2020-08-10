@@ -11,7 +11,7 @@ dependencies:
   - pytest=5.4.1
   - matplotlib=3.1.3
   - swifter=0.304
-  - rpy2=3.3.2
+  - rpy2=2.9.4
   - tzlocal
   - r-mixdist
   - r-tidyr=1.1.0
@@ -32,3 +32,4 @@ dependencies:
   - r-RecordLinkage
   - r-tidyselect
   - r-rvcheck
+  - r-stringdist
