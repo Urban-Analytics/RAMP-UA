@@ -7,7 +7,7 @@
 # rampr_version <- check_github("Urban-Analytics/rampuaR")
 #if(!rampr_version$up_to_date){devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)}
 
-devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, force = TRUE, ref = "no_ff")
+devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, force = TRUE)
 
 library(tidyr)
 library(readr)
