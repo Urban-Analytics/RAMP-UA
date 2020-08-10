@@ -73,23 +73,23 @@ class Microsim:
 
     def __init__(self,
                  data_dir: str = "./data/", r_script_dir: str = "./R/py_int/",
-                 danger_multiplier: float = 1.0, risk_multiplier: float = 1.0,
+                 hazard_multiplier_presymptomatic: float = 1.0,
+                 hazard_multiplier_asymptomatic: float = 1.0,
+                 hazard_multiplier_symptomatic: float = 1.0,
+                 risk_multiplier: float = 1.0,
                  lockdown_from_file: bool = True,
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
                  output: bool = True,
                  debug=False,
                  disable_disease_status=False
+
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
         ----------
         :param data_dir: A data directory from which to read the source data
         :param r_script_dir: A directory with the required R scripts in (these are used to estimate disease status)
-        :param danger_multiplier: Danger assigned to a place if an infected individual visits it
-        is calcuated as duration * flow * danger_multiplier.
-        :param risk_multiplier: Risk that individuals get from a location is calculatd as
-        duration * flow * * danger * risk_multiplier
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
@@ -105,7 +105,9 @@ class Microsim:
         Microsim.DATA_DIR = data_dir  # TODO (minor) pass the data_dir to class functions directly so no need to have it defined at class level
         self.DATA_DIR = data_dir
         self.iteration = 0
-        self.danger_multiplier = danger_multiplier
+        self.hazard_multiplier_presymptomatic = hazard_multiplier_presymptomatic
+        self.hazard_multiplier_asymptomatic = hazard_multiplier_asymptomatic
+        self.hazard_multiplier_symptomatic = hazard_multiplier_symptomatic
         self.risk_multiplier = risk_multiplier
         self.lockdown_from_file = lockdown_from_file
         self.random = random.Random(time.time() if random_seed is None else random_seed)
@@ -1161,10 +1163,14 @@ class Microsim:
         individuals[ColumnNames.DISEASE_STATUS_CHANGED] = False
         # individuals[ColumnNames.DAYS_WITH_STATUS] = 0  # Also keep the number of days that have elapsed with this status
         individuals[ColumnNames.CURRENT_RISK] = 0  # This is the risk that people get when visiting locations.
-        individuals[ColumnNames.MSOA_CASES] = 0  # Useful to count cases per MSOA
-        individuals[ColumnNames.HID_CASES] = 0  # Ditto for the household
+
+        # No longer update disease counts per MSOA etc. Not needed
+        #individuals[ColumnNames.MSOA_CASES] = 0  # Useful to count cases per MSOA
+        #individuals[ColumnNames.HID_CASES] = 0  # Ditto for the household
+
         individuals[ColumnNames.DISEASE_PRESYMP] = -1
         individuals[ColumnNames.DISEASE_SYMP_DAYS] = -1
+        individuals[ColumnNames.DISEASE_EXPOSED_DAYS] = -1
         return individuals
 
     def update_behaviour_during_lockdown(self):
@@ -1172,13 +1178,14 @@ class Microsim:
         Unilaterally alter the proportions of time spent on different activities before and after 'lockddown'
         Otherwise this doesn't do anything update_behaviour_during_lockdown.
 
-        Note: ignores people who are currently showing symptoms (`ColumnNames.DISEASE_STATUS_Symptomatic`)
+        Note: ignores people who are currently showing symptoms (`ColumnNames.DiseaseStatus.SYMPTOMATIC`)
         """
         # Are we doing any lockdown at all? in this iteration?
         if self.lockdown_from_file:
-            # Only change the behaviour of people who aren't showing symptoms
+            # Only change the behaviour of people who aren't showing symptoms. If you are showing symptoms then you
+            # will be mostly at home anyway, so don't want your behaviour overridden by lockdown.
             uninfected = self.individuals.index[
-                self.individuals[ColumnNames.DISEASE_STATUS] != ColumnNames.DISEASE_STATUS_Symptomatic]
+                self.individuals[ColumnNames.DISEASE_STATUS] != ColumnNames.DiseaseStatuses.SYMPTOMATIC]
             if len(uninfected) < len(self.individuals):
                 print(f"\t{len(self.individuals) - len(uninfected)} people are symptomatic so not affected by lockdown")
 
@@ -1255,12 +1262,24 @@ class Microsim:
             durations = self.individuals.loc[:, durations_col]
             assert len(venues) == len(flows) and len(venues) == len(statuses)
             for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)):  # For each individual
-                if s == ColumnNames.DISEASE_STATUS_PreSymptomatic or s == ColumnNames.DISEASE_STATUS_Symptomatic:
+                # Only people with the disease who are infectious will add danger to a place
+                if s == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC \
+                        or s == ColumnNames.DiseaseStatuses.SYMPTOMATIC \
+                        or s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
+                    # The hazard multiplier depends on the type of disease status that this person has
+                    hazard_multiplier = None
+                    if s == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC:
+                        hazard_multiplier = self.hazard_multiplier_presymptomatic
+                    elif s == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
+                        hazard_multiplier = self.hazard_multiplier_symptomatic
+                    elif s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
+                        hazard_multiplier = self.hazard_multiplier_asymptomatic
+                    assert hazard_multiplier is not None
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue_idx, flow in zip(v, f):
                         # print(i, venue_idx, flow, duration)
                         # Increase the danger by the flow multiplied by some disease risk
-                        danger_increase = (flow * duration * self.risk_multiplier)
+                        danger_increase = (flow * duration * hazard_multiplier)
                         warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
                         if activty_name == "Work":
                             work_danger = float(danger_increase / 20)
@@ -1280,8 +1299,9 @@ class Microsim:
                 for venue_idx, flow in zip(v, f):
                     #  Danger associated with the location (we just created these updated dangers in the previous loop)
                     danger = loc_dangers[venue_idx]
-                    current_risk[i] += (flow * danger * duration * self.danger_multiplier)
-                    activity_specific_risk[i] += (flow * danger * duration * self.danger_multiplier)
+                    risk_increase = flow * danger * duration * self.risk_multiplier
+                    current_risk[i] += risk_increase
+                    activity_specific_risk[i] += risk_increase
 
             # Remember the (rounded) risk for this activity
             if decimals is not None:
@@ -1316,28 +1336,29 @@ class Microsim:
 
         return
 
-    def update_disease_counts(self):
-        """Update some disease counters -- counts of diseases in MSOAs & households -- which are useful
-        in estimating the probability of contracting the disease"""
-        # Update the diseases per MSOA and household
-        # TODO replace Nan's with 0 (not a problem with MSOAs because they're a cateogry so the value_counts()
-        # returns all, including those with 0 counts, but with HID those with 0 count don't get returned
-        # Get rows with cases
-        cases = self.individuals.loc[(self.individuals[ColumnNames.DISEASE_STATUS] == 1) |
-                                     (self.individuals[ColumnNames.DISEASE_STATUS] == 2), :]
-        # Count cases per area (convert to a dataframe)
-        case_counts = cases["area"].value_counts()
-        case_counts = pd.DataFrame(data={"area": case_counts.index, "Count": case_counts}).reset_index(drop=True)
-        # Link this back to the orignal data
-        self.individuals[ColumnNames.MSOA_CASES] = self.individuals.merge(case_counts, on="area", how="left")["Count"]
-        self.individuals[ColumnNames.MSOA_CASES].fillna(0, inplace=True)
-
-        # Update HID cases
-        case_counts = cases["House_ID"].value_counts()
-        case_counts = pd.DataFrame(data={"House_ID": case_counts.index, "Count": case_counts}).reset_index(drop=True)
-        self.individuals[ColumnNames.HID_CASES] = self.individuals.merge(case_counts, on="House_ID", how="left")[
-            "Count"]
-        self.individuals[ColumnNames.HID_CASES].fillna(0, inplace=True)
+    # No longer update disease counts per MSOA etc. Not needed
+    #def update_disease_counts(self):
+    #    """Update some disease counters -- counts of diseases in MSOAs & households -- which are useful
+    #    in estimating the probability of contracting the disease"""
+    #    # Update the diseases per MSOA and household
+    #    # TODO replace Nan's with 0 (not a problem with MSOAs because they're a cateogry so the value_counts()
+    #    # returns all, including those with 0 counts, but with HID those with 0 count don't get returned
+    #    # Get rows with cases
+    #    cases = self.individuals.loc[(self.individuals[ColumnNames.DISEASE_STATUS] == 1) |
+    #                                 (self.individuals[ColumnNames.DISEASE_STATUS] == 2), :]
+    #    # Count cases per area (convert to a dataframe)
+    #    case_counts = cases["area"].value_counts()
+    #    case_counts = pd.DataFrame(data={"area": case_counts.index, "Count": case_counts}).reset_index(drop=True)
+    #    # Link this back to the orignal data
+    #    self.individuals[ColumnNames.MSOA_CASES] = self.individuals.merge(case_counts, on="area", how="left")["Count"]
+    #    self.individuals[ColumnNames.MSOA_CASES].fillna(0, inplace=True)
+    #
+    #     # Update HID cases
+    #    case_counts = cases["House_ID"].value_counts()
+    #    case_counts = pd.DataFrame(data={"House_ID": case_counts.index, "Count": case_counts}).reset_index(drop=True)
+    #    self.individuals[ColumnNames.HID_CASES] = self.individuals.merge(case_counts, on="House_ID", how="left")[
+    #        "Count"]
+    #    self.individuals[ColumnNames.HID_CASES].fillna(0, inplace=True)
 
     def calculate_new_disease_status(self) -> None:
         """
@@ -1358,8 +1379,8 @@ class Microsim:
         # For info, find out how the statuses have changed.
         # Make a dict with all possible changes, then loop through and count them.
         change = dict()
-        for old in ColumnNames.DISEASE_STATUS_ALL:
-            for new in ColumnNames.DISEASE_STATUS_ALL:
+        for old in ColumnNames.DiseaseStatuses.ALL:
+            for new in ColumnNames.DiseaseStatuses.ALL:
                 change[(old, new)] = 0
         for (old, new) in zip(old_status, new_status):
             if new != old:
@@ -1368,9 +1389,9 @@ class Microsim:
         assert sum(change.values()) == len(new_status[new_status != old_status])
 
         print(f"\t{len(new_status[new_status != old_status])} individuals have a different status. Status changes:")
-        for old in ColumnNames.DISEASE_STATUS_ALL:
+        for old in ColumnNames.DiseaseStatuses.ALL:
             print(f"\t\t{old} -> ", end="")
-            for new in ColumnNames.DISEASE_STATUS_ALL:
+            for new in ColumnNames.DiseaseStatuses.ALL:
                 print(f" {new}:{change[(old,new)]} \t", end="")
             print()
 
@@ -1391,11 +1412,13 @@ class Microsim:
         # self.individuals.loc[change_idx].swifter.progress_bar(True, desc="Changing behaviour of infected"). \
 
         print(f"\tCurrent statuses:"
-              f"\n\t\tSusceptible: {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_Susceptible])}"
-              f"\n\t\tPresymptomatic: {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_PreSymptomatic])}"
-              f"\n\t\tSymptomatic: {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_Symptomatic])}"
-              f"\n\t\tRecovered: {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_Recovered])}"
-              f"\n\t\tRemoved: {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_Removed])}")
+              f"\n\t\tSusceptible ({ColumnNames.DiseaseStatuses.SUSCEPTIBLE}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.SUSCEPTIBLE])}"
+              f"\n\t\tExposed ({ColumnNames.DiseaseStatuses.EXPOSED}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.EXPOSED])}"
+              f"\n\t\tPresymptomatic ({ColumnNames.DiseaseStatuses.PRESYMPTOMATIC}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC])}"
+              f"\n\t\tSymptomatic ({ColumnNames.DiseaseStatuses.SYMPTOMATIC}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.SYMPTOMATIC])}"
+              f"\n\t\tAsymptomatic ({ColumnNames.DiseaseStatuses.ASYMPTOMATIC}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.ASYMPTOMATIC])}"
+              f"\n\t\tRecovered ({ColumnNames.DiseaseStatuses.RECOVERED}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.RECOVERED])}"
+              f"\n\t\tRemoved/dead ({ColumnNames.DiseaseStatuses.DEAD}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.DEAD])}")
 
         #self.individuals.loc[change_idx].apply(func=self._set_new_behaviour, axis=1)
         #print("... finished")
@@ -1413,16 +1436,18 @@ class Microsim:
         # Susceptible to Pre-symptomatic, which means they continue doing normal behaviour)
         # Minor bug: this will erode any changes caused by lockdown behaviour for the rest of this iteration, but this
         # only affects people whose status has just changed so only a minor problem
-        if row[ColumnNames.DISEASE_STATUS] in [ColumnNames.DISEASE_STATUS_Susceptible,
-                                               ColumnNames.DISEASE_STATUS_PreSymptomatic,
-                                               ColumnNames.DISEASE_STATUS_Recovered,
-                                               ColumnNames.DISEASE_STATUS_Removed]:
+        if row[ColumnNames.DISEASE_STATUS] in [ColumnNames.DiseaseStatuses.SUSCEPTIBLE,
+                                               ColumnNames.DiseaseStatuses.EXPOSED,
+                                               ColumnNames.DiseaseStatuses.PRESYMPTOMATIC,
+                                               ColumnNames.DiseaseStatuses.ASYMPTOMATIC,
+                                               ColumnNames.DiseaseStatuses.RECOVERED,
+                                               ColumnNames.DiseaseStatuses.DEAD]:
             for activity in activities:
                 row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] = \
                     row[f"{activity}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
-        # Put newly diseased people at home
-        elif row[ColumnNames.DISEASE_STATUS] == ColumnNames.DISEASE_STATUS_Symptomatic:
+        # Put newly symptomatic people at home
+        elif row[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
             # Reduce all activities, replacing the lost time with time spent at home
             non_home_activities = set(activities)
             non_home_activities.remove("Home")
@@ -1467,7 +1492,8 @@ class Microsim:
         self.update_venue_danger_and_risks()
 
         # Update disease counters. E.g. count diseases in MSOAs & households
-        self.update_disease_counts()
+        # No longer update disease counts per MSOA etc. Not needed
+        #self.update_disease_counts()
 
         # Calculate new disease status and update the people's behaviour
         if not self.disable_disease_status:
@@ -1566,17 +1592,23 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
         with open(parameters_file, 'r') as f:
             parameters = load(f, Loader=SafeLoader)
             sim_params = parameters["microsim"]  # Parameters for the dynamic microsim (python)
+            calibration_params = parameters["microsim_calibration"]
             disease_params = parameters["disease"]  # Parameters for the disease model (r)
             # TODO Implement a more elegant way to set the parameters and pass them to the model. E.g.:
             #         self.params, self.params_changed = Model._init_kwargs(params, kwargs)
             #         [setattr(self, key, value) for key, value in self.params.items()]
+            # Utility parameters
             iterations = sim_params["iterations"]
             data_dir = sim_params["data-dir"]
             output = sim_params["output"]
             debug = sim_params["debug"]
             repetitions = sim_params["repetitions"]
             lockdown_from_file = sim_params["lockdown-from-file"]
-
+            ## Calibration parameters
+            #hazard_multiplier_presymptomatic = calibration_params["hazard_multiplier_presymptomatic"]
+            #hazard_multiplier_asymptomatic = calibration_params["hazard_multiplier_asymptomatic"]
+            #hazard_multiplier_symptomatic = calibration_params["hazard_multiplier_symptomatic"]
+            #risk_multiplier = calibration_params["risk_multiplier"]
 
     # Check the parameters are sensible
     if iterations < 0:
@@ -1591,8 +1623,12 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
           f"\tOutputting results?: {output}\n"
           f"\tDebug mode?: {debug}\n"
           f"\tNumber of repetitions: {repetitions}\n"
-          f"\tLockdown from file? : {lockdown_from_file}")
-
+          f"\tLockdown from file? : {lockdown_from_file}\n"
+          f"\tCalibration parameters: {str(calibration_params)}\n")
+          #f"\thazard_multiplier_presymptomatic: {hazard_multiplier_presymptomatic}\n"
+          #f"\thazard_multiplier_asymptomatic: {hazard_multiplier_asymptomatic}\n"
+          #f"\thazard_multiplier_symptomatic: {hazard_multiplier_symptomatic}\n"
+          #f"\trisk_multiplier: {risk_multiplier}\n")
 
     if iterations == 0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
@@ -1611,7 +1647,9 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir,
                  "output": output, "debug": debug,
-                 "lockdown_from_file": lockdown_from_file}
+                 "lockdown_from_file": lockdown_from_file,
+                 **calibration_params  # Calibration parameters can be passed directly as named arguments
+                 }
 
     # Temporily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")

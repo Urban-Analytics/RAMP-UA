@@ -24,19 +24,26 @@ class ColumnNames:
     # Columns for information about the disease. These are needed for estimating the disease status
 
     # Disease status is one of the following:
-    DISEASE_STATUS_Susceptible = 0
-    DISEASE_STATUS_PreSymptomatic = 1
-    DISEASE_STATUS_Symptomatic = 2
-    DISEASE_STATUS_Recovered = 3
-    DISEASE_STATUS_Removed = 4
-    DISEASE_STATUS_ALL = [ DISEASE_STATUS_Susceptible, DISEASE_STATUS_PreSymptomatic,
-                           DISEASE_STATUS_Symptomatic, DISEASE_STATUS_Recovered, DISEASE_STATUS_Removed]
+    class DiseaseStatuses:
+        SUSCEPTIBLE = 0
+        EXPOSED = 1
+        PRESYMPTOMATIC = 2
+        SYMPTOMATIC = 3
+        ASYMPTOMATIC = 4
+        RECOVERED = 5
+        DEAD = 6
+        ALL = [SUSCEPTIBLE, EXPOSED, PRESYMPTOMATIC, SYMPTOMATIC, ASYMPTOMATIC, RECOVERED, DEAD]
+        assert len(ALL) == 7
+
     DISEASE_STATUS = "disease_status"  # Which one it is
     DISEASE_STATUS_CHANGED = "status_changed"  # Whether it has changed between the current iteration and the last
     DISEASE_PRESYMP = "presymp_days"
     DISEASE_SYMP_DAYS = "symp_days"
+    DISEASE_EXPOSED_DAYS = "exposed_days"
 
     #DAYS_WITH_STATUS = "Days_With_Status"  # The number of days that have elapsed with this status
     CURRENT_RISK = "current_risk"  # This is the risk that people get when visiting locations.
-    MSOA_CASES = "MSOA_Cases"  # The number of cases per MSOA
-    HID_CASES = "HID_Cases"  # The number of cases in the individual's house
+
+    # No longer update disease counts per MSOA etc. Not needed
+    #MSOA_CASES = "MSOA_Cases"  # The number of cases per MSOA
+    #HID_CASES = "HID_Cases"  # The number of cases in the individual's house

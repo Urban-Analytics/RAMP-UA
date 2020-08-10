@@ -25,3 +25,11 @@ dependencies:
   - r-stringi=1.4.6
   - coverage
   - pyyaml
+  - r-devtools=2.3.1
+  - r-data.table
+  - r-mixdist
+  - r-mgcv
+  - r-RecordLinkage
+  - r-tidyselect
+  - r-rvcheck
+  - r-stringdist

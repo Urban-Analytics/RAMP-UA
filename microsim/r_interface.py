@@ -21,8 +21,8 @@ class RInterface():
         print(f"Initialising R interface. Loading R scripts in {script_dir}.")
         R = ro.r
         R.setwd(script_dir)
-        R.source('initialize_and_helper_functions.R')
-        R.source('covid_status_functions.R')
+    #    R.source('initialize_and_helper_functions.R')
+   #     R.source('covid_status_functions.R')
         try:
             R.source("covid_run.R")
         except rpy2.rinterface.embedded.RRuntimeError as e:
@@ -46,8 +46,9 @@ class RInterface():
         """
         print("\tCalculating new disease status...", end='')
         # It's expesive to convert large dataframes, only give the required columns to R.
-        individuals_reduced = individuals.loc[:, ["area", "House_ID", "ID", "Age1", "Sex", ColumnNames.CURRENT_RISK, "pnothome",
-                                                   ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP, ColumnNames.DISEASE_SYMP_DAYS] ]
+        individuals_reduced = individuals.loc[:, ["area", "House_ID", "ID", "Age1", "Sex", ColumnNames.CURRENT_RISK,
+                                                  "pnothome", ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP,
+                                                  ColumnNames.DISEASE_SYMP_DAYS, ColumnNames.DISEASE_EXPOSED_DAYS]]
         individuals_reduced["area"] = individuals_reduced.area.astype(str)
         individuals_reduced["id"] = individuals_reduced.ID
         del individuals_reduced["ID"]
@@ -62,7 +63,7 @@ class RInterface():
         assert False not in list(r_df.ID.values == individuals.ID.values)  # Check that person IDs are the same
 
         # Update the individuals dataframe with the new values
-        for col in [ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP, ColumnNames.DISEASE_SYMP_DAYS]:
+        for col in [ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP, ColumnNames.DISEASE_SYMP_DAYS, ColumnNames.DISEASE_EXPOSED_DAYS]:
             individuals[col] = list(r_df[col])
         assert False not in (individuals.loc[individuals[ColumnNames.DISEASE_STATUS] > 0, ColumnNames.DISEASE_STATUS].values ==
                              r_df.loc[r_df[ColumnNames.DISEASE_STATUS] > 0, ColumnNames.DISEASE_STATUS].values)
