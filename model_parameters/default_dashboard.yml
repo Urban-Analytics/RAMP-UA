@@ -1,15 +1,17 @@
 dashboard: # Parameters for the dashboard (visualisation), all are optional
   # for all scenarios
   data_dir: devon_data # Root directory to load data from
-  start_day:     # Start day
-  end_day:       # End day (inclusive)
+  start_day: 0    # Start day
+  end_day: 80      # End day (inclusive)
   start_run: 0   # Iteration/run to start
-  end_run: 0     # Last iteration/run to include
+  end_run: 1     # Last iteration/run to include
   # define scenarios (first will be used as control), any number
   scenario_name: # names for scenario
   - Control
+  - Alternative
   scenario_dir: # directory for scenario (subdir of /output), same order as names above
-  - sc3
+  - sc0
+  - sc1
   # for all scenarios
 
   
