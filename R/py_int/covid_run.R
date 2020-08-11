@@ -9,7 +9,7 @@
 # if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
 
-devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
+devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "age_surv")
 
 library(tidyr)
 library(readr)
@@ -17,7 +17,7 @@ library(mixdist)
 library(dplyr)
 library(rampuaR)
 
-#pop <- read.csv("R/py_int/output/2020-07-29 16:48:20/daily_7.csv")
+pop <- read.csv("R/py_int/output/2020-08-11-09-37-59/daily_26.csv")
 
 #gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 data(gam_cases)
@@ -141,7 +141,7 @@ if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
 
   print("infection and recovery lengths assigned")
 
-  df_rem <- removed(df_inf, chance_recovery = chance_recovery)
+  df_rem <- removed_age(df_inf)
   print("individuals removed")
 
   df_rec <- recalc_sympdays(df_rem)
