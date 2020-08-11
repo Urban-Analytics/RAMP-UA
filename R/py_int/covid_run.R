@@ -9,7 +9,7 @@
 # if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
 
-devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "age_surv")
+devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
 library(tidyr)
 library(readr)
@@ -17,9 +17,7 @@ library(mixdist)
 library(dplyr)
 library(rampuaR)
 
-pop <- read.csv("R/py_int/output/2020-08-11-09-37-59/daily_26.csv")
 
-#gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
 data(gam_cases)
 data(msoas)
 
