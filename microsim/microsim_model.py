@@ -483,10 +483,10 @@ class Microsim:
         tuh["pschool-primary"] = 0.0
         tuh["pschool-secondary"] = 0.0
         # TODO Assign to schools properly
-        children_idx = tuh.index[tuh["Age1"] == 1]
-        teen_idx = tuh.index[tuh['Age1'] == 2]
-        #children_idx = tuh.index[tuh["DC1117EW_C_AGE"] < 11]
-        #teen_idx = tuh.index[(tuh["DC1117EW_C_AGE"] >= 11) & (tuh["DC1117EW_C_AGE"] < 19)]
+        #children_idx = tuh.index[tuh["Age1"] == 1]
+        #teen_idx = tuh.index[tuh['Age1'] == 2]
+        children_idx = tuh.index[tuh["Age1"] < 11]
+        teen_idx = tuh.index[(tuh["Age1"] >= 11) & (tuh["Age1"] < 19)]
 
         tuh.loc[children_idx, "pschool-primary"] = tuh.loc[children_idx, "pschool"]
         tuh.loc[teen_idx, "pschool-secondary"] = tuh.loc[teen_idx, "pschool"]

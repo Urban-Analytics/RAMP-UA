@@ -7,7 +7,7 @@
 # rampr_version <- check_github("Urban-Analytics/rampuaR")
 #if(!rampr_version$up_to_date){devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)}
 
-devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, force = TRUE, ref = "no_ff")
+devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, force = TRUE)
 
 library(tidyr)
 library(readr)
@@ -49,7 +49,9 @@ run_status <- function(pop,
   print(paste("R timestep:", timestep))
 
   if(timestep==1) {
-    tmp.dir <<- paste(getwd(),"/output/",Sys.time(),sep="")
+    # windows does not allow colons in folder names so substitute sys.time() to hyphen
+    tmp.dir <<- paste0(getwd(), "/output/", gsub(":","-", gsub(" ","-",Sys.time())))
+
     if(!dir.exists(tmp.dir)){
       dir.create(tmp.dir, recursive = TRUE)
     }
