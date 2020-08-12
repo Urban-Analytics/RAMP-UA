@@ -1557,7 +1557,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
           f"\tDebug mode?: {debug}\n"
           f"\tNumber of repetitions: {repetitions}\n"
           f"\tLockdown from file? : {lockdown_from_file}\n"
-          f"\tCalibration parameters: {str(calibration_params)}\n")
+          f"\tCalibration parameters: {'N/A (not reading parameters file)' if no_parameters_file else str(calibration_params)}\n")
           #f"\thazard_multiplier_presymptomatic: {hazard_multiplier_presymptomatic}\n"
           #f"\thazard_multiplier_asymptomatic: {hazard_multiplier_asymptomatic}\n"
           #f"\thazard_multiplier_symptomatic: {hazard_multiplier_symptomatic}\n"
@@ -1581,8 +1581,10 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
     msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir,
                  "output": output, "debug": debug,
                  "lockdown_from_file": lockdown_from_file,
-                 **calibration_params  # Calibration parameters can be passed directly as named arguments
                  }
+
+    if not no_parameters_file:
+        msim_args.update(**calibration_params)
 
     # Temporily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")
