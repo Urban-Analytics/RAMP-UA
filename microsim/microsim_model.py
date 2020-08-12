@@ -14,7 +14,10 @@ tmp_microsim_dir = os.path.join(tmp_base_dir, "microsim") # go to data dir
 os.chdir(tmp_microsim_dir)
 
 import sys
-
+#import os
+#owd = os.getcwd()
+#os.chdir(os.path.join(owd,"microsim"))
+    
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
 from activity_location import ActivityLocation
 from r_interface import RInterface
@@ -44,7 +47,7 @@ import pickle  # to save data
 import swifter  # For speeding up apply functions (e.g. df.swifter.apply)
 import rpy2.robjects as ro  # For calling R scripts
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
-
+from shutil import copyfile
 
 import QUANTRampAPI2 as qa
 
@@ -52,7 +55,7 @@ import QUANTRampAPI2 as qa
 
 os.chdir(tmp_base_dir)
 
-
+#os.chdir(owd)
 
 class Microsim:
     """
@@ -72,7 +75,9 @@ class Microsim:
     """
 
     def __init__(self,
-                 data_dir: str = "./data/", r_script_dir: str = "./R/py_int/",
+                 data_dir: str = "./data/", 
+                 scen_dir: str = "./test/",
+                 r_script_dir: str = "./R/py_int/",
                  hazard_multiplier_presymptomatic: float = 1.0,
                  hazard_multiplier_asymptomatic: float = 1.0,
                  hazard_multiplier_symptomatic: float = 1.0,
@@ -104,6 +109,7 @@ class Microsim:
         # Administrative variables that need to be defined
         Microsim.DATA_DIR = data_dir  # TODO (minor) pass the data_dir to class functions directly so no need to have it defined at class level
         self.DATA_DIR = data_dir
+        self.SCEN_DIR = scen_dir
         self.iteration = 0
         self.hazard_multiplier_presymptomatic = hazard_multiplier_presymptomatic
         self.hazard_multiplier_asymptomatic = hazard_multiplier_asymptomatic
@@ -121,7 +127,10 @@ class Microsim:
 
         if not read_data:  # Optionally can not do this, usually for debugging
             return
-
+        
+        # create full path for scenario dir, also check if scenario dir exists and if so, add nr
+        self.SCEN_DIR = Microsim._find_new_directory(os.path.join(self.DATA_DIR, "output"), self.SCEN_DIR)
+        
         # We need an interface to R code to calculate disease status, but don't initialise it until the run()
         # method is called so that the R process is initiatied in the same process as the Microsim object
         self.r_int = None
@@ -282,24 +291,29 @@ class Microsim:
         return  # finish __init__
 
     @staticmethod
-    def _find_new_directory(dir):
+    def _find_new_directory(dir,scendir):
         """
         Find a new directory and make one to store results in starting from 'dir'.
         :param dir: Start looking from this directory
         :return: The new directory (full path)
         """
-        # Find a new directory for this initialisation (may have old ones)
+        results_subdir = os.path.join(dir,scendir)
+        # if it exists already, try adding numbers
         i = 0
-        while os.path.exists(os.path.join(dir, str(i))):
+        while os.path.isdir(results_subdir):
             i += 1
+            newdir = scendir + "_" + str(i)
+            results_subdir = os.path.join(dir,newdir)
         # Create a directory for these results
-        results_subdir = os.path.join(dir, str(i))
+        #results_subdir = os.path.join(dir, str(i))
         try:
             os.mkdir(results_subdir)
         except FileExistsError as e:
             print("Directory ", results_subdir, " already exists")
             raise e
         return results_subdir
+
+
 
     @staticmethod
     def _round_flows(flows):
@@ -483,10 +497,10 @@ class Microsim:
         tuh["pschool-primary"] = 0.0
         tuh["pschool-secondary"] = 0.0
         # TODO Assign to schools properly
-        children_idx = tuh.index[tuh["Age1"] == 1]
-        teen_idx = tuh.index[tuh['Age1'] == 2]
-        #children_idx = tuh.index[tuh["DC1117EW_C_AGE"] < 11]
-        #teen_idx = tuh.index[(tuh["DC1117EW_C_AGE"] >= 11) & (tuh["DC1117EW_C_AGE"] < 19)]
+        #children_idx = tuh.index[tuh["Age1"] == 1]
+        #teen_idx = tuh.index[tuh['Age1'] == 2]
+        children_idx = tuh.index[tuh["Age1"] < 11]
+        teen_idx = tuh.index[(tuh["Age1"] >= 11) & (tuh["Age1"] < 19)]
 
         tuh.loc[children_idx, "pschool-primary"] = tuh.loc[children_idx, "pschool"]
         tuh.loc[teen_idx, "pschool-secondary"] = tuh.loc[teen_idx, "pschool"]
@@ -1119,7 +1133,7 @@ class Microsim:
             return list(l)
         return [round(x, decimals) for x in l]
 
-    def _init_output(self):
+    def _init_output(self,repnr):
         """
         Might need to write out some data if saving output for analysis later. If so, creates a new directory for the
         results as a subdirectory of the data directory.
@@ -1127,9 +1141,12 @@ class Microsim:
         """
         if self.output:
             print("Saving initial models for analysis ... ", )
-            # Find a directory to use, within the 'outut' directory
-            self.output_dir = Microsim._find_new_directory(os.path.join(self.DATA_DIR, "output"))
-
+            # Find a directory to use, within the 'output' directory
+#            if repnr == 0:
+#                self.SCEN_DIR = Microsim._find_new_directory(os.path.join(self.DATA_DIR, "output"), self.SCEN_DIR)
+            self.output_dir = os.path.join(self.SCEN_DIR, str(repnr))
+            os.mkdir(self.output_dir)
+            
             # save initial model
             pickle_out = open(os.path.join(self.output_dir, "m0.pickle"), "wb")
             pickle.dump(self, pickle_out)
@@ -1500,13 +1517,13 @@ class Microsim:
             self.calculate_new_disease_status()
             self.change_behaviour_with_disease()
 
-    def run(self, iterations: int) -> None:
+    def run(self, iterations: int, repnr: int) -> None:
         """
-        Run the model (call the step() function) for the given number of iterations
+        Run the model (call the step() function) for the given number of iterations. Repnr is used to create new unique directory for this repeat
         :param iterations:
         """
         # Create directories for the results
-        self._init_output()
+        self._init_output(repnr)
 
         # Initialise the R interface. Do this here, rather than in init, because when in multiprocessing mode
         # at this point the Microsim object will be in its own process
@@ -1582,6 +1599,9 @@ class Microsim:
 @click.option('-r', '--repetitions', default=1, help="How many times to run the model (default 1)")
 @click.option('-l', '--lockdown-from-file/--no-lockdown-from-file', default=True,
               help="Optionally read lockdown mobility data from a file (default True)")
+
+
+
 def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, debug, repetitions, lockdown_from_file):
 
     # First see if we're reading a parameters file or using command-line arguments.
@@ -1598,6 +1618,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
             #         self.params, self.params_changed = Model._init_kwargs(params, kwargs)
             #         [setattr(self, key, value) for key, value in self.params.items()]
             # Utility parameters
+            scen_dir = sim_params["scenario"]
             iterations = sim_params["iterations"]
             data_dir = sim_params["data-dir"]
             output = sim_params["output"]
@@ -1618,6 +1639,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
 
     print(f"Running model with the following parameters:\n"
           f"\tParameters file: {parameters_file}\n"
+          f"\tScenario directory: {scen_dir}\n"
           f"\tNumber of iterations: {iterations}\n"
           f"\tData dir: {data_dir}\n"
           f"\tOutputting results?: {output}\n"
@@ -1645,7 +1667,8 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
                               names=["x", "y", "Num", "Code", "Desc"])
 
     # Use same arguments whether running 1 repetition or many
-    msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir,
+    msim_args = {"data_dir": data_dir, "scen_dir": scen_dir, 
+                 "r_script_dir": r_script_dir,
                  "output": output, "debug": debug,
                  "lockdown_from_file": lockdown_from_file,
                  **calibration_params  # Calibration parameters can be passed directly as named arguments
@@ -1654,32 +1677,39 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
     # Temporily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")
     # m = Microsim(data_dir=data_dir, testing=True, output=output)
-
+    
     # Run it!
     if repetitions == 1:
         # Create a microsim object
         m = Microsim(**msim_args)
-        m.run(iterations)
+        copyfile(parameters_file,os.path.join(m.SCEN_DIR,"parameters.yml"))
+        m.run(iterations,0)
+        
     else:  # Run it multiple times in lots of cores
         try:
             with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
                 # Copy the model instance so we don't have to re-read the data each time
                 # (Use a generator so we don't need to store all the models in memory at once).
                 m = Microsim(**msim_args)
+                copyfile(parameters_file,os.path.join(m.SCEN_DIR,"parameters.yml"))
                 models = (Microsim._make_a_copy(m) for _ in range(repetitions))
+                pickle_out = open(os.path.join("Models_m.pickle"), "wb")
+                pickle.dump(m, pickle_out)
+                pickle_out.close()
                 # models = ( Microsim(msim_args) for _ in range(repetitions))
                 # Also need a list giving the number of iterations for each model (same for each model)
                 iters = (iterations for _ in range(repetitions))
+                repnr = (r for r in range(repetitions))
                 # Run the models by passing each model and the number of iterations
-                pool.starmap(_run_multicore, zip(models, iters))
+                pool.starmap(_run_multicore, zip(models, iters,repnr))
         finally:  # Make sure they get closed (shouldn't be necessary)
             pool.close()
 
     print("End of program")
 
 
-def _run_multicore(m, iter):
-    return m.run(iter)
+def _run_multicore(m, iter,rep):
+    return m.run(iter,rep)
 
 
 if __name__ == "__main__":
