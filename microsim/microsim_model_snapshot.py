@@ -45,7 +45,6 @@ from yaml import load, dump, SafeLoader  # pyyaml library for reading the parame
 # import pandas.rpy.common as com
 
 
-
 class Microsim:
     """
     A class used to represent the microsimulation model.
@@ -134,7 +133,6 @@ class Microsim:
         # Extract a list of all MSOAs in the study area. Will need this for the new SIMs
         self.all_msoas = Microsim.extract_msoas_from_indiviuals(self.individuals)
 
-
         #
         # ********** How to assign activities for the population **********
         #
@@ -187,10 +185,9 @@ class Microsim:
         # One thing we do need to do (this would be done in the function) is replace NaNs in the time use data with 0
         # for col in ["pwork", "_pschool", "pshop", "pleisure", "ptransport", "pother"]:
         for col in ["punknown", "phome", "pworkhome", "pwork", "_pschool", "pshop", "pservices", "pleisure",
-                   "pescort", "ptransport", "pnothome", "phometot", "pmwalk", "pmcycle", "pmprivate",
-                   "pmpublic", "pmunknown"]:
+                    "pescort", "ptransport", "pnothome", "phometot", "pmwalk", "pmcycle", "pmprivate",
+                    "pmpublic", "pmunknown"]:
             self.individuals[col].fillna(0, inplace=True)
-
 
         # Read Retail flows data
         retail_name = "Retail"  # How to refer to this in data frame columns etc.
@@ -237,7 +234,7 @@ class Microsim:
         ## Some flows will be very complicated numbers. Reduce the numbers of decimal places across the board.
         ## This makes it easier to write out the files and to make sure that the proportions add up properly
         ## Use multiprocessing because swifter doesn't work properly for some reason (wont paralelise)
-        #with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
+        # with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
         #   for name in tqdm(self.activity_locations.keys(), desc="Rounding all flows"):
         #       rounded_flows = pool.map( Microsim._round_flows, list(self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"]))
         #       self.individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = rounded_flows
@@ -438,7 +435,7 @@ class Microsim:
         # While we're here, may as well also check that [Area, HID, PID] is a unique identifier of individuals
         if len(tuh) != len(set(unique_individuals)):
             # TODO FIND OUT FROM KARYN WHY THERE ARE ~20,000 NON-UNIQUE PEOPLE
-            warnings.warn(f"There are {len(tuh)-len(set(unique_individuals))} / {len(tuh)} non-unique individuals.")
+            warnings.warn(f"There are {len(tuh) - len(set(unique_individuals))} / {len(tuh)} non-unique individuals.")
 
         # Done! Now can create the households dataframe
         households_df = pd.DataFrame(house_ids_dict.values(), columns=['House_ID', 'Num_People', 'area', '_hid'])
@@ -475,8 +472,8 @@ class Microsim:
         tuh["pschool-primary"] = 0.0
         tuh["pschool-secondary"] = 0.0
         # TODO Assign to schools properly
-        #children_idx = tuh.index[tuh["Age1"] == 1]
-        #teen_idx = tuh.index[tuh['Age1'] == 2]
+        # children_idx = tuh.index[tuh["Age1"] == 1]
+        # teen_idx = tuh.index[tuh['Age1'] == 2]
         children_idx = tuh.index[tuh["Age1"] < 11]
         teen_idx = tuh.index[(tuh["Age1"] >= 11) & (tuh["Age1"] < 19)]
 
@@ -734,11 +731,11 @@ class Microsim:
         # Need to do the flows in venues in 2 stages: first just add the venue, then turn that venu into a single-element
         # list (pandas complains about 'TypeError: unhashable type: 'list'' if you try to make the single-item lists
         # directly in the apply
-        with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
-            print("Assigning work venues ... ",)
+        with multiprocessing.Pool(processes=int(os.cpu_count() / 2)) as pool:
+            print("Assigning work venues ... ", )
             venues = pool.starmap(Microsim._assign_work_flow,
-                                  zip(list(individuals["soc2010"]), (workplaces for _ in range(len(individuals))) ) )
-        #venues = list(individuals["soc2010"].swifter.progress_bar(True, desc="Assigning work venues").apply(
+                                  zip(list(individuals["soc2010"]), (workplaces for _ in range(len(individuals)))))
+        # venues = list(individuals["soc2010"].swifter.progress_bar(True, desc="Assigning work venues").apply(
         #    lambda job: workplaces.index[workplaces[ColumnNames.LOCATION_NAME] == job].values[0]))
         venues = [[x] for x in venues]
         individuals[venues_col] = venues
@@ -1000,7 +997,7 @@ class Microsim:
         assert (total_duration <= 1.0).all()  # None should be more than 1.0 (after rounding)
 
         missing_duration = 1.0 - total_duration  # Amount of activity time that needs to be added on to home
-        #missing_duration = missing_duration.apply(lambda x: round(x,5))
+        # missing_duration = missing_duration.apply(lambda x: round(x,5))
         individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] = \
             (individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] + missing_duration).apply(lambda x: round(x, 5))
 
@@ -1015,9 +1012,8 @@ class Microsim:
             total_duration = total_duration + individuals.loc[:, f"{activity}{ColumnNames.ACTIVITY_DURATION}"]
         if not (total_duration.apply(lambda x: round(x, 5)) == 1.0).all():
             print("Some activity durations don't sum to 1", flush=True)
-            print(total_duration[total_duration!=1.0], flush=True)
+            print(total_duration[total_duration != 1.0], flush=True)
             raise Exception("Some activity durations don't sum to 1")
-
 
     @classmethod
     def read_time_activity_multiplier(cls) -> pd.DataFrame:
@@ -1029,7 +1025,7 @@ class Microsim:
         print("Reading time activity multiplier data...", )
         time_activity = pd.read_csv(os.path.join(cls.DATA_DIR, "google_mobility_lockdown_daily.csv"))
         # Cap at 1.0 (it's a curve so some times peaks above 1.0)=
-        time_activity["timeout_multiplier"] = time_activity.loc[:,"timeout_multiplier"].\
+        time_activity["timeout_multiplier"] = time_activity.loc[:, "timeout_multiplier"]. \
             apply(lambda x: 1.0 if x > 1.0 else x)
 
         return time_activity
@@ -1099,303 +1095,13 @@ class Microsim:
         individuals[ColumnNames.CURRENT_RISK] = 0  # This is the risk that people get when visiting locations.
 
         # No longer update disease counts per MSOA etc. Not needed
-        #individuals[ColumnNames.MSOA_CASES] = 0  # Useful to count cases per MSOA
-        #individuals[ColumnNames.HID_CASES] = 0  # Ditto for the household
+        # individuals[ColumnNames.MSOA_CASES] = 0  # Useful to count cases per MSOA
+        # individuals[ColumnNames.HID_CASES] = 0  # Ditto for the household
 
         individuals[ColumnNames.DISEASE_PRESYMP] = -1
         individuals[ColumnNames.DISEASE_SYMP_DAYS] = -1
         individuals[ColumnNames.DISEASE_EXPOSED_DAYS] = -1
         return individuals
-
-    def update_behaviour_during_lockdown(self):
-        """
-        Unilaterally alter the proportions of time spent on different activities before and after 'lockddown'
-        Otherwise this doesn't do anything update_behaviour_during_lockdown.
-
-        Note: ignores people who are currently showing symptoms (`ColumnNames.DiseaseStatus.SYMPTOMATIC`)
-        """
-        # Are we doing any lockdown at all? in this iteration?
-        if self.lockdown_from_file:
-            # Only change the behaviour of people who aren't showing symptoms. If you are showing symptoms then you
-            # will be mostly at home anyway, so don't want your behaviour overridden by lockdown.
-            uninfected = self.individuals.index[
-                self.individuals[ColumnNames.DISEASE_STATUS] != ColumnNames.DiseaseStatuses.SYMPTOMATIC]
-            if len(uninfected) < len(self.individuals):
-                print(f"\t{len(self.individuals) - len(uninfected)} people are symptomatic so not affected by lockdown")
-
-            # Reduce all activities, replacing the lost time with time spent at home
-            non_home_activities = set(self.activity_locations.keys())
-            non_home_activities.remove("Home")
-            # Need to remember the total duration of time lost for non-home activities
-            total_duration = pd.Series(data=[0.0] * len(self.individuals.loc[uninfected]), name="TotalDuration")
-
-            if self.lockdown_from_file:  # Reduce the initial activity proportion of time by a particular amount per day
-                timeout_multiplier = self.time_activity_multiplier.loc[
-                    self.time_activity_multiplier.day == self.iteration, "timeout_multiplier"].values[0]
-                print(f"\tApplying regular (google mobility) multiplier {timeout_multiplier}")
-                for activity in non_home_activities:
-                    # Need to be careful with new_duration because we don't want to keep the index used in
-                    # self.individuals as this will be missing out people who aren't infected so will have gaps
-                    new_duration = pd.Series(list(self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION_INITIAL] * timeout_multiplier), name="NewDuration")
-                    total_duration += new_duration
-                    self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION] = list(new_duration)
-
-            else:  # Should not be able to get here
-                assert False
-
-            assert (total_duration <= 1.0).all() and (new_duration <= 1.0).all()
-            # Now set home duration to fill in the time lost from doing other activities.
-            self.individuals.loc[uninfected, 'Home' + ColumnNames.ACTIVITY_DURATION] = list(1 - total_duration)
-
-            # Check they still sum correctly (if not then they probably need rounding)
-            # (If you want to print the durations)
-            # self.individuals.loc[:, [ x+ColumnNames.ACTIVITY_DURATION for x in self.activity_locations.keys() ]+
-            #     [ x+ColumnNames.ACTIVITY_DURATION_INITIAL for x in self.activity_locations.keys()   ]   ]
-            Microsim.check_durations_sum_to_1(self.individuals, self.activity_locations.keys())
-
-    def update_venue_danger_and_risks(self, decimals=8):
-        """
-        Update the danger score for each location, based on where the individuals who have the infection visit.
-        Then look through the individuals again, assigning some of that danger back to them as 'current risk'.
-
-        :param risk_multiplier: Risk is calcuated as duration * flow * risk_multiplier.
-        :param decimals: Number of decimals to round the indivdiual risks and dangers to (defult 10). If 'None'
-                        then do no rounding
-        """
-        print("\tUpdating danger associated with visiting each venue")
-
-        # Make a new list to keep the new risk for each individual (better than repeatedly accessing the dataframe)
-        # Make this 0 initialy as the risk is not cumulative; it gets reset each day
-        current_risk = [0] * len(self.individuals)
-
-        # for name in tqdm(self.activity_locations, desc=f"Updating dangers and risks for activity locations"):
-        for activty_name in self.activity_locations:
-
-            #
-            # ***** 1 - update dangers of each venue (infected people visitting places)
-            #
-
-            print(f"\t\t{activty_name} activity")
-            # Get the details of the location activity
-            activity_location = self.activity_locations[activty_name]  # Pointer to the ActivityLocation object
-            # Create a list to store the dangers associated with each location for this activity.
-            # Assume 0 initially, it should be reset each day
-            loc_dangers = [0] * len(activity_location.get_dangers())
-            # loc_dangers = activity_location.get_dangers()  # List of the current dangers associated with each place
-
-            # Now look up those venues in the table of individuals
-            venues_col = f"{activty_name}{ColumnNames.ACTIVITY_VENUES}"  # The names of the venues and
-            flows_col = f"{activty_name}{ColumnNames.ACTIVITY_FLOWS}"  # flows in the individuals DataFrame
-            durations_col = f"{activty_name}{ColumnNames.ACTIVITY_DURATION}"  # flows in the individuals DataFrame
-
-            # 2D lists, for each individual: the venues they visit, the flows to the venue (i.e. how much they visit it)
-            # and the durations (how long they spend doing it)
-            statuses = self.individuals[ColumnNames.DISEASE_STATUS]
-            venues = self.individuals.loc[:, venues_col]
-            flows = self.individuals.loc[:, flows_col]
-            durations = self.individuals.loc[:, durations_col]
-            assert len(venues) == len(flows) and len(venues) == len(statuses)
-            for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)):  # For each individual
-                # Only people with the disease who are infectious will add danger to a place
-                if s == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC \
-                        or s == ColumnNames.DiseaseStatuses.SYMPTOMATIC \
-                        or s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
-                    # The hazard multiplier depends on the type of disease status that this person has
-                    hazard_multiplier = None
-                    if s == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC:
-                        hazard_multiplier = self.hazard_multiplier_presymptomatic
-                    elif s == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
-                        hazard_multiplier = self.hazard_multiplier_symptomatic
-                    elif s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
-                        hazard_multiplier = self.hazard_multiplier_asymptomatic
-                    assert hazard_multiplier is not None
-                    # v and f are lists of flows and venues for the individual. Go through each one
-                    for venue_idx, flow in zip(v, f):
-                        # print(i, venue_idx, flow, duration)
-                        # Increase the danger by the flow multiplied by some disease risk
-                        danger_increase = (flow * duration * hazard_multiplier)
-                        warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
-                        if activty_name == "Work":
-                            work_danger = float(danger_increase / 20)
-                            loc_dangers[venue_idx] += work_danger
-                        else:
-                            loc_dangers[venue_idx] += danger_increase
-
-            #
-            # ***** 2 - risks for individuals who visit dangerous venues
-            #
-
-            # It's useful to report the specific risks associated with *this* activity for each individual
-            activity_specific_risk = [0] * len(self.individuals)
-
-            for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)):  # For each individual
-                # v and f are lists of flows and venues for the individual. Go through each one
-                for venue_idx, flow in zip(v, f):
-                    #  Danger associated with the location (we just created these updated dangers in the previous loop)
-                    danger = loc_dangers[venue_idx]
-                    risk_increase = flow * danger * duration * self.risk_multiplier
-                    current_risk[i] += risk_increase
-                    activity_specific_risk[i] += risk_increase
-
-            # Remember the (rounded) risk for this activity
-            if decimals is not None:
-                activity_specific_risk = [round(x, decimals) for x in activity_specific_risk]
-            self.individuals[f"{activty_name}{ColumnNames.ACTIVITY_RISK}"] = activity_specific_risk
-
-            # Now we have the dangers associated with each location, apply these back to the main dataframe
-            if decimals is not None:  # Round the dangers?
-                loc_dangers = [round(x, decimals) for x in loc_dangers]
-            activity_location.update_dangers(loc_dangers)
-
-        # Round the current risk
-        if decimals is not None:
-            current_risk = [round(x, decimals) for x in current_risk]
-
-        # Sanity check
-        assert len(current_risk) == len(self.individuals)
-        assert min(current_risk) >= 0  # Should not be risk less than 0
-        # Santity check - do the risks of each activity add up to the total?
-        # (I can't get this to work, there are some really minor differences, but on the whole it looks fine)
-        # (I can't get this to work, there are some really minor differences, but on the whole it looks fine)
-        # if Microsim.debug:  # replace with .debug
-        #    total_risk = [0.0] * len(self.individuals)
-        #    for activty_name in self.activity_locations:
-        #        total_risk = [i + j for (i, j) in zip(total_risk, list(self.individuals[f"{activty_name}{ColumnNames.ACTIVITY_RISK}"]))]
-        #    # Round both
-        #    total_risk = [round(x, 5) for x in total_risk]
-        #    current_risk_temp = [round(x, 5) for x in current_risk]
-        #    assert current_risk_temp == total_risk
-
-        self.individuals[ColumnNames.CURRENT_RISK] = current_risk
-
-        return
-
-    # No longer update disease counts per MSOA etc. Not needed
-    #def update_disease_counts(self):
-    #    """Update some disease counters -- counts of diseases in MSOAs & households -- which are useful
-    #    in estimating the probability of contracting the disease"""
-    #    # Update the diseases per MSOA and household
-    #    # TODO replace Nan's with 0 (not a problem with MSOAs because they're a cateogry so the value_counts()
-    #    # returns all, including those with 0 counts, but with HID those with 0 count don't get returned
-    #    # Get rows with cases
-    #    cases = self.individuals.loc[(self.individuals[ColumnNames.DISEASE_STATUS] == 1) |
-    #                                 (self.individuals[ColumnNames.DISEASE_STATUS] == 2), :]
-    #    # Count cases per area (convert to a dataframe)
-    #    case_counts = cases["area"].value_counts()
-    #    case_counts = pd.DataFrame(data={"area": case_counts.index, "Count": case_counts}).reset_index(drop=True)
-    #    # Link this back to the orignal data
-    #    self.individuals[ColumnNames.MSOA_CASES] = self.individuals.merge(case_counts, on="area", how="left")["Count"]
-    #    self.individuals[ColumnNames.MSOA_CASES].fillna(0, inplace=True)
-    #
-    #     # Update HID cases
-    #    case_counts = cases["House_ID"].value_counts()
-    #    case_counts = pd.DataFrame(data={"House_ID": case_counts.index, "Count": case_counts}).reset_index(drop=True)
-    #    self.individuals[ColumnNames.HID_CASES] = self.individuals.merge(case_counts, on="House_ID", how="left")[
-    #        "Count"]
-    #    self.individuals[ColumnNames.HID_CASES].fillna(0, inplace=True)
-
-    def calculate_new_disease_status(self) -> None:
-        """
-        Call an R function to calculate the new disease status for all individuals.
-        Update the indivdiuals dataframe in place
-        :return: . Update the dataframe inplace
-        """
-        # Remember the old status so that we can calculate whether it has changed
-        old_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
-
-        # Calculate the new status (will return a new dataframe)
-        self.individuals = self.r_int.calculate_disease_status(self.individuals, self.iteration)
-
-        # Remember whose status has changed
-        new_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
-        self.individuals[ColumnNames.DISEASE_STATUS_CHANGED] = list(new_status != old_status)
-
-        # For info, find out how the statuses have changed.
-        # Make a dict with all possible changes, then loop through and count them.
-        change = dict()
-        for old in ColumnNames.DiseaseStatuses.ALL:
-            for new in ColumnNames.DiseaseStatuses.ALL:
-                change[(old, new)] = 0
-        for (old, new) in zip(old_status, new_status):
-            if new != old:
-                change[(old,  new)] += 1
-
-        assert sum(change.values()) == len(new_status[new_status != old_status])
-
-        print(f"\t{len(new_status[new_status != old_status])} individuals have a different status. Status changes:")
-        for old in ColumnNames.DiseaseStatuses.ALL:
-            print(f"\t\t{old} -> ", end="")
-            for new in ColumnNames.DiseaseStatuses.ALL:
-                print(f" {new}:{change[(old,new)]} \t", end="")
-            print()
-
-    def change_behaviour_with_disease(self) -> None:
-        """
-        When people have the disease the proportions that they spend doing activities changes. This function applies
-        those changes inline to the individuals dataframe
-        :return: None. Update the dataframe inplace
-        """
-        #print("Changing behaviour of infected individuals ... ",)
-        # Find out which people have changed status
-        change_idx = self.individuals.index[self.individuals[ColumnNames.DISEASE_STATUS_CHANGED] == True]
-
-        # Now set their new behaviour
-        self.individuals.loc[change_idx] = \
-            self.individuals.loc[change_idx].apply(
-                func=Microsim._set_new_behaviour, args=( list(self.activity_locations.keys()), ), axis=1)
-        # self.individuals.loc[change_idx].swifter.progress_bar(True, desc="Changing behaviour of infected"). \
-
-        print(f"\tCurrent statuses:"
-              f"\n\t\tSusceptible ({ColumnNames.DiseaseStatuses.SUSCEPTIBLE}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.SUSCEPTIBLE])}"
-              f"\n\t\tExposed ({ColumnNames.DiseaseStatuses.EXPOSED}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.EXPOSED])}"
-              f"\n\t\tPresymptomatic ({ColumnNames.DiseaseStatuses.PRESYMPTOMATIC}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC])}"
-              f"\n\t\tSymptomatic ({ColumnNames.DiseaseStatuses.SYMPTOMATIC}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.SYMPTOMATIC])}"
-              f"\n\t\tAsymptomatic ({ColumnNames.DiseaseStatuses.ASYMPTOMATIC}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.ASYMPTOMATIC])}"
-              f"\n\t\tRecovered ({ColumnNames.DiseaseStatuses.RECOVERED}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.RECOVERED])}"
-              f"\n\t\tRemoved/dead ({ColumnNames.DiseaseStatuses.DEAD}): {len(self.individuals.loc[self.individuals[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.DEAD])}")
-
-        #self.individuals.loc[change_idx].apply(func=self._set_new_behaviour, axis=1)
-        #print("... finished")
-
-    @staticmethod
-    def _set_new_behaviour(row: pd.Series, activities: List[str]):
-        """
-        Define how someone with the disease should behave. This is called for every individual whose disease status
-        has changed between the current iteration and the previous one
-        :param row: A row of the individuals dataframe
-        :return: An updated row with new ACTIVITY_DURATION columns to reflect the changes in proportion of time that
-        the individual spends doing the different activities.
-        """
-        # Maybe need to put non-symptomatic people back to normal behaviour (or do nothing if they e.g. transfer from
-        # Susceptible to Pre-symptomatic, which means they continue doing normal behaviour)
-        # Minor bug: this will erode any changes caused by lockdown behaviour for the rest of this iteration, but this
-        # only affects people whose status has just changed so only a minor problem
-        if row[ColumnNames.DISEASE_STATUS] in [ColumnNames.DiseaseStatuses.SUSCEPTIBLE,
-                                               ColumnNames.DiseaseStatuses.EXPOSED,
-                                               ColumnNames.DiseaseStatuses.PRESYMPTOMATIC,
-                                               ColumnNames.DiseaseStatuses.ASYMPTOMATIC,
-                                               ColumnNames.DiseaseStatuses.RECOVERED,
-                                               ColumnNames.DiseaseStatuses.DEAD]:
-            for activity in activities:
-                row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] = \
-                    row[f"{activity}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
-
-        # Put newly symptomatic people at home
-        elif row[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
-            # Reduce all activities, replacing the lost time with time spent at home
-            non_home_activities = set(activities)
-            non_home_activities.remove("Home")
-            total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
-            for activity in non_home_activities:
-                #new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.10
-                new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.50
-                total_duration += new_duration
-                row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] = new_duration
-            # Now set home duration to fill in the time lost from doing other activities.
-            row[f"Home{ColumnNames.ACTIVITY_DURATION}"] = (1 - total_duration)
-        else:
-            raise Exception(f"Unrecognised disease state for individual {row['ID']}: {row[ColumnNames.DISEASE_STATUS] }")
-        return row
 
     @staticmethod
     def _make_a_copy(m):
@@ -1408,96 +1114,21 @@ class Microsim:
         m.random.seed()
         return copy.deepcopy(m)
 
-    def step(self) -> None:
-        """
-        Step (iterate) the model for 1 iteration
+    def store_people_snapshots(self, snapshot_output_path):
+        num_people = self.individuals['ID'].count()
+        ages = self.individuals['age']
+        age_array = ages.to_numpy(dtype=np.uint16)
+        filepath = os.path.join(snapshot_output_path, 'people_ages.npz')
+        print(f"Saving ages for {num_people} people to {filepath}")
+        np.savez(filepath, age_array)
 
-        :return:
-        """
-        self.iteration += 1
 
-        print(f"\nIteration: {self.iteration}\n")
+    def store_place_snapshots(self, snapshot_output_path):
+        pass
 
-        # Unilaterally adjust the proportions of time that people spend doing different activities after lockdown
-        self.update_behaviour_during_lockdown()
-
-        # Update the danger associated with each venue (i.e. the as people with the disease visit them they
-        # become more dangerous) then update the risk to each individual of going to those venues.
-        self.update_venue_danger_and_risks()
-
-        # Update disease counters. E.g. count diseases in MSOAs & households
-        # No longer update disease counts per MSOA etc. Not needed
-        #self.update_disease_counts()
-
-        # Calculate new disease status and update the people's behaviour
-        if not self.disable_disease_status:
-            self.calculate_new_disease_status()
-            self.change_behaviour_with_disease()
-
-    def run(self, iterations: int) -> None:
-        """
-        Run the model (call the step() function) for the given number of iterations
-        :param iterations:
-        """
-        # Create directories for the results
-        self._init_output()
-
-        # Initialise the R interface. Do this here, rather than in init, because when in multiprocessing mode
-        # at this point the Microsim object will be in its own process
-        if not self.disable_disease_status:
-            self.r_int = RInterface(self.r_script_dir)
-
-        # Step the model
-        for i in range(iterations):
-            iter_start_time = time.time()  # time how long each iteration takes (for info)
-            self.step()
-
-            # Add to items to pickle for visualisations
-            if self.output:
-                print("\tGenerating output ... ",)
-                # (Force column names to have leading zeros)
-                self.individuals_to_pickle[f"{ColumnNames.DISEASE_STATUS}{(i + 1):03d}"] = self.individuals[
-                    ColumnNames.DISEASE_STATUS]
-                fname = os.path.join(self.output_dir, "Individuals")
-                with open(fname + ".pickle", "wb") as pickle_out:
-                    pickle.dump(self.individuals_to_pickle, pickle_out)
-                # Also make a (compressed) csv file for others
-                self.individuals_to_pickle.to_csv(fname + ".csv.gz", compression='gzip')
-
-                for name in self.activity_locations:
-                    # Get the details of the location activity
-                    activity = self.activity_locations[name]  # Pointer to the ActivityLocation object
-                    loc_name = activity.get_name()  # retail, school etc
-                    # loc_ids = activity.get_ids()  # List of the IDs of the locations
-                    loc_dangers = activity.get_dangers()  # List of the current dangers
-                    # Add a new danger column to the previous dataframe
-                    self.activities_to_pickle[loc_name][f"{ColumnNames.LOCATION_DANGER}{(i + 1):03d}"] = loc_dangers
-                    # Save this activity location
-                    fname = os.path.join(self.output_dir, loc_name)
-                    with open(fname + ".pickle", "wb") as pickle_out:
-                        pickle.dump(self.activities_to_pickle[loc_name], pickle_out)
-                    # Also make a (compressed) csv file for others
-                    self.activities_to_pickle[loc_name].to_csv(fname + ".csv.gz", compression='gzip')
-                    # self.activities_to_pickle[loc_name].to_csv(fname+".csv")  # They not so big so don't compress
-                print(" ... finished ", )
-
-            print(f"\tIteration {i} took {round(float(time.time() - iter_start_time), 2)}s")
-
-        print(f"Model finished running (iterations: {i+1})")
-
-        # TEMP WRITE OUTPUT AT END
-        #fname = os.path.join(self.output_dir, "Individuals")
-        #with open(fname + ".pickle", "wb") as pickle_out:
-        #    pickle.dump(self.individuals_to_pickle, pickle_out)
-        #self.individuals_to_pickle.to_csv(fname + ".csv.gz", compression='gzip')
-        #for name in self.activity_locations:
-        #    loc_name = self.activity_locations[name].get_name()
-        #    fname = os.path.join(self.output_dir, loc_name)
-        #    with open(fname + ".pickle", "wb") as pickle_out:
-        #        pickle.dump(self.activities_to_pickle[loc_name], pickle_out)
-        #    # Also make a (compressed) csv file for others
-        #    self.activities_to_pickle[loc_name].to_csv(fname + ".csv.gz", compression='gzip')
-
+    def store_snapshots(self, snapshot_output_path):
+        self.store_people_snapshots(snapshot_output_path)
+        self.store_place_snapshots(snapshot_output_path)
 
 # ********
 # PROGRAM ENTRY POINT
@@ -1516,8 +1147,8 @@ class Microsim:
 @click.option('-r', '--repetitions', default=1, help="How many times to run the model (default 1)")
 @click.option('-l', '--lockdown-from-file/--no-lockdown-from-file', default=True,
               help="Optionally read lockdown mobility data from a file (default True)")
-def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, debug, repetitions, lockdown_from_file):
-
+def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, debug, repetitions,
+               lockdown_from_file):
     # First see if we're reading a parameters file or using command-line arguments.
     if no_parameters_file:
         print("Not reading a parameters file")
@@ -1539,10 +1170,10 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
             repetitions = sim_params["repetitions"]
             lockdown_from_file = sim_params["lockdown-from-file"]
             ## Calibration parameters
-            #hazard_multiplier_presymptomatic = calibration_params["hazard_multiplier_presymptomatic"]
-            #hazard_multiplier_asymptomatic = calibration_params["hazard_multiplier_asymptomatic"]
-            #hazard_multiplier_symptomatic = calibration_params["hazard_multiplier_symptomatic"]
-            #risk_multiplier = calibration_params["risk_multiplier"]
+            # hazard_multiplier_presymptomatic = calibration_params["hazard_multiplier_presymptomatic"]
+            # hazard_multiplier_asymptomatic = calibration_params["hazard_multiplier_asymptomatic"]
+            # hazard_multiplier_symptomatic = calibration_params["hazard_multiplier_symptomatic"]
+            # risk_multiplier = calibration_params["risk_multiplier"]
 
     # Check the parameters are sensible
     if iterations < 0:
@@ -1559,10 +1190,10 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
           f"\tNumber of repetitions: {repetitions}\n"
           f"\tLockdown from file? : {lockdown_from_file}\n"
           f"\tCalibration parameters: {str(calibration_params)}\n")
-          #f"\thazard_multiplier_presymptomatic: {hazard_multiplier_presymptomatic}\n"
-          #f"\thazard_multiplier_asymptomatic: {hazard_multiplier_asymptomatic}\n"
-          #f"\thazard_multiplier_symptomatic: {hazard_multiplier_symptomatic}\n"
-          #f"\trisk_multiplier: {risk_multiplier}\n")
+    # f"\thazard_multiplier_presymptomatic: {hazard_multiplier_presymptomatic}\n"
+    # f"\thazard_multiplier_asymptomatic: {hazard_multiplier_asymptomatic}\n"
+    # f"\thazard_multiplier_symptomatic: {hazard_multiplier_symptomatic}\n"
+    # f"\trisk_multiplier: {risk_multiplier}\n")
 
     if iterations == 0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
@@ -1589,31 +1220,9 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
     # data_dir = os.path.join(base_dir, "dummy_data")
     # m = Microsim(data_dir=data_dir, testing=True, output=output)
 
-    # Run it!
-    if repetitions == 1:
-        # Create a microsim object
-        m = Microsim(**msim_args)
-        m.run(iterations)
-    else:  # Run it multiple times in lots of cores
-        try:
-            with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
-                # Copy the model instance so we don't have to re-read the data each time
-                # (Use a generator so we don't need to store all the models in memory at once).
-                m = Microsim(**msim_args)
-                models = (Microsim._make_a_copy(m) for _ in range(repetitions))
-                # models = ( Microsim(msim_args) for _ in range(repetitions))
-                # Also need a list giving the number of iterations for each model (same for each model)
-                iters = (iterations for _ in range(repetitions))
-                # Run the models by passing each model and the number of iterations
-                pool.starmap(_run_multicore, zip(models, iters))
-        finally:  # Make sure they get closed (shouldn't be necessary)
-            pool.close()
-
-    print("End of program")
-
-
-def _run_multicore(m, iter):
-    return m.run(iter)
+    # store individuals and place data as snapshot
+    m = Microsim(**msim_args)
+    m.store_snapshots(snapshot_output_path=os.path.join(base_dir, "snapshots"))
 
 
 if __name__ == "__main__":
