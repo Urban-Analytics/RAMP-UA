@@ -21,3 +21,19 @@ microsim_calibration:
   risk_multiplier: 1.0
 
 disease: # This is where the parameter for the disease model (the R part) can go (same format the 'microsim_calibration' above)
+  current_risk_beta: 0.008
+  risk_cap: 5
+  seed_days: 5
+  exposed_dist: "weibull"
+  exposed_mean: 2.56
+  exposed_sd: 0.72
+  presymp_dist: "weibull"
+  presymp_mean: 2.3
+  presymp_sd: 0.35
+  infection_dist: "normal"
+  infection_mean: 16
+  infection_sd: 3
+  asymp_rate: 0.35
+  output_switch: TRUE
+  rank_assign: FALSE
+  
