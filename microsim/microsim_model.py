@@ -17,6 +17,7 @@ from r_interface import RInterface
 from microsim_analysis import MicrosimAnalysis
 from column_names import ColumnNames
 from utilities import Optimise
+from snapshotter import Snapshotter
 import multiprocessing
 import copy
 
@@ -1515,7 +1516,10 @@ class Microsim:
 @click.option('-r', '--repetitions', default=1, help="How many times to run the model (default 1)")
 @click.option('-l', '--lockdown-from-file/--no-lockdown-from-file', default=True,
               help="Optionally read lockdown mobility data from a file (default True)")
-def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, debug, repetitions, lockdown_from_file):
+@click.option('-s', '--store-snapshot/--dont-store-snapshot', default=True,
+              help="Store internal model state to .npz files")
+def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, debug, repetitions,
+               lockdown_from_file, store_snapshot):
 
     # First see if we're reading a parameters file or using command-line arguments.
     if no_parameters_file:
@@ -1592,6 +1596,13 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
     if repetitions == 1:
         # Create a microsim object
         m = Microsim(**msim_args)
+
+        if store_snapshot:
+            # Store model state so it can be used by GPU model
+            snapshotter = Snapshotter(individuals=m.individuals, activity_locations=m.activity_locations,
+                                      snapshot_dir=os.path.join(base_dir, "snapshots"), use_cache=True)
+            snapshotter.store_snapshots()
+
         m.run(iterations)
     else:  # Run it multiple times in lots of cores
         try:

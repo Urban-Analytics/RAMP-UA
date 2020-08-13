@@ -28,4 +28,6 @@ __pycache__
 .Rproj.user/
 *.Rproj
 
+# snapshot files
 *.npz
+*.pkl
