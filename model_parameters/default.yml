@@ -33,4 +33,4 @@ disease: # This is where the parameter for the disease model (the R part) can go
   infection_dist: "normal"
   infection_mean: 16
   infection_sd: 3
-  asymp_rate: 0.7
+  asymp_rate: 0.35
