@@ -245,6 +245,8 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
                     # in case some entries don't exist
                     # start with empty dataframe
                     tmp_df =  pd.DataFrame(np.zeros(len(msoas)), columns = ['tmp'], index=msoas)   
+                    # drop multiindex to prevent warning msg
+                    msoa_count_temp.columns = msoa_count_temp.columns.droplevel(0)
                     # merge with obtained counts - NaN will appear
                     tmp_df = pd.merge(tmp_df, msoa_count_temp, how='left', left_index=True,right_index=True)
                     # replace NaN by 0
@@ -262,7 +264,8 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
                     # in case some entries don't exist
                     # start with empty dataframe
                     tmp_df =  pd.DataFrame(np.zeros(age_cat.shape[0]), columns = ['tmp'], index=list(range(1,age_cat.shape[0]+1)))   
-                           
+                    # drop multilevel index to prevent warning msg
+                    age_count_temp.columns = age_count_temp.columns.droplevel(0)
                     # merge with obtained counts - NaN will appear
                     tmp_df = pd.merge(tmp_df, age_count_temp, how='left', left_index=True,right_index=True)
                     # replace NaN by 0
