@@ -22,8 +22,8 @@ load_rpackages <- function() {
 load_init_data <- function() {
   data(gam_cases)
   data(msoas)
-  w <- NULL
-  model_cases <- NULL
+  w <<- NULL
+  model_cases <<- NULL
 }
 
 run_status <- function(pop,
