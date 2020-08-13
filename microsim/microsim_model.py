@@ -73,8 +73,8 @@ class Microsim:
                  testing: bool = False,
                  output: bool = True,
                  debug=False,
-                 disable_disease_status=False
-
+                 disable_disease_status=False,
+                 disease_params=dict()
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
@@ -90,6 +90,8 @@ class Microsim:
         :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
         :param disable_disease_status: Optionally turn off the R interface. This will mean we cannot calculate new
             disease status. Only good for testing.
+        :param disease_params: Optional parameters that are passed to the R code that estimates disease status
+            (a dictionary, assumed to be empty)
         """
 
         # Administrative variables that need to be defined
@@ -106,6 +108,7 @@ class Microsim:
         self.r_script_dir = r_script_dir
         Microsim.debug = debug
         self.disable_disease_status = disable_disease_status
+        self.disease_params = disease_params
         Microsim.testing = testing
         if self.testing:
             warnings.warn("Running in testing mode. Some exceptions will be disabled.")
@@ -1303,7 +1306,7 @@ class Microsim:
         old_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
 
         # Calculate the new status (will return a new dataframe)
-        self.individuals = self.r_int.calculate_disease_status(self.individuals, self.iteration)
+        self.individuals = self.r_int.calculate_disease_status(self.individuals, self.iteration, self.disease_params)
 
         # Remember whose status has changed
         new_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
@@ -1583,8 +1586,13 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
                  "lockdown_from_file": lockdown_from_file,
                  }
 
-    if not no_parameters_file:
-        msim_args.update(**calibration_params)
+    if not no_parameters_file:  # When using a parameters file, include the calibration parameters
+        msim_args.update(**calibration_params)  # python calibration parameters are unpacked now
+        # Also read the R calibration parameters (this is a separate section in the .yml file)
+        if disease_params is not None:
+            # (If the 'disease_params' section is included but has no calibration variables then we want to ignore it -
+            # it will be turned into an empty dictionary by the Microsim constructor)
+            msim_args["disease_params"] = disease_params  # R parameters kept as a dictionary and unpacked later
 
     # Temporily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")

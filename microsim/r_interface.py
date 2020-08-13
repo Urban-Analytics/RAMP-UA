@@ -37,7 +37,7 @@ class RInterface():
         # Remember the session
         self.R = R
 
-    def calculate_disease_status(self, individuals: pd.DataFrame, iteration: int):
+    def calculate_disease_status(self, individuals: pd.DataFrame, iteration: int, disease_params: dict ):
         """
         Call the R 'run_status' function to calculate the new disease status. It will return a new dataframe with
         a few columns, including the new status.
@@ -55,10 +55,9 @@ class RInterface():
         individuals_reduced["house_id"] = individuals_reduced.House_ID
         del individuals_reduced["House_ID"]
 
-        #print("TEMPORERILY WRITINT OUT DATAFRAME BEFORE SENDING TO R")
-        #individuals_reduced.to_csv("~/Desktop/individuals_results.temp.csv")
-        r_df = self.R.run_status(individuals_reduced, iteration)  # This gets converted to a pandas dataframe implicitly
-        #pd_df = ro.conversion.ri2py(r_df)  # Is explicit conversion necessary? 'pandas2ri.activate()' in import lines might make it implicit
+        # Call the R function. The returned object will be converted to a pandas dataframe implicitly
+        r_df = self.R.run_status(individuals_reduced, iteration, **disease_params)
+
         assert len(r_df) == len(individuals)
         assert False not in list(r_df.ID.values == individuals.ID.values)  # Check that person IDs are the same
 
