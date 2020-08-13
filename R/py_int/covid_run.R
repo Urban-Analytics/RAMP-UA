@@ -26,6 +26,11 @@ load_init_data <- function() {
   model_cases <<- NULL
 }
 
+initialize_r <- function() {
+  load_init_data()
+  load_rpackages()
+}
+
 run_status <- function(pop,
                        timestep = 1,
                        current_risk_beta = 0.008,

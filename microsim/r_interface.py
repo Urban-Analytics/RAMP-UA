@@ -56,8 +56,7 @@ class RInterface():
         del individuals_reduced["House_ID"]
 
         # Call the R function. The returned object will be converted to a pandas dataframe implicitly
-        self.R.load_rpackages()
-        self.R.load_init_data()
+        self.R.initialize_r()
         r_df = self.R.run_status(individuals_reduced, iteration, **disease_params)
 
         assert len(r_df) == len(individuals)
