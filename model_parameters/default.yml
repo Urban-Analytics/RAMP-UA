@@ -3,6 +3,7 @@ scenario_name: default # A name describing the scenario. Output data will be sto
 # Utility parameters for the microsimulation (python) part.
 # These can also be passed as command line arguments
 microsim:
+  scenario: "TestScenario" # name for scenario directory
   iterations: 10 # Number of model iterations. 0 means just run the initialisation.
   data-dir: devon_data # Root directory to load data from
   output: true # Whether to generate output or not
