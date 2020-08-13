@@ -427,8 +427,6 @@ def test_random():
     # Create a large number of microsims and check that all random numbers are unique
     pool = multiprocessing.Pool()
     num_reps = 250
-    # Note: Windows seems to only be able to generate 278 random numbers, so num_reps should be lower
-    # than that otherwise the windows tests fail
     m = [Microsim(**microsim_args, read_data=False) for _ in range(num_reps)]
     r = pool.map(_get_rand, m)
     assert len(r) == len(set(r))
