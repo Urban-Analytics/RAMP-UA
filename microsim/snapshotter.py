@@ -12,12 +12,15 @@ class Snapshotter:
     def __init__(self, individuals, activity_locations, snapshot_dir, use_cache=True):
         self.snapshot_dir = snapshot_dir
 
-        if use_cache:
-            self.individuals = self.cache_or_load(individuals, "individuals_cache.pkl")
-            self.activity_locations = self.cache_or_load(activity_locations, "activity_locations_cache.pkl")
-        else:
-            self.individuals = individuals
-            self.activity_locations = activity_locations
+        self.individuals = self.cache_or_load(individuals, "individuals_cache.pkl") if use_cache else individuals
+
+        self.locations = dict()
+        for activity_name, activity_location in activity_locations.items():
+            if use_cache:
+                cache_filename = "activity_locations_" + activity_name + "_cache.pkl"
+                self.locations[activity_name] = self.cache_or_load(activity_location._locations, cache_filename)
+            else:
+                self.locations[activity_name] = activity_location._locations
 
     def store_snapshots(self):
         self.store_people_snapshots()
@@ -29,7 +32,7 @@ class Snapshotter:
         age_array = ages.to_numpy(dtype=np.uint16)
         filepath = os.path.join(self.snapshot_dir, 'people_ages.npz')
         print(f"Saving ages for {num_people} people to {filepath}")
-        np.savez(filepath, age_array)
+        np.savez(filepath, age_array=age_array)
 
     def store_place_snapshots(self):
         pass
