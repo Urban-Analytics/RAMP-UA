@@ -13,8 +13,6 @@ import sys
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
 from activity_location import ActivityLocation
 from r_interface import RInterface
-# from microsim.microsim_analysis import MicrosimAnalysis
-from microsim_analysis import MicrosimAnalysis
 from column_names import ColumnNames
 from utilities import Optimise
 import multiprocessing
