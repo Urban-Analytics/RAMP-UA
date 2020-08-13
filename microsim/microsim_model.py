@@ -1516,7 +1516,7 @@ class Microsim:
 @click.option('-r', '--repetitions', default=1, help="How many times to run the model (default 1)")
 @click.option('-l', '--lockdown-from-file/--no-lockdown-from-file', default=True,
               help="Optionally read lockdown mobility data from a file (default True)")
-@click.option('-s', '--store-snapshot/--dont-store-snapshot', default=True,
+@click.option('-s', '--store-snapshot/--dont-store-snapshot', default=False,
               help="Store internal model state to .npz files")
 def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, debug, repetitions,
                lockdown_from_file, store_snapshot):
@@ -1600,7 +1600,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
         if store_snapshot:
             # Store model state so it can be used by GPU model
             snapshotter = Snapshotter(individuals=m.individuals, activity_locations=m.activity_locations,
-                                      snapshot_dir=os.path.join(base_dir, "snapshots"), use_cache=True)
+                                      snapshot_dir=os.path.join(base_dir, "snapshots"), cache_inputs=True)
             snapshotter.store_snapshots()
 
         m.run(iterations)
