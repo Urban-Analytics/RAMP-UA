@@ -101,7 +101,6 @@ class Microsim:
         self.hazard_multiplier_symptomatic = hazard_multiplier_symptomatic
         self.risk_multiplier = risk_multiplier
         self.lockdown_from_file = lockdown_from_file
-        #self.random = random.Random(time.time() if random_seed is None else random_seed)
         self.random = random.Random(random_seed)
         self.output = output
         self.r_script_dir = r_script_dir
