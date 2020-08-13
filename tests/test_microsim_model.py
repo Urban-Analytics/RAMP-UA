@@ -426,7 +426,7 @@ def test_random():
     # Check that this still happens even if they are executed in pools.
     # Create a large number of microsims and check that all random numbers are unique
     pool = multiprocessing.Pool()
-    num_reps = 250
+    num_reps = 1000
     m = [Microsim(**microsim_args, read_data=False) for _ in range(num_reps)]
     r = pool.map(_get_rand, m)
     assert len(r) == len(set(r))
