@@ -102,6 +102,7 @@ class Microsim:
         self.risk_multiplier = risk_multiplier
         self.lockdown_from_file = lockdown_from_file
         self.random = random.Random(random_seed)
+
         self.output = output
         self.r_script_dir = r_script_dir
         Microsim.debug = debug
