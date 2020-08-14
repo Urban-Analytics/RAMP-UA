@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import os
 import pickle
+from tqdm import tqdm
 
 
 class Snapshotter:
@@ -81,9 +82,9 @@ class Snapshotter:
     def get_people_place_data(self):
         max_places_per_person = 16
         people_place_ids = np.full((self.num_people, max_places_per_person), np.nan, dtype=np.uint32)
-        people_flows = np.full((self.num_people, max_places_per_person), -1, dtype=np.float32)
+        people_flows = np.full((self.num_people, max_places_per_person), np.nan, dtype=np.float32)
 
-        for people_id in range(self.num_people):
+        for people_id in tqdm(range(self.num_people), desc="Calculating place flows for all people"):
             person_global_place_ids = list()
             person_place_flows = list()
 
@@ -110,6 +111,7 @@ class Snapshotter:
                     person_global_place_ids.append(self.get_global_place_id(activity_name, local_place_id))
 
             person_place_data = np.array(list(zip(person_global_place_ids, person_place_flows)))
+
             # sort by flow value descending so we can take the n places with highest flows
             person_place_data = person_place_data[person_place_data[:, 1].argsort()[::-1]]
             person_place_data = person_place_data[:max_places_per_person]
