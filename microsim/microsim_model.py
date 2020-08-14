@@ -475,21 +475,21 @@ class Microsim:
         tuh["pschool"] = tuh["pschool"].fillna(0)
         tuh["pschool-primary"] = 0.0
         tuh["pschool-secondary"] = 0.0
-        # TODO Assign to schools properly
-        #children_idx = tuh.index[tuh["Age1"] == 1]
-        #teen_idx = tuh.index[tuh['Age1'] == 2]
-        children_idx = tuh.index[tuh["Age1"] < 11]
-        teen_idx = tuh.index[(tuh["Age1"] >= 11) & (tuh["Age1"] < 19)]
+        children_idx = tuh.index[tuh["age"] < 11]
+        teen_idx = tuh.index[(tuh["age"] >= 11) & (tuh["age"] < 19)]
+
+        assert len(children_idx) > 0
+        assert len(teen_idx) > 0
 
         tuh.loc[children_idx, "pschool-primary"] = tuh.loc[children_idx, "pschool"]
         tuh.loc[teen_idx, "pschool-secondary"] = tuh.loc[teen_idx, "pschool"]
 
         # Check that people have been allocated correctly
         adults_in_school = tuh.loc[~(tuh["pschool-primary"] + tuh["pschool-secondary"] == tuh["pschool"]),
-                                   ["Age1", "pschool", "pschool-primary", "pschool-secondary"]]
+                                   ["age", "pschool", "pschool-primary", "pschool-secondary"]]
         if len(adults_in_school) > 0:
             warnings.warn(f"{len(adults_in_school)} people > 18y/o go to school, but they are not being assigned to a "
-                          f"primary or secondary school (so their schooling is ignored at the moment")
+                          f"primary or secondary school (so their schooling is ignored at the moment).")
 
         tuh = tuh.rename(columns={"pschool": "_pschool"})  # Indicate that the pschool column shouldn't be used now
 
@@ -499,7 +499,8 @@ class Microsim:
         large_house_idx = frozenset(households_df.index[households_df.Num_People > 10])  # Indexes of large houses
         # For each person, get a house_id, or -1 if the house is very large
         large_people_idx = tuh["House_ID"].apply(lambda x: -1 if x in large_house_idx else x)
-        warnings.warn(f"There are {len(large_house_idx)} households with more than 10 people in them. This covers "
+        if len(large_house_idx) > 0:
+            warnings.warn(f"There are {len(large_house_idx)} households with more than 10 people in them. This covers "
                       f"{len(large_people_idx[large_people_idx == -1])} people. These households are being removed.")
         tuh["TEMP_HOUSE_ID"] = large_people_idx  # Use this colum to remove people (all people with HOUSE_ID == -1)
         # Check the numbers add up (normal house len + large house len = original len)
