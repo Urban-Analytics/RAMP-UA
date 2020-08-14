@@ -14,7 +14,8 @@ from microsim.activity_location import ActivityLocation
 test_dir = os.path.dirname(os.path.abspath(__file__))
 
 # arguments used when calling the Microsim constructor. Usually these are the same
-microsim_args = {"data_dir": os.path.join(test_dir,"dummy_data"), "r_script_dir": "./R/py_int", "testing": True, "debug": True,
+microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
+                 "r_script_dir": os.path.join(test_dir, "..", "R/py_int"),  "testing": True, "debug": True,
                  "disable_disease_status": True, 'lockdown_from_file':False}
 
 
@@ -538,10 +539,25 @@ def test__normalise():
     assert Microsim._normalise([6, 6, 6, 6, 6]) == [0.2, 0.2, 0.2, 0.2, 0.2]
 
 
-#def test_run_script():
-#    """Check that the correct combinations of input parameters throw the correct errors"""
-#    import microsim.microsim_model as mm
-#    base_args = { "iterations": 10, "data_dir": "devon_data", "output": True, "debug":False, "repetitions": 1, "lockdown_start": 0, "lockdown_from_file": True)}
-#    with pytest.raises(ValueError):
-#         mm.run_script
-#    assert False
+
+def test_r_initilaisation(test_microsim):
+    """Check that the R interface can be initialised without errors"""
+    from microsim.r_interface import RInterface
+    from rpy2.robjects import pandas2ri
+    pandas2ri.activate()
+    # Get a skeleton Microsim object so we know where the default directory
+    # for the R scripts are
+    m = Microsim(read_data=False)
+    # Need to do this becuase we're not calling microsim.run()
+    test_microsim.r_int = RInterface(test_microsim.r_script_dir)
+
+@pytest.mark.skip(reason="Need to work through the R to see why this isn't working")
+def test_calculate_new_disease_status(test_microsim):
+    """Check that the R code to calculate a new disease stutues works without errors"""
+    from microsim.r_interface import RInterface
+    from rpy2.robjects import pandas2ri
+    pandas2ri.activate()
+    # Need to do this becuase we're not calling microsim.run()
+    test_microsim.r_int = RInterface(test_microsim.r_script_dir)
+    # Test if we can calculate disease statuses
+    test_microsim.calculate_new_disease_status()
