@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import pickle
 from tqdm import tqdm
+from convertbng.util import convert_lonlat, convert_osgb36_to_lonlat
 
 
 class Snapshotter:
@@ -39,15 +40,23 @@ class Snapshotter:
                     self.write_to_cache(cache_filename, self.locations[activity_name], is_dataframe=True)
 
         self.num_people = self.individuals['ID'].count()
-        self.global_place_id_lookup = self.create_global_place_ids()
+        self.global_place_id_lookup, self.num_places = self.create_global_place_ids()
 
     def store_snapshots(self):
-        ages = self.get_people_ages()
-        people_place_ids, people_flows = self.get_people_place_data()
+        # ages = self.get_people_ages()
+        # people_place_ids, people_flows = self.get_people_place_data()
+        #
+        # filepath = os.path.join(self.snapshot_dir, 'people_snapshot.npz')
+        # print(f"Saving data for {self.num_people} people to {filepath}")
+        # np.savez(filepath, ages=ages, people_place_ids=people_place_ids, people_baseline_flows=people_flows)
 
-        filepath = os.path.join(self.snapshot_dir, 'people_snapshot.npz')
-        print(f"Saving data for {self.num_people} people to {filepath}")
-        np.savez(filepath, ages=ages, people_place_ids=people_place_ids, people_baseline_flows=people_flows)
+        place_type_enum, place_types, place_coordinates = self.get_place_data()
+        filepath = os.path.join(self.snapshot_dir, 'place_snapshot.npz')
+        print(f"Saving data for {self.num_places} people to {filepath}")
+        np.savez(filepath,
+                 place_type_enum=place_type_enum,
+                 place_types=place_types,
+                 place_coordinates=place_coordinates)
 
     def create_global_place_ids(self):
         max_id = 0
@@ -69,7 +78,8 @@ class Snapshotter:
             }
             max_id += num_activity_ids
 
-        return global_place_id_lookup
+        num_places = max_id
+        return global_place_id_lookup, num_places
 
     def get_global_place_id(self, activity_name, local_place_id):
         ids_for_activity = self.global_place_id_lookup[activity_name]
@@ -121,6 +131,34 @@ class Snapshotter:
             people_flows[people_id][0:num_places] = person_place_data[:, 1]
 
         return people_place_ids, people_flows
+
+    def get_place_data(self):
+        place_type_enum = np.zeros(len(self.activity_names), dtype=object)
+        place_types = np.zeros(self.num_places, dtype=np.uint32)
+        place_coordinates = np.full((self.num_places, 2), np.nan, dtype=np.float32)
+
+        for activity_index, activity_name in enumerate(self.activity_names):
+            place_type_enum[activity_index] = activity_name
+            activity_locations_df = self.locations[activity_name]
+            activity_locations_df = activity_locations_df.rename(columns={"bng_e": "Easting", "bng_n": "Northing"})
+
+            for row_index, location_row in tqdm(activity_locations_df.iterrows(), total=self.num_places,
+                                                desc=f"Storing data for {activity_name} locations"):
+                local_place_id = np.uint32(location_row["ID"])
+                global_place_id = self.get_global_place_id(activity_name, local_place_id)
+
+                place_types[global_place_id] = activity_index
+
+                easting = getattr(location_row, "Easting", None)
+                northing = getattr(location_row, "Northing", None)
+
+                if easting and northing:
+                    long_lat = convert_lonlat([easting], [northing])
+                    long = long_lat[0][0]
+                    lat = long_lat[1][0]
+                    place_coordinates[global_place_id] = np.array([lat, long])
+
+        return place_type_enum, place_types, place_coordinates
 
     def load_from_cache(self, cache_filename, is_dataframe=False):
         cache_filepath = os.path.join(self.snapshot_dir, cache_filename)
