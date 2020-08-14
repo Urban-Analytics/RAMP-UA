@@ -41,12 +41,12 @@ class Snapshotter:
         self.global_place_id_lookup = self.create_global_place_ids()
 
     def store_snapshots(self):
-        people_place_ids = self.get_people_place_data()
         ages = self.get_people_ages()
+        people_place_ids, people_flows = self.get_people_place_data()
 
         filepath = os.path.join(self.snapshot_dir, 'people_snapshot.npz')
         print(f"Saving data for {self.num_people} people to {filepath}")
-        np.savez(filepath, ages=ages, people_place_ids=people_place_ids)
+        np.savez(filepath, ages=ages, people_place_ids=people_place_ids, people_baseline_flows=people_flows)
 
     def create_global_place_ids(self):
         max_id = 0
@@ -80,27 +80,31 @@ class Snapshotter:
 
     def get_people_place_data(self):
         max_places_per_person = 16
-        people_place_ids = np.full((self.num_people, max_places_per_person), -1, dtype=np.uint32)
-        people_flows = np.full((self.num_people, max_places_per_person), -1, dtype=np.uint32)
+        people_place_ids = np.full((self.num_people, max_places_per_person), np.nan, dtype=np.uint32)
+        people_flows = np.full((self.num_people, max_places_per_person), -1, dtype=np.float32)
 
         for people_id in range(self.num_people):
             person_global_place_ids = list()
             person_place_flows = list()
 
+            person_row = self.individuals.loc[people_id]
+
             for activity_name in self.activity_names:
                 activity_venue_col = activity_name + "_Venues"
-                local_place_ids = np.array(self.individuals.at[people_id, activity_venue_col], dytype=np.uint32)
+                local_place_ids = np.array(person_row[activity_venue_col])
+
+                activity_duration_col = activity_name + "_Duration"
+                activity_duration = np.float32(person_row[activity_duration_col])
 
                 activity_flow_col = activity_name + "_Flows"
-                activity_durations_col = activity_name + "_Duration"
-                activity_duration = np.uint32(self.individuals.at[people_id, activity_durations_col], dytype=np.uint32)
-                activity_flows = np.array(self.individuals.at[people_id, activity_flow_col], dytype=np.uint32)
+                activity_flows = np.array(person_row[activity_flow_col])
+
                 activity_flows = activity_flows * activity_duration
 
                 # check dimensions match
                 assert local_place_ids.shape[0] == activity_flows.shape[0]
 
-                person_place_flows += activity_flows
+                person_place_flows += list(activity_flows)
 
                 for (i, local_place_id) in enumerate(local_place_ids):
                     person_global_place_ids.append(self.get_global_place_id(activity_name, local_place_id))
