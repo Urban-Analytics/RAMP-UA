@@ -25,7 +25,7 @@ class RInterface():
    #     R.source('covid_status_functions.R')
         try:
             R.source("covid_run.R")
-            # Also run an R function to initialise the script etc.
+            # Initialize the needed R packages and data
             R.initialize_r()
         except rpy2.rinterface.embedded.RRuntimeError as e:
             # R libraries probably need installing. THe lines below *should* do this, but it's probably better
@@ -38,8 +38,6 @@ class RInterface():
 
         # Remember the session
         self.R = R
-        # Initialize the needed R packages and data
-        self.R.initialize_r()
 
     def calculate_disease_status(self, individuals: pd.DataFrame, iteration: int, disease_params: dict ):
         """
