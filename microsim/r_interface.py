@@ -38,6 +38,8 @@ class RInterface():
 
         # Remember the session
         self.R = R
+        # Initialize the needed R packages and data
+        self.R.initialize_r()
 
     def calculate_disease_status(self, individuals: pd.DataFrame, iteration: int, disease_params: dict ):
         """
