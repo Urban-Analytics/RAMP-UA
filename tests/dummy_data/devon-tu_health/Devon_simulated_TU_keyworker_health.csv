@@ -1,18 +1,18 @@
-﻿area,hid,pid,Sex,Age1,soc2010,punknown,phome,pworkhome,pwork,pschool,pshop,pservices,pleisure,pescort,ptransport,pnothome,phometot,pmwalk,pmcycle,pmprivate,pmpublic,pmunknown
-E00101308,0,64788,0,6,1234,0,0,0,,0.27777779,,0,0,0,0,0,0,0,0,0,0,0
-E00101308,0,69754,1,4,Elementary administration and service occupations,0,0,0,,,0.045138888,0,0,0,0,0,0,0,0,0,0,0
-E02004158,3,80839,1,1,Not applicable,0,0,0,,,,0,0,0,0,0,0,0,0,0,0,0
-E02004158,3,84624,0,3,Administrative occupations,0,0,0,0.2361111,,,0,0,0,0,0,0,0,0,0,0,0
-E02004158,3,88757,0,6,Elementary administration and service occupations,0,0,0,,0.27777779,,0,0,0,0,0,0,0,0,0,0,0
-E02004151,5,17942,0,4,"Business, media and public service professionals",0,0,0,0.2361111,,,0,0,0,0,0,0,0,0,0,0,0
-E02004151,5,22526,1,3,Teaching and educational professionals,0,0,0,,,0.052083332,0,0,0,0,0,0,0,0,0,0,0
-E02004151,5,23434,0,1,Not applicable,0,0,0,,,0.069444448,0,0,0,0,0,0,0,0,0,0,0
-E02004151,5,23968,1,5,Health professionals,0,0,0,0.4201389,,,0,0,0,0,0,0,0,0,0,0,0
-E02004159,8,90653,1,3,"Leisure, travel and related personal service occupations",0,0,0,,,0.086805552,0,0,0,0,0,0,0,0,0,0,0
-E02004142,0,100799,0,4,Health professionals,0,0,0,,,0.052083332,0,0,0,0,0,0,0,0,0,0,0
-E02004132,1,21179,1,2,"Skilled metal, electrical and electronic trades",0,0,0,,0.27777779,,0,0,0,0,0,0,0,0,0,0,0
-E02004132,1,25604,1,3,"Leisure, travel and related personal service occupations",0,0,0,,,,0,0,0,0,0,0,0,0,0,0,0
-E02004147,3,132614,0,4,Elementary administration and service occupations,0,0,0,0.2361111,,,0,0,0,0,0,0,0,0,0,0,0
-E02004147,3,133530,0,2,Not applicable,0,0,0,,,,0,0,0,0,0,0,0,0,0,0,0
-E02004147,3,137456,1,5,Health professionals,0,0,0,,,0.086805552,0,0,0,0,0,0,0,0,0,0,0
-E02004138,6,69652,1,3,"Leisure, travel and related personal service occupations",0,0,0,0.2361111,,,0,0,0,0,0,0,0,0,0,0,0
+﻿area,hid,pid,Sex,age,Age1,soc2010,punknown,phome,pworkhome,pwork,pschool,pshop,pservices,pleisure,pescort,ptransport,pnothome,phometot,pmwalk,pmcycle,pmprivate,pmpublic,pmunknown
+E00101308,0,64788,0,6,84,1234,0,0,0,,0.27777779,,0,0,0,0,0,0,0,0,0,0,0
+E00101308,0,69754,1,4,60,Elementary administration and service occupations,0,0,0,,,0.045138888,0,0,0,0,0,0,0,0,0,0,0
+E02004158,3,80839,1,1,2,Not applicable,0,0,0,,,,0,0,0,0,0,0,0,0,0,0,0
+E02004158,3,84624,0,3,30,Administrative occupations,0,0,0,0.2361111,,,0,0,0,0,0,0,0,0,0,0,0
+E02004158,3,88757,0,6,90,Elementary administration and service occupations,0,0,0,,0.27777779,,0,0,0,0,0,0,0,0,0,0,0
+E02004151,5,17942,0,4,61,"Business, media and public service professionals",0,0,0,0.2361111,,,0,0,0,0,0,0,0,0,0,0,0
+E02004151,5,22526,1,3,42,Teaching and educational professionals,0,0,0,,,0.052083332,0,0,0,0,0,0,0,0,0,0,0
+E02004151,5,23434,0,1,3,Not applicable,0,0,0,,,0.069444448,0,0,0,0,0,0,0,0,0,0,0
+E02004151,5,23968,1,5,70,Health professionals,0,0,0,0.4201389,,,0,0,0,0,0,0,0,0,0,0,0
+E02004159,8,90653,1,3,40,"Leisure, travel and related personal service occupations",0,0,0,,,0.086805552,0,0,0,0,0,0,0,0,0,0,0
+E02004142,0,100799,0,4,50,Health professionals,0,0,0,,,0.052083332,0,0,0,0,0,0,0,0,0,0,0
+E02004132,1,21179,1,2,18,"Skilled metal, electrical and electronic trades",0,0,0,,0.27777779,,0,0,0,0,0,0,0,0,0,0,0
+E02004132,1,25604,1,3,29,"Leisure, travel and related personal service occupations",0,0,0,,,,0,0,0,0,0,0,0,0,0,0,0
+E02004147,3,132614,0,4,55,Elementary administration and service occupations,0,0,0,0.2361111,,,0,0,0,0,0,0,0,0,0,0,0
+E02004147,3,133530,0,2,15,Not applicable,0,0,0,,,,0,0,0,0,0,0,0,0,0,0,0
+E02004147,3,137456,1,5,58,Health professionals,0,0,0,,,0.086805552,0,0,0,0,0,0,0,0,0,0,0
+E02004138,6,69652,1,3,43,"Leisure, travel and related personal service occupations",0,0,0,0.2361111,,,0,0,0,0,0,0,0,0,0,0,0
