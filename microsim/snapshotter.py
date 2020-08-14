@@ -43,12 +43,12 @@ class Snapshotter:
         self.global_place_id_lookup, self.num_places = self.create_global_place_ids()
 
     def store_snapshots(self):
-        # ages = self.get_people_ages()
-        # people_place_ids, people_flows = self.get_people_place_data()
-        #
-        # filepath = os.path.join(self.snapshot_dir, 'people_snapshot.npz')
-        # print(f"Saving data for {self.num_people} people to {filepath}")
-        # np.savez(filepath, ages=ages, people_place_ids=people_place_ids, people_baseline_flows=people_flows)
+        ages = self.get_people_ages()
+        people_place_ids, people_flows = self.get_people_place_data()
+
+        filepath = os.path.join(self.snapshot_dir, 'people_snapshot.npz')
+        print(f"Saving data for {self.num_people} people to {filepath}")
+        np.savez(filepath, ages=ages, people_place_ids=people_place_ids, people_baseline_flows=people_flows)
 
         place_type_enum, place_types, place_coordinates = self.get_place_data()
         filepath = os.path.join(self.snapshot_dir, 'place_snapshot.npz')
