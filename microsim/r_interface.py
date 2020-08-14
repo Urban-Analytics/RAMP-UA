@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 import rpy2.rinterface
 import rpy2.robjects.packages as rpackages  # For installing packages
@@ -19,13 +18,13 @@ class RInterface():
         :param script_dir: The directory where the scripts can be found
         """
         print(f"Initialising R interface. Loading R scripts in {script_dir}.")
+        self.script_dir = script_dir  # Useful to remember for debugging, but not actually needed
         R = ro.r
         R.setwd(script_dir)
-    #    R.source('initialize_and_helper_functions.R')
-   #     R.source('covid_status_functions.R')
         try:
+            # Read the script (doesn't run any functions)
             R.source("covid_run.R")
-            # Initialize the needed R packages and data
+            # Call a function to initialize the needed R packages and data
             R.initialize_r()
         except rpy2.rinterface.embedded.RRuntimeError as e:
             # R libraries probably need installing. THe lines below *should* do this, but it's probably better
@@ -48,9 +47,10 @@ class RInterface():
         """
         print("\tCalculating new disease status...", end='')
         # It's expesive to convert large dataframes, only give the required columns to R.
-        individuals_reduced = individuals.loc[:, ["area", "House_ID", "ID", "age","Sex", ColumnNames.CURRENT_RISK,
-                                                  "pnothome", ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP,
-                                                  ColumnNames.DISEASE_SYMP_DAYS, ColumnNames.DISEASE_EXPOSED_DAYS]]
+        cols = ["area", "House_ID", "ID", "age", "Sex", ColumnNames.CURRENT_RISK, "pnothome",
+                ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP, ColumnNames.DISEASE_SYMP_DAYS,
+                ColumnNames.DISEASE_EXPOSED_DAYS]
+        individuals_reduced = individuals.loc[:, cols]
         individuals_reduced["area"] = individuals_reduced.area.astype(str)
         individuals_reduced["id"] = individuals_reduced.ID
         del individuals_reduced["ID"]
