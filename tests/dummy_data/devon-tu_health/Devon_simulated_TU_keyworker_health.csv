@@ -1,4 +1,4 @@
-﻿area,hid,pid,Sex,age,Age1,soc2010,punknown,phome,pworkhome,pwork,pschool,pshop,pservices,pleisure,pescort,ptransport,pnothome,phometot,pmwalk,pmcycle,pmprivate,pmpublic,pmunknown
+﻿area,hid,pid,Sex,Age1,age,soc2010,punknown,phome,pworkhome,pwork,pschool,pshop,pservices,pleisure,pescort,ptransport,pnothome,phometot,pmwalk,pmcycle,pmprivate,pmpublic,pmunknown
 E00101308,0,64788,0,6,84,1234,0,0,0,,0.27777779,,0,0,0,0,0,0,0,0,0,0,0
 E00101308,0,69754,1,4,60,Elementary administration and service occupations,0,0,0,,,0.045138888,0,0,0,0,0,0,0,0,0,0,0
 E02004158,3,80839,1,1,2,Not applicable,0,0,0,,,,0,0,0,0,0,0,0,0,0,0,0
