@@ -4,6 +4,7 @@ import os
 import pickle
 from tqdm import tqdm
 from convertbng.util import convert_lonlat
+from time import time
 
 
 class Snapshotter:
@@ -92,8 +93,17 @@ class Snapshotter:
     def get_people_ages(self):
         return self.individuals['age'].to_numpy(dtype=np.uint16)
 
-    def get_people_place_data(self):
-        max_places_per_person = 100  # assume upper limit so we can use a fixed size array
+    def get_people_place_data(self, max_places_per_person=100, places_to_keep_per_person=16):
+        """
+        Calculate the "baseline flows" for each person by multiplying flows for each location by duration, then sorting
+        these flows and taking the top n so they can fit in a fixed size array. Locations from all activities are contained
+        in the same array so the activity specific location ids are mapped to global location ids.
+
+        :param max_places_per_person: upper limit of places per person so we can use a fixed size array
+        :param places_to_keep_per_person:
+        :return: Numpy arrays of place ids and baseline flows indexed by person id
+        """
+
         people_place_flows = np.zeros((self.num_people, max_places_per_person, 2), dtype=np.float32)
 
         for people_id, person_row in tqdm(self.individuals.iterrows(), total=self.num_people,
@@ -128,10 +138,12 @@ class Snapshotter:
                 num_places_added += num_places_to_add
 
         # Sort by magnitude of flow
-        people_place_flows = people_place_flows[:, people_place_flows[:, :, 1].argsort()[:, ::-1]][:, 0]
+        sorted_indices = people_place_flows[..., 1].argsort()
+        reversed_sorted_indices = sorted_indices[:, ::-1]
+        for i in range(self.num_people):
+            people_place_flows[i] = people_place_flows[i, reversed_sorted_indices[i]]
 
         # truncate to maximum places per person
-        places_to_keep_per_person = 10
         truncated_people_place_ids = people_place_flows[:, 0:places_to_keep_per_person, 0].astype(np.uint32)
         truncated_people_flows = people_place_flows[:, 0:places_to_keep_per_person, 1]
 

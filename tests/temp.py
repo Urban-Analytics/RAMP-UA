@@ -1,3 +1,0 @@
-from tests.test_snapshotter import test_processes_people_flows
-
-test_processes_people_flows()

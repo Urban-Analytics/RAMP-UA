@@ -43,7 +43,7 @@ def test_global_id_lookup():
     retail_global_id = snapshotter.get_global_place_id("Retail", 0)
     assert home_global_id != retail_global_id
     assert home_global_id == 0
-    assert retail_global_id == 2
+    assert retail_global_id == 3
 
 
 def test_processes_people_flows():
@@ -56,7 +56,8 @@ def test_processes_people_flows():
                                       [0.6, 0.2, 0.16, 0.04, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
                                       ])
 
-    people_place_ids, people_flows = snapshotter.get_people_place_data()
+    people_place_ids, people_flows = snapshotter.get_people_place_data(max_places_per_person=20,
+                                                                       places_to_keep_per_person=10)
 
     assert np.array_equal(expected_people_place_ids, people_place_ids)
-    assert np.array_equal(expected_people_flows, people_flows)
+    assert np.all(np.isclose(expected_people_flows, people_flows))
