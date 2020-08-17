@@ -21,8 +21,6 @@ import sys
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
 from activity_location import ActivityLocation
 from r_interface import RInterface
-# from microsim.microsim_analysis import MicrosimAnalysis
-from microsim_analysis import MicrosimAnalysis
 from column_names import ColumnNames
 from utilities import Optimise
 import multiprocessing
@@ -87,8 +85,8 @@ class Microsim:
                  testing: bool = False,
                  output: bool = True,
                  debug=False,
-                 disable_disease_status=False
-
+                 disable_disease_status=False,
+                 disease_params=dict()
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
@@ -104,6 +102,8 @@ class Microsim:
         :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
         :param disable_disease_status: Optionally turn off the R interface. This will mean we cannot calculate new
             disease status. Only good for testing.
+        :param disease_params: Optional parameters that are passed to the R code that estimates disease status
+            (a dictionary, assumed to be empty)
         """
 
         # Administrative variables that need to be defined
@@ -116,11 +116,13 @@ class Microsim:
         self.hazard_multiplier_symptomatic = hazard_multiplier_symptomatic
         self.risk_multiplier = risk_multiplier
         self.lockdown_from_file = lockdown_from_file
-        self.random = random.Random(time.time() if random_seed is None else random_seed)
+        self.random = random.Random(random_seed)
+
         self.output = output
         self.r_script_dir = r_script_dir
         Microsim.debug = debug
         self.disable_disease_status = disable_disease_status
+        self.disease_params = disease_params
         Microsim.testing = testing
         if self.testing:
             warnings.warn("Running in testing mode. Some exceptions will be disabled.")
@@ -496,21 +498,21 @@ class Microsim:
         tuh["pschool"] = tuh["pschool"].fillna(0)
         tuh["pschool-primary"] = 0.0
         tuh["pschool-secondary"] = 0.0
-        # TODO Assign to schools properly
-        #children_idx = tuh.index[tuh["Age1"] == 1]
-        #teen_idx = tuh.index[tuh['Age1'] == 2]
-        children_idx = tuh.index[tuh["Age1"] < 11]
-        teen_idx = tuh.index[(tuh["Age1"] >= 11) & (tuh["Age1"] < 19)]
+        children_idx = tuh.index[tuh["age"] < 11]
+        teen_idx = tuh.index[(tuh["age"] >= 11) & (tuh["age"] < 19)]
+
+        assert len(children_idx) > 0
+        assert len(teen_idx) > 0
 
         tuh.loc[children_idx, "pschool-primary"] = tuh.loc[children_idx, "pschool"]
         tuh.loc[teen_idx, "pschool-secondary"] = tuh.loc[teen_idx, "pschool"]
 
         # Check that people have been allocated correctly
         adults_in_school = tuh.loc[~(tuh["pschool-primary"] + tuh["pschool-secondary"] == tuh["pschool"]),
-                                   ["Age1", "pschool", "pschool-primary", "pschool-secondary"]]
+                                   ["age", "pschool", "pschool-primary", "pschool-secondary"]]
         if len(adults_in_school) > 0:
             warnings.warn(f"{len(adults_in_school)} people > 18y/o go to school, but they are not being assigned to a "
-                          f"primary or secondary school (so their schooling is ignored at the moment")
+                          f"primary or secondary school (so their schooling is ignored at the moment).")
 
         tuh = tuh.rename(columns={"pschool": "_pschool"})  # Indicate that the pschool column shouldn't be used now
 
@@ -520,7 +522,8 @@ class Microsim:
         large_house_idx = frozenset(households_df.index[households_df.Num_People > 10])  # Indexes of large houses
         # For each person, get a house_id, or -1 if the house is very large
         large_people_idx = tuh["House_ID"].apply(lambda x: -1 if x in large_house_idx else x)
-        warnings.warn(f"There are {len(large_house_idx)} households with more than 10 people in them. This covers "
+        if len(large_house_idx) > 0:
+            warnings.warn(f"There are {len(large_house_idx)} households with more than 10 people in them. This covers "
                       f"{len(large_people_idx[large_people_idx == -1])} people. These households are being removed.")
         tuh["TEMP_HOUSE_ID"] = large_people_idx  # Use this colum to remove people (all people with HOUSE_ID == -1)
         # Check the numbers add up (normal house len + large house len = original len)
@@ -1387,7 +1390,7 @@ class Microsim:
         old_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
 
         # Calculate the new status (will return a new dataframe)
-        self.individuals = self.r_int.calculate_disease_status(self.individuals, self.iteration)
+        self.individuals = self.r_int.calculate_disease_status(self.individuals, self.iteration, self.disease_params)
 
         # Remember whose status has changed
         new_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
@@ -1646,7 +1649,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
           f"\tDebug mode?: {debug}\n"
           f"\tNumber of repetitions: {repetitions}\n"
           f"\tLockdown from file? : {lockdown_from_file}\n"
-          f"\tCalibration parameters: {str(calibration_params)}\n")
+          f"\tCalibration parameters: {'N/A (not reading parameters file)' if no_parameters_file else str(calibration_params)}\n")
           #f"\thazard_multiplier_presymptomatic: {hazard_multiplier_presymptomatic}\n"
           #f"\thazard_multiplier_asymptomatic: {hazard_multiplier_asymptomatic}\n"
           #f"\thazard_multiplier_symptomatic: {hazard_multiplier_symptomatic}\n"
@@ -1671,8 +1674,15 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
                  "r_script_dir": r_script_dir,
                  "output": output, "debug": debug,
                  "lockdown_from_file": lockdown_from_file,
-                 **calibration_params  # Calibration parameters can be passed directly as named arguments
                  }
+
+    if not no_parameters_file:  # When using a parameters file, include the calibration parameters
+        msim_args.update(**calibration_params)  # python calibration parameters are unpacked now
+        # Also read the R calibration parameters (this is a separate section in the .yml file)
+        if disease_params is not None:
+            # (If the 'disease_params' section is included but has no calibration variables then we want to ignore it -
+            # it will be turned into an empty dictionary by the Microsim constructor)
+            msim_args["disease_params"] = disease_params  # R parameters kept as a dictionary and unpacked later
 
     # Temporily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")

@@ -14,7 +14,9 @@ from microsim.activity_location import ActivityLocation
 test_dir = os.path.dirname(os.path.abspath(__file__))
 
 # arguments used when calling the Microsim constructor. Usually these are the same
-microsim_args = {"data_dir": os.path.join(test_dir,"dummy_data"), "r_script_dir": "./R/py_int", "testing": True, "debug": True,
+microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
+                 "r_script_dir": os.path.normpath(os.path.join(test_dir, "..", "R/py_int")),
+                 "testing": True, "debug": True,
                  "disable_disease_status": True, 'lockdown_from_file':False}
 
 
@@ -426,7 +428,8 @@ def test_random():
     # Check that this still happens even if they are executed in pools.
     # Create a large number of microsims and check that all random numbers are unique
     pool = multiprocessing.Pool()
-    m = [Microsim(**microsim_args, read_data=False) for _ in range(10000)]
+    num_reps = 1000
+    m = [Microsim(**microsim_args, read_data=False) for _ in range(num_reps)]
     r = pool.map(_get_rand, m)
     assert len(r) == len(set(r))
 
@@ -536,11 +539,3 @@ def test__normalise():
     assert Microsim._normalise([40, 60]) == [0.4, 0.6]
     assert Microsim._normalise([6, 6, 6, 6, 6]) == [0.2, 0.2, 0.2, 0.2, 0.2]
 
-
-#def test_run_script():
-#    """Check that the correct combinations of input parameters throw the correct errors"""
-#    import microsim.microsim_model as mm
-#    base_args = { "iterations": 10, "data_dir": "devon_data", "output": True, "debug":False, "repetitions": 1, "lockdown_start": 0, "lockdown_from_file": True)}
-#    with pytest.raises(ValueError):
-#         mm.run_script
-#    assert False
