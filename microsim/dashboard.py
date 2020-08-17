@@ -827,6 +827,7 @@ def create_dashboard(parameters_file):
     with open(parameters_file, 'r') as f:
                 parameters = load(f, Loader=SafeLoader)
                 dash_params = parameters["dashboard"]  # Parameters for the dashboard
+                output_name_user = dash_params["output_name"]
                 data_dir_user = dash_params["data_dir"]
                 start_day_user = dash_params["start_day"]
                 end_day_user = dash_params["end_day"]
@@ -912,6 +913,8 @@ def create_dashboard(parameters_file):
     data_dir = "data" if (data_dir_user is None) else data_dir_user
     data_dir = os.path.join(base_dir, data_dir) # update data dir
 
+    # base file name
+    file_name = "dashboard" if (output_name_user is None) else output_name_user
     
     # start and end day
     start_day = 0 if (start_day_user is None) else start_day_user
@@ -1081,7 +1084,7 @@ def create_dashboard(parameters_file):
     if nr_scenarios <= 2:
         
         # determine where/how the visualization will be rendered
-        html_output = os.path.join(data_dir, 'dashboard.html')
+        html_output = os.path.join(data_dir, f'{file_name}.html')
         output_file(html_output, title='RAMP-UA microsim output') # Render to static HTML
         #output_notebook()  # To tender inline in a Jupyter Notebook
     
@@ -1166,7 +1169,7 @@ def create_dashboard(parameters_file):
     
     if nr_scenarios >= 2:
         # determine where/how the visualization will be rendered
-        html_output = os.path.join(data_dir, 'dashboard_scenarios.html')
+        html_output = os.path.join(data_dir, f'{file_name}_scenarios.html')
         output_file(html_output, title='RAMP-UA microsim output scenario comparison') # Render to static HTML
         #output_notebook()  # To tender inline in a Jupyter Notebook
         

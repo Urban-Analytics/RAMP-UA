@@ -1,5 +1,6 @@
 dashboard: # Parameters for the dashboard (visualisation), all are optional
   # for all scenarios
+  output_name: test_dashboard # name for dashboard output file (.html will be added)
   data_dir: devon_data # Root directory to load data from
   start_day: 0    # Start day
   end_day: 80      # End day (inclusive)
