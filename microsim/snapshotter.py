@@ -159,7 +159,8 @@ class Snapshotter:
             activity_locations_df = self.locations[activity_name]
             activity_locations_df = activity_locations_df.rename(columns={"bng_e": "Easting", "bng_n": "Northing"})
 
-            for row_index, location_row in tqdm(activity_locations_df.iterrows(), total=self.num_places,
+            for row_index, location_row in tqdm(activity_locations_df.iterrows(),
+                                                total=len(activity_locations_df.index),
                                                 desc=f"Processing data for {activity_name} locations"):
                 local_place_id = np.uint32(location_row["ID"])
                 global_place_id = self.get_global_place_id(activity_name, local_place_id)
