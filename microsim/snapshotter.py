@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import pickle
 from tqdm import tqdm
-from convertbng.util import convert_lonlat, convert_osgb36_to_lonlat
+from convertbng.util import convert_lonlat
 
 
 class Snapshotter:
@@ -15,6 +15,7 @@ class Snapshotter:
     def __init__(self, individuals, activity_locations, snapshot_dir, cache_inputs=True):
         self.snapshot_dir = snapshot_dir
 
+        # load individuals dataframe from cache
         if individuals is None:
             self.individuals = self.load_from_cache("individuals_cache.pkl", is_dataframe=True)
         else:
@@ -22,6 +23,7 @@ class Snapshotter:
             if cache_inputs:
                 self.write_to_cache("individuals_cache.pkl", self.individuals, is_dataframe=True)
 
+        # load names of activities from cache
         if activity_locations is None:
             self.activity_names = self.load_from_cache("activity_names.pkl")
         else:
@@ -29,6 +31,7 @@ class Snapshotter:
             if cache_inputs:
                 self.write_to_cache("activity_names.pkl", self.activity_names, is_dataframe=False)
 
+        # load locations dataframe from cache
         self.locations = dict()
         for activity_name in self.activity_names:
             cache_filename = "activity_locations_" + activity_name + "_cache.pkl"
