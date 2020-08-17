@@ -93,8 +93,8 @@ class Snapshotter:
         return self.individuals['age'].to_numpy(dtype=np.uint16)
 
     def get_people_place_data(self):
-        max_places_per_person = 10  # assume upper limit so we can use a fixed size array
-        people_place_flows = np.full((self.num_people, max_places_per_person, 2), np.nan, dtype=np.float32)
+        max_places_per_person = 100  # assume upper limit so we can use a fixed size array
+        people_place_flows = np.zeros((self.num_people, max_places_per_person, 2), dtype=np.float32)
 
         for people_id, person_row in tqdm(self.individuals.iterrows(), total=self.num_people,
                                           desc="Calculating place flows for all people"):
@@ -127,21 +127,11 @@ class Snapshotter:
 
                 num_places_added += num_places_to_add
 
-            # person_place_data = np.array(list(zip(person_global_place_ids, person_place_flows)))
-            #
-            # # sort by flow value descending so we can take the n places with highest flows
-            # person_place_data = person_place_data[person_place_data[:, 1].argsort()[::-1]]
-            # # person_place_data = person_place_data[:places_to_keep_per_person]
-            #
-            # num_places = person_place_data.shape[0]
-            # people_place_ids[people_id][0:num_places] = person_place_data[:, 0]
-            # people_flows[people_id][0:num_places] = person_place_data[:, 1]
+        # Sort by magnitude of flow
+        people_place_flows = people_place_flows[:, people_place_flows[:, :, 1].argsort()[:, ::-1]][:, 0]
 
-        # Sort by flow magnitude
-        # people_place_flows = people_place_flows[:, people_place_flows[:, :, 1].argsort()]
-
-        # truncate to maximum places per person to keep
-        places_to_keep_per_person = 16
+        # truncate to maximum places per person
+        places_to_keep_per_person = 10
         truncated_people_place_ids = people_place_flows[:, 0:places_to_keep_per_person, 0].astype(np.uint32)
         truncated_people_flows = people_place_flows[:, 0:places_to_keep_per_person, 1]
 

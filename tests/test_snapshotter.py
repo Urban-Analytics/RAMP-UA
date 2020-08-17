@@ -47,10 +47,10 @@ def test_global_id_lookup():
 
 
 def test_processes_people_flows():
-    expected_people_place_ids = np.array([[0, 4, 6, 2],
-                                          [1, 4, 5, 3]])
-    expected_people_flows = np.array([[0.8, 0.25, 0.15, 0.1],
-                                      [0.7, 0.18, 0.09, 0.03]])
+    expected_people_place_ids = np.array([[0, 4, 6, 2, 0, 0, 0, 0, 0, 0],
+                                          [1, 4, 5, 3, 0, 0, 0, 0, 0, 0]])
+    expected_people_flows = np.array([[0.8, 0.25, 0.15, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                                      [0.7, 0.18, 0.09, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
 
     people_place_ids, people_flows = snapshotter.get_people_place_data()
 
