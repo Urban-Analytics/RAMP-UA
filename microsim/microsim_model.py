@@ -162,6 +162,8 @@ class Microsim:
             quant_dir = os.path.join(self.DATA_DIR, "QUANT_RAMP","model-runs")
             assert os.path.isdir(quant_dir)
             QUANT_data = qa.readQUANT(quant_dir)
+        else: # meed dummy variable
+            QUANT_data = 0
 
         #
         # ********** How to assign activities for the population **********

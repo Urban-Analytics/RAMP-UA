@@ -90,7 +90,7 @@ NOTE: code identical to the primary school version, only with switched lookup ta
 @param threshold Probability threshold e.g. 0.5 means return all possible schools with probability>=0.5
 @returns a list of probabilities in the same order as the venues
 """
-def getProbableSecondarySchoolsByMSOAIZ(dfSecondaryPopulation,dfSecondaryZones,secondary_probPijmsoa_iz,threshold):
+def getProbableSecondarySchoolsByMSOAIZ(dfSecondaryPopulation,dfSecondaryZones,secondary_probPij,msoa_iz,threshold):
     result = []
     zonei = int(dfSecondaryPopulation.loc[dfSecondaryPopulation['msoaiz'] == msoa_iz, 'zonei'])
     m,n = secondary_probPij.shape
