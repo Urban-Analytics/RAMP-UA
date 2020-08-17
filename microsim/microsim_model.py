@@ -70,6 +70,7 @@ class Microsim:
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
                  output: bool = True,
+                 output_every_iteration = False,
                  debug=False,
                  disable_disease_status=False,
                  disease_params=dict()
@@ -85,6 +86,8 @@ class Microsim:
             in debugging).
         :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!)
         :param output: Whether to create files to store the results (default True)
+        :param output_every_iteration: Whether to create files to store the results at every iteration rather than
+            just at the end (default False)
         :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
         :param disable_disease_status: Optionally turn off the R interface. This will mean we cannot calculate new
             disease status. Only good for testing.
@@ -102,8 +105,8 @@ class Microsim:
         self.risk_multiplier = risk_multiplier
         self.lockdown_from_file = lockdown_from_file
         self.random = random.Random(random_seed)
-
         self.output = output
+        self.output_every_iteration = output_every_iteration
         self.r_script_dir = r_script_dir
         Microsim.debug = debug
         self.disable_disease_status = disable_disease_status
@@ -1084,13 +1087,9 @@ class Microsim:
                 loc_name = activity.get_name()  # retail, school etc
                 loc_ids = activity.get_ids()  # List of the IDs of the locations
                 loc_dangers = activity.get_dangers()  # List of the current dangers
-                # XXXX HERE CREATE NEW DATAFRAME FROM PREVIOUS ONE AND ADD Danger0 Column
                 self.activities_to_pickle[loc_name] = activity.get_dataframe_copy()
                 self.activities_to_pickle[loc_name]['Danger0'] = loc_dangers
                 assert False not in list(loc_ids == self.activities_to_pickle[loc_name]["ID"].values)
-                # Just use ID and Danger columns
-                # self.activities_to_pickle[loc_name] = pd.DataFrame(
-                #    list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
 
     @classmethod
     def add_disease_columns(cls, individuals: pd.DataFrame) -> pd.DataFrame:
@@ -1456,15 +1455,20 @@ class Microsim:
 
             # Add to items to pickle for visualisations
             if self.output:
-                print("\tGenerating output ... ",)
+                print("\tPreparing output ... " +
+                      "(but not writing anything until the end)" if not self.output_every_iteration else "",)
+                # Add the new column names for this iteration's disease statuses
                 # (Force column names to have leading zeros)
                 self.individuals_to_pickle[f"{ColumnNames.DISEASE_STATUS}{(i + 1):03d}"] = self.individuals[
                     ColumnNames.DISEASE_STATUS]
-                fname = os.path.join(self.output_dir, "Individuals")
-                with open(fname + ".pickle", "wb") as pickle_out:
-                    pickle.dump(self.individuals_to_pickle, pickle_out)
-                # Also make a (compressed) csv file for others
-                self.individuals_to_pickle.to_csv(fname + ".csv.gz", compression='gzip')
+                # Write the output at the end, or at every iteration
+                if i == (iterations-1) or self.output_every_iteration:
+                    print("\t\tWriting individuals file... ")
+                    fname = os.path.join(self.output_dir, "Individuals")
+                    with open(fname + ".pickle", "wb") as pickle_out:
+                        pickle.dump(self.individuals_to_pickle, pickle_out)
+                    # Also make a (compressed) csv file for others
+                    self.individuals_to_pickle.to_csv(fname + ".csv.gz", compression='gzip')
 
                 for name in self.activity_locations:
                     # Get the details of the location activity
@@ -1475,13 +1479,14 @@ class Microsim:
                     # Add a new danger column to the previous dataframe
                     self.activities_to_pickle[loc_name][f"{ColumnNames.LOCATION_DANGER}{(i + 1):03d}"] = loc_dangers
                     # Save this activity location
-                    fname = os.path.join(self.output_dir, loc_name)
-                    with open(fname + ".pickle", "wb") as pickle_out:
-                        pickle.dump(self.activities_to_pickle[loc_name], pickle_out)
-                    # Also make a (compressed) csv file for others
-                    self.activities_to_pickle[loc_name].to_csv(fname + ".csv.gz", compression='gzip')
-                    # self.activities_to_pickle[loc_name].to_csv(fname+".csv")  # They not so big so don't compress
-                print(" ... finished ", )
+                    if i == (iterations - 1) or self.output_every_iteration:
+                        print(f"\t\tWriting activity file for {name}... ")
+                        fname = os.path.join(self.output_dir, loc_name)
+                        with open(fname + ".pickle", "wb") as pickle_out:
+                            pickle.dump(self.activities_to_pickle[loc_name], pickle_out)
+                        # Also make a (compressed) csv file for others
+                        self.activities_to_pickle[loc_name].to_csv(fname + ".csv.gz", compression='gzip')
+                        # self.activities_to_pickle[loc_name].to_csv(fname+".csv")  # They not so big so don't compress
 
             print(f"\tIteration {i} took {round(float(time.time() - iter_start_time), 2)}s")
 
@@ -1514,11 +1519,14 @@ class Microsim:
 @click.option('--data-dir', default="devon_data", help='Root directory to load data from')
 @click.option('--output/--no-output', default=True,
               help='Whether to generate output data (default yes).')
+@click.option('--output-every-iteration/--no-output-every-iteration', default=False,
+              help='Whether to generate output data at every iteration rather than just at the end (default no).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
 @click.option('-r', '--repetitions', default=1, help="How many times to run the model (default 1)")
 @click.option('-l', '--lockdown-from-file/--no-lockdown-from-file', default=True,
               help="Optionally read lockdown mobility data from a file (default True)")
-def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, debug, repetitions, lockdown_from_file):
+def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, output_every_iteration, debug,
+               repetitions, lockdown_from_file):
 
     # First see if we're reading a parameters file or using command-line arguments.
     if no_parameters_file:
@@ -1537,6 +1545,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
             iterations = sim_params["iterations"]
             data_dir = sim_params["data-dir"]
             output = sim_params["output"]
+            output_every_iteration = sim_params["output-every-iteration"]
             debug = sim_params["debug"]
             repetitions = sim_params["repetitions"]
             lockdown_from_file = sim_params["lockdown-from-file"]
@@ -1551,12 +1560,16 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
         raise ValueError("Iterations must be > 0")
     if repetitions < 1:
         raise ValueError("Repetitions must be greater than 0")
+    if (not output) and output_every_iteration:
+        raise ValueError("Can't choose to not output any data (output=False) but also write the data at every "
+                         "iteration (output_every_iteration=True)")
 
     print(f"Running model with the following parameters:\n"
           f"\tParameters file: {parameters_file}\n"
           f"\tNumber of iterations: {iterations}\n"
           f"\tData dir: {data_dir}\n"
           f"\tOutputting results?: {output}\n"
+          f"\tOutputting results at every iteration?: {output_every_iteration}\n"
           f"\tDebug mode?: {debug}\n"
           f"\tNumber of repetitions: {repetitions}\n"
           f"\tLockdown from file? : {lockdown_from_file}\n"
@@ -1582,7 +1595,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
 
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir,
-                 "output": output, "debug": debug,
+                 "output": output, "output_every_iteration": output_every_iteration, "debug": debug,
                  "lockdown_from_file": lockdown_from_file,
                  }
 
