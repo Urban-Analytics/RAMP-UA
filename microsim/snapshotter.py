@@ -104,7 +104,8 @@ class Snapshotter:
         :return: Numpy arrays of place ids and baseline flows indexed by person id
         """
 
-        people_place_flows = np.zeros((self.num_people, max_places_per_person, 2), dtype=np.float32)
+        people_place_ids = np.zeros((self.num_people, max_places_per_person), dtype=np.uint32)
+        people_place_flows = np.zeros((self.num_people, max_places_per_person), dtype=np.float32)
 
         for people_id, person_row in tqdm(self.individuals.iterrows(), total=self.num_people,
                                           desc="Calculating place flows for all people"):
@@ -129,25 +130,24 @@ class Snapshotter:
 
                 start_idx = num_places_added
                 end_idx = start_idx + num_places_to_add
-                people_place_flows[people_id, start_idx:end_idx, 0] = np.array(
+                people_place_ids[people_id, start_idx:end_idx] = np.array(
                     [self.get_global_place_id(activity_name, local_place_id)
                      for local_place_id in local_place_ids])
 
-                people_place_flows[people_id, start_idx:end_idx, 1] = activity_flows
+                people_place_flows[people_id, start_idx:end_idx] = activity_flows
 
                 num_places_added += num_places_to_add
 
-        # Sort by magnitude of flow
-        sorted_indices = people_place_flows[..., 1].argsort()
-        reversed_sorted_indices = sorted_indices[:, ::-1]
-        for i in range(self.num_people):
-            people_place_flows[i] = people_place_flows[i, reversed_sorted_indices[i]]
+        # Sort by magnitude of flow (reversed)
+        sorted_indices = people_place_flows.argsort()[:, ::-1]
+        people_place_ids = np.take_along_axis(people_place_ids, sorted_indices, axis=1)
+        people_place_flows = np.take_along_axis(people_place_flows, sorted_indices, axis=1)
 
         # truncate to maximum places per person
-        truncated_people_place_ids = people_place_flows[:, 0:places_to_keep_per_person, 0].astype(np.uint32)
-        truncated_people_flows = people_place_flows[:, 0:places_to_keep_per_person, 1]
+        people_place_ids = people_place_ids[:, 0:places_to_keep_per_person]
+        people_place_flows = people_place_flows[:, 0:places_to_keep_per_person]
 
-        return truncated_people_place_ids, truncated_people_flows
+        return people_place_ids, people_place_flows
 
     def get_place_data(self):
         place_type_enum = np.zeros(len(self.activity_names), dtype=object)
