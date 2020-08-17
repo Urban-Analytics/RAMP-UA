@@ -93,8 +93,8 @@ class Snapshotter:
         return self.individuals['age'].to_numpy(dtype=np.uint16)
 
     def get_people_place_data(self):
-        max_places_per_person = 100  # assume upper limit so we can use a fixed size array
-        people_place_flows = np.zeros((self.num_people, max_places_per_person, 2), dtype=np.float32)
+        max_places_per_person = 10  # assume upper limit so we can use a fixed size array
+        people_place_flows = np.full((self.num_people, max_places_per_person, 2), np.nan, dtype=np.float32)
 
         for people_id, person_row in tqdm(self.individuals.iterrows(), total=self.num_people,
                                           desc="Calculating place flows for all people"):
@@ -116,11 +116,14 @@ class Snapshotter:
                 assert local_place_ids.shape[0] == activity_flows.shape[0]
 
                 num_places_to_add = local_place_ids.shape[0]
-                people_place_flows[people_id, num_places_added:num_places_to_add, 0] = activity_flows
 
-                people_place_flows[people_id, num_places_added:num_places_to_add, 1] = np.array(
+                start_idx = num_places_added
+                end_idx = start_idx + num_places_to_add
+                people_place_flows[people_id, start_idx:end_idx, 0] = np.array(
                     [self.get_global_place_id(activity_name, local_place_id)
                      for local_place_id in local_place_ids])
+
+                people_place_flows[people_id, start_idx:end_idx, 1] = activity_flows
 
                 num_places_added += num_places_to_add
 
@@ -135,6 +138,7 @@ class Snapshotter:
             # people_flows[people_id][0:num_places] = person_place_data[:, 1]
 
         # TODO sort by flows along correct axis
+        person_place_data = people_place_flows[people_place_flows[:, :, 1].argsort()]
 
         places_to_keep_per_person = 16
         # TODO: use indexing to truncate from full arrays
