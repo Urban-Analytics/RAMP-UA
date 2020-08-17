@@ -185,16 +185,16 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
             counts_colnames = filter_col[start_day:end_day+1]
             
             
-            # TO BE ADDED SO USER CAN DEFINE AGE BRACKETS - FOR NOW JUST USING PREDEFINED CATEGORIES
-            # individuals['age0'] = np.zeros((len(individuals),1))
-            # for a in range(age_cat.shape[0]):
-            #     individuals['age0'] = np.where((individuals['DC1117EW_C_AGE'] >= age_cat[a,0]) & (individuals['DC1117EW_C_AGE'] <= age_cat[a,1]), a+1, individuals['age0'])   
-            # age_cat_col = individuals['age0'].values
-            # temporary workaround
-            age_cat_col = individuals['Age1'].values 
+            # User defined age brackets
+            individuals.insert(7, 'Age0', np.zeros((len(individuals),1)))
+            for a in range(age_cat.shape[0]):
+                individuals['Age0'] = np.where((individuals['age'] >= age_cat[a,0]) & (individuals['age'] <= age_cat[a,1]), a+1, individuals['Age0'])   
+            age_cat_col = individuals['Age0'].values
+            # temporary workaround if no continuous age
+            #age_cat_col = individuals['Age1'].values 
             
         # add age brackets column to individuals_tmp
-        individuals_tmp.insert(8, 'age0', age_cat_col)
+        individuals_tmp.insert(7, 'Age0', age_cat_col)
         
         
         uniquecounts_df = pd.DataFrame()
@@ -255,7 +255,7 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
                     
 
                 # count nr for this condition per age bracket             
-                age_count_temp = individuals_tmp[tmp.iloc[:,day] == conditions_dict[key]].groupby(['age0']).agg({tmp.columns[day]: ['count']})  
+                age_count_temp = individuals_tmp[tmp.iloc[:,day] == conditions_dict[key]].groupby(['Age0']).agg({tmp.columns[day]: ['count']})  
                 
                 if age_count_temp.shape[0] == 6:
                     age_count_temp = age_count_temp.values
@@ -1012,7 +1012,9 @@ def create_dashboard(parameters_file):
     
     
     # age brackets
-    age_cat = np.array([[0, 19], [20, 29], [30,44], [45,59], [60,74], [75,200]])    
+    age_cat = np.array([[0, 19], [20, 29], [30,44], [45,59], [60,74], [75,200]])    # original categories (Age1 column)
+    #age_cat = np.array([[0, 19], [20, 29], [30,44]])    # original categories (Age1 column)
+    
     # label for plotting age categories
     age_cat_str = []
     for a in range(age_cat.shape[0]):
