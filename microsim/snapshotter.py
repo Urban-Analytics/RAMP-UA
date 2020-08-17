@@ -66,15 +66,15 @@ class Snapshotter:
         global_place_id_lookup = dict()
 
         for activity_name in self.activity_names:
-            activity_ids = self.locations[activity_name]['ID'].to_numpy(dtype=np.uint32)
-            num_activity_ids = activity_ids.shape[0]
-            starting_id = activity_ids[0]
+            locations_ids = self.locations[activity_name]['ID'].to_numpy(dtype=np.uint32)
+            num_activity_ids = locations_ids.shape[0]
+            starting_id = locations_ids[0]
 
             # check that activity IDs increase by one
-            assert activity_ids[-1] == num_activity_ids - 1 + starting_id
+            assert locations_ids[-1] == num_activity_ids - 1 + starting_id
 
             # subtract starting ID in case the first local activity ID is not zero
-            global_ids = activity_ids + max_id - starting_id
+            global_ids = locations_ids + max_id - starting_id
             global_place_id_lookup[activity_name] = {
                 "ids": global_ids,
                 "id_offset": starting_id
@@ -93,15 +93,12 @@ class Snapshotter:
         return self.individuals['age'].to_numpy(dtype=np.uint16)
 
     def get_people_place_data(self):
-        max_places_per_person = 16
-        people_place_ids = np.full((self.num_people, max_places_per_person), np.nan, dtype=np.uint32)
-        people_flows = np.full((self.num_people, max_places_per_person), np.nan, dtype=np.float32)
+        max_places_per_person = 100  # assume upper limit so we can use a fixed size array
+        people_place_flows = np.zeros((self.num_people, max_places_per_person, 2), dtype=np.float32)
 
-        for people_id in tqdm(range(self.num_people), desc="Calculating place flows for all people"):
-            person_global_place_ids = list()
-            person_place_flows = list()
-
-            person_row = self.individuals.loc[people_id]
+        for people_id, person_row in tqdm(self.individuals.iterrows(), total=self.num_people,
+                                          desc="Calculating place flows for all people"):
+            num_places_added = 0
 
             for activity_name in self.activity_names:
                 activity_venue_col = activity_name + "_Venues"
@@ -118,22 +115,34 @@ class Snapshotter:
                 # check dimensions match
                 assert local_place_ids.shape[0] == activity_flows.shape[0]
 
-                person_place_flows += list(activity_flows)
+                num_places_to_add = local_place_ids.shape[0]
+                people_place_flows[people_id, num_places_added:num_places_to_add, 0] = activity_flows
 
-                for (i, local_place_id) in enumerate(local_place_ids):
-                    person_global_place_ids.append(self.get_global_place_id(activity_name, local_place_id))
+                people_place_flows[people_id, num_places_added:num_places_to_add, 1] = np.array(
+                    [self.get_global_place_id(activity_name, local_place_id)
+                     for local_place_id in local_place_ids])
 
-            person_place_data = np.array(list(zip(person_global_place_ids, person_place_flows)))
+                num_places_added += num_places_to_add
 
-            # sort by flow value descending so we can take the n places with highest flows
-            person_place_data = person_place_data[person_place_data[:, 1].argsort()[::-1]]
-            person_place_data = person_place_data[:max_places_per_person]
+            # person_place_data = np.array(list(zip(person_global_place_ids, person_place_flows)))
+            #
+            # # sort by flow value descending so we can take the n places with highest flows
+            # person_place_data = person_place_data[person_place_data[:, 1].argsort()[::-1]]
+            # # person_place_data = person_place_data[:places_to_keep_per_person]
+            #
+            # num_places = person_place_data.shape[0]
+            # people_place_ids[people_id][0:num_places] = person_place_data[:, 0]
+            # people_flows[people_id][0:num_places] = person_place_data[:, 1]
 
-            num_places = person_place_data.shape[0]
-            people_place_ids[people_id][0:num_places] = person_place_data[:, 0]
-            people_flows[people_id][0:num_places] = person_place_data[:, 1]
+        # TODO sort by flows along correct axis
 
-        return people_place_ids, people_flows
+        places_to_keep_per_person = 16
+        # TODO: use indexing to truncate from full arrays
+        truncated_people_place_ids = np.full((self.num_people, places_to_keep_per_person), np.nan, dtype=np.uint32)
+        truncated_people_flows = np.full((self.num_people, places_to_keep_per_person), np.nan, dtype=np.float32)
+
+        # TODO: extract to two arrays - convert id array to uint32
+        return truncated_people_place_ids, truncated_people_flows
 
     def get_place_data(self):
         place_type_enum = np.zeros(len(self.activity_names), dtype=object)
@@ -146,7 +155,7 @@ class Snapshotter:
             activity_locations_df = activity_locations_df.rename(columns={"bng_e": "Easting", "bng_n": "Northing"})
 
             for row_index, location_row in tqdm(activity_locations_df.iterrows(), total=self.num_places,
-                                                desc=f"Storing data for {activity_name} locations"):
+                                                desc=f"Processing data for {activity_name} locations"):
                 local_place_id = np.uint32(location_row["ID"])
                 global_place_id = self.get_global_place_id(activity_name, local_place_id)
 
