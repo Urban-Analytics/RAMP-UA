@@ -1596,7 +1596,7 @@ class Microsim:
 # ********
 @click.command()
 @click.option('-p', '--parameters_file', default="./model_parameters/default.yml", type=click.Path(exists=True),
-              help="Parameters file to use to configure the model. Default: ./model_parameters.yml")
+              help="Parameters file to use to configure the model. Default: ./model_parameters/default.yml")
 @click.option('-npf', '--no-parameters-file', is_flag=True,
               help="Don't read a parameters file, use command line arguments instead")
 @click.option('-i', '--iterations', default=10, help='Number of model iterations. 0 means just run the initialisation')
