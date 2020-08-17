@@ -137,15 +137,14 @@ class Snapshotter:
             # people_place_ids[people_id][0:num_places] = person_place_data[:, 0]
             # people_flows[people_id][0:num_places] = person_place_data[:, 1]
 
-        # TODO sort by flows along correct axis
-        person_place_data = people_place_flows[people_place_flows[:, :, 1].argsort()]
+        # Sort by flow magnitude
+        # people_place_flows = people_place_flows[:, people_place_flows[:, :, 1].argsort()]
 
+        # truncate to maximum places per person to keep
         places_to_keep_per_person = 16
-        # TODO: use indexing to truncate from full arrays
-        truncated_people_place_ids = np.full((self.num_people, places_to_keep_per_person), np.nan, dtype=np.uint32)
-        truncated_people_flows = np.full((self.num_people, places_to_keep_per_person), np.nan, dtype=np.float32)
+        truncated_people_place_ids = people_place_flows[:, 0:places_to_keep_per_person, 0].astype(np.uint32)
+        truncated_people_flows = people_place_flows[:, 0:places_to_keep_per_person, 1]
 
-        # TODO: extract to two arrays - convert id array to uint32
         return truncated_people_place_ids, truncated_people_flows
 
     def get_place_data(self):
