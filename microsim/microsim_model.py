@@ -74,7 +74,7 @@ class Microsim:
 
     def __init__(self,
                  data_dir: str = "./data/", 
-                 scen_dir: str = "./test/",
+                 scen_dir: str = "default",
                  r_script_dir: str = "./R/py_int/",
                  hazard_multiplier_presymptomatic: float = 1.0,
                  hazard_multiplier_asymptomatic: float = 1.0,
@@ -93,6 +93,7 @@ class Microsim:
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
         ----------
         :param data_dir: A data directory from which to read the source data
+        :param scen_dir: A data directory to write the output to (i.e. a name for this model run)
         :param r_script_dir: A directory with the required R scripts in (these are used to estimate disease status)
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
@@ -1610,6 +1611,8 @@ class Microsim:
 @click.option('-npf', '--no-parameters-file', is_flag=True,
               help="Don't read a parameters file, use command line arguments instead")
 @click.option('-i', '--iterations', default=10, help='Number of model iterations. 0 means just run the initialisation')
+@click.option('-s', '--scenario', default="default", help="Name this scenario; output results will be put into a "
+                                                          "directory with this name.")
 @click.option('--data-dir', default="devon_data", help='Root directory to load data from')
 @click.option('--output/--no-output', default=True,
               help='Whether to generate output data (default yes).')
@@ -1622,7 +1625,7 @@ class Microsim:
                    "lockdown pass an empty string, i.e. --lockdown-file='' ")
 
 def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, output_every_iteration, debug,
-               repetitions, lockdown_file):
+               repetitions, lockdown_file, scenario):
 
     # First see if we're reading a parameters file or using command-line arguments.
     if no_parameters_file:
@@ -1638,7 +1641,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
             #         self.params, self.params_changed = Model._init_kwargs(params, kwargs)
             #         [setattr(self, key, value) for key, value in self.params.items()]
             # Utility parameters
-            scen_dir = sim_params["scenario"]
+            scenario = sim_params["scenario"]
             iterations = sim_params["iterations"]
             data_dir = sim_params["data-dir"]
             output = sim_params["output"]
@@ -1663,7 +1666,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
 
     print(f"Running model with the following parameters:\n"
           f"\tParameters file: {parameters_file}\n"
-          f"\tScenario directory: {scen_dir}\n"
+          f"\tScenario directory: {scenario}\n"
           f"\tNumber of iterations: {iterations}\n"
           f"\tData dir: {data_dir}\n"
           f"\tOutputting results?: {output}\n"
@@ -1692,7 +1695,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
                               names=["x", "y", "Num", "Code", "Desc"])
 
     # Use same arguments whether running 1 repetition or many
-    msim_args = {"data_dir": data_dir, "scen_dir": scen_dir, "r_script_dir": r_script_dir,
+    msim_args = {"data_dir": data_dir, "scen_dir": scenario, "r_script_dir": r_script_dir,
                  "output": output, "output_every_iteration": output_every_iteration, "debug": debug,
                  "lockdown_file": lockdown_file,
                  }

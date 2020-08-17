@@ -8,7 +8,8 @@ microsim:
   output-every-iteration: false # Can optionally write output at every iteration, not just at the end
   debug: false # Whether to run some more expensive checks
   repetitions: 1 # How many times to run the model
-  lockdown-file: "google_mobility_lockdown_daily.csv" # Read lockdown mobility data from a file? (Empty string is no file)
+#  lockdown-file: "google_mobility_lockdown_daily.csv" # Read lockdown mobility data from a file? (Empty string is no file)
+  lockdown-file: ""
 
 # Parameters that are used to calibrate the model.
 # These can only be passed using the parameters file
