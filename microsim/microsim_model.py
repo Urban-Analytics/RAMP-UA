@@ -7,9 +7,17 @@ Created on Wed Apr 29 19:59:25 2020
 
 @author: nick
 """
+import os
+# directory to read data from
+tmp_base_dir = os.getcwd()  # get current directory (usually RAMP-UA)
+tmp_microsim_dir = os.path.join(tmp_base_dir, "microsim") # go to data dir
+os.chdir(tmp_microsim_dir)
 
 import sys
-
+#import os
+#owd = os.getcwd()
+#os.chdir(os.path.join(owd,"microsim"))
+    
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
 from activity_location import ActivityLocation
 from r_interface import RInterface
@@ -37,11 +45,15 @@ import pickle  # to save data
 import swifter  # For speeding up apply functions (e.g. df.swifter.apply)
 import rpy2.robjects as ro  # For calling R scripts
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
+from shutil import copyfile
 
+import QUANTRampAPI2 as qa
 
-# import pandas.rpy.common as com
+#import pandas.rpy.common as com # throws error and doesn't seem to be used?
 
+os.chdir(tmp_base_dir)
 
+#os.chdir(owd)
 
 class Microsim:
     """
@@ -61,7 +73,9 @@ class Microsim:
     """
 
     def __init__(self,
-                 data_dir: str = "./data/", r_script_dir: str = "./R/py_int/",
+                 data_dir: str = "./data/", 
+                 scen_dir: str = "./test/",
+                 r_script_dir: str = "./R/py_int/",
                  hazard_multiplier_presymptomatic: float = 1.0,
                  hazard_multiplier_asymptomatic: float = 1.0,
                  hazard_multiplier_symptomatic: float = 1.0,
@@ -95,6 +109,7 @@ class Microsim:
         # Administrative variables that need to be defined
         Microsim.DATA_DIR = data_dir  # TODO (minor) pass the data_dir to class functions directly so no need to have it defined at class level
         self.DATA_DIR = data_dir
+        self.SCEN_DIR = scen_dir
         self.iteration = 0
         self.hazard_multiplier_presymptomatic = hazard_multiplier_presymptomatic
         self.hazard_multiplier_asymptomatic = hazard_multiplier_asymptomatic
@@ -114,7 +129,10 @@ class Microsim:
 
         if not read_data:  # Optionally can not do this, usually for debugging
             return
-
+        
+        # create full path for scenario dir, also check if scenario dir exists and if so, add nr
+        self.SCEN_DIR = Microsim._find_new_directory(os.path.join(self.DATA_DIR, "output"), self.SCEN_DIR)
+        
         # We need an interface to R code to calculate disease status, but don't initialise it until the run()
         # method is called so that the R process is initiatied in the same process as the Microsim object
         self.r_int = None
@@ -205,10 +223,10 @@ class Microsim:
         # Read Schools (primary and secondary)
         primary_name = "PrimarySchool"
         secondary_name = "SecondarySchool"
-        schools, primary_flows, secondary_flows = \
+        primary_schools, secondary_schools, primary_flows, secondary_flows = \
             Microsim.read_school_flows_data(self.all_msoas)  # (list of schools and a flow matrix)
-        Microsim.check_sim_flows(schools, primary_flows)
-        Microsim.check_sim_flows(schools, secondary_flows)
+        Microsim.check_sim_flows(primary_schools, primary_flows)
+        Microsim.check_sim_flows(secondary_schools, secondary_flows)
         # Assign Schools
         # TODO: need to separate primary and secondary school duration. At the moment everyone is given the same
         # duration, 'pschool', which means that children will be assigned a PrimarySchool duration *and* a
@@ -217,11 +235,11 @@ class Microsim:
         # or 0 depending on the age of the child.
         self.individuals = Microsim.add_individual_flows(primary_name, self.individuals, primary_flows)
         self.activity_locations[primary_name] = \
-            ActivityLocation(primary_name, schools.copy(), primary_flows, self.individuals, "pschool-primary")
+            ActivityLocation(primary_name, primary_schools.copy(), primary_flows, self.individuals, "pschool-primary")
         self.individuals = Microsim.add_individual_flows(secondary_name, self.individuals, secondary_flows)
         self.activity_locations[secondary_name] = \
-            ActivityLocation(secondary_name, schools.copy(), secondary_flows, self.individuals, "pschool-secondary")
-        del schools  # No longer needed as we gave copies to the ActivityLocation
+            ActivityLocation(secondary_name, secondary_schools.copy(), secondary_flows, self.individuals, "pschool-secondary")
+        del primary_schools,secondary_schools  # No longer needed as we gave copies to the ActivityLocation
 
         # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go
         # to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
@@ -275,24 +293,29 @@ class Microsim:
         return  # finish __init__
 
     @staticmethod
-    def _find_new_directory(dir):
+    def _find_new_directory(dir,scendir):
         """
         Find a new directory and make one to store results in starting from 'dir'.
         :param dir: Start looking from this directory
         :return: The new directory (full path)
         """
-        # Find a new directory for this initialisation (may have old ones)
+        results_subdir = os.path.join(dir,scendir)
+        # if it exists already, try adding numbers
         i = 0
-        while os.path.exists(os.path.join(dir, str(i))):
+        while os.path.isdir(results_subdir):
             i += 1
+            newdir = scendir + "_" + str(i)
+            results_subdir = os.path.join(dir,newdir)
         # Create a directory for these results
-        results_subdir = os.path.join(dir, str(i))
+        #results_subdir = os.path.join(dir, str(i))
         try:
             os.mkdir(results_subdir)
         except FileExistsError as e:
             print("Directory ", results_subdir, " already exists")
             raise e
         return results_subdir
+
+
 
     @staticmethod
     def _round_flows(flows):
@@ -616,105 +639,143 @@ class Microsim:
         (Schools, PrimaryFlows, SeconaryFlows). Although all the schools are one dataframe, no primary flows will flow
         to secondary schools and vice versa).
         """
-        # TODO Need to read full school flows, not just those of Devon
-        print("Reading school flow data for Devon...", )
-        dir = os.path.join(cls.DATA_DIR, "devon-schools")
-
-        # Read the schools (all of them)
-        schools = pd.read_csv(os.path.join(dir, "exeter schools.csv"))
-        # Add some standard columns that all locations need
-        schools_ids = list(schools.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
-        schools_names = schools.EstablishmentName  # Standard name for the location
-        Microsim._add_location_columns(schools, location_names=schools_names, location_ids=schools_ids)
-
-        # Read the flows
-        primary_rows = []  # Build up all the rows in the matrix gradually then add all at once
-        secondary_rows = []
-        with open(os.path.join(dir, "DJS002.TXT")) as f:
-            # Mark's file comes in batches of 3 lines, each giving different data. However, some lines overrun and are
-            # read as several lines rather than 1 (hence use of dests_tmp and flows_tmp)
-            count = 1
-            oa = None
-            oa_name = ""
-            num_dests = None
-            dests = None
-            flows = None
-            dests_tmp = None
-            flows_tmp = None
-
-            for lineno, raw_line in enumerate(f):
-                # print(f"{lineno}: '{raw_line}'")
-                line_list = raw_line.strip().split()
-                if count == 1:  # primary/secondary school, OA and number of schools
-                    sch_type = int(line_list[0])
-                    assert sch_type == 1 or sch_type == 2  # Primary schools are 1, secondary 2
-                    oa = int(line_list[1])
-                    oa_name = study_msoas[oa - 1]  # The OA names are stored in a separate file temporarily
-                    num_dests = int(line_list[2])
-                elif count == 2:  # school ids
-                    dests_tmp = [int(x) for x in line_list[0:]]  # Make the destinations numbers
-                    # check if dests exists from previous iteration and add dests_tmp
-                    if dests == None:
-                        dests = dests_tmp
-                    else:
-                        dests.extend(dests_tmp)
-                    if len(dests) < num_dests:  # need to read next line
-                        count = 1  # counteracts count being increased by 1 later
-                    else:
-                        assert len(dests) == num_dests
-                elif count == 3:  # Flows per 1,000 pupils
-                    flows_tmp = [float(x) for x in line_list[0:]]  # Make the destinations numbers
-                    # check if dests exists from previous iteration and add dests_tmp
-                    if flows == None:
-                        flows = flows_tmp
-                    else:
-                        flows.extend(flows_tmp)
-                    if len(flows) < num_dests:  # need to read next line
-                        count = 2  # counteracts count being increased by 1 later
-                    else:
-                        assert len(flows) == num_dests
-
-                        # Have read all information for this area. Store the info in the flows matrix
-
-                        # We should have one line in the matrix for each OA, and OA codes are incremental
-                        # assert len(flow_matrix) == oa - 1
-                        row = [0.0 for _ in range(len(schools))]  # Initially assume all flows are 0
-                        for i in range(num_dests):  # Now add the flows
-                            dest = dests[i]
-                            flow = flows[i]
-                            row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
-                        assert len([x for x in row if x > 0]) == num_dests  # There should only be N >0 flows
-                        row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
-
-                        # Luckily Mark's file does all primary schools first, then all secondary schools, so we
-                        # know that all schools in this area are one or the other
-                        if sch_type == 1:
-                            primary_rows.append(row)
+        
+        
+        # devon data
+        if os.path.basename(os.path.normpath(cls.DATA_DIR)) == "devon_data":
+            # TODO Need to read full school flows, not just those of Devon
+            print("Reading school flow data for Devon...", )
+            dir = os.path.join(cls.DATA_DIR, "devon-schools")
+    
+            # Read the schools (all of them)
+            schools = pd.read_csv(os.path.join(dir, "exeter schools.csv"))
+            # Add some standard columns that all locations need
+            schools_ids = list(schools.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
+            schools_names = schools.EstablishmentName  # Standard name for the location
+            Microsim._add_location_columns(schools, location_names=schools_names, location_ids=schools_ids)
+    
+            # Read the flows
+            primary_rows = []  # Build up all the rows in the matrix gradually then add all at once
+            secondary_rows = []
+            with open(os.path.join(dir, "DJS002.TXT")) as f:
+                # Mark's file comes in batches of 3 lines, each giving different data. However, some lines overrun and are
+                # read as several lines rather than 1 (hence use of dests_tmp and flows_tmp)
+                count = 1
+                oa = None
+                oa_name = ""
+                num_dests = None
+                dests = None
+                flows = None
+                dests_tmp = None
+                flows_tmp = None
+    
+                for lineno, raw_line in enumerate(f):
+                    # print(f"{lineno}: '{raw_line}'")
+                    line_list = raw_line.strip().split()
+                    if count == 1:  # primary/secondary school, OA and number of schools
+                        sch_type = int(line_list[0])
+                        assert sch_type == 1 or sch_type == 2  # Primary schools are 1, secondary 2
+                        oa = int(line_list[1])
+                        oa_name = study_msoas[oa - 1]  # The OA names are stored in a separate file temporarily
+                        num_dests = int(line_list[2])
+                    elif count == 2:  # school ids
+                        dests_tmp = [int(x) for x in line_list[0:]]  # Make the destinations numbers
+                        # check if dests exists from previous iteration and add dests_tmp
+                        if dests == None:
+                            dests = dests_tmp
                         else:
-                            secondary_rows.append(row)
-                        # rows.append(row)
+                            dests.extend(dests_tmp)
+                        if len(dests) < num_dests:  # need to read next line
+                            count = 1  # counteracts count being increased by 1 later
+                        else:
+                            assert len(dests) == num_dests
+                    elif count == 3:  # Flows per 1,000 pupils
+                        flows_tmp = [float(x) for x in line_list[0:]]  # Make the destinations numbers
+                        # check if dests exists from previous iteration and add dests_tmp
+                        if flows == None:
+                            flows = flows_tmp
+                        else:
+                            flows.extend(flows_tmp)
+                        if len(flows) < num_dests:  # need to read next line
+                            count = 2  # counteracts count being increased by 1 later
+                        else:
+                            assert len(flows) == num_dests
+    
+                            # Have read all information for this area. Store the info in the flows matrix
+    
+                            # We should have one line in the matrix for each OA, and OA codes are incremental
+                            # assert len(flow_matrix) == oa - 1
+                            row = [0.0 for _ in range(len(schools))]  # Initially assume all flows are 0
+                            for i in range(num_dests):  # Now add the flows
+                                dest = dests[i]
+                                flow = flows[i]
+                                row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
+                            assert len([x for x in row if x > 0]) == num_dests  # There should only be N >0 flows
+                            row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
+    
+                            # Luckily Mark's file does all primary schools first, then all secondary schools, so we
+                            # know that all schools in this area are one or the other
+                            if sch_type == 1:
+                                primary_rows.append(row)
+                            else:
+                                secondary_rows.append(row)
+                            # rows.append(row)
+    
+                            # Add the row to the matrix. As the OA numbers are incremental they should equal the number
+                            # of rows
+                            # flow_matrix.loc[oa-1] = row
+                            # assert len(flow_matrix) == oa
+                            count = 0
+                            # reset dests and flows
+                            dests = None
+                            flows = None
+    
+                    count += 1
+    
+            # Have finished reading the file, now create the matrices. MSOAs as rows, school locations as columns
+            columns = ["Area_ID", "Area_Code"]  # A number (ID) and full code for each MSOA
+            columns += [f"Loc_{i}" for i in schools.index]  # Columns for each school
+    
+            primary_flow_matrix = pd.DataFrame(data=primary_rows, columns=columns)
+            secondary_flow_matrix = pd.DataFrame(data=secondary_rows, columns=columns)
+            # schools_flows = schools_flows.iloc[0:len(self.study_msoas), :]
+            print(f"... finished reading school flows.")
+            
+            # same df for primary and secondary schools
+            primary_schools = schools.copy()
+            secondary_schools = schools.copy()
+            
+        # QUANT data
+        else:
+            print("Reading school flow data...", )
+            dir = os.path.join(cls.DATA_DIR, "QUANT_RAMP","model-runs")
+            
+            # Read the primary schools
+            primary_schools = pd.read_csv(os.path.join(dir, "primaryZones.csv"))
+            # Add some standard columns that all locations need
+            primary_school_ids = list(primary_schools.index)
+            primary_school_names = primary_schools.URN  # unique ID for venue
+            Microsim._add_location_columns(primary_schools, location_names=primary_school_names, location_ids=primary_school_ids)
+    
+            # Read the secondary schools
+            secondary_schools = pd.read_csv(os.path.join(dir, "secondaryZones.csv"))
+            # Add some standard columns that all locations need
+            secondary_school_ids = list(secondary_schools.index)
+            secondary_school_names = secondary_schools.URN  # unique ID for venue
+            Microsim._add_location_columns(secondary_schools, location_names=secondary_school_names, location_ids=secondary_school_ids)
+ 
+            # Read the primary school flows
+            threshold = 5 # top 5
+            thresholdtype = "nr" # threshold based on nr venues
+            primary_flow_matrix = qa.get_flows("PrimarySchool", study_msoas,threshold,thresholdtype)
+            
+            # Read the secondary school flows
+            # same thresholds as before
+            secondary_flow_matrix = qa.get_flows("SecondarySchool", study_msoas,threshold,thresholdtype)
+            
+            
 
-                        # Add the row to the matrix. As the OA numbers are incremental they should equal the number
-                        # of rows
-                        # flow_matrix.loc[oa-1] = row
-                        # assert len(flow_matrix) == oa
-                        count = 0
-                        # reset dests and flows
-                        dests = None
-                        flows = None
-
-                count += 1
-
-        # Have finished reading the file, now create the matrices. MSOAs as rows, school locations as columns
-        columns = ["Area_ID", "Area_Code"]  # A number (ID) and full code for each MSOA
-        columns += [f"Loc_{i}" for i in schools.index]  # Columns for each school
-
-        primary_flow_matrix = pd.DataFrame(data=primary_rows, columns=columns)
-        secondary_flow_matrix = pd.DataFrame(data=secondary_rows, columns=columns)
-        # schools_flows = schools_flows.iloc[0:len(self.study_msoas), :]
-        print(f"... finished reading school flows.")
-
-        return schools, primary_flow_matrix, secondary_flow_matrix
+        return primary_schools, secondary_schools, primary_flow_matrix, secondary_flow_matrix
 
     @classmethod
     def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame) \
@@ -763,93 +824,113 @@ class Microsim:
         :return: A tuple of two dataframes. One containing all of the flows and another
         containing information about the stores themselves.
         """
-        # TODO Need to read full retail flows, not just those of Devon (temporarily created by Mark).
-        # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
-        # working with Devon subset of flows
-        print("Reading retail flow data for Devon...", )
-        dir = os.path.join(cls.DATA_DIR, "devon-retail")
-
-        # Read the stores
-        stores = pd.read_csv(os.path.join(dir, "devon smkt.csv"))
-        # Add some standard columns that all locations need
-        stores_ids = list(stores.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
-        store_names = stores.store_name  # Standard name for the location
-        Microsim._add_location_columns(stores, location_names=store_names, location_ids=stores_ids)
-
-        # Read the flows
-        rows = []  # Build up all the rows in the matrix gradually then add all at once
-        total_flows = 0  # For info & checking
-        with open(os.path.join(dir, "DJR002.TXT")) as f:
-            count = 1  # Mark's file comes in batches of 3 lines, each giving different data
-
-            # See the README for info about these variables. This is only tempoarary so I can't be bothered
-            # to explain properly
-            oa = None
-            oa_name = ""
-            num_dests = None
-            dests = None
-            flows = None
-
-            for lineno, raw_line in enumerate(f):
-                # print(f"{lineno}: '{raw_line}'")
-                line_list = raw_line.strip().split()
-                if count == 1:  # OA and number of destinations
-                    oa = int(line_list[0])
-                    if oa > len(study_msoas):
-                        msg = f"Attempting to read more output areas ({oa}) than are present in the study area {study_msoas}."
-                        if cls.testing:
-                            warnings.warn(msg)
-                        else:
-                            raise Exception(msg)
-                    oa_name = study_msoas[oa - 1]  # The OA names are stored in a separate file temporarily
-                    num_dests = int(line_list[1])
-                elif count == 2:  # Top N (=10) destinations in the OA
-                    # First number is the OA (don't need this), rest are the destinations
-                    assert int(line_list[0]) == oa
-                    dests = [int(x) for x in line_list[1:]]  # Make the destinations numbers
-                    assert len(dests) == num_dests
-                elif count == 3:  # Distance to each store (not currently used)
-                    pass
-                elif count == 4:  # Flows per 1,000 trips
-                    # First number is the OA (don't need this), rest are the destinations
-                    assert int(line_list[0]) == oa
-                    flows = [float(x) for x in line_list[1:]]  # Make the destinations numbers
-                    assert len(flows) == num_dests
-                    total_flows += sum(flows)
-
-                    # Have read all information for this area. Store the info in the flows matrix
-
-                    # We should have one line in the matrix for each OA, and OA codes are incremental
-                    # assert len(flow_matrix) == oa - 1
-                    row = [0.0 for _ in range(len(stores))]  # Initially assume all flows are 0
-                    for i in range(num_dests):  # Now add the flows
-                        dest = dests[i]
-                        flow = flows[i]
-                        row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
-                    assert len([x for x in row if x > 0]) == num_dests  # There should only be positive flows (no 0s)
-                    row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
-
-                    rows.append(row)
-
-                    # Add the row to the matrix. As the OA numbers are incremental they should equal the number
-                    # of rows
-                    # flow_matrix.loc[oa-1] = row
-                    # assert len(flow_matrix) == oa
-                    count = 0
-
-                count += 1
-
-        # Have finished reading the file, now create the matrix. MSOAs as rows, retail locations as columns
-        columns = ["Area_ID", "Area_Code"]  # A number (ID) and full code for each MSOA
-        columns += [f"Loc_{i}" for i in stores.index]  # Columns for each store
-        flow_matrix = pd.DataFrame(data=rows, columns=columns)
-
-        # Check that we haven't lost any flows (need two sums, once to get the flows for each row, then
-        # to add up all rows
-        total_flows2 = flow_matrix.iloc[:, 2:].apply(lambda row: sum(row)).sum()
-        assert total_flows == total_flows2
-
-        print(f"... read {total_flows} flows from {len(flow_matrix)} areas.")
+        
+        # Devon data
+        if os.path.basename(os.path.normpath(cls.DATA_DIR)) == "devon_data":
+            # TODO Need to read full retail flows, not just those of Devon (temporarily created by Mark).
+            # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
+            # working with Devon subset of flows
+            print("Reading retail flow data for Devon...", )
+            dir = os.path.join(cls.DATA_DIR, "devon-retail")
+    
+            # Read the stores
+            stores = pd.read_csv(os.path.join(dir, "devon smkt.csv"))
+            # Add some standard columns that all locations need
+            stores_ids = list(stores.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
+            store_names = stores.store_name  # Standard name for the location
+            Microsim._add_location_columns(stores, location_names=store_names, location_ids=stores_ids)
+    
+            # Read the flows
+            rows = []  # Build up all the rows in the matrix gradually then add all at once
+            total_flows = 0  # For info & checking
+            with open(os.path.join(dir, "DJR002.TXT")) as f:
+                count = 1  # Mark's file comes in batches of 3 lines, each giving different data
+    
+                # See the README for info about these variables. This is only tempoarary so I can't be bothered
+                # to explain properly
+                oa = None
+                oa_name = ""
+                num_dests = None
+                dests = None
+                flows = None
+    
+                for lineno, raw_line in enumerate(f):
+                    # print(f"{lineno}: '{raw_line}'")
+                    line_list = raw_line.strip().split()
+                    if count == 1:  # OA and number of destinations
+                        oa = int(line_list[0])
+                        if oa > len(study_msoas):
+                            msg = f"Attempting to read more output areas ({oa}) than are present in the study area {study_msoas}."
+                            if cls.testing:
+                                warnings.warn(msg)
+                            else:
+                                raise Exception(msg)
+                        oa_name = study_msoas[oa - 1]  # The OA names are stored in a separate file temporarily
+                        num_dests = int(line_list[1])
+                    elif count == 2:  # Top N (=10) destinations in the OA
+                        # First number is the OA (don't need this), rest are the destinations
+                        assert int(line_list[0]) == oa
+                        dests = [int(x) for x in line_list[1:]]  # Make the destinations numbers
+                        assert len(dests) == num_dests
+                    elif count == 3:  # Distance to each store (not currently used)
+                        pass
+                    elif count == 4:  # Flows per 1,000 trips
+                        # First number is the OA (don't need this), rest are the destinations
+                        assert int(line_list[0]) == oa
+                        flows = [float(x) for x in line_list[1:]]  # Make the destinations numbers
+                        assert len(flows) == num_dests
+                        total_flows += sum(flows)
+    
+                        # Have read all information for this area. Store the info in the flows matrix
+    
+                        # We should have one line in the matrix for each OA, and OA codes are incremental
+                        # assert len(flow_matrix) == oa - 1
+                        row = [0.0 for _ in range(len(stores))]  # Initially assume all flows are 0
+                        for i in range(num_dests):  # Now add the flows
+                            dest = dests[i]
+                            flow = flows[i]
+                            row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
+                        assert len([x for x in row if x > 0]) == num_dests  # There should only be positive flows (no 0s)
+                        row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
+    
+                        rows.append(row)
+    
+                        # Add the row to the matrix. As the OA numbers are incremental they should equal the number
+                        # of rows
+                        # flow_matrix.loc[oa-1] = row
+                        # assert len(flow_matrix) == oa
+                        count = 0
+    
+                    count += 1
+    
+            # Have finished reading the file, now create the matrix. MSOAs as rows, retail locations as columns
+            columns = ["Area_ID", "Area_Code"]  # A number (ID) and full code for each MSOA
+            columns += [f"Loc_{i}" for i in stores.index]  # Columns for each store
+            flow_matrix = pd.DataFrame(data=rows, columns=columns)
+    
+            # Check that we haven't lost any flows (need two sums, once to get the flows for each row, then
+            # to add up all rows
+            total_flows2 = flow_matrix.iloc[:, 2:].apply(lambda row: sum(row)).sum()
+            assert total_flows == total_flows2
+    
+            print(f"... read {total_flows} flows from {len(flow_matrix)} areas.")
+            
+        # QUANT data
+        else:
+            print("Reading retail flow data...", )
+            dir = os.path.join(cls.DATA_DIR, "QUANT_RAMP","model-runs")
+            # Read the stores
+            stores = pd.read_csv(os.path.join(dir, "retailpointsZones.csv"))
+            # Add some standard columns that all locations need
+            stores_ids = list(stores.index)
+            store_names = stores.id  # unique ID for venue
+            Microsim._add_location_columns(stores, location_names=store_names, location_ids=stores_ids)
+    
+            # Read the flows
+            threshold = 10 # top 10
+            thresholdtype = "nr" # threshold based on nr venues
+            flow_matrix = qa.get_flows("Retail", study_msoas,threshold,thresholdtype)
+            
 
         return stores, flow_matrix
 
@@ -1055,7 +1136,7 @@ class Microsim:
             return list(l)
         return [round(x, decimals) for x in l]
 
-    def _init_output(self):
+    def _init_output(self,repnr):
         """
         Might need to write out some data if saving output for analysis later. If so, creates a new directory for the
         results as a subdirectory of the data directory.
@@ -1063,9 +1144,12 @@ class Microsim:
         """
         if self.output:
             print("Saving initial models for analysis ... ", )
-            # Find a directory to use, within the 'outut' directory
-            self.output_dir = Microsim._find_new_directory(os.path.join(self.DATA_DIR, "output"))
-
+            # Find a directory to use, within the 'output' directory
+#            if repnr == 0:
+#                self.SCEN_DIR = Microsim._find_new_directory(os.path.join(self.DATA_DIR, "output"), self.SCEN_DIR)
+            self.output_dir = os.path.join(self.SCEN_DIR, str(repnr))
+            os.mkdir(self.output_dir)
+            
             # save initial model
             pickle_out = open(os.path.join(self.output_dir, "m0.pickle"), "wb")
             pickle.dump(self, pickle_out)
@@ -1436,13 +1520,13 @@ class Microsim:
             self.calculate_new_disease_status()
             self.change_behaviour_with_disease()
 
-    def run(self, iterations: int) -> None:
+    def run(self, iterations: int, repnr: int) -> None:
         """
-        Run the model (call the step() function) for the given number of iterations
+        Run the model (call the step() function) for the given number of iterations. Repnr is used to create new unique directory for this repeat
         :param iterations:
         """
         # Create directories for the results
-        self._init_output()
+        self._init_output(repnr)
 
         # Initialise the R interface. Do this here, rather than in init, because when in multiprocessing mode
         # at this point the Microsim object will be in its own process
@@ -1518,6 +1602,9 @@ class Microsim:
 @click.option('-r', '--repetitions', default=1, help="How many times to run the model (default 1)")
 @click.option('-l', '--lockdown-from-file/--no-lockdown-from-file', default=True,
               help="Optionally read lockdown mobility data from a file (default True)")
+
+
+
 def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, debug, repetitions, lockdown_from_file):
 
     # First see if we're reading a parameters file or using command-line arguments.
@@ -1534,6 +1621,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
             #         self.params, self.params_changed = Model._init_kwargs(params, kwargs)
             #         [setattr(self, key, value) for key, value in self.params.items()]
             # Utility parameters
+            scen_dir = sim_params["scenario"]
             iterations = sim_params["iterations"]
             data_dir = sim_params["data-dir"]
             output = sim_params["output"]
@@ -1554,6 +1642,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
 
     print(f"Running model with the following parameters:\n"
           f"\tParameters file: {parameters_file}\n"
+          f"\tScenario directory: {scen_dir}\n"
           f"\tNumber of iterations: {iterations}\n"
           f"\tData dir: {data_dir}\n"
           f"\tOutputting results?: {output}\n"
@@ -1581,7 +1670,8 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
                               names=["x", "y", "Num", "Code", "Desc"])
 
     # Use same arguments whether running 1 repetition or many
-    msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir,
+    msim_args = {"data_dir": data_dir, "scen_dir": scen_dir, 
+                 "r_script_dir": r_script_dir,
                  "output": output, "debug": debug,
                  "lockdown_from_file": lockdown_from_file,
                  }
@@ -1597,32 +1687,39 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
     # Temporily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")
     # m = Microsim(data_dir=data_dir, testing=True, output=output)
-
+    
     # Run it!
     if repetitions == 1:
         # Create a microsim object
         m = Microsim(**msim_args)
-        m.run(iterations)
+        copyfile(parameters_file,os.path.join(m.SCEN_DIR,"parameters.yml"))
+        m.run(iterations,0)
+        
     else:  # Run it multiple times in lots of cores
         try:
             with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
                 # Copy the model instance so we don't have to re-read the data each time
                 # (Use a generator so we don't need to store all the models in memory at once).
                 m = Microsim(**msim_args)
+                copyfile(parameters_file,os.path.join(m.SCEN_DIR,"parameters.yml"))
                 models = (Microsim._make_a_copy(m) for _ in range(repetitions))
+                pickle_out = open(os.path.join("Models_m.pickle"), "wb")
+                pickle.dump(m, pickle_out)
+                pickle_out.close()
                 # models = ( Microsim(msim_args) for _ in range(repetitions))
                 # Also need a list giving the number of iterations for each model (same for each model)
                 iters = (iterations for _ in range(repetitions))
+                repnr = (r for r in range(repetitions))
                 # Run the models by passing each model and the number of iterations
-                pool.starmap(_run_multicore, zip(models, iters))
+                pool.starmap(_run_multicore, zip(models, iters,repnr))
         finally:  # Make sure they get closed (shouldn't be necessary)
             pool.close()
 
     print("End of program")
 
 
-def _run_multicore(m, iter):
-    return m.run(iter)
+def _run_multicore(m, iter,rep):
+    return m.run(iter,rep)
 
 
 if __name__ == "__main__":
