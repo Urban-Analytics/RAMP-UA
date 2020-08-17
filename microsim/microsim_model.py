@@ -47,7 +47,7 @@ import rpy2.robjects as ro  # For calling R scripts
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
 from shutil import copyfile
 
-import QUANTRampAPI2 as qa
+#import QUANTRampAPI2 as qa
 
 #import pandas.rpy.common as com # throws error and doesn't seem to be used?
 
