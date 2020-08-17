@@ -80,7 +80,7 @@ class Microsim:
                  hazard_multiplier_asymptomatic: float = 1.0,
                  hazard_multiplier_symptomatic: float = 1.0,
                  risk_multiplier: float = 1.0,
-                 lockdown_from_file: bool = True,
+                 lockdown_file: str = "google_mobility_lockdown_daily.csv",
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
                  output: bool = True,
@@ -102,6 +102,8 @@ class Microsim:
         :param output: Whether to create files to store the results (default True)
         :param output_every_iteration: Whether to create files to store the results at every iteration rather than
             just at the end (default False)
+        :param lockdown_file: The file to use for estimating mobility under lockdown, or don't do any lockdown
+            if this is an empty string.
         :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
         :param disable_disease_status: Optionally turn off the R interface. This will mean we cannot calculate new
             disease status. Only good for testing.
@@ -118,7 +120,8 @@ class Microsim:
         self.hazard_multiplier_asymptomatic = hazard_multiplier_asymptomatic
         self.hazard_multiplier_symptomatic = hazard_multiplier_symptomatic
         self.risk_multiplier = risk_multiplier
-        self.lockdown_from_file = lockdown_from_file
+        self.lockdown_file = lockdown_file
+        self.do_lockdown = False if (lockdown_file == "") else True
         self.random = random.Random(random_seed)
         self.output = output
         self.output_every_iteration = output_every_iteration
@@ -289,14 +292,17 @@ class Microsim:
 
         # Read a file that tells us how much more time people should spend at home than normal (this is much greater
         # after lockdown
-        self.time_activity_multiplier: pd.DataFrame = Microsim.read_time_activity_multiplier()
+        if self.do_lockdown:
+            self.time_activity_multiplier: pd.DataFrame = Microsim.read_time_activity_multiplier(lockdown_file)
+        else:
+            self.time_activity_multiplier = None
 
         print(" ... finished initialisation.")
 
         return  # finish __init__
 
     @staticmethod
-    def _find_new_directory(dir,scendir):
+    def _find_new_directory(dir, scendir):
         """
         Find a new directory and make one to store results in starting from 'dir'.
         :param dir: Start looking from this directory
@@ -1106,16 +1112,20 @@ class Microsim:
 
 
     @classmethod
-    def read_time_activity_multiplier(cls) -> pd.DataFrame:
+    def read_time_activity_multiplier(cls, lockdown_file) -> pd.DataFrame:
         """
         Some times people should spend more time at home than normal. E.g. after lockdown. This function
         reads a file that tells us how much more time should be spent at home on each day.
+        :param lockdown_file: Where to read the mobility data from (assume it's within the DATA_DIR).
         :return: A dataframe with 'day' and 'timeout_multiplier' columns
         """
-        print("Reading time activity multiplier data...", )
-        time_activity = pd.read_csv(os.path.join(cls.DATA_DIR, "google_mobility_lockdown_daily.csv"))
+        assert lockdown_file != "", \
+            "read_time_activity_multiplier should not have been called if lockdown_file is empty"
+        path = os.path.join(cls.DATA_DIR, lockdown_file)
+        print(f"Reading time activity multiplier data from {path}...", )
+        time_activity = pd.read_csv(path)
         # Cap at 1.0 (it's a curve so some times peaks above 1.0)=
-        time_activity["timeout_multiplier"] = time_activity.loc[:,"timeout_multiplier"].\
+        time_activity["timeout_multiplier"] = time_activity.loc[:, "timeout_multiplier"].\
             apply(lambda x: 1.0 if x > 1.0 else x)
 
         return time_activity
@@ -1200,7 +1210,7 @@ class Microsim:
         Note: ignores people who are currently showing symptoms (`ColumnNames.DiseaseStatus.SYMPTOMATIC`)
         """
         # Are we doing any lockdown at all? in this iteration?
-        if self.lockdown_from_file:
+        if self.do_lockdown:
             # Only change the behaviour of people who aren't showing symptoms. If you are showing symptoms then you
             # will be mostly at home anyway, so don't want your behaviour overridden by lockdown.
             uninfected = self.individuals.index[
@@ -1214,19 +1224,17 @@ class Microsim:
             # Need to remember the total duration of time lost for non-home activities
             total_duration = pd.Series(data=[0.0] * len(self.individuals.loc[uninfected]), name="TotalDuration")
 
-            if self.lockdown_from_file:  # Reduce the initial activity proportion of time by a particular amount per day
-                timeout_multiplier = self.time_activity_multiplier.loc[
-                    self.time_activity_multiplier.day == self.iteration, "timeout_multiplier"].values[0]
-                print(f"\tApplying regular (google mobility) multiplier {timeout_multiplier}")
-                for activity in non_home_activities:
-                    # Need to be careful with new_duration because we don't want to keep the index used in
-                    # self.individuals as this will be missing out people who aren't infected so will have gaps
-                    new_duration = pd.Series(list(self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION_INITIAL] * timeout_multiplier), name="NewDuration")
-                    total_duration += new_duration
-                    self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION] = list(new_duration)
+            # Reduce the initial activity proportion of time by a particular amount per day
+            timeout_multiplier = self.time_activity_multiplier.loc[
+                self.time_activity_multiplier.day == self.iteration, "timeout_multiplier"].values[0]
+            print(f"\tApplying regular (google mobility) lockdown multiplier {timeout_multiplier}")
+            for activity in non_home_activities:
+                # Need to be careful with new_duration because we don't want to keep the index used in
+                # self.individuals as this will be missing out people who aren't infected so will have gaps
+                new_duration = pd.Series(list(self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION_INITIAL] * timeout_multiplier), name="NewDuration")
+                total_duration += new_duration
+                self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION] = list(new_duration)
 
-            else:  # Should not be able to get here
-                assert False
 
             assert (total_duration <= 1.0).all() and (new_duration <= 1.0).all()
             # Now set home duration to fill in the time lost from doing other activities.
@@ -1237,6 +1245,8 @@ class Microsim:
             # self.individuals.loc[:, [ x+ColumnNames.ACTIVITY_DURATION for x in self.activity_locations.keys() ]+
             #     [ x+ColumnNames.ACTIVITY_DURATION_INITIAL for x in self.activity_locations.keys()   ]   ]
             Microsim.check_durations_sum_to_1(self.individuals, self.activity_locations.keys())
+        else:
+            print("\tNot applying a lockdown multiplier")
 
     def update_venue_danger_and_risks(self, decimals=8):
         """
@@ -1607,11 +1617,12 @@ class Microsim:
               help='Whether to generate output data at every iteration rather than just at the end (default no).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
 @click.option('-r', '--repetitions', default=1, help="How many times to run the model (default 1)")
-@click.option('-l', '--lockdown-from-file/--no-lockdown-from-file', default=True,
-              help="Optionally read lockdown mobility data from a file (default True)")
+@click.option('-l', '--lockdown-file', default="google_mobility_lockdown_daily.csv",
+              help="Optionally read lockdown mobility data from a file (default use google mobility). To have no "
+                   "lockdown pass an empty string, i.e. --lockdown-file='' ")
 
 def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, output_every_iteration, debug,
-               repetitions, lockdown_from_file):
+               repetitions, lockdown_file):
 
     # First see if we're reading a parameters file or using command-line arguments.
     if no_parameters_file:
@@ -1634,7 +1645,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
             output_every_iteration = sim_params["output-every-iteration"]
             debug = sim_params["debug"]
             repetitions = sim_params["repetitions"]
-            lockdown_from_file = sim_params["lockdown-from-file"]
+            lockdown_file = sim_params["lockdown-file"]
             ## Calibration parameters
             #hazard_multiplier_presymptomatic = calibration_params["hazard_multiplier_presymptomatic"]
             #hazard_multiplier_asymptomatic = calibration_params["hazard_multiplier_asymptomatic"]
@@ -1659,7 +1670,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
           f"\tOutputting results at every iteration?: {output_every_iteration}\n"
           f"\tDebug mode?: {debug}\n"
           f"\tNumber of repetitions: {repetitions}\n"
-          f"\tLockdown from file? : {lockdown_from_file}\n"
+          f"\tLockdown file: {lockdown_file}\n"
           f"\tCalibration parameters: {'N/A (not reading parameters file)' if no_parameters_file else str(calibration_params)}\n")
           #f"\thazard_multiplier_presymptomatic: {hazard_multiplier_presymptomatic}\n"
           #f"\thazard_multiplier_asymptomatic: {hazard_multiplier_asymptomatic}\n"
@@ -1683,7 +1694,7 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "scen_dir": scen_dir, "r_script_dir": r_script_dir,
                  "output": output, "output_every_iteration": output_every_iteration, "debug": debug,
-                 "lockdown_from_file": lockdown_from_file,
+                 "lockdown_file": lockdown_file,
                  }
 
     if not no_parameters_file:  # When using a parameters file, include the calibration parameters
