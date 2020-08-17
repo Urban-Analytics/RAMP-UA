@@ -47,7 +47,7 @@ import rpy2.robjects as ro  # For calling R scripts
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
 from shutil import copyfile
 
-#import QUANTRampAPI2 as qa
+import QUANTRampAPI2 as qa
 
 #import pandas.rpy.common as com # throws error and doesn't seem to be used?
 
@@ -156,6 +156,12 @@ class Microsim:
         # Extract a list of all MSOAs in the study area. Will need this for the new SIMs
         self.all_msoas = Microsim.extract_msoas_from_indiviuals(self.individuals)
 
+        # in case QUANTRamp input data is used, read the csv files
+        if not os.path.basename(os.path.normpath(self.DATA_DIR)) == "devon_data":
+            print("reading in QUANTRamp data")
+            quant_dir = os.path.join(self.DATA_DIR, "QUANT_RAMP","model-runs")
+            assert os.path.isdir(quant_dir)
+            QUANT_data = qa.readQUANT(quant_dir)
 
         #
         # ********** How to assign activities for the population **********
@@ -216,7 +222,7 @@ class Microsim:
 
         # Read Retail flows data
         retail_name = "Retail"  # How to refer to this in data frame columns etc.
-        stores, stores_flows = Microsim.read_retail_flows_data(self.all_msoas)  # (list of shops and a flow matrix)
+        stores, stores_flows = Microsim.read_retail_flows_data(self.all_msoas,QUANT_data)  # (list of shops and a flow matrix)
         Microsim.check_sim_flows(stores, stores_flows)
         # Assign Retail flows data to the individuals
         self.individuals = Microsim.add_individual_flows(retail_name, self.individuals, stores_flows)
@@ -227,7 +233,7 @@ class Microsim:
         primary_name = "PrimarySchool"
         secondary_name = "SecondarySchool"
         primary_schools, secondary_schools, primary_flows, secondary_flows = \
-            Microsim.read_school_flows_data(self.all_msoas)  # (list of schools and a flow matrix)
+            Microsim.read_school_flows_data(self.all_msoas,QUANT_data)  # (list of schools and a flow matrix)
         Microsim.check_sim_flows(primary_schools, primary_flows)
         Microsim.check_sim_flows(secondary_schools, secondary_flows)
         # Assign Schools
@@ -632,7 +638,7 @@ class Microsim:
         return individuals
 
     @classmethod
-    def read_school_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
+    def read_school_flows_data(cls, study_msoas: List[str], QUANT_data) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
         """
         Read the flows between each MSOA and the most likely schools attended by pupils in this area.
         All schools are initially read together, but flows are separated into primary and secondary
@@ -770,11 +776,11 @@ class Microsim:
             # Read the primary school flows
             threshold = 5 # top 5
             thresholdtype = "nr" # threshold based on nr venues
-            primary_flow_matrix = qa.get_flows("PrimarySchool", study_msoas,threshold,thresholdtype)
+            primary_flow_matrix = qa.get_flows("PrimarySchool",QUANT_data["dfPrimaryPopulation"],QUANT_data["dfPrimaryZones"],QUANT_data["primary_probPij"],study_msoas,threshold,thresholdtype)
             
             # Read the secondary school flows
             # same thresholds as before
-            secondary_flow_matrix = qa.get_flows("SecondarySchool", study_msoas,threshold,thresholdtype)
+            secondary_flow_matrix = qa.get_flows("SecondarySchool",QUANT_data["dfSecondaryPopulation"],QUANT_data["dfSecondaryZones"],QUANT_data["secondary_probPij"],study_msoas,threshold,thresholdtype)
             
             
 
@@ -819,7 +825,7 @@ class Microsim:
         return workplaces.index[workplaces[ColumnNames.LOCATION_NAME] == job].values[0]
 
     @classmethod
-    def read_retail_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
+    def read_retail_flows_data(cls, study_msoas: List[str],QUANT_data) -> (pd.DataFrame, pd.DataFrame):
         """
         Read the flows between each MSOA and the most commonly visited shops
 
@@ -932,7 +938,7 @@ class Microsim:
             # Read the flows
             threshold = 10 # top 10
             thresholdtype = "nr" # threshold based on nr venues
-            flow_matrix = qa.get_flows("Retail", study_msoas,threshold,thresholdtype)
+            flow_matrix = qa.get_flows("Retail",QUANT_data["dfRetailPointsPopulation"],QUANT_data["dfRetailPointsZones"],QUANT_data["retailpoints_probSij"],study_msoas,threshold,thresholdtype)
             
 
         return stores, flow_matrix

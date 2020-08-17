@@ -25,24 +25,27 @@ def loadMatrix(filename):
     return matrix
 
 ################################################################################
-# Globals
+# Used to be globals - rewritten to prevent read in on import
 ################################################################################
 
-os.chdir("..")
-quant_dir = 'data/QUANT_RAMP/model-runs/'
-dfPrimaryPopulation = pd.read_csv(os.path.join(quant_dir,'primaryPopulation.csv'))
-dfPrimaryZones = pd.read_csv(os.path.join(quant_dir,'primaryZones.csv'))
-primary_probPij = loadMatrix(os.path.join(quant_dir,'primaryProbPij.bin'))
-dfSecondaryPopulation = pd.read_csv(os.path.join(quant_dir,'secondaryPopulation.csv'))
-dfSecondaryZones = pd.read_csv(os.path.join(quant_dir,'secondaryZones.csv'))
-secondary_probPij = loadMatrix(os.path.join(quant_dir,'secondaryProbPij.bin'))
-dfRetailPointsPopulation = pd.read_csv(os.path.join(quant_dir,'retailpointsPopulation.csv'))
-dfRetailPointsZones = pd.read_csv(os.path.join(quant_dir,'retailpointsZones.csv'))
-retailpoints_probSij = loadMatrix(os.path.join(quant_dir,'retailpointsProbSij.bin'))
-dfHospitalPopulation = pd.read_csv(os.path.join(quant_dir,'hospitalPopulation.csv'))
-dfHospitalZones = pd.read_csv(os.path.join(quant_dir,'hospitalZones.csv'))
-hospital_probHij = loadMatrix(os.path.join(quant_dir,'hospitalProbHij.bin'))
-
+def readQUANT(quant_dir):
+    #os.chdir("..")
+    #quant_dir = 'data/QUANT_RAMP/model-runs/'
+    QUANT_data = {
+    "dfPrimaryPopulation" : pd.read_csv(os.path.join(quant_dir,'primaryPopulation.csv')),
+    "dfPrimaryZones" : pd.read_csv(os.path.join(quant_dir,'primaryZones.csv')),
+    "primary_probPij" : loadMatrix(os.path.join(quant_dir,'primaryProbPij.bin')),
+    "dfSecondaryPopulation" : pd.read_csv(os.path.join(quant_dir,'secondaryPopulation.csv')),
+    "dfSecondaryZones" : pd.read_csv(os.path.join(quant_dir,'secondaryZones.csv')),
+    "secondary_probPij" : loadMatrix(os.path.join(quant_dir,'secondaryProbPij.bin')),
+    "dfRetailPointsPopulation" : pd.read_csv(os.path.join(quant_dir,'retailpointsPopulation.csv')),
+    "dfRetailPointsZones" : pd.read_csv(os.path.join(quant_dir,'retailpointsZones.csv')),
+    "retailpoints_probSij" : loadMatrix(os.path.join(quant_dir,'retailpointsProbSij.bin')),
+    "dfHospitalPopulation" : pd.read_csv(os.path.join(quant_dir,'hospitalPopulation.csv')),
+    "dfHospitalZones" : pd.read_csv(os.path.join(quant_dir,'hospitalZones.csv')),
+    "hospital_probHij" : loadMatrix(os.path.join(quant_dir,'hospitalProbHij.bin'))
+    }
+    return QUANT_data
 
 ################################################################################
 # Interface
@@ -60,7 +63,7 @@ NOTE: code identical to the secondary school version, only with switched lookup 
 @param threshold Probability threshold e.g. 0.5 means return all possible schools with probability>=0.5
 @returns a list of probabilities in the same order as the venues
 """
-def getProbablePrimarySchoolsByMSOAIZ(msoa_iz,threshold):
+def getProbablePrimarySchoolsByMSOAIZ(dfPrimaryPopulation,dfPrimaryZones,primary_probPij,msoa_iz,threshold):
     result = []
     zonei = int(dfPrimaryPopulation.loc[dfPrimaryPopulation['msoaiz'] == msoa_iz,'zonei'])
     m,n = primary_probPij.shape
@@ -87,7 +90,7 @@ NOTE: code identical to the primary school version, only with switched lookup ta
 @param threshold Probability threshold e.g. 0.5 means return all possible schools with probability>=0.5
 @returns a list of probabilities in the same order as the venues
 """
-def getProbableSecondarySchoolsByMSOAIZ(msoa_iz,threshold):
+def getProbableSecondarySchoolsByMSOAIZ(dfSecondaryPopulation,dfSecondaryZones,secondary_probPijmsoa_iz,threshold):
     result = []
     zonei = int(dfSecondaryPopulation.loc[dfSecondaryPopulation['msoaiz'] == msoa_iz, 'zonei'])
     m,n = secondary_probPij.shape
@@ -113,7 +116,7 @@ Retail ids are from ????
 @param threshold Probability threshold e.g. 0.5 means return all possible retail points with probability>=0.5
 @returns a list of probabilities in the same order as the venues
 """
-def getProbableRetailByMSOAIZ(msoa_iz,threshold):
+def getProbableRetailByMSOAIZ(dfRetailPointsPopulation,dfRetailPointsZones,retailpoints_probSij,msoa_iz,threshold):
     result = []
     zonei = int(dfRetailPointsPopulation.loc[dfRetailPointsPopulation['msoaiz'] == msoa_iz, 'zonei'])
     m,n = retailpoints_probSij.shape
@@ -141,7 +144,7 @@ NOTE: code identical to the primary school version, only with switched lookup ta
 @returns a list of [ {id: 'hospitalid1', p: 0.5}, {id: 'hospitalid2', p:0.6}, ... etc] (NOTE: not sorted in any particular order)
 """
 
-def getProbableHospitalByMSOAIZ(msoa_iz,threshold):
+def getProbableHospitalByMSOAIZ(dfHospitalPopulation,dfHospitalZones,hospital_probHijmsoa_iz,threshold):
     result = []
     zonei = int(dfHospitalPopulation.loc[dfHospitalPopulation['msoaiz'] == msoa_iz, 'zonei'])
     m,n = hospital_probHij.shape
@@ -163,7 +166,7 @@ def getProbableHospitalByMSOAIZ(msoa_iz,threshold):
 # Prepare RAMP UA compatible data
 ################################################################################
 
-def get_flows(venue, msoa_list, threshold, thresholdtype):
+def get_flows(venue, Population, Zones, probPij, msoa_list, threshold, thresholdtype):
     
     # get all probabilities so they sum to at least threshold value
     dic = {} # appending to dictionary is faster than dataframe
@@ -171,11 +174,11 @@ def get_flows(venue, msoa_list, threshold, thresholdtype):
         print(m)
         # get all probabilities for this MSOA (threshold set to 0)
         if venue == "PrimarySchool":
-            result_tmp = getProbablePrimarySchoolsByMSOAIZ(m,0)
+            result_tmp = getProbablePrimarySchoolsByMSOAIZ(Population,Zones,probPij,m,0)
         elif venue == "SecondarySchool":
-            result_tmp = getProbableSecondarySchoolsByMSOAIZ(m,0)
+            result_tmp = getProbableSecondarySchoolsByMSOAIZ(Population,Zones,probPij,m,0)
         elif venue == "Retail":
-            result_tmp = getProbableRetailByMSOAIZ(m,0)
+            result_tmp = getProbableRetailByMSOAIZ(Population,Zones,probPij,m,0)
         else:
             sys.exit("unknown venue type") 
         # keep only values that sum to at least the specified threshold
