@@ -4,7 +4,6 @@ import os
 import pickle
 from tqdm import tqdm
 from convertbng.util import convert_lonlat
-from time import time
 
 
 class Snapshotter:
@@ -107,36 +106,33 @@ class Snapshotter:
         people_place_ids = np.zeros((self.num_people, max_places_per_person), dtype=np.uint32)
         people_place_flows = np.zeros((self.num_people, max_places_per_person), dtype=np.float32)
 
-        for people_id, person_row in tqdm(self.individuals.iterrows(), total=self.num_people,
-                                          desc="Calculating place flows for all people"):
-            num_places_added = 0
+        num_places_added = np.zeros(self.num_people, dtype=np.uint32)
 
-            for activity_name in self.activity_names:
-                activity_venue_col = activity_name + "_Venues"
-                local_place_ids = np.array(person_row[activity_venue_col])
+        for activity_name in self.activity_names:
+            activity_venues = self.individuals.loc[:, activity_name + "_Venues"]
+            activity_flows = self.individuals.loc[:, activity_name + "_Flows"]
+            activity_durations = self.individuals.loc[:, activity_name + "_Duration"]
 
-                activity_duration_col = activity_name + "_Duration"
-                activity_duration = np.float32(person_row[activity_duration_col])
-
-                activity_flow_col = activity_name + "_Flows"
-                activity_flows = np.array(person_row[activity_flow_col])
-
-                activity_flows = activity_flows * activity_duration
+            for people_id, (local_place_ids, flows, duration) in tqdm(
+                                                enumerate(zip(activity_venues, activity_flows, activity_durations)),
+                                                total=self.num_people,
+                                                desc=f"Calculating {activity_name} flows for all people"):
+                flows = np.array(flows) * duration
 
                 # check dimensions match
-                assert local_place_ids.shape[0] == activity_flows.shape[0]
+                assert len(local_place_ids) == flows.shape[0]
 
-                num_places_to_add = local_place_ids.shape[0]
+                num_places_to_add = len(local_place_ids)
 
-                start_idx = num_places_added
+                start_idx = num_places_added[people_id]
                 end_idx = start_idx + num_places_to_add
                 people_place_ids[people_id, start_idx:end_idx] = np.array(
                     [self.get_global_place_id(activity_name, local_place_id)
                      for local_place_id in local_place_ids])
 
-                people_place_flows[people_id, start_idx:end_idx] = activity_flows
+                people_place_flows[people_id, start_idx:end_idx] = flows
 
-                num_places_added += num_places_to_add
+                num_places_added[people_id] += num_places_to_add
 
         # Sort by magnitude of flow (reversed)
         sorted_indices = people_place_flows.argsort()[:, ::-1]
