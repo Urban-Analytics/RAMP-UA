@@ -114,9 +114,9 @@ class Snapshotter:
             activity_durations = self.individuals.loc[:, activity_name + "_Duration"]
 
             for people_id, (local_place_ids, flows, duration) in tqdm(
-                                                enumerate(zip(activity_venues, activity_flows, activity_durations)),
-                                                total=self.num_people,
-                                                desc=f"Calculating {activity_name} flows for all people"):
+                    enumerate(zip(activity_venues, activity_flows, activity_durations)),
+                    total=self.num_people,
+                    desc=f"Calculating {activity_name} flows for all people"):
                 flows = np.array(flows) * duration
 
                 # check dimensions match
@@ -153,20 +153,26 @@ class Snapshotter:
         for activity_index, activity_name in enumerate(self.activity_names):
             place_type_enum[activity_index] = activity_name
             activity_locations_df = self.locations[activity_name]
-            activity_locations_df = activity_locations_df.rename(columns={"bng_e": "Easting", "bng_n": "Northing"})
 
-            for row_index, location_row in tqdm(activity_locations_df.iterrows(),
-                                                total=len(activity_locations_df.index),
-                                                desc=f"Processing data for {activity_name} locations"):
-                local_place_id = np.uint32(location_row["ID"])
+            ids = activity_locations_df.loc[:, "ID"]
+
+            # Store global ids
+            for local_place_id in tqdm(ids, desc=f"Storing location type for {activity_name}"):
                 global_place_id = self.get_global_place_id(activity_name, local_place_id)
-
                 place_types[global_place_id] = activity_index
 
-                easting = getattr(location_row, "Easting", None)
-                northing = getattr(location_row, "Northing", None)
+            # Convert and store coordinates
+            activity_locations_df = activity_locations_df.rename(columns={"bng_e": "Easting", "bng_n": "Northing"})
 
-                if easting and northing:
+            if 'Easting' in activity_locations_df.columns and 'Northing' in activity_locations_df.columns:
+                eastings = activity_locations_df.loc[:, "Easting"]
+                northings = activity_locations_df.loc[:, "Northing"]
+
+                for local_place_id, easting, northing in tqdm(zip(ids, eastings, northings),
+                                                              desc=f"Processing coordinate data for {activity_name}"):
+
+                    global_place_id = self.get_global_place_id(activity_name, local_place_id)
+
                     long_lat = convert_lonlat([easting], [northing])
                     long = long_lat[0][0]
                     lat = long_lat[1][0]
