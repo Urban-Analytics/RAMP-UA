@@ -47,6 +47,7 @@ import rpy2.robjects as ro  # For calling R scripts
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
 from shutil import copyfile
 
+USE_QUANT_DATA = False  # Temorary flag to use UCL SIMs or Devon ones. Needs to become a command-line parameter
 #import QUANTRampAPI2 as qa
 
 #import pandas.rpy.common as com # throws error and doesn't seem to be used?
@@ -652,7 +653,7 @@ class Microsim:
         
         
         # devon data
-        if os.path.basename(os.path.normpath(cls.DATA_DIR)) == "devon_data":
+        if not USE_QUANT_DATA:
             # TODO Need to read full school flows, not just those of Devon
             print("Reading school flow data for Devon...", )
             dir = os.path.join(cls.DATA_DIR, "devon-schools")
@@ -836,7 +837,7 @@ class Microsim:
         """
         
         # Devon data
-        if os.path.basename(os.path.normpath(cls.DATA_DIR)) == "devon_data":
+        if not USE_QUANT_DATA:
             # TODO Need to read full retail flows, not just those of Devon (temporarily created by Mark).
             # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
             # working with Devon subset of flows
@@ -940,7 +941,6 @@ class Microsim:
             threshold = 10 # top 10
             thresholdtype = "nr" # threshold based on nr venues
             flow_matrix = qa.get_flows("Retail", study_msoas,threshold,thresholdtype)
-            
 
         return stores, flow_matrix
 
