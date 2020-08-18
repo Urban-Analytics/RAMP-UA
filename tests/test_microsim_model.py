@@ -17,7 +17,7 @@ test_dir = os.path.dirname(os.path.abspath(__file__))
 microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
                  "r_script_dir": os.path.normpath(os.path.join(test_dir, "..", "R/py_int")),
                  "testing": True, "debug": True,
-                 "disable_disease_status": True, 'lockdown_from_file':False}
+                 "disable_disease_status": True, 'lockdown_file': ""}
 
 
 # This 'fixture' means that other functions (e.g. step) can use the object created here.
