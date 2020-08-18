@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import os
 from microsim.snapshotter import Snapshotter
 
 
@@ -43,8 +44,9 @@ activity_locations = {
     "Retail": TestActivityLocation(name="Retail", locations=retail_df)
 }
 
-# pass None in order to load locations from pickle file
-snapshotter = Snapshotter(individuals_df, activity_locations, "snapshots", cache_inputs=False)
+base_dir = os.getcwd()
+snapshot_dir = os.path.join(base_dir, "test_snapshots")
+snapshotter = Snapshotter(individuals_df, activity_locations, snapshot_dir=snapshot_dir, cache_inputs=False)
 
 
 def test_global_id_lookup():
@@ -89,3 +91,11 @@ def test_get_place_data():
     assert np.array_equal(expected_place_type_enum, place_type_enum)
     assert np.array_equal(expected_place_types, place_types)
     assert np.all(np.isclose(expected_place_coordinates, place_coordinates, atol=0.0001, equal_nan=True))
+
+
+def test_store_snapshots():
+    snapshotter.store_snapshots()
+
+    # check npz files exist
+    assert os.path.isfile(os.path.join(snapshot_dir, "people.npz"))
+    assert os.path.isfile(os.path.join(snapshot_dir, "places.npz"))
