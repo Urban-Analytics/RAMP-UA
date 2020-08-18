@@ -26,8 +26,17 @@ individuals_df = pd.DataFrame(people_data,
 home_data = {'ID': [0, 1, 2]}
 home_df = pd.DataFrame(home_data, columns=['ID'])
 
-retail_data = {'ID': [0, 1, 2, 3, 4]}
-retail_df = pd.DataFrame(retail_data, columns=['ID'])
+bng_coordinate_a = [533494, 181851]
+lat_lon_coordinate_a = [51.519811, -0.077342]  # NB: converted BNG coordinates to lat long using online tool
+bng_coordinate_b = [280397, 696841]
+lat_lon_coordinate_b = [56.149214, -3.926794]
+
+retail_data = {'ID': [0, 1, 2, 3, 4],
+               "Easting": [bng_coordinate_a[0], bng_coordinate_a[0], bng_coordinate_b[0], bng_coordinate_b[0],
+                           bng_coordinate_b[0]],
+               "Northing": [bng_coordinate_a[1], bng_coordinate_a[1], bng_coordinate_b[1], bng_coordinate_b[1],
+                            bng_coordinate_b[1]]}
+retail_df = pd.DataFrame(retail_data, columns=['ID', "Easting", "Northing"])
 
 activity_locations = {
     "Home": TestActivityLocation(name="Home", locations=home_df),
@@ -61,3 +70,22 @@ def test_processes_people_flows():
 
     assert np.array_equal(expected_people_place_ids, people_place_ids)
     assert np.all(np.isclose(expected_people_flows, people_flows))
+
+
+def test_get_place_data():
+    expected_place_type_enum = np.array(["Home", "Retail"])
+    expected_place_types = np.array([0, 0, 0, 1, 1, 1, 1, 1])
+    expected_place_coordinates = np.array([[np.nan, np.nan],
+                                           [np.nan, np.nan],
+                                           [np.nan, np.nan],
+                                           lat_lon_coordinate_a,
+                                           lat_lon_coordinate_a,
+                                           lat_lon_coordinate_b,
+                                           lat_lon_coordinate_b,
+                                           lat_lon_coordinate_b])
+
+    place_type_enum, place_types, place_coordinates = snapshotter.get_place_data()
+
+    assert np.array_equal(expected_place_type_enum, place_type_enum)
+    assert np.array_equal(expected_place_types, place_types)
+    assert np.all(np.isclose(expected_place_coordinates, place_coordinates, atol=0.0001, equal_nan=True))
