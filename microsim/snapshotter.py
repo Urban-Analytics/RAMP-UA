@@ -49,12 +49,12 @@ class Snapshotter:
         ages = self.get_people_ages()
         people_place_ids, people_flows = self.get_people_place_data()
 
-        filepath = os.path.join(self.snapshot_dir, 'people_snapshot.npz')
+        filepath = os.path.join(self.snapshot_dir, 'people.npz')
         print(f"Saving data for {self.num_people} people to {filepath}")
         np.savez(filepath, ages=ages, people_place_ids=people_place_ids, people_baseline_flows=people_flows)
 
         place_type_enum, place_types, place_coordinates = self.get_place_data()
-        filepath = os.path.join(self.snapshot_dir, 'place_snapshot.npz')
+        filepath = os.path.join(self.snapshot_dir, 'places.npz')
         print(f"Saving data for {self.num_places} people to {filepath}")
         np.savez(filepath,
                  place_type_enum=place_type_enum,
