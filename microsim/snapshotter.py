@@ -53,12 +53,12 @@ class Snapshotter:
         print(f"Saving data for {self.num_people} people to {filepath}")
         np.savez(filepath, ages=ages, people_place_ids=people_place_ids, people_baseline_flows=people_flows)
 
-        place_type_enum, place_types, place_coordinates = self.get_place_data()
+        activity_name_enum, place_activities, place_coordinates = self.get_place_data()
         filepath = os.path.join(self.snapshot_dir, 'places.npz')
         print(f"Saving data for {self.num_places} people to {filepath}")
         np.savez(filepath,
-                 place_type_enum=place_type_enum,
-                 place_types=place_types,
+                 activity_names=activity_name_enum,
+                 place_activities=place_activities,
                  place_coordinates=place_coordinates)
 
     def create_global_place_ids(self):
@@ -146,12 +146,12 @@ class Snapshotter:
         return people_place_ids, people_place_flows
 
     def get_place_data(self):
-        place_type_enum = np.zeros(len(self.activity_names), dtype=object)
-        place_types = np.zeros(self.num_places, dtype=np.uint32)
+        activity_name_enum = np.zeros(len(self.activity_names), dtype=object)
+        place_activities = np.zeros(self.num_places, dtype=np.uint32)
         place_coordinates = np.full((self.num_places, 2), np.nan, dtype=np.float32)
 
         for activity_index, activity_name in enumerate(self.activity_names):
-            place_type_enum[activity_index] = activity_name
+            activity_name_enum[activity_index] = activity_name
             activity_locations_df = self.locations[activity_name]
 
             ids = activity_locations_df.loc[:, "ID"]
@@ -159,7 +159,7 @@ class Snapshotter:
             # Store global ids
             for local_place_id in tqdm(ids, desc=f"Storing location type for {activity_name}"):
                 global_place_id = self.get_global_place_id(activity_name, local_place_id)
-                place_types[global_place_id] = activity_index
+                place_activities[global_place_id] = activity_index
 
             # Convert and store coordinates
             activity_locations_df = activity_locations_df.rename(columns={"bng_e": "Easting", "bng_n": "Northing"})
@@ -178,7 +178,7 @@ class Snapshotter:
                     lat = long_lat[1][0]
                     place_coordinates[global_place_id] = np.array([lat, long])
 
-        return place_type_enum, place_types, place_coordinates
+        return activity_name_enum, place_activities, place_coordinates
 
     def load_from_cache(self, cache_filename, is_dataframe=False):
         cache_filepath = os.path.join(self.snapshot_dir, cache_filename)
