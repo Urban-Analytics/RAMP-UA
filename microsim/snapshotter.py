@@ -5,6 +5,8 @@ import pickle
 from tqdm import tqdm
 from convertbng.util import convert_lonlat
 
+sentinel_value = (1 << 32) - 1
+
 
 class Snapshotter:
     """
@@ -103,7 +105,7 @@ class Snapshotter:
         :return: Numpy arrays of place ids and baseline flows indexed by person id
         """
 
-        people_place_ids = np.zeros((self.num_people, max_places_per_person), dtype=np.uint32)
+        people_place_ids = np.full((self.num_people, max_places_per_person), sentinel_value, dtype=np.uint32)
         people_place_flows = np.zeros((self.num_people, max_places_per_person), dtype=np.float32)
 
         num_places_added = np.zeros(self.num_people, dtype=np.uint32)
@@ -170,7 +172,6 @@ class Snapshotter:
 
                 for local_place_id, easting, northing in tqdm(zip(ids, eastings, northings),
                                                               desc=f"Processing coordinate data for {activity_name}"):
-
                     global_place_id = self.get_global_place_id(activity_name, local_place_id)
 
                     long_lat = convert_lonlat([easting], [northing])

@@ -3,6 +3,8 @@ import numpy as np
 import os
 from microsim.snapshotter import Snapshotter
 
+sentinel_value = (1 << 32) - 1
+
 
 class TestActivityLocation:
     def __init__(self, name: str, locations: pd.DataFrame):
@@ -58,17 +60,17 @@ def test_global_id_lookup():
 
 
 def test_processes_people_flows():
-    expected_people_place_ids = np.array([[0, 5, 7, 3, 0, 0, 0, 0, 0, 0],
-                                          [1, 5, 6, 4, 0, 0, 0, 0, 0, 0],
-                                          [2, 3, 7, 6, 0, 0, 0, 0, 0, 0]
+    expected_people_place_ids = np.array([[0, 5, 7, 3, sentinel_value, sentinel_value, sentinel_value, sentinel_value],
+                                          [1, 5, 6, 4, sentinel_value, sentinel_value, sentinel_value, sentinel_value],
+                                          [2, 3, 7, 6, sentinel_value, sentinel_value, sentinel_value, sentinel_value],
                                           ])
-    expected_people_flows = np.array([[0.8, 0.1, 0.06, 0.04, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                                      [0.7, 0.18, 0.09, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                                      [0.6, 0.2, 0.16, 0.04, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    expected_people_flows = np.array([[0.8, 0.1, 0.06, 0.04, 0.0, 0.0, 0.0, 0.0],
+                                      [0.7, 0.18, 0.09, 0.03, 0.0, 0.0, 0.0, 0.0],
+                                      [0.6, 0.2, 0.16, 0.04, 0.0, 0.0, 0.0, 0.0]
                                       ])
 
     people_place_ids, people_flows = snapshotter.get_people_place_data(max_places_per_person=20,
-                                                                       places_to_keep_per_person=10)
+                                                                       places_to_keep_per_person=8)
 
     assert np.array_equal(expected_people_place_ids, people_place_ids)
     assert np.all(np.isclose(expected_people_flows, people_flows))
