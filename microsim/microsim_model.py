@@ -155,7 +155,7 @@ class Microsim:
         # durations that people spend doing activities.
         # This also creates flows and venues columns for the journeys of individuals to households, and makes a new
         # households dataset to replace the one we read in above.
-        home_name = "Home"  # How to describe flows to people's houses
+        home_name = ColumnNames.Activities.HOME  # How to describe flows to people's houses
         self.individuals, self.households = Microsim.read_individual_time_use_and_health_data(home_name)
 
         # Extract a list of all MSOAs in the study area. Will need this for the new SIMs
@@ -220,7 +220,7 @@ class Microsim:
 
 
         # Read Retail flows data
-        retail_name = "Retail"  # How to refer to this in data frame columns etc.
+        retail_name = ColumnNames.Activities.RETAIL  # How to refer to this in data frame columns etc.
         stores, stores_flows = Microsim.read_retail_flows_data(self.all_msoas)  # (list of shops and a flow matrix)
         Microsim.check_sim_flows(stores, stores_flows)
         # Assign Retail flows data to the individuals
@@ -229,8 +229,8 @@ class Microsim:
             ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
 
         # Read Schools (primary and secondary)
-        primary_name = "PrimarySchool"
-        secondary_name = "SecondarySchool"
+        primary_name = ColumnNames.Activities.PRIMARY
+        secondary_name = ColumnNames.Activities.SECONDARY
         primary_schools, secondary_schools, primary_flows, secondary_flows = \
             Microsim.read_school_flows_data(self.all_msoas)  # (list of schools and a flow matrix)
         Microsim.check_sim_flows(primary_schools, primary_flows)
@@ -256,7 +256,7 @@ class Microsim:
         possible_jobs = sorted(self.individuals.soc2010.unique())  # list of possible jobs in alphabetical order
         workplaces = pd.DataFrame({'ID': range(0, 0 + len(possible_jobs))})  # df with all possible 'virtual offices'
         Microsim._add_location_columns(workplaces, location_names=possible_jobs)
-        work_name = "Work"
+        work_name = ColumnNames.Activities.WORK
         self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces)
         self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
                                                               individuals=self.individuals, duration_col="pwork")
@@ -778,11 +778,11 @@ class Microsim:
             # Read the primary school flows
             threshold = 5 # top 5
             thresholdtype = "nr" # threshold based on nr venues
-            primary_flow_matrix = qa.get_flows("PrimarySchool", study_msoas,threshold,thresholdtype)
+            primary_flow_matrix = qa.get_flows(ColumnNames.Activities.PRIMARY, study_msoas,threshold,thresholdtype)
             
             # Read the secondary school flows
             # same thresholds as before
-            secondary_flow_matrix = qa.get_flows("SecondarySchool", study_msoas,threshold,thresholdtype)
+            secondary_flow_matrix = qa.get_flows(ColumnNames.Activities.SECONDARY, study_msoas,threshold,thresholdtype)
             
             
 
@@ -1094,8 +1094,8 @@ class Microsim:
 
         missing_duration = 1.0 - total_duration  # Amount of activity time that needs to be added on to home
         #missing_duration = missing_duration.apply(lambda x: round(x,5))
-        individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] = \
-            (individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] + missing_duration).apply(lambda x: round(x, 5))
+        individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = \
+            (individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] + missing_duration).apply(lambda x: round(x, 5))
 
         Microsim.check_durations_sum_to_1(individuals, activity_locations.keys())
 
@@ -1221,7 +1221,7 @@ class Microsim:
 
             # Reduce all activities, replacing the lost time with time spent at home
             non_home_activities = set(self.activity_locations.keys())
-            non_home_activities.remove("Home")
+            non_home_activities.remove(ColumnNames.Activities.HOME)
             # Need to remember the total duration of time lost for non-home activities
             total_duration = pd.Series(data=[0.0] * len(self.individuals.loc[uninfected]), name="TotalDuration")
 
@@ -1239,7 +1239,7 @@ class Microsim:
 
             assert (total_duration <= 1.0).all() and (new_duration <= 1.0).all()
             # Now set home duration to fill in the time lost from doing other activities.
-            self.individuals.loc[uninfected, 'Home' + ColumnNames.ACTIVITY_DURATION] = list(1 - total_duration)
+            self.individuals.loc[uninfected, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = list(1 - total_duration)
 
             # Check they still sum correctly (if not then they probably need rounding)
             # (If you want to print the durations)
@@ -1311,7 +1311,7 @@ class Microsim:
                         # Increase the danger by the flow multiplied by some disease risk
                         danger_increase = (flow * duration * hazard_multiplier)
                         warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
-                        if activty_name == "Work":
+                        if activty_name == ColumnNames.Activities.WORK:
                             work_danger = float(danger_increase / 20)
                             loc_dangers[venue_idx] += work_danger
                         else:
@@ -1480,7 +1480,7 @@ class Microsim:
         elif row[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
             # Reduce all activities, replacing the lost time with time spent at home
             non_home_activities = set(activities)
-            non_home_activities.remove("Home")
+            non_home_activities.remove(ColumnNames.Activities.HOME)
             total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
             for activity in non_home_activities:
                 #new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.10
@@ -1488,7 +1488,7 @@ class Microsim:
                 total_duration += new_duration
                 row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] = new_duration
             # Now set home duration to fill in the time lost from doing other activities.
-            row[f"Home{ColumnNames.ACTIVITY_DURATION}"] = (1 - total_duration)
+            row[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = (1 - total_duration)
         else:
             raise Exception(f"Unrecognised disease state for individual {row['ID']}: {row[ColumnNames.DISEASE_STATUS] }")
         return row

@@ -5,6 +5,16 @@ class ColumnNames:
     LOCATION_NAME = "Location_Name"  # Name of a location
     LOCATION_ID = "ID"  # Unique ID for each location
 
+    # Define the different types of activities/locations that the model can represent
+    class Activities:
+        RETAIL = "Retail2"
+        PRIMARY = "PrimarySchool2"
+        SECONDARY = "SecondarySchool2"
+        HOME = "Home2"
+        WORK = "Work2"
+
+
+
     ACTIVITY_VENUES = "_Venues"  # Venues an individual may visit. Appended to activity type, e.g. 'Retail_Venues'
     ACTIVITY_FLOWS = "_Flows"  # Flows to a venue for an individual. Appended to activity type, e.g. 'Retail_Flows'
     ACTIVITY_RISK = "_Risk"  # Risk associated with a particular activity for each individual. E.g. 'Retail_Risk'
