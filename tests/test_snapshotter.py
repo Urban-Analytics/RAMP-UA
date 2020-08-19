@@ -26,8 +26,8 @@ individuals_df = pd.DataFrame(people_data,
                               columns=['ID', 'age', 'Home_Venues', 'Home_Duration', 'Home_Flows', 'Retail_Venues',
                                        'Retail_Duration', 'Retail_Flows'])
 
-home_data = {'ID': [0, 1, 2]}
-home_df = pd.DataFrame(home_data, columns=['ID'])
+home_data = {'ID': [0, 1, 2], 'area': ['E02004129', 'E02004130', 'E02004131']}
+home_df = pd.DataFrame(home_data, columns=['ID', 'area'])
 
 bng_coordinate_a = [533494, 181851]
 lat_lon_coordinate_a = [51.519811, -0.077342]  # NB: converted BNG coordinates to lat long using online tool
@@ -47,8 +47,10 @@ activity_locations = {
 }
 
 base_dir = os.getcwd()
-snapshot_dir = os.path.join(base_dir, "test_snapshots")
-snapshotter = Snapshotter(individuals_df, activity_locations, snapshot_dir=snapshot_dir, cache_inputs=False)
+data_dir = os.path.join(base_dir, "devon_data")
+test_dir = os.path.join(base_dir, "tests")
+snapshot_dir = os.path.join(test_dir, "test_snapshots")
+snapshotter = Snapshotter(individuals_df, activity_locations, snapshot_dir=snapshot_dir, data_dir=data_dir, cache_inputs=False)
 
 
 def test_global_id_lookup():
@@ -79,19 +81,28 @@ def test_processes_people_flows():
 def test_get_place_data():
     expected_place_activity_enum = np.array(["Home", "Retail"])
     expected_place_activities = np.array([0, 0, 0, 1, 1, 1, 1, 1])
-    expected_place_coordinates = np.array([[np.nan, np.nan],
-                                           [np.nan, np.nan],
-                                           [np.nan, np.nan],
+
+    place_activity_enum, place_activities = snapshotter.get_place_data()
+
+    assert np.array_equal(expected_place_activity_enum, place_activity_enum)
+    assert np.array_equal(expected_place_activities, place_activities)
+
+
+def test_get_coordinates():
+    lat_lon_msoa_1 = [50.848446, -3.150362]
+    lat_lon_msoa_2 = [50.798812, -3.187370]
+    lat_lon_msoa_3 = [50.792060, -3.197727]
+    expected_place_coordinates = np.array([lat_lon_msoa_1,
+                                           lat_lon_msoa_2,
+                                           lat_lon_msoa_3,
                                            lat_lon_coordinate_a,
                                            lat_lon_coordinate_a,
                                            lat_lon_coordinate_b,
                                            lat_lon_coordinate_b,
                                            lat_lon_coordinate_b])
 
-    place_activity_enum, place_activities, place_coordinates = snapshotter.get_place_data()
+    place_coordinates = snapshotter.get_place_coordinates()
 
-    assert np.array_equal(expected_place_activity_enum, place_activity_enum)
-    assert np.array_equal(expected_place_activities, place_activities)
     assert np.all(np.isclose(expected_place_coordinates, place_coordinates, atol=0.0001, equal_nan=True))
 
 

@@ -4,6 +4,7 @@ import os
 import pickle
 from tqdm import tqdm
 from convertbng.util import convert_lonlat
+from time import time
 
 sentinel_value = (1 << 32) - 1
 
@@ -14,8 +15,9 @@ class Snapshotter:
     state can be saved and transferred to the GPU version of the model
     """
 
-    def __init__(self, individuals, activity_locations, snapshot_dir, cache_inputs=True):
+    def __init__(self, individuals, activity_locations, snapshot_dir, data_dir, cache_inputs=True):
         self.snapshot_dir = snapshot_dir
+        self.data_dir = data_dir
 
         # load individuals dataframe from cache
         if individuals is None:
@@ -55,7 +57,8 @@ class Snapshotter:
         print(f"Saving data for {self.num_people} people to {filepath}")
         np.savez(filepath, ages=ages, people_place_ids=people_place_ids, people_baseline_flows=people_flows)
 
-        activity_name_enum, place_activities, place_coordinates = self.get_place_data()
+        activity_name_enum, place_activities = self.get_place_data()
+        place_coordinates = self.get_place_coordinates()
         filepath = os.path.join(self.snapshot_dir, 'places.npz')
         print(f"Saving data for {self.num_places} people to {filepath}")
         np.savez(filepath,
@@ -150,7 +153,6 @@ class Snapshotter:
     def get_place_data(self):
         activity_name_enum = np.zeros(len(self.activity_names), dtype=object)
         place_activities = np.zeros(self.num_places, dtype=np.uint32)
-        place_coordinates = np.full((self.num_places, 2), np.nan, dtype=np.float32)
 
         for activity_index, activity_name in enumerate(self.activity_names):
             activity_name_enum[activity_index] = activity_name
@@ -163,14 +165,44 @@ class Snapshotter:
                 global_place_id = self.get_global_place_id(activity_name, local_place_id)
                 place_activities[global_place_id] = activity_index
 
-            # Convert and store coordinates
+        return activity_name_enum, place_activities
+
+    def get_place_coordinates(self):
+        place_coordinates = np.zeros((self.num_places, 2), dtype=np.float32)
+
+        for activity_index, activity_name in enumerate(self.activity_names):
+            activity_locations_df = self.locations[activity_name]
+
+            # rename OS grid coordinate columns
             activity_locations_df = activity_locations_df.rename(columns={"bng_e": "Easting", "bng_n": "Northing"})
 
+            # for homes: get coordinates of MSOA area
+            if activity_name == "Home":
+                print("Getting coordinates for home locations")
+                msoa_lookup = self.load_msoas()
+
+                areas = activity_locations_df.loc[:, "area"]
+
+                eastings = np.zeros(len(areas))
+                northings = np.zeros(len(areas))
+
+                for i, area in enumerate(areas):
+                    eastings[i] = msoa_lookup[area][0]
+                    northings[i] = msoa_lookup[area][1]
+
+                # TODO: add jitter
+
+                activity_locations_df["Easting"] = eastings
+                activity_locations_df["Northing"] = northings
+
+
+            # Convert OS grid coordinates (eastings and northings) to latitude and longitude
             if 'Easting' in activity_locations_df.columns and 'Northing' in activity_locations_df.columns:
+                local_ids = activity_locations_df.loc[:, "ID"]
                 eastings = activity_locations_df.loc[:, "Easting"]
                 northings = activity_locations_df.loc[:, "Northing"]
 
-                for local_place_id, easting, northing in tqdm(zip(ids, eastings, northings),
+                for local_place_id, easting, northing in tqdm(zip(local_ids, eastings, northings),
                                                               desc=f"Processing coordinate data for {activity_name}"):
                     global_place_id = self.get_global_place_id(activity_name, local_place_id)
 
@@ -179,7 +211,7 @@ class Snapshotter:
                     lat = long_lat[1][0]
                     place_coordinates[global_place_id] = np.array([lat, long])
 
-        return activity_name_enum, place_activities, place_coordinates
+        return place_coordinates
 
     def load_from_cache(self, cache_filename, is_dataframe=False):
         cache_filepath = os.path.join(self.snapshot_dir, cache_filename)
@@ -200,11 +232,27 @@ class Snapshotter:
         else:
             pickle.dump(data, open(cache_filepath, "wb"))
 
+    def load_msoas(self, msoa_filename="devon_msoas.csv"):
+        msoa_df = pd.read_csv(os.path.join(self.data_dir, msoa_filename), header=None,
+                              names=["Easting", "Northing", "Num", "Code", "Desc"])
+
+        eastings = msoa_df.loc[:, "Easting"]
+        northings = msoa_df.loc[:, "Northing"]
+        msoa_codes = msoa_df.loc[:, "Code"]
+
+        msoa_lookup = dict()
+
+        for easting, northing, code in zip(eastings, northings, msoa_codes):
+            msoa_lookup[code] = [easting, northing]
+
+        return msoa_lookup
+
 
 def main():
     base_dir = os.getcwd()
     snapshot_dir = os.path.join(base_dir, "snapshots")
-    snapshotter = Snapshotter(individuals=None, activity_locations=None, snapshot_dir=snapshot_dir)
+    data_dir = os.path.join(base_dir, "devon_data")
+    snapshotter = Snapshotter(individuals=None, activity_locations=None, snapshot_dir=snapshot_dir, data_dir=data_dir)
     snapshotter.store_snapshots()
 
 
