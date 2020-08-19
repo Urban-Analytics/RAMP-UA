@@ -167,7 +167,7 @@ class Snapshotter:
 
         return activity_name_enum, place_activities
 
-    def get_place_coordinates(self):
+    def get_place_coordinates(self, add_jitter=True, jitter_std_dev=2000.0):
         place_coordinates = np.zeros((self.num_places, 2), dtype=np.float32)
 
         for activity_index, activity_name in enumerate(self.activity_names):
@@ -183,18 +183,20 @@ class Snapshotter:
 
                 areas = activity_locations_df.loc[:, "area"]
 
-                eastings = np.zeros(len(areas))
-                northings = np.zeros(len(areas))
+                num_locations = len(activity_locations_df.index)
+                eastings = np.zeros(num_locations)
+                northings = np.zeros(num_locations)
 
                 for i, area in enumerate(areas):
                     eastings[i] = msoa_lookup[area][0]
                     northings[i] = msoa_lookup[area][1]
 
-                # TODO: add jitter
+                if add_jitter:
+                    eastings += np.random.normal(0.0, jitter_std_dev, num_locations)
+                    northings += np.random.normal(0.0, jitter_std_dev, num_locations)
 
                 activity_locations_df["Easting"] = eastings
                 activity_locations_df["Northing"] = northings
-
 
             # Convert OS grid coordinates (eastings and northings) to latitude and longitude
             if 'Easting' in activity_locations_df.columns and 'Northing' in activity_locations_df.columns:

@@ -101,7 +101,7 @@ def test_get_coordinates():
                                            lat_lon_coordinate_b,
                                            lat_lon_coordinate_b])
 
-    place_coordinates = snapshotter.get_place_coordinates()
+    place_coordinates = snapshotter.get_place_coordinates(add_jitter=False)
 
     assert np.all(np.isclose(expected_place_coordinates, place_coordinates, atol=0.0001, equal_nan=True))
 
