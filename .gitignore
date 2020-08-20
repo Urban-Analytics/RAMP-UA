@@ -23,3 +23,9 @@ __pycache__
 
 # scrapbook 
 **/scrapbook/*
+
+# setuptools items
+**/*.egg-info/*
+
+# vscode items
+**/.vscode/*
