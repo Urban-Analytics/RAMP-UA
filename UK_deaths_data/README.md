@@ -5,5 +5,7 @@ UK covid-19 death data by local authority was accessed from gov.uk: [Death regis
 
 The current _"all_deaths.csv"_ is raw data downloaded from the ONS, however it is very out of date so it is worth replacing this with the most up to date data from the ONS site.
 
-The `clean_data.py` script generates a csv file with cleaned data for all local authorities. This can then be loaded
-by the covid19_data.py class, which calculates the start and end date from the data and generates a timeseries for a specific local authority, with the number of deaths on each day starting from the first day in the data.
+The `clean_data.py` script generates a csv file with cleaned deaths data and local authority population data. This can then be loaded
+by the `Covid19Data` class, which calculates the start and end date from the data and generates a timeseries for a specific local authority, with the number of deaths on each day starting from the first day in the data.
+
+If it's working then when you run the `covid19_data.py` file you should see a timeseries plot of deaths increasing.
