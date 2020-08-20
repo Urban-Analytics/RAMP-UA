@@ -77,9 +77,8 @@ class Microsim:
                  data_dir: str = "./data/", 
                  scen_dir: str = "default",
                  r_script_dir: str = "./R/py_int/",
-                 hazard_multiplier_presymptomatic: float = 1.0,
-                 hazard_multiplier_asymptomatic: float = 1.0,
-                 hazard_multiplier_symptomatic: float = 1.0,
+                 hazard_individual_multipliers: Dict[str, float] = {},
+                 hazard_location_multipliers: Dict[str, float] = {},
                  risk_multiplier: float = 1.0,
                  lockdown_file: str = "google_mobility_lockdown_daily.csv",
                  random_seed: float = None, read_data: bool = True,
@@ -88,7 +87,7 @@ class Microsim:
                  output_every_iteration = False,
                  debug=False,
                  disable_disease_status=False,
-                 disease_params=dict()
+                 disease_params: Dict = {}
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
@@ -96,6 +95,14 @@ class Microsim:
         :param data_dir: A data directory from which to read the source data
         :param scen_dir: A data directory to write the output to (i.e. a name for this model run)
         :param r_script_dir: A directory with the required R scripts in (these are used to estimate disease status)
+        :param hazard_individual_multipliers: A dictionary containing multipliers that can make particular disease
+            statuses more hazardous to the locations that the people visit. See 'hazard_individual_multipliers' section
+            of the parameters file (e.g. model_parameters/default.yml). Default is {} which means the multiplier will
+            be 1.0
+        :hazard_location_multipliers: A dictionary containing multipliers that can make certain locations
+            more hazardous (e.g. easier to get the disease if you visit). See 'hazard_location_multipliers' section
+            of the parameters file (e.g. model_parameters/default.yml). Default is {} which means the multiplier will
+            be 1.0
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
@@ -118,9 +125,9 @@ class Microsim:
         self.DATA_DIR = data_dir
         self.SCEN_DIR = scen_dir
         self.iteration = 0
-        self.hazard_multiplier_presymptomatic = hazard_multiplier_presymptomatic
-        self.hazard_multiplier_asymptomatic = hazard_multiplier_asymptomatic
-        self.hazard_multiplier_symptomatic = hazard_multiplier_symptomatic
+        self.hazard_individual_multipliers = hazard_individual_multipliers
+        Microsim.__check_hazard_location_multipliers(hazard_location_multipliers)
+        self.hazard_location_multipliers = hazard_location_multipliers
         self.risk_multiplier = risk_multiplier
         self.lockdown_file = lockdown_file
         self.do_lockdown = False if (lockdown_file == "") else True
@@ -155,7 +162,7 @@ class Microsim:
         # durations that people spend doing activities.
         # This also creates flows and venues columns for the journeys of individuals to households, and makes a new
         # households dataset to replace the one we read in above.
-        home_name = "Home"  # How to describe flows to people's houses
+        home_name = ColumnNames.Activities.HOME  # How to describe flows to people's houses
         self.individuals, self.households = Microsim.read_individual_time_use_and_health_data(home_name)
 
         # Extract a list of all MSOAs in the study area. Will need this for the new SIMs
@@ -220,7 +227,7 @@ class Microsim:
 
 
         # Read Retail flows data
-        retail_name = "Retail"  # How to refer to this in data frame columns etc.
+        retail_name = ColumnNames.Activities.RETAIL  # How to refer to this in data frame columns etc.
         stores, stores_flows = Microsim.read_retail_flows_data(self.all_msoas)  # (list of shops and a flow matrix)
         Microsim.check_sim_flows(stores, stores_flows)
         # Assign Retail flows data to the individuals
@@ -229,8 +236,8 @@ class Microsim:
             ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
 
         # Read Schools (primary and secondary)
-        primary_name = "PrimarySchool"
-        secondary_name = "SecondarySchool"
+        primary_name = ColumnNames.Activities.PRIMARY
+        secondary_name = ColumnNames.Activities.SECONDARY
         primary_schools, secondary_schools, primary_flows, secondary_flows = \
             Microsim.read_school_flows_data(self.all_msoas)  # (list of schools and a flow matrix)
         Microsim.check_sim_flows(primary_schools, primary_flows)
@@ -256,7 +263,7 @@ class Microsim:
         possible_jobs = sorted(self.individuals.soc2010.unique())  # list of possible jobs in alphabetical order
         workplaces = pd.DataFrame({'ID': range(0, 0 + len(possible_jobs))})  # df with all possible 'virtual offices'
         Microsim._add_location_columns(workplaces, location_names=possible_jobs)
-        work_name = "Work"
+        work_name = ColumnNames.Activities.WORK
         self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces)
         self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
                                                               individuals=self.individuals, duration_col="pwork")
@@ -302,6 +309,23 @@ class Microsim:
         print(" ... finished initialisation.")
 
         return  # finish __init__
+
+    @staticmethod
+    def __check_hazard_location_multipliers(hazard_location_multipliers):
+        """Check that the hazard multipliation multipliers correspond to the actual locations being used
+        in the model (we don't want a hazard for a location that doesn't exist, and need all locations
+        to have hazards). If there are no hazard location multipliers (an empty dict) then we're not
+        using them so just return
+
+        :return None if all is OK. Throw an exception if not
+        :raise Exception if the multipliers don't align."""
+        if not hazard_location_multipliers:
+            return
+        hazard_activities = set(hazard_location_multipliers.keys())
+        all_activities = set(ColumnNames.Activities.ALL)
+        if hazard_activities != all_activities:
+            raise Exception(f"The hzard location multipliers: '{hazard_activities} don't match the "
+                            f"activities in the model: {all_activities}")
 
     @staticmethod
     def _find_new_directory(dir, scendir):
@@ -778,11 +802,11 @@ class Microsim:
             # Read the primary school flows
             threshold = 5 # top 5
             thresholdtype = "nr" # threshold based on nr venues
-            primary_flow_matrix = qa.get_flows("PrimarySchool", study_msoas,threshold,thresholdtype)
+            primary_flow_matrix = qa.get_flows(ColumnNames.Activities.PRIMARY, study_msoas,threshold,thresholdtype)
             
             # Read the secondary school flows
             # same thresholds as before
-            secondary_flow_matrix = qa.get_flows("SecondarySchool", study_msoas,threshold,thresholdtype)
+            secondary_flow_matrix = qa.get_flows(ColumnNames.Activities.SECONDARY, study_msoas,threshold,thresholdtype)
             
             
 
@@ -1094,8 +1118,8 @@ class Microsim:
 
         missing_duration = 1.0 - total_duration  # Amount of activity time that needs to be added on to home
         #missing_duration = missing_duration.apply(lambda x: round(x,5))
-        individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] = \
-            (individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] + missing_duration).apply(lambda x: round(x, 5))
+        individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = \
+            (individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] + missing_duration).apply(lambda x: round(x, 5))
 
         Microsim.check_durations_sum_to_1(individuals, activity_locations.keys())
 
@@ -1221,7 +1245,7 @@ class Microsim:
 
             # Reduce all activities, replacing the lost time with time spent at home
             non_home_activities = set(self.activity_locations.keys())
-            non_home_activities.remove("Home")
+            non_home_activities.remove(ColumnNames.Activities.HOME)
             # Need to remember the total duration of time lost for non-home activities
             total_duration = pd.Series(data=[0.0] * len(self.individuals.loc[uninfected]), name="TotalDuration")
 
@@ -1239,7 +1263,7 @@ class Microsim:
 
             assert (total_duration <= 1.0).all() and (new_duration <= 1.0).all()
             # Now set home duration to fill in the time lost from doing other activities.
-            self.individuals.loc[uninfected, 'Home' + ColumnNames.ACTIVITY_DURATION] = list(1 - total_duration)
+            self.individuals.loc[uninfected, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = list(1 - total_duration)
 
             # Check they still sum correctly (if not then they probably need rounding)
             # (If you want to print the durations)
@@ -1297,21 +1321,35 @@ class Microsim:
                         or s == ColumnNames.DiseaseStatuses.SYMPTOMATIC \
                         or s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
                     # The hazard multiplier depends on the type of disease status that this person has
-                    hazard_multiplier = None
-                    if s == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC:
-                        hazard_multiplier = self.hazard_multiplier_presymptomatic
-                    elif s == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
-                        hazard_multiplier = self.hazard_multiplier_symptomatic
-                    elif s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
-                        hazard_multiplier = self.hazard_multiplier_asymptomatic
-                    assert hazard_multiplier is not None
+                    # There may be different multipliers passed in a dictionary as calibration parameters, if not
+                    # then assume the multiplier is 1.0
+                    individual_hazard_multiplier: float = None
+                    if not self.hazard_individual_multipliers:  # The dictionary is empty
+                        individual_hazard_multiplier = 1.0
+                    else:  # A dict was passed, so find out what the values of the multiplier are by disease status
+                        if s == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC:
+                            individual_hazard_multiplier = self.hazard_individual_multipliers['presymptomatic']
+                        elif s == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
+                            individual_hazard_multiplier = self.hazard_individual_multipliers['symptomatic']
+                        elif s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
+                            individual_hazard_multiplier = self.hazard_individual_multipliers['asymptomatic']
+                    assert individual_hazard_multiplier is not None
+                    # There may also be a hazard multiplier for locations (i.e. some locations become more hazardous
+                    # than others
+                    location_hazard_multiplier = None
+                    if not self.hazard_location_multipliers:  # The dictionary is empty
+                        location_hazard_multiplier = 1.0
+                    else:
+                        location_hazard_multiplier = self.hazard_location_multipliers[activty_name]
+                    assert location_hazard_multiplier is not None
+
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue_idx, flow in zip(v, f):
                         # print(i, venue_idx, flow, duration)
                         # Increase the danger by the flow multiplied by some disease risk
-                        danger_increase = (flow * duration * hazard_multiplier)
-                        warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
-                        if activty_name == "Work":
+                        danger_increase = (flow * duration * individual_hazard_multiplier * location_hazard_multiplier)
+                        if activty_name == ColumnNames.Activities.WORK:
+                            warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
                             work_danger = float(danger_increase / 20)
                             loc_dangers[venue_idx] += work_danger
                         else:
@@ -1480,7 +1518,7 @@ class Microsim:
         elif row[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
             # Reduce all activities, replacing the lost time with time spent at home
             non_home_activities = set(activities)
-            non_home_activities.remove("Home")
+            non_home_activities.remove(ColumnNames.Activities.HOME)
             total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
             for activity in non_home_activities:
                 #new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.10
@@ -1488,7 +1526,7 @@ class Microsim:
                 total_duration += new_duration
                 row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] = new_duration
             # Now set home duration to fill in the time lost from doing other activities.
-            row[f"Home{ColumnNames.ACTIVITY_DURATION}"] = (1 - total_duration)
+            row[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = (1 - total_duration)
         else:
             raise Exception(f"Unrecognised disease state for individual {row['ID']}: {row[ColumnNames.DISEASE_STATUS] }")
         return row
@@ -1649,11 +1687,6 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
             debug = sim_params["debug"]
             repetitions = sim_params["repetitions"]
             lockdown_file = sim_params["lockdown-file"]
-            ## Calibration parameters
-            #hazard_multiplier_presymptomatic = calibration_params["hazard_multiplier_presymptomatic"]
-            #hazard_multiplier_asymptomatic = calibration_params["hazard_multiplier_asymptomatic"]
-            #hazard_multiplier_symptomatic = calibration_params["hazard_multiplier_symptomatic"]
-            #risk_multiplier = calibration_params["risk_multiplier"]
 
     # Check the parameters are sensible
     if iterations < 0:
@@ -1675,10 +1708,6 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
           f"\tNumber of repetitions: {repetitions}\n"
           f"\tLockdown file: {lockdown_file}\n"
           f"\tCalibration parameters: {'N/A (not reading parameters file)' if no_parameters_file else str(calibration_params)}\n")
-          #f"\thazard_multiplier_presymptomatic: {hazard_multiplier_presymptomatic}\n"
-          #f"\thazard_multiplier_asymptomatic: {hazard_multiplier_asymptomatic}\n"
-          #f"\thazard_multiplier_symptomatic: {hazard_multiplier_symptomatic}\n"
-          #f"\trisk_multiplier: {risk_multiplier}\n")
 
     if iterations == 0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
