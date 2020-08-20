@@ -312,11 +312,8 @@ def test_hazard_multipliers(test_microsim):
     m.hazard_individual_multipliers["presymptomatic"] = 1.0
     m.hazard_individual_multipliers["asymptomatic"] = 2.0
     m.hazard_individual_multipliers["symptomatic"] = 3.0
-    m.hazard_location_multipliers[ColumnNames.Activities.RETAIL] = 1.0
-    m.hazard_location_multipliers[ColumnNames.Activities.PRIMARY] = 1.0
-    m.hazard_location_multipliers[ColumnNames.Activities.SECONDARY] = 1.0
-    m.hazard_location_multipliers[ColumnNames.Activities.HOME] = 1.0
-    m.hazard_location_multipliers[ColumnNames.Activities.WORK] = 1.0
+    for act in ColumnNames.Activities.ALL:
+        m.hazard_location_multipliers[act] = 1.0
 
     # Step 0 (initialisation):
 
@@ -332,20 +329,13 @@ def test_hazard_multipliers(test_microsim):
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.PRESYMPTOMATIC  # Give p1 the disease
     for p in [p1, p2]:  # Set their activity durations to 0 except for home
         for name, activity in m.activity_locations.items():
-            m.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
-        m.individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = 1.0
+            m.individuals.at[p, f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
+        m.individuals.at[p, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = 1.0
 
     m.step()
 
     # Check the disease has spread to the house with a multiplier of 1.0, but nowhere else
     _check_hazard_spread(p1, p2, m.individuals, m.households, 1.0)
-    #for p in [p1, p2]:
-    #    assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 1.0
-    #for p in range(2, len(m.individuals)):
-    #    assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
-    #assert m.households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
-    #for h in range(1, len(m.households)):  # all others are 0
-    #    assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     # If the person is asymptomatic, we said the hazard should be doubled, so the risk should be doubled
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.ASYMPTOMATIC  # Give p1 the disease
@@ -353,15 +343,6 @@ def test_hazard_multipliers(test_microsim):
 
     m.step()
     _check_hazard_spread(p1, p2, m.individuals, m.households, 2.0)
-
-    ## Check the disease has spread to the house with a multiplier of 1.0, but nowhere else
-    #for p in [p1, p2]:
-    #    assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 2.0
-    #for p in range(2, len(m.individuals)):
-    #    assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
-    #assert m.households.at[0, ColumnNames.LOCATION_DANGER] == 2.0
-    #for h in range(1, len(m.households)):  # all others are 0
-    #    assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     # And for symptomatic we said 3.0
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC  # Give p1 the disease
@@ -375,37 +356,73 @@ def test_hazard_multipliers(test_microsim):
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC
     m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC
     m.step()
-    _check_hazard_spread(p1, p2, m.individuals, m.households, 6.0)  #Should be size because sympomatic is 3.0
+    _check_hazard_spread(p1, p2, m.individuals, m.households, 6.0)
 
     #
-    # Now see if the hazards for locations work. Check schools
+    # Now see if the hazards for locations work. Check houses and schools
     #
-    #del p1, p2
-    #p1 = 4  # The infected person is index 1
-    ## Make everyone better except for that one person
-    #m.individuals[ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SUSCEPTIBLE
-    #m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC
-    ## Assign everyone equal time doing all activities
-    #for name, activity in m.activity_locations.items():
-    #    m.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 1.0 / len(m.activity_locations)
-    #
-    #m.step()
 
-    # Now check that the danger has propagated to locations and risk to people
-    # TODO Also check that the total risks and danger scores sum correctly
-    #for name, activity in m.activity_locations.items():
-    #    # Indices of the locations where this person visited
-    #    visited_idx = m.individuals.at[p1, f"{name}{ColumnNames.ACTIVITY_VENUES}"]
-    #    not_visited_idx = list(set(range(len(activity._locations))) - set(visited_idx))
-    #    # Dangers should be >0.0 (or not if the person didn't visit there)
-    #    assert False not in list(activity._locations.loc[visited_idx, "Danger"].values > 0)
-    #    assert False not in list(activity._locations.loc[not_visited_idx, "Danger"].values == 0)
-    #    # Individuals should have an associated risk
-    #    for index, row in m.individuals.iterrows():
-    #        for idx in visited_idx:
-    #            if idx in row[f"{name}{ColumnNames.ACTIVITY_VENUES}"]:
-    #                assert row[ColumnNames.CURRENT_RISK] > 0
-    #                # Note: can't check if risk is equal to 0 becuase it might come from another activity
+    # Both people are symptomatic. And double the hazard for home. So in total the new risk should
+    # be 3 * 2 * 5 = 30
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC
+    m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC
+    m.hazard_location_multipliers[ColumnNames.Activities.HOME] = 5.0
+
+    m.step()
+    _check_hazard_spread(p1, p2, m.individuals, m.households, 30.0)
+
+
+    # Check for school as well. Now give durations for home and school as 0.5. Make them asymptomatic so the additional
+    # hazard is 2.0 (set above). And make the risks for home 5.35 and for school 2.9.
+
+    # Make sure all *other* individuals go to a different school (school 1), then make p1 and p2 go to the same school
+    # (school 0) below
+    # (annoying apply is because pandas doesn't like a list being assigned to a value in a cell)
+    m.individuals[f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"] = \
+        m.individuals.loc[:, f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"].apply(lambda x: [1])
+    m.individuals.loc[[p1, p2], f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"] = \
+        m.individuals.loc[[p1, p2], f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"].apply(lambda x: [0])
+    # All school flows need to be 1 (don't want the people to go to more than 1 school
+    m.individuals[f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_FLOWS}"] = \
+        m.individuals.loc[:, f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"].apply(lambda x: [1.0])
+
+    for p in [p1, p2]:  # Set their activity durations to 0.5 for home and school
+        for name, activity in m.activity_locations.items():
+            m.individuals.at[p, f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
+        m.individuals.at[p, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = 0.5
+        m.individuals.at[p, f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_DURATION}"] = 0.5
+    # Make them asymptomatic
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.ASYMPTOMATIC
+    m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.ASYMPTOMATIC
+    # Set hazards for home and school
+    m.hazard_location_multipliers[ColumnNames.Activities.HOME] = 5.35
+    m.hazard_location_multipliers[ColumnNames.Activities.PRIMARY] = 2.9
+
+    m.step()
+
+    # Can't use _check_hazard_spread because it assumes only one activity (HOME)
+    # Current risks are:
+    # For home. 2 people * 2.0 asymptomatic hazard * 0.5 duration * 5.35 HOME risk = 10.7
+    # For school. 2 people * 2.0 asymptomatic hazard * 0.5 duration * 2.9 PRIMARY risk = 5.8
+    # Total risk for individuals: 10.7*0.5 + 5.8*0.5 = 8.25
+
+    # Individuals
+    for p in [p1, p2]:
+        assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 8.25
+    for p in range(2, len(m.individuals)):
+        assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
+
+    # Households
+    assert m.households.at[0, ColumnNames.LOCATION_DANGER] == 10.7
+    # (the self.households dataframe should be the same as the one stored in the activity_locations)
+    assert m.activity_locations[ColumnNames.Activities.HOME]._locations.at[0, ColumnNames.LOCATION_DANGER] == 10.7
+    for h in range(1, len(m.households)):  # all others are 0
+        assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+
+    # Schools
+    assert m.activity_locations[ColumnNames.Activities.PRIMARY]._locations.at[0, ColumnNames.LOCATION_DANGER] == 5.8
+    for h in range(1, len( m.activity_locations[ColumnNames.Activities.PRIMARY]._locations)):  # all others are 0
+        assert m.activity_locations[ColumnNames.Activities.PRIMARY]._locations.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     print("End of test hazard multipliers")
 
@@ -419,8 +436,6 @@ def _check_hazard_spread(p1, p2, individuals, households, risk):
     assert households.at[0, ColumnNames.LOCATION_DANGER] == risk
     for h in range(1, len(households)):  # all others are 0
         assert households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
-
-
 
 
 
@@ -453,8 +468,8 @@ def test_step(test_microsim):
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC  # Give them the disease
     for p in [p1, p2]:  # Set their activity durations to 0
         for name, activity in m.activity_locations.items():
-            m.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
-        m.individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = 1.0  # Spend all their time at home
+            m.individuals.at[p, f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
+        m.individuals.at[p, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = 1.0  # Spend all their time at home
 
     m.step()
 

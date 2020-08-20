@@ -77,8 +77,8 @@ class Microsim:
                  data_dir: str = "./data/", 
                  scen_dir: str = "default",
                  r_script_dir: str = "./R/py_int/",
-                 hazard_individual_multipliers: dict = {},
-                 hazard_location_multipliers: dict = {},
+                 hazard_individual_multipliers: Dict[str, float] = {},
+                 hazard_location_multipliers: Dict[str, float] = {},
                  risk_multiplier: float = 1.0,
                  lockdown_file: str = "google_mobility_lockdown_daily.csv",
                  random_seed: float = None, read_data: bool = True,
@@ -87,7 +87,7 @@ class Microsim:
                  output_every_iteration = False,
                  debug=False,
                  disable_disease_status=False,
-                 disease_params=dict()
+                 disease_params: Dict = {}
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
@@ -126,6 +126,7 @@ class Microsim:
         self.SCEN_DIR = scen_dir
         self.iteration = 0
         self.hazard_individual_multipliers = hazard_individual_multipliers
+        Microsim.__check_hazard_location_multipliers(hazard_location_multipliers)
         self.hazard_location_multipliers = hazard_location_multipliers
         self.risk_multiplier = risk_multiplier
         self.lockdown_file = lockdown_file
@@ -308,6 +309,23 @@ class Microsim:
         print(" ... finished initialisation.")
 
         return  # finish __init__
+
+    @staticmethod
+    def __check_hazard_location_multipliers(hazard_location_multipliers):
+        """Check that the hazard multipliation multipliers correspond to the actual locations being used
+        in the model (we don't want a hazard for a location that doesn't exist, and need all locations
+        to have hazards). If there are no hazard location multipliers (an empty dict) then we're not
+        using them so just return
+
+        :return None if all is OK. Throw an exception if not
+        :raise Exception if the multipliers don't align."""
+        if not hazard_location_multipliers:
+            return
+        hazard_activities = set(hazard_location_multipliers.keys())
+        all_activities = set(ColumnNames.Activities.ALL)
+        if hazard_activities != all_activities:
+            raise Exception(f"The hzard location multipliers: '{hazard_activities} don't match the "
+                            f"activities in the model: {all_activities}")
 
     @staticmethod
     def _find_new_directory(dir, scendir):
@@ -1316,14 +1334,22 @@ class Microsim:
                         elif s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
                             individual_hazard_multiplier = self.hazard_individual_multipliers['asymptomatic']
                     assert individual_hazard_multiplier is not None
-                    # TODO also add a hazard multiplier for the location (and check that the dictionary corresponds with those defined in ColumnNames)
+                    # There may also be a hazard multiplier for locations (i.e. some locations become more hazardous
+                    # than others
+                    location_hazard_multiplier = None
+                    if not self.hazard_location_multipliers:  # The dictionary is empty
+                        location_hazard_multiplier = 1.0
+                    else:
+                        location_hazard_multiplier = self.hazard_location_multipliers[activty_name]
+                    assert location_hazard_multiplier is not None
+
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue_idx, flow in zip(v, f):
                         # print(i, venue_idx, flow, duration)
                         # Increase the danger by the flow multiplied by some disease risk
-                        danger_increase = (flow * duration * individual_hazard_multiplier)
-                        warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
+                        danger_increase = (flow * duration * individual_hazard_multiplier * location_hazard_multiplier)
                         if activty_name == ColumnNames.Activities.WORK:
+                            warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
                             work_danger = float(danger_increase / 20)
                             loc_dangers[venue_idx] += work_danger
                         else:
