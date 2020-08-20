@@ -38,18 +38,30 @@ def microsim_inst():
 
     return test_sim 
 
-def test_calculate_disease_status(rInterface):
+def test_calculate_disease_status_onestep(rInterface):
     """
     A series of tests for the calculate_disease_status function
     """
 
     raw_indiv = pd.read_csv(os.path.join(test_dir,'dummy_data','test_r_int_data.csv'), index_col=None)
 
-    r_updated_frame = rInterface.calculate_disease_status(individuals = raw_indiv, iteration = 3, disease_params = dict())
+    r_updated_frame = rInterface.calculate_disease_status(individuals = raw_indiv, iteration = 1, disease_params = dict())
 
     assert len(raw_indiv) == len(r_updated_frame)
 
-# below test hangs TODO
+def test_calculate_disease_status_multistep(rInterface):
+    """
+    A series of tests for the calculate_disease_status function
+    """
+
+    raw_indiv = pd.read_csv(os.path.join(test_dir,'dummy_data','test_r_int_data.csv'), index_col=None)
+
+    for i in range(1,4):
+        r_updated_frame = rInterface.calculate_disease_status(individuals = raw_indiv, iteration = i, disease_params = dict())
+
+        assert len(raw_indiv) == len(r_updated_frame)
+
+
 def test_calculate_disease_status_wMicrosim(rInterface, microsim_inst):
     """
     A series of tests testing instantiated microsim individual dataset on function
@@ -59,4 +71,4 @@ def test_calculate_disease_status_wMicrosim(rInterface, microsim_inst):
 
     assert len(microsim_inst.individuals) == len(r_updated_frame)
 
-    assert microsim_inst.columns in r_updated_frame.columns
+    assert ["area","ID","house_id","disease_status","exposed_days","presymp_days","symp_days"] in r_updated_frame.columns.tolist()
