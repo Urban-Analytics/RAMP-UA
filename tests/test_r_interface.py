@@ -17,7 +17,7 @@ R_script_dir = os.path.abspath(os.path.join(test_dir, '..','R','py_int'))
 
 # arguments used when calling the Microsim constructor. Usually these are the same
 microsim_args = {"data_dir": os.path.join(test_dir,"dummy_data"), "r_script_dir": "./R/py_int", "testing": True, "debug": True,
-                 "disable_disease_status": True, 'lockdown_from_file':False}
+                 "disable_disease_status": True, 'lockdown_file':"google_mobility_lockdown_daily.csv"}
 
 @pytest.fixture()
 def rInterface():
@@ -43,20 +43,19 @@ def test_calculate_disease_status(rInterface):
     A series of tests for the calculate_disease_status function
     """
 
-    raw_indiv = pd.from_csv(os.path.join(test_dir,'dummy_data','devon-tu_health','Devon_simulated_TU_keyworker_health.csv'))
+    raw_indiv = pd.read_csv(os.path.join(test_dir,'dummy_data','test_r_int_data.csv'), index_col=None)
 
-    r_updated_frame = rInterface.calculate_disease_status(individuals = raw_indiv, iteration = 1, disease_params = dict())
+    r_updated_frame = rInterface.calculate_disease_status(individuals = raw_indiv, iteration = 3, disease_params = dict())
 
     assert len(raw_indiv) == len(r_updated_frame)
 
 # below test hangs TODO
-@pytest.skip()
 def test_calculate_disease_status_wMicrosim(rInterface, microsim_inst):
     """
     A series of tests testing instantiated microsim individual dataset on function
     """
 
-    r_updated_frame = rInterface.calculate_disease_status(individuals = microsim_inst.individuals, iteration = 1, disease_params = dict())
+    r_updated_frame = rInterface.calculate_disease_status(individuals = microsim_inst.individuals, iteration = 3, disease_params = dict())
 
     assert len(microsim_inst.individuals) == len(r_updated_frame)
 
