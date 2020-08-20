@@ -57,8 +57,11 @@ class RInterface():
         individuals_reduced["house_id"] = individuals_reduced.House_ID
         del individuals_reduced["House_ID"]
 
+        # create output directory for R runs
+        r_output = self.R.create_output_dir()
+
         # Call the R function. The returned object will be converted to a pandas dataframe implicitly
-        r_df = self.R.run_status(individuals_reduced, iteration, **disease_params)
+        r_df = self.R.run_status(individuals_reduced, iteration, r_output, **disease_params)
 
         assert len(r_df) == len(individuals)
         assert False not in list(r_df.ID.values == individuals.ID.values)  # Check that person IDs are the same

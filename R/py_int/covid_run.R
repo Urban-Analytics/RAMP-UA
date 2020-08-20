@@ -31,8 +31,20 @@ initialize_r <- function() {
   load_rpackages()
 }
 
+create_output_dir <- function() {
+    
+    # windows does not allow colons in folder names so substitute sys.time() to hyphen
+    tmp.dir <<- paste0(getwd(), "/output/", gsub(":","-", gsub(" ","-",Sys.time())))
+
+    if(!dir.exists(tmp.dir)){
+      dir.create(tmp.dir, recursive = TRUE)
+    }
+  return(tmp.dir)
+}
+
 run_status <- function(pop,
                        timestep = 1,
+                       output_dir,
                        current_risk_beta = 0.008,
                        risk_cap = 5,
                        seed_days = 10,
@@ -49,19 +61,13 @@ run_status <- function(pop,
                        chance_recovery = 0.95,
                        output_switch = TRUE,
                        rank_assign = FALSE) {
+  
+  # pass output directory to tmp.dir
+  tmp.dir <- output_dir
 
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
 
   print(paste("R timestep:", timestep))
-
-  if(timestep==1) {
-    # windows does not allow colons in folder names so substitute sys.time() to hyphen
-    tmp.dir <<- paste0(getwd(), "/output/", gsub(":","-", gsub(" ","-",Sys.time())))
-
-    if(!dir.exists(tmp.dir)){
-      dir.create(tmp.dir, recursive = TRUE)
-    }
-  }
 
   if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
 
