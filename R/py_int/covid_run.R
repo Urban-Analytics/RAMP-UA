@@ -1,29 +1,35 @@
-# list.of.packages <- c("rampuaR")
-# new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-# if(length(new.packages) >0 ){devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)}
-# 
-# library(rvcheck)
-# 
-# rampr_version <- check_github("Urban-Analytics/rampuaR")
-#if(!rampr_version$up_to_date){devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)}
 
-devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, force = TRUE)
+load_rpackages <- function() {
+  list.of.packages <- c("rampuaR")
+  new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 
-library(tidyr)
-library(readr)
-library(mixdist)
-library(dplyr)
-library(rampuaR)
+  if(length(new.packages)) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
-#pop <- read.csv("R/py_int/output/2020-07-29 16:48:20/daily_7.csv")
+  library(rvcheck)
 
-#gam_cases <- readRDS(paste0(getwd(),"/gam_fitted_PHE_cases.RDS"))
-data(gam_cases)
-data(msoas)
+  rampr_version <- check_github("Urban-Analytics/rampuaR")
+  if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
-w <- NULL
-model_cases <- NULL
+  #devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
+  library(tidyr)
+  library(readr)
+  library(mixdist)
+  library(dplyr)
+  library(rampuaR)
+}
+
+load_init_data <- function() {
+  data(gam_cases)
+  data(msoas)
+  w <<- NULL
+  model_cases <<- NULL
+}
+
+initialize_r <- function() {
+  load_init_data()
+  load_rpackages()
+}
 
 run_status <- function(pop,
                        timestep = 1,
@@ -57,7 +63,7 @@ run_status <- function(pop,
     }
   }
 
-if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
+  if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
 
   df_cr_in <-create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
@@ -124,7 +130,6 @@ if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
     }
   }
 
-
   df_inf <- infection_length(df = df_ass,
                              exposed_dist = exposed_dist,
                              exposed_mean = exposed_mean,
@@ -139,7 +144,7 @@ if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
 
   print("infection and recovery lengths assigned")
 
-  df_rem <- removed(df_inf, chance_recovery = chance_recovery)
+  df_rem <- removed_age(df_inf)
   print("individuals removed")
 
   df_rec <- recalc_sympdays(df_rem)
@@ -159,7 +164,3 @@ if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
 
   return(df_out)
 }
-
-
-
-

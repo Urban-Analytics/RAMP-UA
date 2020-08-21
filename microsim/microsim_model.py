@@ -7,14 +7,20 @@ Created on Wed Apr 29 19:59:25 2020
 
 @author: nick
 """
+import os
+# directory to read data from
+tmp_base_dir = os.getcwd()  # get current directory (usually RAMP-UA)
+tmp_microsim_dir = os.path.join(tmp_base_dir, "microsim") # go to data dir
+os.chdir(tmp_microsim_dir)
 
 import sys
-
+#import os
+#owd = os.getcwd()
+#os.chdir(os.path.join(owd,"microsim"))
+    
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
 from activity_location import ActivityLocation
 from r_interface import RInterface
-# from microsim.microsim_analysis import MicrosimAnalysis
-from microsim_analysis import MicrosimAnalysis
 from column_names import ColumnNames
 from utilities import Optimise
 from snapshotter import Snapshotter
@@ -40,11 +46,16 @@ import pickle  # to save data
 import swifter  # For speeding up apply functions (e.g. df.swifter.apply)
 import rpy2.robjects as ro  # For calling R scripts
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
+from shutil import copyfile
 
+USE_QUANT_DATA = False  # Temorary flag to use UCL SIMs or Devon ones. Needs to become a command-line parameter
+#import QUANTRampAPI2 as qa
 
-# import pandas.rpy.common as com
+#import pandas.rpy.common as com # throws error and doesn't seem to be used?
 
+os.chdir(tmp_base_dir)
 
+#os.chdir(owd)
 
 class Microsim:
     """
@@ -64,56 +75,80 @@ class Microsim:
     """
 
     def __init__(self,
-                 data_dir: str = "./data/", r_script_dir: str = "./R/py_int/",
-                 hazard_multiplier_presymptomatic: float = 1.0,
-                 hazard_multiplier_asymptomatic: float = 1.0,
-                 hazard_multiplier_symptomatic: float = 1.0,
+                 data_dir: str = "./data/", 
+                 scen_dir: str = "default",
+                 r_script_dir: str = "./R/py_int/",
+                 hazard_individual_multipliers: Dict[str, float] = {},
+                 hazard_location_multipliers: Dict[str, float] = {},
                  risk_multiplier: float = 1.0,
-                 lockdown_from_file: bool = True,
+                 lockdown_file: str = "google_mobility_lockdown_daily.csv",
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
                  output: bool = True,
+                 output_every_iteration = False,
                  debug=False,
-                 disable_disease_status=False
-
+                 disable_disease_status=False,
+                 disease_params: Dict = {}
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
         ----------
         :param data_dir: A data directory from which to read the source data
+        :param scen_dir: A data directory to write the output to (i.e. a name for this model run)
         :param r_script_dir: A directory with the required R scripts in (these are used to estimate disease status)
+        :param hazard_individual_multipliers: A dictionary containing multipliers that can make particular disease
+            statuses more hazardous to the locations that the people visit. See 'hazard_individual_multipliers' section
+            of the parameters file (e.g. model_parameters/default.yml). Default is {} which means the multiplier will
+            be 1.0
+        :hazard_location_multipliers: A dictionary containing multipliers that can make certain locations
+            more hazardous (e.g. easier to get the disease if you visit). See 'hazard_location_multipliers' section
+            of the parameters file (e.g. model_parameters/default.yml). Default is {} which means the multiplier will
+            be 1.0
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
             in debugging).
         :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!)
         :param output: Whether to create files to store the results (default True)
+        :param output_every_iteration: Whether to create files to store the results at every iteration rather than
+            just at the end (default False)
+        :param lockdown_file: The file to use for estimating mobility under lockdown, or don't do any lockdown
+            if this is an empty string.
         :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
         :param disable_disease_status: Optionally turn off the R interface. This will mean we cannot calculate new
             disease status. Only good for testing.
+        :param disease_params: Optional parameters that are passed to the R code that estimates disease status
+            (a dictionary, assumed to be empty)
         """
 
         # Administrative variables that need to be defined
         Microsim.DATA_DIR = data_dir  # TODO (minor) pass the data_dir to class functions directly so no need to have it defined at class level
         self.DATA_DIR = data_dir
+        self.SCEN_DIR = scen_dir
         self.iteration = 0
-        self.hazard_multiplier_presymptomatic = hazard_multiplier_presymptomatic
-        self.hazard_multiplier_asymptomatic = hazard_multiplier_asymptomatic
-        self.hazard_multiplier_symptomatic = hazard_multiplier_symptomatic
+        self.hazard_individual_multipliers = hazard_individual_multipliers
+        Microsim.__check_hazard_location_multipliers(hazard_location_multipliers)
+        self.hazard_location_multipliers = hazard_location_multipliers
         self.risk_multiplier = risk_multiplier
-        self.lockdown_from_file = lockdown_from_file
-        self.random = random.Random(time.time() if random_seed is None else random_seed)
+        self.lockdown_file = lockdown_file
+        self.do_lockdown = False if (lockdown_file == "") else True
+        self.random = random.Random(random_seed)
         self.output = output
+        self.output_every_iteration = output_every_iteration
         self.r_script_dir = r_script_dir
         Microsim.debug = debug
         self.disable_disease_status = disable_disease_status
+        self.disease_params = disease_params
         Microsim.testing = testing
         if self.testing:
             warnings.warn("Running in testing mode. Some exceptions will be disabled.")
 
         if not read_data:  # Optionally can not do this, usually for debugging
             return
-
+        
+        # create full path for scenario dir, also check if scenario dir exists and if so, add nr
+        self.SCEN_DIR = Microsim._find_new_directory(os.path.join(self.DATA_DIR, "output"), self.SCEN_DIR)
+        
         # We need an interface to R code to calculate disease status, but don't initialise it until the run()
         # method is called so that the R process is initiatied in the same process as the Microsim object
         self.r_int = None
@@ -128,7 +163,7 @@ class Microsim:
         # durations that people spend doing activities.
         # This also creates flows and venues columns for the journeys of individuals to households, and makes a new
         # households dataset to replace the one we read in above.
-        home_name = "Home"  # How to describe flows to people's houses
+        home_name = ColumnNames.Activities.HOME  # How to describe flows to people's houses
         self.individuals, self.households = Microsim.read_individual_time_use_and_health_data(home_name)
 
         # Extract a list of all MSOAs in the study area. Will need this for the new SIMs
@@ -193,7 +228,7 @@ class Microsim:
 
 
         # Read Retail flows data
-        retail_name = "Retail"  # How to refer to this in data frame columns etc.
+        retail_name = ColumnNames.Activities.RETAIL  # How to refer to this in data frame columns etc.
         stores, stores_flows = Microsim.read_retail_flows_data(self.all_msoas)  # (list of shops and a flow matrix)
         Microsim.check_sim_flows(stores, stores_flows)
         # Assign Retail flows data to the individuals
@@ -202,12 +237,12 @@ class Microsim:
             ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
 
         # Read Schools (primary and secondary)
-        primary_name = "PrimarySchool"
-        secondary_name = "SecondarySchool"
-        schools, primary_flows, secondary_flows = \
+        primary_name = ColumnNames.Activities.PRIMARY
+        secondary_name = ColumnNames.Activities.SECONDARY
+        primary_schools, secondary_schools, primary_flows, secondary_flows = \
             Microsim.read_school_flows_data(self.all_msoas)  # (list of schools and a flow matrix)
-        Microsim.check_sim_flows(schools, primary_flows)
-        Microsim.check_sim_flows(schools, secondary_flows)
+        Microsim.check_sim_flows(primary_schools, primary_flows)
+        Microsim.check_sim_flows(secondary_schools, secondary_flows)
         # Assign Schools
         # TODO: need to separate primary and secondary school duration. At the moment everyone is given the same
         # duration, 'pschool', which means that children will be assigned a PrimarySchool duration *and* a
@@ -216,11 +251,11 @@ class Microsim:
         # or 0 depending on the age of the child.
         self.individuals = Microsim.add_individual_flows(primary_name, self.individuals, primary_flows)
         self.activity_locations[primary_name] = \
-            ActivityLocation(primary_name, schools.copy(), primary_flows, self.individuals, "pschool-primary")
+            ActivityLocation(primary_name, primary_schools.copy(), primary_flows, self.individuals, "pschool-primary")
         self.individuals = Microsim.add_individual_flows(secondary_name, self.individuals, secondary_flows)
         self.activity_locations[secondary_name] = \
-            ActivityLocation(secondary_name, schools.copy(), secondary_flows, self.individuals, "pschool-secondary")
-        del schools  # No longer needed as we gave copies to the ActivityLocation
+            ActivityLocation(secondary_name, secondary_schools.copy(), secondary_flows, self.individuals, "pschool-secondary")
+        del primary_schools,secondary_schools  # No longer needed as we gave copies to the ActivityLocation
 
         # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go
         # to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
@@ -229,7 +264,7 @@ class Microsim:
         possible_jobs = sorted(self.individuals.soc2010.unique())  # list of possible jobs in alphabetical order
         workplaces = pd.DataFrame({'ID': range(0, 0 + len(possible_jobs))})  # df with all possible 'virtual offices'
         Microsim._add_location_columns(workplaces, location_names=possible_jobs)
-        work_name = "Work"
+        work_name = ColumnNames.Activities.WORK
         self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces)
         self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
                                                               individuals=self.individuals, duration_col="pwork")
@@ -267,31 +302,56 @@ class Microsim:
 
         # Read a file that tells us how much more time people should spend at home than normal (this is much greater
         # after lockdown
-        self.time_activity_multiplier: pd.DataFrame = Microsim.read_time_activity_multiplier()
+        if self.do_lockdown:
+            self.time_activity_multiplier: pd.DataFrame = Microsim.read_time_activity_multiplier(lockdown_file)
+        else:
+            self.time_activity_multiplier = None
 
         print(" ... finished initialisation.")
 
         return  # finish __init__
 
     @staticmethod
-    def _find_new_directory(dir):
+    def __check_hazard_location_multipliers(hazard_location_multipliers):
+        """Check that the hazard multipliation multipliers correspond to the actual locations being used
+        in the model (we don't want a hazard for a location that doesn't exist, and need all locations
+        to have hazards). If there are no hazard location multipliers (an empty dict) then we're not
+        using them so just return
+
+        :return None if all is OK. Throw an exception if not
+        :raise Exception if the multipliers don't align."""
+        if not hazard_location_multipliers:
+            return
+        hazard_activities = set(hazard_location_multipliers.keys())
+        all_activities = set(ColumnNames.Activities.ALL)
+        if hazard_activities != all_activities:
+            raise Exception(f"The hzard location multipliers: '{hazard_activities} don't match the "
+                            f"activities in the model: {all_activities}")
+
+    @staticmethod
+    def _find_new_directory(dir, scendir):
         """
         Find a new directory and make one to store results in starting from 'dir'.
         :param dir: Start looking from this directory
         :return: The new directory (full path)
         """
-        # Find a new directory for this initialisation (may have old ones)
+        results_subdir = os.path.join(dir,scendir)
+        # if it exists already, try adding numbers
         i = 0
-        while os.path.exists(os.path.join(dir, str(i))):
+        while os.path.isdir(results_subdir):
             i += 1
+            newdir = scendir + "_" + str(i)
+            results_subdir = os.path.join(dir,newdir)
         # Create a directory for these results
-        results_subdir = os.path.join(dir, str(i))
+        #results_subdir = os.path.join(dir, str(i))
         try:
             os.mkdir(results_subdir)
         except FileExistsError as e:
             print("Directory ", results_subdir, " already exists")
             raise e
         return results_subdir
+
+
 
     @staticmethod
     def _round_flows(flows):
@@ -474,21 +534,21 @@ class Microsim:
         tuh["pschool"] = tuh["pschool"].fillna(0)
         tuh["pschool-primary"] = 0.0
         tuh["pschool-secondary"] = 0.0
-        # TODO Assign to schools properly
-        #children_idx = tuh.index[tuh["Age1"] == 1]
-        #teen_idx = tuh.index[tuh['Age1'] == 2]
-        children_idx = tuh.index[tuh["Age1"] < 11]
-        teen_idx = tuh.index[(tuh["Age1"] >= 11) & (tuh["Age1"] < 19)]
+        children_idx = tuh.index[tuh["age"] < 11]
+        teen_idx = tuh.index[(tuh["age"] >= 11) & (tuh["age"] < 19)]
+
+        assert len(children_idx) > 0
+        assert len(teen_idx) > 0
 
         tuh.loc[children_idx, "pschool-primary"] = tuh.loc[children_idx, "pschool"]
         tuh.loc[teen_idx, "pschool-secondary"] = tuh.loc[teen_idx, "pschool"]
 
         # Check that people have been allocated correctly
         adults_in_school = tuh.loc[~(tuh["pschool-primary"] + tuh["pschool-secondary"] == tuh["pschool"]),
-                                   ["Age1", "pschool", "pschool-primary", "pschool-secondary"]]
+                                   ["age", "pschool", "pschool-primary", "pschool-secondary"]]
         if len(adults_in_school) > 0:
             warnings.warn(f"{len(adults_in_school)} people > 18y/o go to school, but they are not being assigned to a "
-                          f"primary or secondary school (so their schooling is ignored at the moment")
+                          f"primary or secondary school (so their schooling is ignored at the moment).")
 
         tuh = tuh.rename(columns={"pschool": "_pschool"})  # Indicate that the pschool column shouldn't be used now
 
@@ -498,7 +558,8 @@ class Microsim:
         large_house_idx = frozenset(households_df.index[households_df.Num_People > 10])  # Indexes of large houses
         # For each person, get a house_id, or -1 if the house is very large
         large_people_idx = tuh["House_ID"].apply(lambda x: -1 if x in large_house_idx else x)
-        warnings.warn(f"There are {len(large_house_idx)} households with more than 10 people in them. This covers "
+        if len(large_house_idx) > 0:
+            warnings.warn(f"There are {len(large_house_idx)} households with more than 10 people in them. This covers "
                       f"{len(large_people_idx[large_people_idx == -1])} people. These households are being removed.")
         tuh["TEMP_HOUSE_ID"] = large_people_idx  # Use this colum to remove people (all people with HOUSE_ID == -1)
         # Check the numbers add up (normal house len + large house len = original len)
@@ -614,105 +675,143 @@ class Microsim:
         (Schools, PrimaryFlows, SeconaryFlows). Although all the schools are one dataframe, no primary flows will flow
         to secondary schools and vice versa).
         """
-        # TODO Need to read full school flows, not just those of Devon
-        print("Reading school flow data for Devon...", )
-        dir = os.path.join(cls.DATA_DIR, "devon-schools")
-
-        # Read the schools (all of them)
-        schools = pd.read_csv(os.path.join(dir, "exeter schools.csv"))
-        # Add some standard columns that all locations need
-        schools_ids = list(schools.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
-        schools_names = schools.EstablishmentName  # Standard name for the location
-        Microsim._add_location_columns(schools, location_names=schools_names, location_ids=schools_ids)
-
-        # Read the flows
-        primary_rows = []  # Build up all the rows in the matrix gradually then add all at once
-        secondary_rows = []
-        with open(os.path.join(dir, "DJS002.TXT")) as f:
-            # Mark's file comes in batches of 3 lines, each giving different data. However, some lines overrun and are
-            # read as several lines rather than 1 (hence use of dests_tmp and flows_tmp)
-            count = 1
-            oa = None
-            oa_name = ""
-            num_dests = None
-            dests = None
-            flows = None
-            dests_tmp = None
-            flows_tmp = None
-
-            for lineno, raw_line in enumerate(f):
-                # print(f"{lineno}: '{raw_line}'")
-                line_list = raw_line.strip().split()
-                if count == 1:  # primary/secondary school, OA and number of schools
-                    sch_type = int(line_list[0])
-                    assert sch_type == 1 or sch_type == 2  # Primary schools are 1, secondary 2
-                    oa = int(line_list[1])
-                    oa_name = study_msoas[oa - 1]  # The OA names are stored in a separate file temporarily
-                    num_dests = int(line_list[2])
-                elif count == 2:  # school ids
-                    dests_tmp = [int(x) for x in line_list[0:]]  # Make the destinations numbers
-                    # check if dests exists from previous iteration and add dests_tmp
-                    if dests == None:
-                        dests = dests_tmp
-                    else:
-                        dests.extend(dests_tmp)
-                    if len(dests) < num_dests:  # need to read next line
-                        count = 1  # counteracts count being increased by 1 later
-                    else:
-                        assert len(dests) == num_dests
-                elif count == 3:  # Flows per 1,000 pupils
-                    flows_tmp = [float(x) for x in line_list[0:]]  # Make the destinations numbers
-                    # check if dests exists from previous iteration and add dests_tmp
-                    if flows == None:
-                        flows = flows_tmp
-                    else:
-                        flows.extend(flows_tmp)
-                    if len(flows) < num_dests:  # need to read next line
-                        count = 2  # counteracts count being increased by 1 later
-                    else:
-                        assert len(flows) == num_dests
-
-                        # Have read all information for this area. Store the info in the flows matrix
-
-                        # We should have one line in the matrix for each OA, and OA codes are incremental
-                        # assert len(flow_matrix) == oa - 1
-                        row = [0.0 for _ in range(len(schools))]  # Initially assume all flows are 0
-                        for i in range(num_dests):  # Now add the flows
-                            dest = dests[i]
-                            flow = flows[i]
-                            row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
-                        assert len([x for x in row if x > 0]) == num_dests  # There should only be N >0 flows
-                        row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
-
-                        # Luckily Mark's file does all primary schools first, then all secondary schools, so we
-                        # know that all schools in this area are one or the other
-                        if sch_type == 1:
-                            primary_rows.append(row)
+        
+        
+        # devon data
+        if not USE_QUANT_DATA:
+            # TODO Need to read full school flows, not just those of Devon
+            print("Reading school flow data for Devon...", )
+            dir = os.path.join(cls.DATA_DIR, "devon-schools")
+    
+            # Read the schools (all of them)
+            schools = pd.read_csv(os.path.join(dir, "exeter schools.csv"))
+            # Add some standard columns that all locations need
+            schools_ids = list(schools.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
+            schools_names = schools.EstablishmentName  # Standard name for the location
+            Microsim._add_location_columns(schools, location_names=schools_names, location_ids=schools_ids)
+    
+            # Read the flows
+            primary_rows = []  # Build up all the rows in the matrix gradually then add all at once
+            secondary_rows = []
+            with open(os.path.join(dir, "DJS002.TXT")) as f:
+                # Mark's file comes in batches of 3 lines, each giving different data. However, some lines overrun and are
+                # read as several lines rather than 1 (hence use of dests_tmp and flows_tmp)
+                count = 1
+                oa = None
+                oa_name = ""
+                num_dests = None
+                dests = None
+                flows = None
+                dests_tmp = None
+                flows_tmp = None
+    
+                for lineno, raw_line in enumerate(f):
+                    # print(f"{lineno}: '{raw_line}'")
+                    line_list = raw_line.strip().split()
+                    if count == 1:  # primary/secondary school, OA and number of schools
+                        sch_type = int(line_list[0])
+                        assert sch_type == 1 or sch_type == 2  # Primary schools are 1, secondary 2
+                        oa = int(line_list[1])
+                        oa_name = study_msoas[oa - 1]  # The OA names are stored in a separate file temporarily
+                        num_dests = int(line_list[2])
+                    elif count == 2:  # school ids
+                        dests_tmp = [int(x) for x in line_list[0:]]  # Make the destinations numbers
+                        # check if dests exists from previous iteration and add dests_tmp
+                        if dests == None:
+                            dests = dests_tmp
                         else:
-                            secondary_rows.append(row)
-                        # rows.append(row)
+                            dests.extend(dests_tmp)
+                        if len(dests) < num_dests:  # need to read next line
+                            count = 1  # counteracts count being increased by 1 later
+                        else:
+                            assert len(dests) == num_dests
+                    elif count == 3:  # Flows per 1,000 pupils
+                        flows_tmp = [float(x) for x in line_list[0:]]  # Make the destinations numbers
+                        # check if dests exists from previous iteration and add dests_tmp
+                        if flows == None:
+                            flows = flows_tmp
+                        else:
+                            flows.extend(flows_tmp)
+                        if len(flows) < num_dests:  # need to read next line
+                            count = 2  # counteracts count being increased by 1 later
+                        else:
+                            assert len(flows) == num_dests
+    
+                            # Have read all information for this area. Store the info in the flows matrix
+    
+                            # We should have one line in the matrix for each OA, and OA codes are incremental
+                            # assert len(flow_matrix) == oa - 1
+                            row = [0.0 for _ in range(len(schools))]  # Initially assume all flows are 0
+                            for i in range(num_dests):  # Now add the flows
+                                dest = dests[i]
+                                flow = flows[i]
+                                row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
+                            assert len([x for x in row if x > 0]) == num_dests  # There should only be N >0 flows
+                            row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
+    
+                            # Luckily Mark's file does all primary schools first, then all secondary schools, so we
+                            # know that all schools in this area are one or the other
+                            if sch_type == 1:
+                                primary_rows.append(row)
+                            else:
+                                secondary_rows.append(row)
+                            # rows.append(row)
+    
+                            # Add the row to the matrix. As the OA numbers are incremental they should equal the number
+                            # of rows
+                            # flow_matrix.loc[oa-1] = row
+                            # assert len(flow_matrix) == oa
+                            count = 0
+                            # reset dests and flows
+                            dests = None
+                            flows = None
+    
+                    count += 1
+    
+            # Have finished reading the file, now create the matrices. MSOAs as rows, school locations as columns
+            columns = ["Area_ID", "Area_Code"]  # A number (ID) and full code for each MSOA
+            columns += [f"Loc_{i}" for i in schools.index]  # Columns for each school
+    
+            primary_flow_matrix = pd.DataFrame(data=primary_rows, columns=columns)
+            secondary_flow_matrix = pd.DataFrame(data=secondary_rows, columns=columns)
+            # schools_flows = schools_flows.iloc[0:len(self.study_msoas), :]
+            print(f"... finished reading school flows.")
+            
+            # same df for primary and secondary schools
+            primary_schools = schools.copy()
+            secondary_schools = schools.copy()
+            
+        # QUANT data
+        else:
+            print("Reading school flow data...", )
+            dir = os.path.join(cls.DATA_DIR, "QUANT_RAMP","model-runs")
+            
+            # Read the primary schools
+            primary_schools = pd.read_csv(os.path.join(dir, "primaryZones.csv"))
+            # Add some standard columns that all locations need
+            primary_school_ids = list(primary_schools.index)
+            primary_school_names = primary_schools.URN  # unique ID for venue
+            Microsim._add_location_columns(primary_schools, location_names=primary_school_names, location_ids=primary_school_ids)
+    
+            # Read the secondary schools
+            secondary_schools = pd.read_csv(os.path.join(dir, "secondaryZones.csv"))
+            # Add some standard columns that all locations need
+            secondary_school_ids = list(secondary_schools.index)
+            secondary_school_names = secondary_schools.URN  # unique ID for venue
+            Microsim._add_location_columns(secondary_schools, location_names=secondary_school_names, location_ids=secondary_school_ids)
+ 
+            # Read the primary school flows
+            threshold = 5 # top 5
+            thresholdtype = "nr" # threshold based on nr venues
+            primary_flow_matrix = qa.get_flows(ColumnNames.Activities.PRIMARY, study_msoas,threshold,thresholdtype)
+            
+            # Read the secondary school flows
+            # same thresholds as before
+            secondary_flow_matrix = qa.get_flows(ColumnNames.Activities.SECONDARY, study_msoas,threshold,thresholdtype)
+            
+            
 
-                        # Add the row to the matrix. As the OA numbers are incremental they should equal the number
-                        # of rows
-                        # flow_matrix.loc[oa-1] = row
-                        # assert len(flow_matrix) == oa
-                        count = 0
-                        # reset dests and flows
-                        dests = None
-                        flows = None
-
-                count += 1
-
-        # Have finished reading the file, now create the matrices. MSOAs as rows, school locations as columns
-        columns = ["Area_ID", "Area_Code"]  # A number (ID) and full code for each MSOA
-        columns += [f"Loc_{i}" for i in schools.index]  # Columns for each school
-
-        primary_flow_matrix = pd.DataFrame(data=primary_rows, columns=columns)
-        secondary_flow_matrix = pd.DataFrame(data=secondary_rows, columns=columns)
-        # schools_flows = schools_flows.iloc[0:len(self.study_msoas), :]
-        print(f"... finished reading school flows.")
-
-        return schools, primary_flow_matrix, secondary_flow_matrix
+        return primary_schools, secondary_schools, primary_flow_matrix, secondary_flow_matrix
 
     @classmethod
     def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame) \
@@ -761,93 +860,112 @@ class Microsim:
         :return: A tuple of two dataframes. One containing all of the flows and another
         containing information about the stores themselves.
         """
-        # TODO Need to read full retail flows, not just those of Devon (temporarily created by Mark).
-        # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
-        # working with Devon subset of flows
-        print("Reading retail flow data for Devon...", )
-        dir = os.path.join(cls.DATA_DIR, "devon-retail")
-
-        # Read the stores
-        stores = pd.read_csv(os.path.join(dir, "devon smkt.csv"))
-        # Add some standard columns that all locations need
-        stores_ids = list(stores.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
-        store_names = stores.store_name  # Standard name for the location
-        Microsim._add_location_columns(stores, location_names=store_names, location_ids=stores_ids)
-
-        # Read the flows
-        rows = []  # Build up all the rows in the matrix gradually then add all at once
-        total_flows = 0  # For info & checking
-        with open(os.path.join(dir, "DJR002.TXT")) as f:
-            count = 1  # Mark's file comes in batches of 3 lines, each giving different data
-
-            # See the README for info about these variables. This is only tempoarary so I can't be bothered
-            # to explain properly
-            oa = None
-            oa_name = ""
-            num_dests = None
-            dests = None
-            flows = None
-
-            for lineno, raw_line in enumerate(f):
-                # print(f"{lineno}: '{raw_line}'")
-                line_list = raw_line.strip().split()
-                if count == 1:  # OA and number of destinations
-                    oa = int(line_list[0])
-                    if oa > len(study_msoas):
-                        msg = f"Attempting to read more output areas ({oa}) than are present in the study area {study_msoas}."
-                        if cls.testing:
-                            warnings.warn(msg)
-                        else:
-                            raise Exception(msg)
-                    oa_name = study_msoas[oa - 1]  # The OA names are stored in a separate file temporarily
-                    num_dests = int(line_list[1])
-                elif count == 2:  # Top N (=10) destinations in the OA
-                    # First number is the OA (don't need this), rest are the destinations
-                    assert int(line_list[0]) == oa
-                    dests = [int(x) for x in line_list[1:]]  # Make the destinations numbers
-                    assert len(dests) == num_dests
-                elif count == 3:  # Distance to each store (not currently used)
-                    pass
-                elif count == 4:  # Flows per 1,000 trips
-                    # First number is the OA (don't need this), rest are the destinations
-                    assert int(line_list[0]) == oa
-                    flows = [float(x) for x in line_list[1:]]  # Make the destinations numbers
-                    assert len(flows) == num_dests
-                    total_flows += sum(flows)
-
-                    # Have read all information for this area. Store the info in the flows matrix
-
-                    # We should have one line in the matrix for each OA, and OA codes are incremental
-                    # assert len(flow_matrix) == oa - 1
-                    row = [0.0 for _ in range(len(stores))]  # Initially assume all flows are 0
-                    for i in range(num_dests):  # Now add the flows
-                        dest = dests[i]
-                        flow = flows[i]
-                        row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
-                    assert len([x for x in row if x > 0]) == num_dests  # There should only be positive flows (no 0s)
-                    row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
-
-                    rows.append(row)
-
-                    # Add the row to the matrix. As the OA numbers are incremental they should equal the number
-                    # of rows
-                    # flow_matrix.loc[oa-1] = row
-                    # assert len(flow_matrix) == oa
-                    count = 0
-
-                count += 1
-
-        # Have finished reading the file, now create the matrix. MSOAs as rows, retail locations as columns
-        columns = ["Area_ID", "Area_Code"]  # A number (ID) and full code for each MSOA
-        columns += [f"Loc_{i}" for i in stores.index]  # Columns for each store
-        flow_matrix = pd.DataFrame(data=rows, columns=columns)
-
-        # Check that we haven't lost any flows (need two sums, once to get the flows for each row, then
-        # to add up all rows
-        total_flows2 = flow_matrix.iloc[:, 2:].apply(lambda row: sum(row)).sum()
-        assert total_flows == total_flows2
-
-        print(f"... read {total_flows} flows from {len(flow_matrix)} areas.")
+        
+        # Devon data
+        if not USE_QUANT_DATA:
+            # TODO Need to read full retail flows, not just those of Devon (temporarily created by Mark).
+            # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
+            # working with Devon subset of flows
+            print("Reading retail flow data for Devon...", )
+            dir = os.path.join(cls.DATA_DIR, "devon-retail")
+    
+            # Read the stores
+            stores = pd.read_csv(os.path.join(dir, "devon smkt.csv"))
+            # Add some standard columns that all locations need
+            stores_ids = list(stores.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
+            store_names = stores.store_name  # Standard name for the location
+            Microsim._add_location_columns(stores, location_names=store_names, location_ids=stores_ids)
+    
+            # Read the flows
+            rows = []  # Build up all the rows in the matrix gradually then add all at once
+            total_flows = 0  # For info & checking
+            with open(os.path.join(dir, "DJR002.TXT")) as f:
+                count = 1  # Mark's file comes in batches of 3 lines, each giving different data
+    
+                # See the README for info about these variables. This is only tempoarary so I can't be bothered
+                # to explain properly
+                oa = None
+                oa_name = ""
+                num_dests = None
+                dests = None
+                flows = None
+    
+                for lineno, raw_line in enumerate(f):
+                    # print(f"{lineno}: '{raw_line}'")
+                    line_list = raw_line.strip().split()
+                    if count == 1:  # OA and number of destinations
+                        oa = int(line_list[0])
+                        if oa > len(study_msoas):
+                            msg = f"Attempting to read more output areas ({oa}) than are present in the study area {study_msoas}."
+                            if cls.testing:
+                                warnings.warn(msg)
+                            else:
+                                raise Exception(msg)
+                        oa_name = study_msoas[oa - 1]  # The OA names are stored in a separate file temporarily
+                        num_dests = int(line_list[1])
+                    elif count == 2:  # Top N (=10) destinations in the OA
+                        # First number is the OA (don't need this), rest are the destinations
+                        assert int(line_list[0]) == oa
+                        dests = [int(x) for x in line_list[1:]]  # Make the destinations numbers
+                        assert len(dests) == num_dests
+                    elif count == 3:  # Distance to each store (not currently used)
+                        pass
+                    elif count == 4:  # Flows per 1,000 trips
+                        # First number is the OA (don't need this), rest are the destinations
+                        assert int(line_list[0]) == oa
+                        flows = [float(x) for x in line_list[1:]]  # Make the destinations numbers
+                        assert len(flows) == num_dests
+                        total_flows += sum(flows)
+    
+                        # Have read all information for this area. Store the info in the flows matrix
+    
+                        # We should have one line in the matrix for each OA, and OA codes are incremental
+                        # assert len(flow_matrix) == oa - 1
+                        row = [0.0 for _ in range(len(stores))]  # Initially assume all flows are 0
+                        for i in range(num_dests):  # Now add the flows
+                            dest = dests[i]
+                            flow = flows[i]
+                            row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
+                        assert len([x for x in row if x > 0]) == num_dests  # There should only be positive flows (no 0s)
+                        row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
+    
+                        rows.append(row)
+    
+                        # Add the row to the matrix. As the OA numbers are incremental they should equal the number
+                        # of rows
+                        # flow_matrix.loc[oa-1] = row
+                        # assert len(flow_matrix) == oa
+                        count = 0
+    
+                    count += 1
+    
+            # Have finished reading the file, now create the matrix. MSOAs as rows, retail locations as columns
+            columns = ["Area_ID", "Area_Code"]  # A number (ID) and full code for each MSOA
+            columns += [f"Loc_{i}" for i in stores.index]  # Columns for each store
+            flow_matrix = pd.DataFrame(data=rows, columns=columns)
+    
+            # Check that we haven't lost any flows (need two sums, once to get the flows for each row, then
+            # to add up all rows
+            total_flows2 = flow_matrix.iloc[:, 2:].apply(lambda row: sum(row)).sum()
+            assert total_flows == total_flows2
+    
+            print(f"... read {total_flows} flows from {len(flow_matrix)} areas.")
+            
+        # QUANT data
+        else:
+            print("Reading retail flow data...", )
+            dir = os.path.join(cls.DATA_DIR, "QUANT_RAMP","model-runs")
+            # Read the stores
+            stores = pd.read_csv(os.path.join(dir, "retailpointsZones.csv"))
+            # Add some standard columns that all locations need
+            stores_ids = list(stores.index)
+            store_names = stores.id  # unique ID for venue
+            Microsim._add_location_columns(stores, location_names=store_names, location_ids=stores_ids)
+    
+            # Read the flows
+            threshold = 10 # top 10
+            thresholdtype = "nr" # threshold based on nr venues
+            flow_matrix = qa.get_flows("Retail", study_msoas,threshold,thresholdtype)
 
         return stores, flow_matrix
 
@@ -1001,8 +1119,8 @@ class Microsim:
 
         missing_duration = 1.0 - total_duration  # Amount of activity time that needs to be added on to home
         #missing_duration = missing_duration.apply(lambda x: round(x,5))
-        individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] = \
-            (individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] + missing_duration).apply(lambda x: round(x, 5))
+        individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = \
+            (individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] + missing_duration).apply(lambda x: round(x, 5))
 
         Microsim.check_durations_sum_to_1(individuals, activity_locations.keys())
 
@@ -1020,16 +1138,20 @@ class Microsim:
 
 
     @classmethod
-    def read_time_activity_multiplier(cls) -> pd.DataFrame:
+    def read_time_activity_multiplier(cls, lockdown_file) -> pd.DataFrame:
         """
         Some times people should spend more time at home than normal. E.g. after lockdown. This function
         reads a file that tells us how much more time should be spent at home on each day.
+        :param lockdown_file: Where to read the mobility data from (assume it's within the DATA_DIR).
         :return: A dataframe with 'day' and 'timeout_multiplier' columns
         """
-        print("Reading time activity multiplier data...", )
-        time_activity = pd.read_csv(os.path.join(cls.DATA_DIR, "google_mobility_lockdown_daily.csv"))
+        assert lockdown_file != "", \
+            "read_time_activity_multiplier should not have been called if lockdown_file is empty"
+        path = os.path.join(cls.DATA_DIR, lockdown_file)
+        print(f"Reading time activity multiplier data from {path}...", )
+        time_activity = pd.read_csv(path)
         # Cap at 1.0 (it's a curve so some times peaks above 1.0)=
-        time_activity["timeout_multiplier"] = time_activity.loc[:,"timeout_multiplier"].\
+        time_activity["timeout_multiplier"] = time_activity.loc[:, "timeout_multiplier"].\
             apply(lambda x: 1.0 if x > 1.0 else x)
 
         return time_activity
@@ -1053,7 +1175,7 @@ class Microsim:
             return list(l)
         return [round(x, decimals) for x in l]
 
-    def _init_output(self):
+    def _init_output(self,repnr):
         """
         Might need to write out some data if saving output for analysis later. If so, creates a new directory for the
         results as a subdirectory of the data directory.
@@ -1061,9 +1183,12 @@ class Microsim:
         """
         if self.output:
             print("Saving initial models for analysis ... ", )
-            # Find a directory to use, within the 'outut' directory
-            self.output_dir = Microsim._find_new_directory(os.path.join(self.DATA_DIR, "output"))
-
+            # Find a directory to use, within the 'output' directory
+#            if repnr == 0:
+#                self.SCEN_DIR = Microsim._find_new_directory(os.path.join(self.DATA_DIR, "output"), self.SCEN_DIR)
+            self.output_dir = os.path.join(self.SCEN_DIR, str(repnr))
+            os.mkdir(self.output_dir)
+            
             # save initial model
             pickle_out = open(os.path.join(self.output_dir, "m0.pickle"), "wb")
             pickle.dump(self, pickle_out)
@@ -1082,13 +1207,9 @@ class Microsim:
                 loc_name = activity.get_name()  # retail, school etc
                 loc_ids = activity.get_ids()  # List of the IDs of the locations
                 loc_dangers = activity.get_dangers()  # List of the current dangers
-                # XXXX HERE CREATE NEW DATAFRAME FROM PREVIOUS ONE AND ADD Danger0 Column
                 self.activities_to_pickle[loc_name] = activity.get_dataframe_copy()
                 self.activities_to_pickle[loc_name]['Danger0'] = loc_dangers
                 assert False not in list(loc_ids == self.activities_to_pickle[loc_name]["ID"].values)
-                # Just use ID and Danger columns
-                # self.activities_to_pickle[loc_name] = pd.DataFrame(
-                #    list(zip(loc_ids, loc_dangers)), columns=['ID', 'Danger0'])
 
     @classmethod
     def add_disease_columns(cls, individuals: pd.DataFrame) -> pd.DataFrame:
@@ -1115,7 +1236,7 @@ class Microsim:
         Note: ignores people who are currently showing symptoms (`ColumnNames.DiseaseStatus.SYMPTOMATIC`)
         """
         # Are we doing any lockdown at all? in this iteration?
-        if self.lockdown_from_file:
+        if self.do_lockdown:
             # Only change the behaviour of people who aren't showing symptoms. If you are showing symptoms then you
             # will be mostly at home anyway, so don't want your behaviour overridden by lockdown.
             uninfected = self.individuals.index[
@@ -1125,33 +1246,33 @@ class Microsim:
 
             # Reduce all activities, replacing the lost time with time spent at home
             non_home_activities = set(self.activity_locations.keys())
-            non_home_activities.remove("Home")
+            non_home_activities.remove(ColumnNames.Activities.HOME)
             # Need to remember the total duration of time lost for non-home activities
             total_duration = pd.Series(data=[0.0] * len(self.individuals.loc[uninfected]), name="TotalDuration")
 
-            if self.lockdown_from_file:  # Reduce the initial activity proportion of time by a particular amount per day
-                timeout_multiplier = self.time_activity_multiplier.loc[
-                    self.time_activity_multiplier.day == self.iteration, "timeout_multiplier"].values[0]
-                print(f"\tApplying regular (google mobility) multiplier {timeout_multiplier}")
-                for activity in non_home_activities:
-                    # Need to be careful with new_duration because we don't want to keep the index used in
-                    # self.individuals as this will be missing out people who aren't infected so will have gaps
-                    new_duration = pd.Series(list(self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION_INITIAL] * timeout_multiplier), name="NewDuration")
-                    total_duration += new_duration
-                    self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION] = list(new_duration)
+            # Reduce the initial activity proportion of time by a particular amount per day
+            timeout_multiplier = self.time_activity_multiplier.loc[
+                self.time_activity_multiplier.day == self.iteration, "timeout_multiplier"].values[0]
+            print(f"\tApplying regular (google mobility) lockdown multiplier {timeout_multiplier}")
+            for activity in non_home_activities:
+                # Need to be careful with new_duration because we don't want to keep the index used in
+                # self.individuals as this will be missing out people who aren't infected so will have gaps
+                new_duration = pd.Series(list(self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION_INITIAL] * timeout_multiplier), name="NewDuration")
+                total_duration += new_duration
+                self.individuals.loc[uninfected, activity + ColumnNames.ACTIVITY_DURATION] = list(new_duration)
 
-            else:  # Should not be able to get here
-                assert False
 
             assert (total_duration <= 1.0).all() and (new_duration <= 1.0).all()
             # Now set home duration to fill in the time lost from doing other activities.
-            self.individuals.loc[uninfected, 'Home' + ColumnNames.ACTIVITY_DURATION] = list(1 - total_duration)
+            self.individuals.loc[uninfected, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = list(1 - total_duration)
 
             # Check they still sum correctly (if not then they probably need rounding)
             # (If you want to print the durations)
             # self.individuals.loc[:, [ x+ColumnNames.ACTIVITY_DURATION for x in self.activity_locations.keys() ]+
             #     [ x+ColumnNames.ACTIVITY_DURATION_INITIAL for x in self.activity_locations.keys()   ]   ]
             Microsim.check_durations_sum_to_1(self.individuals, self.activity_locations.keys())
+        else:
+            print("\tNot applying a lockdown multiplier")
 
     def update_venue_danger_and_risks(self, decimals=8):
         """
@@ -1201,21 +1322,35 @@ class Microsim:
                         or s == ColumnNames.DiseaseStatuses.SYMPTOMATIC \
                         or s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
                     # The hazard multiplier depends on the type of disease status that this person has
-                    hazard_multiplier = None
-                    if s == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC:
-                        hazard_multiplier = self.hazard_multiplier_presymptomatic
-                    elif s == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
-                        hazard_multiplier = self.hazard_multiplier_symptomatic
-                    elif s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
-                        hazard_multiplier = self.hazard_multiplier_asymptomatic
-                    assert hazard_multiplier is not None
+                    # There may be different multipliers passed in a dictionary as calibration parameters, if not
+                    # then assume the multiplier is 1.0
+                    individual_hazard_multiplier: float = None
+                    if not self.hazard_individual_multipliers:  # The dictionary is empty
+                        individual_hazard_multiplier = 1.0
+                    else:  # A dict was passed, so find out what the values of the multiplier are by disease status
+                        if s == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC:
+                            individual_hazard_multiplier = self.hazard_individual_multipliers['presymptomatic']
+                        elif s == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
+                            individual_hazard_multiplier = self.hazard_individual_multipliers['symptomatic']
+                        elif s == ColumnNames.DiseaseStatuses.ASYMPTOMATIC:
+                            individual_hazard_multiplier = self.hazard_individual_multipliers['asymptomatic']
+                    assert individual_hazard_multiplier is not None
+                    # There may also be a hazard multiplier for locations (i.e. some locations become more hazardous
+                    # than others
+                    location_hazard_multiplier = None
+                    if not self.hazard_location_multipliers:  # The dictionary is empty
+                        location_hazard_multiplier = 1.0
+                    else:
+                        location_hazard_multiplier = self.hazard_location_multipliers[activty_name]
+                    assert location_hazard_multiplier is not None
+
                     # v and f are lists of flows and venues for the individual. Go through each one
                     for venue_idx, flow in zip(v, f):
                         # print(i, venue_idx, flow, duration)
                         # Increase the danger by the flow multiplied by some disease risk
-                        danger_increase = (flow * duration * hazard_multiplier)
-                        warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
-                        if activty_name == "Work":
+                        danger_increase = (flow * duration * individual_hazard_multiplier * location_hazard_multiplier)
+                        if activty_name == ColumnNames.Activities.WORK:
+                            warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
                             work_danger = float(danger_increase / 20)
                             loc_dangers[venue_idx] += work_danger
                         else:
@@ -1304,7 +1439,7 @@ class Microsim:
         old_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
 
         # Calculate the new status (will return a new dataframe)
-        self.individuals = self.r_int.calculate_disease_status(self.individuals, self.iteration)
+        self.individuals = self.r_int.calculate_disease_status(self.individuals, self.iteration, self.disease_params)
 
         # Remember whose status has changed
         new_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
@@ -1384,7 +1519,7 @@ class Microsim:
         elif row[ColumnNames.DISEASE_STATUS] == ColumnNames.DiseaseStatuses.SYMPTOMATIC:
             # Reduce all activities, replacing the lost time with time spent at home
             non_home_activities = set(activities)
-            non_home_activities.remove("Home")
+            non_home_activities.remove(ColumnNames.Activities.HOME)
             total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
             for activity in non_home_activities:
                 #new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.10
@@ -1392,7 +1527,7 @@ class Microsim:
                 total_duration += new_duration
                 row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] = new_duration
             # Now set home duration to fill in the time lost from doing other activities.
-            row[f"Home{ColumnNames.ACTIVITY_DURATION}"] = (1 - total_duration)
+            row[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = (1 - total_duration)
         else:
             raise Exception(f"Unrecognised disease state for individual {row['ID']}: {row[ColumnNames.DISEASE_STATUS] }")
         return row
@@ -1434,13 +1569,13 @@ class Microsim:
             self.calculate_new_disease_status()
             self.change_behaviour_with_disease()
 
-    def run(self, iterations: int) -> None:
+    def run(self, iterations: int, repnr: int) -> None:
         """
-        Run the model (call the step() function) for the given number of iterations
+        Run the model (call the step() function) for the given number of iterations. Repnr is used to create new unique directory for this repeat
         :param iterations:
         """
         # Create directories for the results
-        self._init_output()
+        self._init_output(repnr)
 
         # Initialise the R interface. Do this here, rather than in init, because when in multiprocessing mode
         # at this point the Microsim object will be in its own process
@@ -1454,15 +1589,20 @@ class Microsim:
 
             # Add to items to pickle for visualisations
             if self.output:
-                print("\tGenerating output ... ",)
+                print("\tPreparing output ... " +
+                      "(but not writing anything until the end)" if not self.output_every_iteration else "",)
+                # Add the new column names for this iteration's disease statuses
                 # (Force column names to have leading zeros)
                 self.individuals_to_pickle[f"{ColumnNames.DISEASE_STATUS}{(i + 1):03d}"] = self.individuals[
                     ColumnNames.DISEASE_STATUS]
-                fname = os.path.join(self.output_dir, "Individuals")
-                with open(fname + ".pickle", "wb") as pickle_out:
-                    pickle.dump(self.individuals_to_pickle, pickle_out)
-                # Also make a (compressed) csv file for others
-                self.individuals_to_pickle.to_csv(fname + ".csv.gz", compression='gzip')
+                # Write the output at the end, or at every iteration
+                if i == (iterations-1) or self.output_every_iteration:
+                    print("\t\tWriting individuals file... ")
+                    fname = os.path.join(self.output_dir, "Individuals")
+                    with open(fname + ".pickle", "wb") as pickle_out:
+                        pickle.dump(self.individuals_to_pickle, pickle_out)
+                    # Also make a (compressed) csv file for others
+                    self.individuals_to_pickle.to_csv(fname + ".csv.gz", compression='gzip')
 
                 for name in self.activity_locations:
                     # Get the details of the location activity
@@ -1473,13 +1613,14 @@ class Microsim:
                     # Add a new danger column to the previous dataframe
                     self.activities_to_pickle[loc_name][f"{ColumnNames.LOCATION_DANGER}{(i + 1):03d}"] = loc_dangers
                     # Save this activity location
-                    fname = os.path.join(self.output_dir, loc_name)
-                    with open(fname + ".pickle", "wb") as pickle_out:
-                        pickle.dump(self.activities_to_pickle[loc_name], pickle_out)
-                    # Also make a (compressed) csv file for others
-                    self.activities_to_pickle[loc_name].to_csv(fname + ".csv.gz", compression='gzip')
-                    # self.activities_to_pickle[loc_name].to_csv(fname+".csv")  # They not so big so don't compress
-                print(" ... finished ", )
+                    if i == (iterations - 1) or self.output_every_iteration:
+                        print(f"\t\tWriting activity file for {name}... ")
+                        fname = os.path.join(self.output_dir, loc_name)
+                        with open(fname + ".pickle", "wb") as pickle_out:
+                            pickle.dump(self.activities_to_pickle[loc_name], pickle_out)
+                        # Also make a (compressed) csv file for others
+                        self.activities_to_pickle[loc_name].to_csv(fname + ".csv.gz", compression='gzip')
+                        # self.activities_to_pickle[loc_name].to_csv(fname+".csv")  # They not so big so don't compress
 
             print(f"\tIteration {i} took {round(float(time.time() - iter_start_time), 2)}s")
 
@@ -1505,21 +1646,26 @@ class Microsim:
 # ********
 @click.command()
 @click.option('-p', '--parameters_file', default="./model_parameters/default.yml", type=click.Path(exists=True),
-              help="Parameters file to use to configure the model. Default: ./model_parameters.yml")
+              help="Parameters file to use to configure the model. Default: ./model_parameters/default.yml")
 @click.option('-npf', '--no-parameters-file', is_flag=True,
               help="Don't read a parameters file, use command line arguments instead")
 @click.option('-i', '--iterations', default=10, help='Number of model iterations. 0 means just run the initialisation')
+@click.option('-s', '--scenario', default="default", help="Name this scenario; output results will be put into a "
+                                                          "directory with this name.")
 @click.option('--data-dir', default="devon_data", help='Root directory to load data from')
 @click.option('--output/--no-output', default=True,
               help='Whether to generate output data (default yes).')
+@click.option('--output-every-iteration/--no-output-every-iteration', default=False,
+              help='Whether to generate output data at every iteration rather than just at the end (default no).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
 @click.option('-r', '--repetitions', default=1, help="How many times to run the model (default 1)")
-@click.option('-l', '--lockdown-from-file/--no-lockdown-from-file', default=True,
-              help="Optionally read lockdown mobility data from a file (default True)")
 @click.option('-s', '--store-snapshot/--dont-store-snapshot', default=False,
               help="Store internal model state to .npz files")
-def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, debug, repetitions,
-               lockdown_from_file, store_snapshot):
+@click.option('-l', '--lockdown-file', default="google_mobility_lockdown_daily.csv",
+              help="Optionally read lockdown mobility data from a file (default use google mobility). To have no "
+                   "lockdown pass an empty string, i.e. --lockdown-file='' ")
+def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, output_every_iteration, debug,
+               repetitions, lockdown_file, store_snapshot, scenario):
 
     # First see if we're reading a parameters file or using command-line arguments.
     if no_parameters_file:
@@ -1535,37 +1681,35 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
             #         self.params, self.params_changed = Model._init_kwargs(params, kwargs)
             #         [setattr(self, key, value) for key, value in self.params.items()]
             # Utility parameters
+            scenario = sim_params["scenario"]
             iterations = sim_params["iterations"]
             data_dir = sim_params["data-dir"]
             output = sim_params["output"]
+            output_every_iteration = sim_params["output-every-iteration"]
             debug = sim_params["debug"]
             repetitions = sim_params["repetitions"]
-            lockdown_from_file = sim_params["lockdown-from-file"]
-            ## Calibration parameters
-            #hazard_multiplier_presymptomatic = calibration_params["hazard_multiplier_presymptomatic"]
-            #hazard_multiplier_asymptomatic = calibration_params["hazard_multiplier_asymptomatic"]
-            #hazard_multiplier_symptomatic = calibration_params["hazard_multiplier_symptomatic"]
-            #risk_multiplier = calibration_params["risk_multiplier"]
+            lockdown_file = sim_params["lockdown-file"]
 
     # Check the parameters are sensible
     if iterations < 0:
         raise ValueError("Iterations must be > 0")
     if repetitions < 1:
         raise ValueError("Repetitions must be greater than 0")
+    if (not output) and output_every_iteration:
+        raise ValueError("Can't choose to not output any data (output=False) but also write the data at every "
+                         "iteration (output_every_iteration=True)")
 
     print(f"Running model with the following parameters:\n"
           f"\tParameters file: {parameters_file}\n"
+          f"\tScenario directory: {scenario}\n"
           f"\tNumber of iterations: {iterations}\n"
           f"\tData dir: {data_dir}\n"
           f"\tOutputting results?: {output}\n"
+          f"\tOutputting results at every iteration?: {output_every_iteration}\n"
           f"\tDebug mode?: {debug}\n"
           f"\tNumber of repetitions: {repetitions}\n"
-          f"\tLockdown from file? : {lockdown_from_file}\n"
-          f"\tCalibration parameters: {str(calibration_params)}\n")
-          #f"\thazard_multiplier_presymptomatic: {hazard_multiplier_presymptomatic}\n"
-          #f"\thazard_multiplier_asymptomatic: {hazard_multiplier_asymptomatic}\n"
-          #f"\thazard_multiplier_symptomatic: {hazard_multiplier_symptomatic}\n"
-          #f"\trisk_multiplier: {risk_multiplier}\n")
+          f"\tLockdown file: {lockdown_file}\n"
+          f"\tCalibration parameters: {'N/A (not reading parameters file)' if no_parameters_file else str(calibration_params)}\n")
 
     if iterations == 0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
@@ -1582,16 +1726,23 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
                               names=["x", "y", "Num", "Code", "Desc"])
 
     # Use same arguments whether running 1 repetition or many
-    msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir,
-                 "output": output, "debug": debug,
-                 "lockdown_from_file": lockdown_from_file,
-                 **calibration_params  # Calibration parameters can be passed directly as named arguments
+    msim_args = {"data_dir": data_dir, "scen_dir": scenario, "r_script_dir": r_script_dir,
+                 "output": output, "output_every_iteration": output_every_iteration, "debug": debug,
+                 "lockdown_file": lockdown_file,
                  }
+
+    if not no_parameters_file:  # When using a parameters file, include the calibration parameters
+        msim_args.update(**calibration_params)  # python calibration parameters are unpacked now
+        # Also read the R calibration parameters (this is a separate section in the .yml file)
+        if disease_params is not None:
+            # (If the 'disease_params' section is included but has no calibration variables then we want to ignore it -
+            # it will be turned into an empty dictionary by the Microsim constructor)
+            msim_args["disease_params"] = disease_params  # R parameters kept as a dictionary and unpacked later
 
     # Temporily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")
     # m = Microsim(data_dir=data_dir, testing=True, output=output)
-
+    
     # Run it!
     if repetitions == 1:
         # Create a microsim object
@@ -1603,27 +1754,34 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
                                       snapshot_dir=os.path.join(base_dir, "snapshots"), cache_inputs=True)
             snapshotter.store_snapshots()
 
-        m.run(iterations)
+        copyfile(parameters_file,os.path.join(m.SCEN_DIR,"parameters.yml"))
+        m.run(iterations,0)
+
     else:  # Run it multiple times in lots of cores
         try:
             with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
                 # Copy the model instance so we don't have to re-read the data each time
                 # (Use a generator so we don't need to store all the models in memory at once).
                 m = Microsim(**msim_args)
+                copyfile(parameters_file,os.path.join(m.SCEN_DIR,"parameters.yml"))
                 models = (Microsim._make_a_copy(m) for _ in range(repetitions))
+                pickle_out = open(os.path.join("Models_m.pickle"), "wb")
+                pickle.dump(m, pickle_out)
+                pickle_out.close()
                 # models = ( Microsim(msim_args) for _ in range(repetitions))
                 # Also need a list giving the number of iterations for each model (same for each model)
                 iters = (iterations for _ in range(repetitions))
+                repnr = (r for r in range(repetitions))
                 # Run the models by passing each model and the number of iterations
-                pool.starmap(_run_multicore, zip(models, iters))
+                pool.starmap(_run_multicore, zip(models, iters,repnr))
         finally:  # Make sure they get closed (shouldn't be necessary)
             pool.close()
 
     print("End of program")
 
 
-def _run_multicore(m, iter):
-    return m.run(iter)
+def _run_multicore(m, iter,rep):
+    return m.run(iter,rep)
 
 
 if __name__ == "__main__":

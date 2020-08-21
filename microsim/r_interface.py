@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 import rpy2.rinterface
 import rpy2.robjects.packages as rpackages  # For installing packages
@@ -19,12 +18,14 @@ class RInterface():
         :param script_dir: The directory where the scripts can be found
         """
         print(f"Initialising R interface. Loading R scripts in {script_dir}.")
+        self.script_dir = script_dir  # Useful to remember for debugging, but not actually needed
         R = ro.r
         R.setwd(script_dir)
-    #    R.source('initialize_and_helper_functions.R')
-   #     R.source('covid_status_functions.R')
         try:
+            # Read the script (doesn't run any functions)
             R.source("covid_run.R")
+            # Call a function to initialize the needed R packages and data
+            R.initialize_r()
         except rpy2.rinterface.embedded.RRuntimeError as e:
             # R libraries probably need installing. THe lines below *should* do this, but it's probably better
             # to install them manually.
@@ -37,7 +38,7 @@ class RInterface():
         # Remember the session
         self.R = R
 
-    def calculate_disease_status(self, individuals: pd.DataFrame, iteration: int):
+    def calculate_disease_status(self, individuals: pd.DataFrame, iteration: int, disease_params: dict ):
         """
         Call the R 'run_status' function to calculate the new disease status. It will return a new dataframe with
         a few columns, including the new status.
@@ -46,19 +47,19 @@ class RInterface():
         """
         print("\tCalculating new disease status...", end='')
         # It's expesive to convert large dataframes, only give the required columns to R.
-        individuals_reduced = individuals.loc[:, ["area", "House_ID", "ID", "Age1", "Sex", ColumnNames.CURRENT_RISK,
-                                                  "pnothome", ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP,
-                                                  ColumnNames.DISEASE_SYMP_DAYS, ColumnNames.DISEASE_EXPOSED_DAYS]]
+        cols = ["area", "House_ID", "ID", "age", "Sex", ColumnNames.CURRENT_RISK, "pnothome",
+                ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP, ColumnNames.DISEASE_SYMP_DAYS,
+                ColumnNames.DISEASE_EXPOSED_DAYS]
+        individuals_reduced = individuals.loc[:, cols]
         individuals_reduced["area"] = individuals_reduced.area.astype(str)
         individuals_reduced["id"] = individuals_reduced.ID
         del individuals_reduced["ID"]
         individuals_reduced["house_id"] = individuals_reduced.House_ID
         del individuals_reduced["House_ID"]
 
-        #print("TEMPORERILY WRITINT OUT DATAFRAME BEFORE SENDING TO R")
-        #individuals_reduced.to_csv("~/Desktop/individuals_results.temp.csv")
-        r_df = self.R.run_status(individuals_reduced, iteration)  # This gets converted to a pandas dataframe implicitly
-        #pd_df = ro.conversion.ri2py(r_df)  # Is explicit conversion necessary? 'pandas2ri.activate()' in import lines might make it implicit
+        # Call the R function. The returned object will be converted to a pandas dataframe implicitly
+        r_df = self.R.run_status(individuals_reduced, iteration, **disease_params)
+
         assert len(r_df) == len(individuals)
         assert False not in list(r_df.ID.values == individuals.ID.values)  # Check that person IDs are the same
 
