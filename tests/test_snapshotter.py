@@ -3,7 +3,7 @@ import numpy as np
 import os
 from microsim.snapshotter import Snapshotter
 
-sentinel_value = (1 << 32) - 1
+sentinel_value = (1 << 31) - 1
 
 
 class TestActivityLocation:
