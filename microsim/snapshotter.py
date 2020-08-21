@@ -6,7 +6,7 @@ from tqdm import tqdm
 from convertbng.util import convert_lonlat
 from time import time
 
-sentinel_value = (1 << 32) - 1
+sentinel_value = (1 << 31) - 1
 
 
 class Snapshotter:
