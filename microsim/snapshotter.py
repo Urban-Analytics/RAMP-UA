@@ -4,7 +4,6 @@ import os
 import pickle
 from tqdm import tqdm
 from convertbng.util import convert_lonlat
-from time import time
 
 sentinel_value = (1 << 31) - 1
 
