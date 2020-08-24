@@ -906,27 +906,52 @@ def create_dashboard(parameters_file):
     else: # add output to each directory
         for d in range(0,len(sc_dir)):
             sc_dir[d] = os.path.join("output", sc_dir[d])
-        
     nr_scenarios = len(sc_dir)
     
     # directory to read data from
     data_dir = "data" if (data_dir_user is None) else data_dir_user
     data_dir = os.path.join(base_dir, data_dir) # update data dir
+    
+    # check if this directory exists
+    if os.path.isdir(os.path.join(data_dir, sc_dir[0])) == False:
+        sys.exit('Results directory does not exist, please check input file')
+    if os.path.isfile(os.path.join(data_dir,sc_dir[0],"0","Individuals.pickle")) == False:
+        sys.exit('No data in results directory, please check input file')
+        
+    
 
     # base file name
     file_name = "dashboard" if (output_name_user is None) else output_name_user
     
-    # start and end day
+    # start and end day and run
+    
+    # first, check maximum end day and run available across all scenarios
+    end_day_max = 1000000
+    end_run_max = 1000000
+    for sdir in sc_dir:
+        end_day_max_tmp = calc_nr_days(os.path.join(data_dir, sdir,"0","Retail.pickle"))-1
+        if end_day_max_tmp < end_day_max:
+            end_day_max = end_day_max_tmp
+        end_run_max_tmp = len(next(os.walk(os.path.join(data_dir, sdir)))[1]) -1
+        if end_run_max_tmp < end_run_max:
+            end_run_max = end_run_max_tmp
+
+    # days
     start_day = 0 if (start_day_user is None) else start_day_user
-    end_day = calc_nr_days(os.path.join(data_dir, sc_dir[0],"0","Retail.pickle"))-1 if (end_day_user is None) else end_day_user
+    end_day = end_day_max if (end_day_user is None) else end_day_user
+    if end_day_user is not None and end_day_user > end_day_max:
+        print("Warning: user specified end day is greater than number of days available, so setting end_day to last day!")
+        end_day = end_day_max
     nr_days = end_day - start_day + 1
     
-    # start and end run
+    #runs
     start_run = 0 if (start_run_user is None) else start_run_user
-    end_run = len(next(os.walk(os.path.join(data_dir, "output")))[1]) -1 if (end_run_user is None) else end_run_user
+    end_run = end_run_max if (end_run_user is None) else end_run_user
+    if end_run_max is not None and end_run_user > end_run_max:
+        print("Warning: user specified end run is greater than number of runs available, so setting run to last run!")
+        end_run = end_run_max
     nr_runs = end_run - start_run + 1
     r_range = range(start_run, end_run+1)
-    
     
     dict_days = [] # empty list for column names 'Day0' etc
     for d in range(start_day, end_day+1):
