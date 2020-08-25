@@ -10,7 +10,7 @@ load_rpackages <- function() {
   rampr_version <- check_github("Urban-Analytics/rampuaR")
   if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
-  #devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
+  devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "obesity", force = T)
 
   library(tidyr)
   library(readr)
@@ -46,9 +46,15 @@ run_status <- function(pop,
                        infection_mean =  16,
                        infection_sd = 3,
                        asymp_rate = 0.7,
-                       chance_recovery = 0.95,
                        output_switch = TRUE,
-                       rank_assign = FALSE) {
+                       rank_assign = FALSE,
+                       overweight = 1,
+                       obesity_30 = 1.2,
+                       obesity_35 = 1.4,
+                       obesity_40 = 1.9,
+                       cvd = 1.5,
+                       diabetes = 1.5,
+                       bloodpressure = 1.5) {
 
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
 
@@ -65,15 +71,24 @@ run_status <- function(pop,
 
   if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
 
-  df_cr_in <-create_input(micro_sim_pop  = pop,
+
+  df_cr_in <- create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
                                    "house_id",
                                    "id",
-                                   "current_risk"))
+                                   "current_risk",
+                                   "BMIvg6",
+                                   "cvd",
+                                   "diabetes",
+                                   "bloodpressure"))
 
   other_betas <- list(current_risk = current_risk_beta)
-
-  df_msoa <- df_cr_in
+  
+  df_msoa <- mortality_risk(df = df_cr_in, 
+                              obesity = obesity,
+                              cvd = cvd,
+                              diabetes = diabetes,
+                              bloodpressure = bloodpressure)
 
   #### seeding the first day in high risk MSOAs
   if(timestep==1){
@@ -160,7 +175,7 @@ run_status <- function(pop,
                        presymp_days = df_msoa$presymp_days,
                        symp_days = df_msoa$symp_days)
 
-  if(output_switch){write.csv(df_out, paste0(tmp.dir, "/daily_out_", timestep, ".csv"))}
+  #if(output_switch){write.csv(df_out, paste0(tmp.dir, "/daily_out_", timestep, ".csv"))}
 
   return(df_out)
 }
