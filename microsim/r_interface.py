@@ -49,7 +49,7 @@ class RInterface():
         # It's expesive to convert large dataframes, only give the required columns to R.
         cols = ["area", "House_ID", "ID", "age", "Sex", ColumnNames.CURRENT_RISK, "pnothome",
                 ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP, ColumnNames.DISEASE_SYMP_DAYS,
-                ColumnNames.DISEASE_EXPOSED_DAYS, "obese40", "cvd", "diabetes", "bloodpressure", "BMIvg6"]
+                ColumnNames.DISEASE_EXPOSED_DAYS, "cvd", "diabetes", "bloodpressure", "BMIvg6"]
         individuals_reduced = individuals.loc[:, cols]
         individuals_reduced["area"] = individuals_reduced.area.astype(str)
         individuals_reduced["id"] = individuals_reduced.ID
