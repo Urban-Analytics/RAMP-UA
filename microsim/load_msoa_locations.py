@@ -31,6 +31,7 @@ def load_osm_buildings():
         # just take the first node as the approximate location of the building
         # no need to calculate the centroid, since this is just approximate anyway
         node = way.nodes[0]
+        # building_coords.append(Point(float(node.lon), float(node.lat)))
         building_coords.append(Point(float(node.lat), float(node.lon)))
 
     return building_coords
@@ -50,7 +51,7 @@ def load_msoa_shapes(data_dir):
     print(f"Loaded {len(all_msoa_shapes.index)} MSOA shapes with projection {all_msoa_shapes.crs}")
 
     # re-project coordinates from british national grid to WGS84 (lat/lon)
-    all_msoa_shapes = all_msoa_shapes.to_crs("EPSG:3395")
+    all_msoa_shapes = all_msoa_shapes.to_crs("EPSG:4326")
 
     # Filter to devon MSOAs
     devon_msoas = load_devon_msoas(data_dir)
@@ -90,6 +91,7 @@ def main():
     devon_msoa_shapes = load_msoa_shapes(data_dir)
 
     msoa_buildings = calculate_msoa_buildings(building_coordinates, devon_msoa_shapes)
+    print(msoa_buildings)
 
     # TODO: store dict as JSON
 
