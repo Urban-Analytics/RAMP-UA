@@ -166,7 +166,7 @@ class Snapshotter:
 
         return activity_name_enum, place_activities
 
-    def get_place_coordinates(self, add_jitter=True, jitter_std_dev=2000.0):
+    def get_place_coordinates(self):
         place_coordinates = np.zeros((self.num_places, 2), dtype=np.float32)
 
         for activity_index, activity_name in enumerate(self.activity_names):
@@ -177,23 +177,7 @@ class Snapshotter:
 
             # for homes: get coordinates of MSOA area
             if activity_name == "Home":
-                print("Getting coordinates for home locations")
-                msoa_lookup = self.load_msoas()
-
-                areas = activity_locations_df.loc[:, "area"]
-
-                num_locations = len(activity_locations_df.index)
-                eastings = np.zeros(num_locations)
-                northings = np.zeros(num_locations)
-
-                for i, area in enumerate(areas):
-                    eastings[i] = msoa_lookup[area][0]
-                    northings[i] = msoa_lookup[area][1]
-
-                if add_jitter:
-                    eastings += np.random.normal(0.0, jitter_std_dev, num_locations)
-                    northings += np.random.normal(0.0, jitter_std_dev, num_locations)
-
+                eastings, northings = self.get_home_coordinates(activity_locations_df)
                 activity_locations_df["Easting"] = eastings
                 activity_locations_df["Northing"] = northings
 
@@ -214,6 +198,24 @@ class Snapshotter:
 
         return place_coordinates
 
+    def get_home_coordinates(self, home_locations_df):
+        print("Getting coordinates for home locations")
+
+        # TODO: load msoa building lookup from JSON file
+
+        areas = home_locations_df.loc[:, "area"]
+
+        num_locations = len(home_locations_df.index)
+        eastings = np.zeros(num_locations)
+        northings = np.zeros(num_locations)
+
+        for i, area in enumerate(areas):
+            # TODO: select random building from within area and assign easting and northing
+            eastings[i] = 0
+            northings[i] = 0
+
+        return eastings, northings
+
     def load_from_cache(self, cache_filename, is_dataframe=False):
         cache_filepath = os.path.join(self.snapshot_dir, cache_filename)
         if os.path.isfile(cache_filepath):
@@ -232,21 +234,6 @@ class Snapshotter:
             data.to_pickle(cache_filepath)
         else:
             pickle.dump(data, open(cache_filepath, "wb"))
-
-    def load_msoas(self, msoa_filename="devon_msoas.csv"):
-        msoa_df = pd.read_csv(os.path.join(self.data_dir, msoa_filename), header=None,
-                              names=["Easting", "Northing", "Num", "Code", "Desc"])
-
-        eastings = msoa_df.loc[:, "Easting"]
-        northings = msoa_df.loc[:, "Northing"]
-        msoa_codes = msoa_df.loc[:, "Code"]
-
-        msoa_lookup = dict()
-
-        for easting, northing, code in zip(eastings, northings, msoa_codes):
-            msoa_lookup[code] = [easting, northing]
-
-        return msoa_lookup
 
 
 def main():
