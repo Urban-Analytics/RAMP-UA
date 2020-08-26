@@ -85,7 +85,10 @@ run_status <- function(pop,
   other_betas <- list(current_risk = current_risk_beta)
   
   df_msoa <- mortality_risk(df = df_cr_in, 
-                              obesity = obesity,
+                              obesity_40 = obesity_40,
+                              obesity_35 = obesity_35,
+                              obesity_30 = obesity_30,
+                              overweight = overweight,
                               cvd = cvd,
                               diabetes = diabetes,
                               bloodpressure = bloodpressure)
