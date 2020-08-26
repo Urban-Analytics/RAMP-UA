@@ -206,6 +206,7 @@ class Snapshotter:
         areas = home_locations_df.loc[:, "area"]
 
         num_locations = len(home_locations_df.index)
+        # TODO: store as lat/longs instead of eastings/northings
         eastings = np.zeros(num_locations)
         northings = np.zeros(num_locations)
 
