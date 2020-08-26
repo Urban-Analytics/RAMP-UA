@@ -14,11 +14,20 @@ microsim:
 # These can only be passed using the parameters file
 microsim_calibration:
   # These multiply the amount of hazard that individuals pass on to shops etc:
-  hazard_multiplier_presymptomatic: 1.0
-  hazard_multiplier_asymptomatic: 1.0
-  hazard_multiplier_symptomatic: 1.0
+  hazard_individual_multipliers:
+    presymptomatic: 1.0
+    asymptomatic: 1.0
+    symptomatic: 1.0
+  # Different locations can also have their own multipliers (e.g. to make it easier to pass the disease on to shops than schools)
+  hazard_location_multipliers:
+    Retail: 1.0
+    PrimarySchool: 1.0
+    SecondarySchool: 1.0
+    Home: 1.0
+    Work: 1.0
   # This multiplies the risk received as individuals visit shops etc.
   risk_multiplier: 1.0
+
 
 disease: # This is where the parameter for the disease model (the R part) can go (same format the 'microsim_calibration' above)
   current_risk_beta: 0.008
