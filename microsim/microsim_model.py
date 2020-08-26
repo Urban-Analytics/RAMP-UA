@@ -1484,7 +1484,7 @@ class Microsim:
             total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
             for activity in non_home_activities:
                 #new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.10
-                new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.50
+                new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.10
                 total_duration += new_duration
                 row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] = new_duration
             # Now set home duration to fill in the time lost from doing other activities.
