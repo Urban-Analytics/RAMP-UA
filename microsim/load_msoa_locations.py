@@ -55,7 +55,8 @@ def calculate_msoa_buildings(osm_buildings, msoa_shapes):
     building_geometries = osm_buildings.loc[:, "geometry"]
 
     # for all msoas store the buildings within their shapes
-    for code, msoa_geometry in tqdm(zip(msoa_codes, msoa_geometries), desc="Finding buildings for all MSOAs"):
+    for code, msoa_geometry in tqdm(zip(msoa_codes, msoa_geometries), total=len(msoa_shapes.index),
+                                    desc="Finding buildings for all MSOAs"):
         buildings_within_msoa = []
         # iterate through all buildings and append ones within shape
         for building_geometry in tqdm(building_geometries, desc=f"Assigning buildings to MSOA {code}"):
