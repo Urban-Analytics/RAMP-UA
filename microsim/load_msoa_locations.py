@@ -14,20 +14,20 @@ def load_osm_buildings():
     print("Requesting buildings")
 
     # fetch buildings - small area
-    result = api.query("""
-        way(50.30745,-3.98185,50.34093,-3.90066) ["building"];
-        (._;>;);
-        out body;
-        """)
-
-    # fetch buildings - All of Devon
     # result = api.query("""
-    #     way(50.07156,-4.70709,50.39431,-4.14253) ["building"];
+    #     way(50.30745,-3.98185,50.34093,-3.90066) ["building"];
     #     (._;>;);
     #     out body;
     #     """)
 
-    print(f"Found {len(result.ways)} buildings")
+    # fetch buildings - All of Devon
+    result = api.query("""
+        way(50.12614,-4.55055,51.24506,-2.8141) ["building"];
+        (._;>;);
+        out body;
+        """)
+
+    print(f"Received {len(result.ways)} buildings")
 
     building_coords = []
     for way in tqdm(result.ways, desc="extracting building coordinates from ways"):

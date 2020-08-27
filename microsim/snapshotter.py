@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
+import random
 import os
+import json
 import pickle
 from tqdm import tqdm
 from convertbng.util import convert_lonlat
@@ -169,17 +171,13 @@ class Snapshotter:
     def get_place_coordinates(self):
         place_coordinates = np.zeros((self.num_places, 2), dtype=np.float32)
 
-        for activity_index, activity_name in enumerate(self.activity_names):
+        non_home_activities = list(filter(lambda activity: activity != "Home", self.activity_names))
+
+        for activity_index, activity_name in enumerate(non_home_activities):
             activity_locations_df = self.locations[activity_name]
 
             # rename OS grid coordinate columns
             activity_locations_df = activity_locations_df.rename(columns={"bng_e": "Easting", "bng_n": "Northing"})
-
-            # for homes: get coordinates of MSOA area
-            if activity_name == "Home":
-                eastings, northings = self.get_home_coordinates(activity_locations_df)
-                activity_locations_df["Easting"] = eastings
-                activity_locations_df["Northing"] = northings
 
             # Convert OS grid coordinates (eastings and northings) to latitude and longitude
             if 'Easting' in activity_locations_df.columns and 'Northing' in activity_locations_df.columns:
@@ -196,26 +194,39 @@ class Snapshotter:
                     lat = long_lat[1][0]
                     place_coordinates[global_place_id] = np.array([lat, long])
 
+        # for homes: assign coordinates of random building inside MSOA area
+        home_locations_df = self.locations["Home"]
+        lats, lons = self.get_coordinates_from_buildings(home_locations_df)
+        local_ids = home_locations_df.loc[:, "ID"]
+
+        for local_place_id, lat, lon in tqdm(zip(local_ids, lats, lons), desc=f"Storing coordinates for homes"):
+            global_place_id = self.get_global_place_id("Home", local_place_id)
+            place_coordinates[global_place_id] = np.array([lat, lon])
+
         return place_coordinates
 
-    def get_home_coordinates(self, home_locations_df):
-        print("Getting coordinates for home locations")
-
-        # TODO: load msoa building lookup from JSON file
+    def get_coordinates_from_buildings(self, home_locations_df):
+        # load msoa building lookup from JSON file
+        msoa_building_filepath = os.path.join(self.data_dir, "msoa_building_coordinates.json")
+        with open(msoa_building_filepath) as f:
+            msoa_buildings = json.load(f)
 
         areas = home_locations_df.loc[:, "area"]
 
         num_locations = len(home_locations_df.index)
-        # TODO: store as lat/longs instead of eastings/northings
-        eastings = np.zeros(num_locations)
-        northings = np.zeros(num_locations)
+
+        lats = np.zeros(num_locations)
+        lons = np.zeros(num_locations)
 
         for i, area in enumerate(areas):
-            # TODO: select random building from within area and assign easting and northing
-            eastings[i] = 0
-            northings[i] = 0
+            # select random building from within area and assign easting and northing
+            area_buildings = msoa_buildings[area]
+            building = random.choice(area_buildings)
 
-        return eastings, northings
+            lats[i] = building[0]
+            lons[i] = building[1]
+
+        return lats, lons
 
     def load_from_cache(self, cache_filename, is_dataframe=False):
         cache_filepath = os.path.join(self.snapshot_dir, cache_filename)
