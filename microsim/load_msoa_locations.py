@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 
 def load_osm_shapefile(data_dir):
     # Shape file downloaded for devon from https://download.geofabrik.de/europe/great-britain/england/devon.html
-
     osm_dir = os.path.join(data_dir, "osm")
     shape_file = os.path.join(osm_dir, "gis_osm_buildings_a_free_1.shp")
 
@@ -16,51 +15,6 @@ def load_osm_shapefile(data_dir):
     osm_buildings = gpd.read_file(shape_file)
     print(f"Loaded {len(osm_buildings.index)} buildings from shapefile")
     return osm_buildings
-
-
-# def load_osm_buildings(data_dir):
-#     api = overpy.Overpass()
-#
-#     osm_filepath = os.path.join(data_dir, "osm/devon-latest.osm")
-#
-#     print("Loading OSM data")
-#     with open(osm_filepath) as file_handle:
-#         osm_data = api.parse_xml(data=file_handle.read(), encoding='utf-8', parser=None)
-#
-#     print("Querying local data")
-#     # osm_data.ways.
-#     result = osm_data.api.query("""
-#         way(50.12614,-4.55055,51.24506,-2.8141) ["building"];
-#         (._;>;);
-#         out body;
-#         """)
-#
-#     print("Requesting buildings")
-#
-#     # fetch buildings - small area
-#     # result = api.query("""
-#     #     way(50.30745,-3.98185,50.34093,-3.90066) ["building"];
-#     #     (._;>;);
-#     #     out body;
-#     #     """)
-#
-#     # fetch buildings - All of Devon
-#     # result = api.query("""
-#     #     way(50.12614,-4.55055,51.24506,-2.8141) ["building"];
-#     #     (._;>;);
-#     #     out body;
-#     #     """)
-#
-#     print(f"Received {len(result.ways)} buildings")
-#
-#     building_coords = []
-#     for way in tqdm(result.ways, desc="extracting building coordinates from ways"):
-#         # just take the first node as the approximate location of the building
-#         # no need to calculate the centroid, since this is just approximate anyway
-#         node = way.nodes[0]
-#         building_coords.append(Point(float(node.lon), float(node.lat)))
-#
-#     return building_coords
 
 
 def load_devon_msoas(data_dir, msoa_filename="devon_msoas.csv"):
@@ -121,7 +75,6 @@ def main():
 
     osm_buildings = load_osm_shapefile(data_dir)
 
-    # building_coordinates = load_osm_buildings(data_dir)
     devon_msoa_shapes = load_msoa_shapes(data_dir, visualize=False)
 
     msoa_buildings = calculate_msoa_buildings(osm_buildings, devon_msoa_shapes)
