@@ -29,8 +29,7 @@ from bokeh.transform import transform, factor_cmap
 import click  # command-line interface
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
 
-
-
+from microsim.column_names import ColumnNames
 
 
 
@@ -46,7 +45,7 @@ def calc_nr_days(data_file):
     dangers = pickle.load(pickle_in)
     pickle_in.close()
             
-    filter_col = [col for col in dangers if col.startswith('Danger')]
+    filter_col = [col for col in dangers if col.startswith(ColumnNames.LOCATION_DANGER)]
     # don't use the column simply called 'Danger'
     filter_col = filter_col[1:len(filter_col)]
     nr_days = len(filter_col)
@@ -131,7 +130,7 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
     msoacounts: nr per msoa and day
     agecounts: nr per age category and day
     totalcounts: nr per day (across all areas)
-    cumcounts: nr per MSOA (across given time period)
+    cumcounts: nr per MSOA and day
     uniquecounts: nr with 'final' disease status across time period e.g. someone who is presymptomatic, symptomatic and recoverd is only counted once as recovered
     Output: 
     msoas                   # list of msoas
@@ -198,45 +197,33 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
         
         
         uniquecounts_df = pd.DataFrame()
-        
+        # select right columns
+        subset = individuals_tmp[counts_colnames]
+            
         for key, value in conditions_dict.items():
             #print(key)
             if r == start_run:
-                msoacounts_dict_3d[key] = np.zeros((len(msoas),nr_days,nr_runs))        
+                msoacounts_dict_3d[key] = np.zeros((len(msoas),nr_days,nr_runs))    
+                cumcounts_dict_3d[key] = np.zeros((len(msoas),nr_days,nr_runs))
                 agecounts_dict_3d[key] = np.zeros((age_cat.shape[0],nr_days,nr_runs))
                 totalcounts_dict_3d[key] = np.zeros((nr_days,nr_runs))  
-                cumcounts_dict_3d[key] = np.zeros((len(msoas),nr_runs))
                 uniquecounts_dict_3d[key] = np.zeros(nr_runs)
                 
-            # cumulative counts
-            # select right columns
-            tmp = individuals_tmp[counts_colnames]
-            #tmp = individuals_tmp.iloc[:,start_col:end_col]  
             # find all rows with condition (dict value)
-            indices = tmp[tmp.eq(value).any(1)].index
+            indices = subset[subset.eq(value).any(1)].index
             # create new df of zeros and replace with 1 at indices
-            cumcounts_run = pd.DataFrame(np.zeros((tmp.shape[0], 1)))
-            cumcounts_run.loc[indices] = 1
-            
-            uniquecounts_df[key] = cumcounts_run.values[:,0]
-            
-            #uniqcounts[:,value,r] = cumcounts_run.values[:,0]
-            # merge with MSOA df
-            cumcounts_run = cumcounts_run.merge(area_individuals, left_index=True, right_index=True)
-            cumcounts_msoa_run = cumcounts_run.groupby(['area']).sum()
-            cumcounts_msoa_run = cumcounts_msoa_run.values
+            cumcounts_end = pd.DataFrame(np.zeros((subset.shape[0], 1)))
+            cumcounts_end.loc[indices] = 1
+            uniquecounts_df[key] = cumcounts_end.values[:,0]
     
             # loop aroud days
             msoacounts_run = np.zeros((len(msoas),nr_days))
+            cumcounts_run = np.zeros((len(msoas),nr_days))
             agecounts_run = np.zeros((age_cat.shape[0],nr_days))
             for day in range(0, nr_days):
                 #print(day)
-                # count nr for this condition per area
-                #msoa_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['area']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
-                
-                msoa_count_temp = individuals_tmp[tmp.iloc[:,day] == conditions_dict[key]].groupby(['area']).agg({tmp.columns[day]: ['count']})  
-                
-                
+                # count nr for this condition per area               
+                msoa_count_temp = individuals_tmp[subset.iloc[:,day] == conditions_dict[key]].groupby(['area']).agg({subset.columns[day]: ['count']})  
                 if msoa_count_temp.shape[0] == len(msoas):
                     msoa_count_temp = msoa_count_temp.values
                     msoacounts_run[:,day] = msoa_count_temp[:, 0]
@@ -252,10 +239,37 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
                     # replace NaN by 0
                     tmp_df = tmp_df.fillna(0)
                     msoacounts_run[:,day] = tmp_df.iloc[:,1].values
-                    
+                
+                
+                # cumulative counts
+                # select right columns
+                tmp_cum = subset.iloc[:,0:day+1]
+                indices = tmp_cum[tmp_cum.eq(value).any(1)].index
+                # create new df of zeros and replace with 1 at indices
+                tmp_df = pd.DataFrame(np.zeros((tmp_cum.shape[0], 1)))
+                tmp_df.loc[indices] = 1
+                # merge with MSOA df
+                tmp_df = tmp_df.merge(area_individuals, left_index=True, right_index=True)
+                cumcounts_tmp = tmp_df.groupby(['area']).sum()
+                if cumcounts_tmp.shape[0] == len(msoas):
+                    cumcounts_tmp = cumcounts_tmp.values
+                    cumcounts_run[:,day] = cumcounts_tmp[:, 0]
+                elif cumcounts_tmp.empty == False:
+                    #print('check MSOAs')
+                    # in case some entries don't exist
+                    # start with empty dataframe
+                    tmp_df =  pd.DataFrame(np.zeros(len(msoas)), columns = ['tmp'], index=msoas)   
+                    # drop multiindex to prevent warning msg
+                    cumcounts_tmp.columns = cumcounts_tmp.columns.droplevel(0)
+                    # merge with obtained counts - NaN will appear
+                    tmp_df = pd.merge(tmp_df, cumcounts_tmp, how='left', left_index=True,right_index=True)
+                    # replace NaN by 0
+                    tmp_df = tmp_df.fillna(0)
+                    cumcounts_run[:,day] = tmp_df.iloc[:,1].values
+  
 
                 # count nr for this condition per age bracket             
-                age_count_temp = individuals_tmp[tmp.iloc[:,day] == conditions_dict[key]].groupby(['Age0']).agg({tmp.columns[day]: ['count']})  
+                age_count_temp = individuals_tmp[subset.iloc[:,day] == conditions_dict[key]].groupby(['Age0']).agg({subset.columns[day]: ['count']})  
                 
                 if age_count_temp.shape[0] == 6:
                     age_count_temp = age_count_temp.values
@@ -276,26 +290,23 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
 
             # get current values from dict
             msoacounts = msoacounts_dict_3d[key]
+            cumcounts = cumcounts_dict_3d[key]
             agecounts = agecounts_dict_3d[key]
             totalcounts = totalcounts_dict_3d[key]
-            cumcounts = cumcounts_dict_3d[key]
             # add current run's values
             msoacounts[:,:,r-start_run] = msoacounts_run
+            cumcounts[:,:,r-start_run] = cumcounts_run
             agecounts[:,:,r-start_run] = agecounts_run
             totalcounts[:,r-start_run] = msoacounts_run.sum(axis=0)
-            cumcounts[:,r-start_run] = cumcounts_msoa_run[:, 0]
+
             # write out to dict
             msoacounts_dict_3d[key] = msoacounts
+            cumcounts_dict_3d[key] = cumcounts
             agecounts_dict_3d[key] = agecounts
             totalcounts_dict_3d[key] = totalcounts
-            cumcounts_dict_3d[key] = cumcounts
             
             uniquecounts_df[key] = uniquecounts_df[key]*(value+1)
             
-        # uniquecounts['presymptomatic'] = uniquecounts['presymptomatic']*2
-        # uniquecounts['symptomatic'] = uniquecounts['symptomatic']*3
-        # uniquecounts['recovered'] = uniquecounts['recovered']*4
-        # uniquecounts['dead'] = uniquecounts['dead']*5
         uniquecounts_df['maxval'] = uniquecounts_df.max(axis = 1)
         
         for key, value in conditions_dict.items():
@@ -312,60 +323,35 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
     for key, value in conditions_dict.items():
         # get current values from dict
         msoacounts = msoacounts_dict_3d[key]
+        cumcounts = cumcounts_dict_3d[key]
         agecounts = agecounts_dict_3d[key]
         totalcounts = totalcounts_dict_3d[key]
-        cumcounts = cumcounts_dict_3d[key]
         uniquecounts = uniquecounts_dict_3d[key]
         # aggregate
         msoacounts_std = msoacounts.std(axis=2)
         msoacounts = msoacounts.mean(axis=2)
+        cumcounts_std = cumcounts.std(axis=2)
+        cumcounts = cumcounts.mean(axis=2)
         agecounts_std = agecounts.std(axis=2)
         agecounts = agecounts.mean(axis=2)
         totalcounts_std = totalcounts.std(axis=1)
         totalcounts = totalcounts.mean(axis=1)
-        cumcounts_std = cumcounts.std(axis=1)
-        cumcounts = cumcounts.mean(axis = 1)
         uniquecounts_std = uniquecounts.std()
         uniquecounts = uniquecounts.mean()
         # write out to dict
         msoacounts_dict[key] = pd.DataFrame(data=msoacounts, index=msoas, columns=dict_days)
         msoacounts_dict_std[key] = pd.DataFrame(data=msoacounts_std, index=msoas, columns=dict_days)
+        cumcounts_dict[key] = pd.DataFrame(data=cumcounts, index=msoas, columns=dict_days)
+        cumcounts_dict_std[key] = pd.DataFrame(data=cumcounts_std, index=msoas, columns=dict_days)
         agecounts_dict[key] = pd.DataFrame(data=agecounts, index=age_cat_str, columns=dict_days)
         agecounts_dict_std[key] = pd.DataFrame(data=agecounts_std, index=age_cat_str, columns=dict_days)
         totalcounts_dict[key] = pd.Series(data=totalcounts, index=dict_days)
         totalcounts_dict_std[key] = pd.Series(data=totalcounts_std, index=dict_days)
-        cumcounts_dict[key] = pd.Series(data=cumcounts, index=msoas)
-        cumcounts_dict_std[key] = pd.Series(data=cumcounts_std, index=msoas)
         uniquecounts_dict[key] = pd.Series(data=uniquecounts, index=["total"])
         uniquecounts_dict_std[key] = pd.Series(data=uniquecounts_std, index=["total"])
     
     
     return msoas, totalcounts_dict, cumcounts_dict, agecounts_dict,  msoacounts_dict, cumcounts_dict_3d, totalcounts_dict_std, cumcounts_dict_std, agecounts_dict_std, msoacounts_dict_std, totalcounts_dict_3d, agecounts_dict_3d, msoacounts_dict_3d, uniquecounts_dict_3d, uniquecounts_dict_std, uniquecounts_dict
-
-
-
-
-# def calc_cumtotal_counts(cumcounts_dict_3d):
-#     """ Calculate cumulative total across time and space, returned as mean and std nr susceptible, presymptomatic, symptomatic, recovered and dead"""
-#     cumtotal_counts = np.zeros((5,nr_runs))
-#     for r in r_range:
-#         nr_dead = cumcounts_dict_3d["dead"][:,r-start_run].sum()
-#         nr_recovered = cumcounts_dict_3d["recovered"][:,r-start_run].sum()
-#         nr_symptomatic = cumcounts_dict_3d["symptomatic"][:,r-start_run].sum() - nr_dead - nr_recovered
-#         nr_presymptomatic = cumcounts_dict_3d["presymptomatic"][:,r-start_run].sum() - nr_dead - nr_recovered - nr_symptomatic
-#         nr_susceptible = cumcounts_dict_3d["susceptible"][:,r-start_run].sum() - nr_dead - nr_recovered - nr_symptomatic - nr_presymptomatic
-#         cumtotal_counts[0,r-start_run] = nr_susceptible
-#         cumtotal_counts[1,r-start_run] = nr_presymptomatic
-#         cumtotal_counts[2,r-start_run] = nr_symptomatic
-#         cumtotal_counts[3,r-start_run] = nr_recovered
-#         cumtotal_counts[4,r-start_run] = nr_dead
-#     cumtotal_counts_mean = cumtotal_counts.mean(axis=1)
-#     cumtotal_counts_std = cumtotal_counts.std(axis=1)      
-#     return cumtotal_counts_mean, cumtotal_counts_std
-
-   
-
-
 
 
 
@@ -507,9 +493,13 @@ def create_dashboard(parameters_file):
         data_s3["msoa_nr"] = msoas_nr
         data_s3["msoa_name"] = msoas
         for key, value in cumcounts_dict.items():
-            data_s3[key] = cumcounts_dict[key]
-            data_s3[f"{key}_std_upper"] = cumcounts_dict[key] + cumcounts_dict_std[key]
-            data_s3[f"{key}_std_lower"] = cumcounts_dict[key] - cumcounts_dict_std[key]
+            data_s3[key] = cumcounts_dict[key].iloc[:,nr_days-1]
+            data_s3[f"{key}_std_upper"] = cumcounts_dict[key].iloc[:,nr_days-1] + cumcounts_dict_std[key].iloc[:,nr_days-1]
+            data_s3[f"{key}_std_lower"] = cumcounts_dict[key].iloc[:,nr_days-1] - cumcounts_dict_std[key].iloc[:,nr_days-1]
+            # old
+            # data_s3[key] = cumcounts_dict[key]
+            # data_s3[f"{key}_std_upper"] = cumcounts_dict[key] + cumcounts_dict_std[key]
+            # data_s3[f"{key}_std_lower"] = cumcounts_dict[key] - cumcounts_dict_std[key]
         source_3 = ColumnDataSource(data=data_s3)
         # Create fig
         s3 = figure(background_fill_color="#fafafa",title="MSOA", x_axis_label='Nr people', y_axis_label='MSOA',toolbar_location='above')
@@ -845,15 +835,16 @@ def create_dashboard(parameters_file):
     # dictionaries with condition and venue names
     # conditions are coded as numbers in microsim output
     conditions_dict = {
-      "susceptible": 0,
-      "exposed": 1,
-      "presymptomatic": 2,
-      "symptomatic": 3,
-      "asymptomatic": 4,
-      "recovered": 5,
-      "dead": 6,
+      "susceptible": ColumnNames.DiseaseStatuses.SUSCEPTIBLE,
+      "exposed": ColumnNames.DiseaseStatuses.EXPOSED,
+      "presymptomatic": ColumnNames.DiseaseStatuses.PRESYMPTOMATIC,
+      "symptomatic": ColumnNames.DiseaseStatuses.SYMPTOMATIC,
+      "asymptomatic": ColumnNames.DiseaseStatuses.ASYMPTOMATIC,
+      "recovered": ColumnNames.DiseaseStatuses.RECOVERED,
+      "dead": ColumnNames.DiseaseStatuses.DEAD,
     }
-    # venues are coded as strings - redefined here so script works as standalone, could refer to ActivityLocations instead
+    # venues are coded as strings
+    # for backwards compatability
     locations_dict = {
       "PrimarySchool": "PrimarySchool",
       "SecondarySchool": "SecondarySchool",
@@ -861,6 +852,14 @@ def create_dashboard(parameters_file):
       "Work": "Work",
       "Home": "Home",
     }
+    # # new names
+    # locations_dict = {
+    #   "PrimarySchool": "ColumnNames.Activities.PRIMARY",
+    #   "SecondarySchool": "ColumnNames.Activities.SECONDARY",
+    #   "Retail": "ColumnNames.Activities.RETAIL",
+    #   "Work": "ColumnNames.Activities.WORK",
+    #   "Home": "ColumnNames.Activities.HOME",
+    # }
     
     # default list of tools for plots
     tools = "crosshair,hover,pan,wheel_zoom,box_zoom,reset,box_select,lasso_select"
