@@ -34,7 +34,6 @@ def load_osm_buildings():
         # just take the first node as the approximate location of the building
         # no need to calculate the centroid, since this is just approximate anyway
         node = way.nodes[0]
-        # building_coords.append(Point(float(node.lon), float(node.lat)))
         building_coords.append(Point(float(node.lon), float(node.lat)))
 
     return building_coords
