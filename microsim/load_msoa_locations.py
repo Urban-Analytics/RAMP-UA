@@ -3,6 +3,7 @@ import overpy
 from shapely.geometry import Point
 import geopandas as gpd
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 def load_osm_buildings():
@@ -12,7 +13,7 @@ def load_osm_buildings():
 
     # fetch buildings - small area
     result = api.query("""
-        way(50.36453,-4.17754,50.39431,-4.14253) ["building"];
+        way(50.30745,-3.98185,50.34093,-3.90066) ["building"];
         (._;>;);
         out body;
         """)
@@ -32,7 +33,7 @@ def load_osm_buildings():
         # no need to calculate the centroid, since this is just approximate anyway
         node = way.nodes[0]
         # building_coords.append(Point(float(node.lon), float(node.lat)))
-        building_coords.append(Point(float(node.lat), float(node.lon)))
+        building_coords.append(Point(float(node.lon), float(node.lat)))
 
     return building_coords
 
@@ -42,7 +43,7 @@ def load_devon_msoas(data_dir, msoa_filename="devon_msoas.csv"):
                        names=["Easting", "Northing", "Num", "Code", "Desc"])
 
 
-def load_msoa_shapes(data_dir):
+def load_msoa_shapes(data_dir, visualize=False):
     shape_dir = os.path.join(data_dir, "MSOAS_shp")
     shape_file = os.path.join(shape_dir, "bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp")
 
@@ -60,6 +61,10 @@ def load_msoa_shapes(data_dir):
     devon_msoa_shapes = pd.merge(all_msoa_shapes, devon_msoas, on="Code")
     print(f"Filtered {len(devon_msoa_shapes.index)} devon MSOA shapes")
 
+    if visualize:
+        devon_msoa_shapes.plot()
+        plt.show()
+
     return devon_msoa_shapes
 
 
@@ -74,7 +79,7 @@ def calculate_msoa_buildings(building_coordinates, msoa_shapes):
         buildings_within_msoa = []
         # iterate through all buildings and append ones within shape
         for building_point in building_coordinates:
-            if geometry.within(building_point):
+            if building_point.within(geometry):
                 print(f"Found building within msoa: {code}")
                 buildings_within_msoa.append(building_point)
 
@@ -88,7 +93,7 @@ def main():
     data_dir = os.path.join(base_dir, "devon_data")
 
     building_coordinates = load_osm_buildings()
-    devon_msoa_shapes = load_msoa_shapes(data_dir)
+    devon_msoa_shapes = load_msoa_shapes(data_dir, visualize=True)
 
     msoa_buildings = calculate_msoa_buildings(building_coordinates, devon_msoa_shapes)
     print(msoa_buildings)
