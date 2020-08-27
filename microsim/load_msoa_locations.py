@@ -1,5 +1,7 @@
 import os
+import json
 import overpy
+from tqdm import tqdm
 from shapely.geometry import Point
 import geopandas as gpd
 import pandas as pd
@@ -28,7 +30,7 @@ def load_osm_buildings():
     print(f"Found {len(result.ways)} buildings")
 
     building_coords = []
-    for way in result.ways:
+    for way in tqdm(result.ways, desc="extracting building coordinates from ways"):
         # just take the first node as the approximate location of the building
         # no need to calculate the centroid, since this is just approximate anyway
         node = way.nodes[0]
@@ -75,13 +77,13 @@ def calculate_msoa_buildings(building_coordinates, msoa_shapes):
     msoa_geometries = msoa_shapes.loc[:, "geometry"]
 
     # for all msoas store the buildings within their shapes
-    for code, geometry in zip(msoa_codes, msoa_geometries):
+    for code, geometry in tqdm(zip(msoa_codes, msoa_geometries), desc="Finding buildings for all MSOAs"):
         buildings_within_msoa = []
         # iterate through all buildings and append ones within shape
-        for building_point in building_coordinates:
+        for building_point in tqdm(building_coordinates, desc=f"Checking building coordinates for MSOA {code}"):
             if building_point.within(geometry):
-                print(f"Found building within msoa: {code}")
-                buildings_within_msoa.append(building_point)
+                building_lat_lon = [building_point.y, building_point.x]
+                buildings_within_msoa.append(building_lat_lon)
 
         msoa_buildings[code] = buildings_within_msoa
 
@@ -93,12 +95,15 @@ def main():
     data_dir = os.path.join(base_dir, "devon_data")
 
     building_coordinates = load_osm_buildings()
-    devon_msoa_shapes = load_msoa_shapes(data_dir, visualize=True)
+    devon_msoa_shapes = load_msoa_shapes(data_dir, visualize=False)
 
     msoa_buildings = calculate_msoa_buildings(building_coordinates, devon_msoa_shapes)
-    print(msoa_buildings)
 
-    # TODO: store dict as JSON
+    print("Writing MSOA buildings to JSON file")
+    output_filepath = os.path.join(data_dir, "msoa_building_coordinates.json")
+
+    with open(output_filepath, 'w') as output_file:
+        json.dump(msoa_buildings, output_file)
 
 
 if __name__ == '__main__':
