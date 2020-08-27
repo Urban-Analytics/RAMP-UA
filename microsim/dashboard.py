@@ -947,7 +947,7 @@ def create_dashboard(parameters_file):
     start_run = 0 if (start_run_user is None) else start_run_user
     end_run = end_run_max if (end_run_user is None) else end_run_user
     if end_run_max is not None and end_run_user > end_run_max:
-        print("Warning: user specified end run is greater than number of runs available, so setting run to last run!")
+        print("Warning: user specified end run is greater than number of runs available, so setting end_run to last run!")
         end_run = end_run_max
     nr_runs = end_run - start_run + 1
     r_range = range(start_run, end_run+1)
@@ -1216,7 +1216,7 @@ def create_dashboard(parameters_file):
         
         tab1 = Panel(child=row(plotref_dict["scen_hist_Condition"], plotref_dict["scen_hist_Venues"]), title='Histograms')
         
-        tab2 = Panel(child=row(plotref_dict["scen_time_Conditions_susceptible"], plotref_dict["scen_time_Conditions_presymptomatic"], plotref_dict["scen_time_Conditions_symptomatic"], plotref_dict["scen_time_Conditions_recovered"], plotref_dict["scen_time_Conditions_dead"]), title='Conditions')
+        tab2 = Panel(child=row(plotref_dict["scen_time_Conditions_susceptible"], plotref_dict["scen_time_Conditions_exposed"], plotref_dict["scen_time_Conditions_presymptomatic"], plotref_dict["scen_time_Conditions_symptomatic"], plotref_dict["scen_time_Conditions_asymptomatic"], plotref_dict["scen_time_Conditions_recovered"], plotref_dict["scen_time_Conditions_dead"]), title='Conditions')
         
         tab3 = Panel(child=row(plotref_dict["scen_time_Venues_Retail"], plotref_dict["scen_time_Venues_PrimarySchool"], plotref_dict["scen_time_Venues_SecondarySchool"], plotref_dict["scen_time_Venues_Work"], plotref_dict["scen_time_Venues_Home"]), title='Venues')      
         
