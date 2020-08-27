@@ -5,6 +5,13 @@ import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
 
+# Functionality to create a lookup table of MSOA codes to a list of coordinates of all the buildings
+# in that MSOA area, this is stored to a JSON file and used in the snapshotter to allocate people's
+# homes to real building locations.
+# This works by using Geopandas to load OSM data for all buildings in devon from a local file, then loading all MSOA
+# shapes in the country and filtering to just the Devon ones. Then iterating through all Devon MSOAs and finding the
+# buildings that lie within the MSOA boundary polygon.
+
 
 def load_osm_shapefile(data_dir):
     # Shape file downloaded for devon from https://download.geofabrik.de/europe/great-britain/england/devon.html
