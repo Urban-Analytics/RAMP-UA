@@ -6,6 +6,7 @@ Created on Thu Jun  4 16:22:57 2020
 """
 
 import os
+import sys
 import click
 import pickle
 import pandas as pd
@@ -454,16 +455,28 @@ def create_dashboard(parameters_file):
         
     # plot 2: disease conditions across time
     
-    def plot_cond_time():
+    def plot_cond_time(flag):
         # build ColumnDataSource
-        data_s2 = dict(totalcounts_dict)
-        data_s2["days"] = days
-        for key, value in totalcounts_dict.items():
-            data_s2[f"{key}_std_upper"] = totalcounts_dict[key] + totalcounts_dict_std[key]
-            data_s2[f"{key}_std_lower"] = totalcounts_dict[key] - totalcounts_dict_std[key]
+        if flag == "daily":
+            title_fig = "Daily counts"
+            name_plotref = "cond_time_daily"
+            data_s2 = dict(totalcounts_dict)
+            data_s2["days"] = days
+            for key, value in totalcounts_dict.items():
+                data_s2[f"{key}_std_upper"] = totalcounts_dict[key] + totalcounts_dict_std[key]
+                data_s2[f"{key}_std_lower"] = totalcounts_dict[key] - totalcounts_dict_std[key]
+        elif flag == "cumulative": 
+            title_fig = "Cumulative counts"
+            name_plotref = "cond_time_cumulative"
+            data_s2 = {"days": days}
+            for key, value in totalcounts_dict.items():
+                data_s2[f"{key}"] = cumcounts_dict[key].sum(axis=0)
+                data_s2[f"{key}_std_upper"] = cumcounts_dict[key].sum(axis=0) + cumcounts_dict_std[key].sum(axis=0)
+                data_s2[f"{key}_std_lower"] = cumcounts_dict[key].sum(axis=0) - cumcounts_dict_std[key].sum(axis=0)
+            
         source_2 = ColumnDataSource(data=data_s2)
         # Create fig
-        s2 = figure(background_fill_color="#fafafa",title="Time", x_axis_label='Time', y_axis_label='Nr of people',toolbar_location='above')
+        s2 = figure(background_fill_color="#fafafa",title=title_fig, x_axis_label='Time', y_axis_label='Nr of people',toolbar_location='above')
         legend_it = []
         for key, value in totalcounts_dict.items():
             c1 = s2.line(x = 'days', y = key, source = source_2, line_width=2, line_color=colour_dict[key],muted_color="grey", muted_alpha=0.2)   
@@ -482,7 +495,7 @@ def create_dashboard(parameters_file):
         ))
         s2.add_layout(legend, 'right')
         s2.toolbar.autohide = False
-        plotref_dict["cond_time"] = s2    
+        plotref_dict[name_plotref] = s2    
         
         
     # plot 3: Conditions across MSOAs
@@ -1138,7 +1151,8 @@ def create_dashboard(parameters_file):
             plot_heatmap_danger(key)
             
         # disease conditions across time
-        plot_cond_time()
+        plot_cond_time("daily")
+        plot_cond_time("cumulative")
         
         # disease conditions across msoas
         plot_cond_msoas()    
@@ -1161,7 +1175,7 @@ def create_dashboard(parameters_file):
         
         # Layout and output
         
-        tab1 = Panel(child=row(plotref_dict["cond_time"], plotref_dict["cond_msoas"]), title='Summary conditions')
+        tab1 = Panel(child=row(plotref_dict["cond_time_daily"],plotref_dict["cond_time_cumulative"], plotref_dict["cond_msoas"]), title='Summary conditions')
         
         tab2 = Panel(child=row(plotref_dict["hmsusceptible"],column(plotref_dict["chslsusceptible"],plotref_dict["chplsusceptible"])), title='Susceptible')
         

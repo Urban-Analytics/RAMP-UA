@@ -9,10 +9,8 @@ dashboard: # Parameters for the dashboard (visualisation), all are optional
   # define scenarios (first will be used as control), any number
   scenario_name: # names for scenario
   - Control
-  - Alternative
   scenario_dir: # directory for scenario (subdir of /output), same order as names above
-  - default
-  - scenario1
+  - sc4
   # for all scenarios
 
   
