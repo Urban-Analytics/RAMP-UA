@@ -27,8 +27,8 @@ load_init_data <- function() {
 }
 
 initialize_r <- function() {
-  load_init_data()
   load_rpackages()
+  load_init_data()
 }
 
 run_status <- function(pop,
@@ -49,12 +49,12 @@ run_status <- function(pop,
                        output_switch = TRUE,
                        rank_assign = FALSE,
                        overweight = 1,
-                       obesity_30 = 1.2,
+                       obesity_30 = 1,
                        obesity_35 = 1.4,
                        obesity_40 = 1.9,
-                       cvd = 1.5,
-                       diabetes = 1.5,
-                       bloodpressure = 1.5) {
+                       cvd = 1,
+                       diabetes = 1,
+                       bloodpressure = 1) {
 
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
 
@@ -71,7 +71,6 @@ run_status <- function(pop,
 
   if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
 
-
   df_cr_in <- create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
                                    "house_id",
@@ -83,6 +82,8 @@ run_status <- function(pop,
                                    "bloodpressure"))
 
   other_betas <- list(current_risk = current_risk_beta)
+  
+  
   
   df_msoa <- mortality_risk(df = df_cr_in, 
                               obesity_40 = obesity_40,
@@ -179,6 +180,7 @@ run_status <- function(pop,
                        symp_days = df_msoa$symp_days)
 
   #if(output_switch){write.csv(df_out, paste0(tmp.dir, "/daily_out_", timestep, ".csv"))}
-
+  warnings()
+  
   return(df_out)
 }
