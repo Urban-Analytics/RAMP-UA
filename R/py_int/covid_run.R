@@ -29,7 +29,6 @@ load_init_data <- function() {
 initialize_r <- function() {
   load_rpackages()
   load_init_data()
-}
 
 run_status <- function(pop,
                        timestep = 1,
