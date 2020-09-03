@@ -16,7 +16,7 @@ test_dir = os.path.dirname(os.path.abspath(__file__))
 R_script_dir = os.path.abspath(os.path.join(test_dir, '..','R','py_int'))
 
 # arguments used when calling the Microsim constructor. Usually these are the same
-microsim_args = {"data_dir": os.path.join(test_dir,"dummy_data"), "r_script_dir": "./R/py_int", "testing": True, "debug": True,
+microsim_args = {"data_dir": os.path.join(test_dir,"dummy_data"), "testing": True, "debug": True,
                  "disable_disease_status": True, 'lockdown_file':"google_mobility_lockdown_daily.csv"}
 
 @pytest.fixture()
@@ -47,7 +47,7 @@ def test_calculate_disease_status_onestep(rInterface):
 
     r_updated_frame = rInterface.calculate_disease_status(individuals = raw_indiv, iteration = 1, disease_params = dict())
 
-    assert len(raw_indiv) == len(r_updated_frame)
+    assert raw_indiv.shape[0] == r_updated_frame.shape[0]
 
 def test_calculate_disease_status_multistep(rInterface):
     """
@@ -59,7 +59,7 @@ def test_calculate_disease_status_multistep(rInterface):
     for i in range(1,4):
         r_updated_frame = rInterface.calculate_disease_status(individuals = raw_indiv, iteration = i, disease_params = dict())
 
-        assert len(raw_indiv) == len(r_updated_frame)
+        assert raw_indiv.shape[0] == r_updated_frame.shape[0]
 
 
 def test_calculate_disease_status_wMicrosim(rInterface, microsim_inst):
@@ -67,8 +67,8 @@ def test_calculate_disease_status_wMicrosim(rInterface, microsim_inst):
     A series of tests testing instantiated microsim individual dataset on function
     """
 
-    r_updated_frame = rInterface.calculate_disease_status(individuals = microsim_inst.individuals, iteration = 3, disease_params = dict())
+    r_updated_frame = rInterface.calculate_disease_status(individuals = microsim_inst.individuals, iteration = 1, disease_params = dict())
 
-    assert len(microsim_inst.individuals) == len(r_updated_frame)
+    assert microsim_inst.individuals.shape[0] == r_updated_frame.shape[0]
 
-    assert ["area","ID","house_id","disease_status","exposed_days","presymp_days","symp_days"] in r_updated_frame.columns.tolist()
+    assert set(["area","ID","house_id","disease_status","exposed_days","presymp_days","symp_days"]).issubset(set(r_updated_frame.columns.tolist()))
