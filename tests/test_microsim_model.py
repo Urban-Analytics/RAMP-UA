@@ -3,6 +3,7 @@ import pytest
 import multiprocessing
 import pandas as pd
 import numpy as np
+import copy
 from microsim.microsim_model import Microsim
 from microsim.column_names import ColumnNames
 from microsim.activity_location import ActivityLocation
@@ -17,7 +18,7 @@ test_dir = os.path.dirname(os.path.abspath(__file__))
 microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
                  "r_script_dir": os.path.normpath(os.path.join(test_dir, "..", "R/py_int")),
                  "testing": True, "debug": True,
-                 "disable_disease_status": True, 'lockdown_from_file':False}
+                 "disable_disease_status": True, 'lockdown_file': ""}
 
 
 # This 'fixture' means that other functions (e.g. step) can use the object created here.
@@ -43,42 +44,42 @@ def test_microsim():
 
     # Households
     # (The households df should be the same as the one in the corresponding activity location)
-    assert m.activity_locations['Home']._locations.equals(m.households)
+    assert m.activity_locations[f"{ColumnNames.Activities.HOME}"]._locations.equals(m.households)
     # All flows should be to one location (single element [1.0])
-    for flow in m.individuals[f"Home{ColumnNames.ACTIVITY_FLOWS}"]:
+    for flow in m.individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_FLOWS}"]:
         assert flow == [1.0]
 
     # House IDs are the same as the row index
     assert False not in list(m.households.index == m.households.ID)
 
     # First two people live together in first household
-    assert list(m.individuals.loc[0:1, :][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) == [[0], [0]]
+    assert list(m.individuals.loc[0:1, :][f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_VENUES}"].values) == [[0], [0]]
     # This one lives on their own in the fourth house
-    assert list(m.individuals.loc[9:9, :][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) == [[3]]
+    assert list(m.individuals.loc[9:9, :][f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_VENUES}"].values) == [[3]]
     # These three live together in the last house
-    assert list(m.individuals.loc[13:15, :][f"Home{ColumnNames.ACTIVITY_VENUES}"].values) == [[6], [6], [6]]
+    assert list(m.individuals.loc[13:15, :][f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_VENUES}"].values) == [[6], [6], [6]]
 
     # Workplaces
     # All flows should be to one location (single element [1.0])
-    for flow in m.individuals[f"Work{ColumnNames.ACTIVITY_FLOWS}"]:
+    for flow in m.individuals[f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_FLOWS}"]:
         assert flow == [1.0]
     # First person is the only one who does that job
-    assert len(list(m.individuals.loc[0:0, ][f"Work{ColumnNames.ACTIVITY_VENUES}"]))
-    job_index = list(m.individuals.loc[0:0, ][f"Work{ColumnNames.ACTIVITY_VENUES}"])[0][0]
-    for work_id in m.individuals.loc[1:len(m.individuals), f"Work{ColumnNames.ACTIVITY_VENUES}"]:
+    assert len(list(m.individuals.loc[0:0, ][f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"]))
+    job_index = list(m.individuals.loc[0:0, ][f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"])[0][0]
+    for work_id in m.individuals.loc[1:len(m.individuals), f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"]:
         assert work_id[0] != job_index
     # Three people do the same job as second person
-    job_index = list(m.individuals.loc[1:1, ][f"Work{ColumnNames.ACTIVITY_VENUES}"])[0]
-    assert list(m.individuals.loc[4:4, f"Work{ColumnNames.ACTIVITY_VENUES}"])[0] == job_index
-    assert list(m.individuals.loc[13:13, f"Work{ColumnNames.ACTIVITY_VENUES}"])[0] == job_index
+    job_index = list(m.individuals.loc[1:1, ][f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"])[0]
+    assert list(m.individuals.loc[4:4, f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"])[0] == job_index
+    assert list(m.individuals.loc[13:13, f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"])[0] == job_index
     # Not this person:
-    assert list(m.individuals.loc[15:15, f"Work{ColumnNames.ACTIVITY_VENUES}"])[0] != job_index
+    assert list(m.individuals.loc[15:15, f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"])[0] != job_index
 
     # Test Shops
-    shop_locs = m.activity_locations['Retail']._locations
+    shop_locs = m.activity_locations[ColumnNames.Activities.RETAIL]._locations
     assert len(shop_locs) == 248
     # First person has these flows and venues
-    venue_ids = list(m.individuals.loc[0:0, f"Retail{ColumnNames.ACTIVITY_VENUES}"])[0]
+    venue_ids = list(m.individuals.loc[0:0, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_VENUES}"])[0]
     # flows = list(m.individuals.loc[0:0, f"Retail{ColumnNames.ACTIVITY_FLOWS}"])[0]
     # These are the venues in the filename:
     raw_venues = sorted([24, 23, 22, 21, 19, 12, 13, 25, 20, 17])
@@ -89,17 +90,17 @@ def test_microsim():
     assert shop_locs.loc[18:18, ColumnNames.LOCATION_NAME].values[0] == "Aldi Honiton"
 
     # Test Schools (similar to house/work above) (need to do for primary and secondary)
-    primary_locs = m.activity_locations['PrimarySchool']._locations
-    secondary_locs = m.activity_locations['SecondarySchool']._locations
+    primary_locs = m.activity_locations[f"{ColumnNames.Activities.PRIMARY}"]._locations
+    secondary_locs = m.activity_locations[f"{ColumnNames.Activities.SECONDARY}"]._locations
     # All schools are read in from one file, both primary and secondary
     assert len(primary_locs) == 350
     assert len(secondary_locs) == 350
     assert primary_locs.equals(secondary_locs)
     # Check primary and secondary indexes point to primary and secondary schools respectively
-    for indexes in m.individuals.loc[:, f"PrimarySchool{ColumnNames.ACTIVITY_VENUES}"]:
+    for indexes in m.individuals.loc[:, f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"]:
         for index in indexes:
             assert primary_locs.loc[index, "PhaseOfEducation_name"] == "Primary"
-    for indexes in m.individuals.loc[:, f"SecondarySchool{ColumnNames.ACTIVITY_VENUES}"]:
+    for indexes in m.individuals.loc[:, f"{ColumnNames.Activities.SECONDARY}{ColumnNames.ACTIVITY_VENUES}"]:
         for index in indexes:
             assert secondary_locs.loc[index, "PhaseOfEducation_name"] == "Secondary"
 
@@ -107,7 +108,7 @@ def test_microsim():
     # (we know this because, by coincidence, the first person lives in the area that has the
     # first area name if they were ordered alphabetically)
     list(m.individuals.loc[0:0, "area"])[0] == "E00101308"
-    venue_ids = list(m.individuals.loc[0:0, f"PrimarySchool{ColumnNames.ACTIVITY_VENUES}"])[0]
+    venue_ids = list(m.individuals.loc[0:0, f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"])[0]
     raw_venues = sorted([12, 110, 118, 151, 163, 180, 220, 249, 280])
     # Mark counts from 1, so these should be 1 greater than the ids
     assert [x - 1 for x in raw_venues] == venue_ids
@@ -117,7 +118,7 @@ def test_microsim():
 
     # Second to last person lives in 'E02004138' which will be the last area recorded in Mark's file
     assert list(m.individuals.loc[9:9, "area"])[0] == "E02004159"
-    venue_ids = list(m.individuals.loc[9:9, f"SecondarySchool{ColumnNames.ACTIVITY_VENUES}"])[0]
+    venue_ids = list(m.individuals.loc[9:9, f"{ColumnNames.Activities.SECONDARY}{ColumnNames.ACTIVITY_VENUES}"])[0]
     raw_venues = sorted([335, 346])
     # Mark counts from 1, so these should be 1 greater than the ids
     assert [x - 1 for x in raw_venues] == venue_ids
@@ -147,8 +148,8 @@ def test_add_home_flows(test_microsim):
 def test_read_school_flows_data(test_microsim):
     """Check that flows to primary and secondary schools were read correctly """
     # Check priary and seconary have the same data (they're read together)
-    primary_schools = test_microsim.activity_locations["PrimarySchool"]._locations
-    secondary_schools = test_microsim.activity_locations["SecondarySchool"]._locations
+    primary_schools = test_microsim.activity_locations[f"{ColumnNames.Activities.PRIMARY}"]._locations
+    secondary_schools = test_microsim.activity_locations[f"{ColumnNames.Activities.SECONDARY}"]._locations
     assert primary_schools.equals(secondary_schools)
     # But they don't point to the same dataframe
     primary_schools["TestCol"] = 0
@@ -165,8 +166,8 @@ def test_read_school_flows_data(test_microsim):
     len(secondary_schools) == 39
 
     # Check all primary flows go to primary schools and secondary flows go to secondary schools
-    primary_flows = test_microsim.activity_locations["PrimarySchool"]._flows
-    secondary_flows = test_microsim.activity_locations["SecondarySchool"]._flows
+    primary_flows = test_microsim.activity_locations[f"{ColumnNames.Activities.PRIMARY}"]._flows
+    secondary_flows = test_microsim.activity_locations[f"{ColumnNames.Activities.SECONDARY}"]._flows
     # Following slice slice gives the total flow to each of the 350 schools (sum across rows for each colum and then
     # drop the first two columns which are area ID and Code)
     for school_no, flow in enumerate(primary_flows.sum(0)[2:]):
@@ -221,7 +222,7 @@ def test_read_msm_data(test_microsim):
 
 def test_change_behaviour_with_disease(test_microsim):
     """Check that individuals behaviour changed correctly with the disease status"""
-    m = test_microsim  # less typing
+    m = copy.deepcopy(test_microsim)  # less typing and so as not to interfere with other tests
     # Give some people the disease (these two chosen because they both spend a bit of time in retail
     p1 = 1
     p2 = 6
@@ -232,8 +233,9 @@ def test_change_behaviour_with_disease(test_microsim):
     m.change_behaviour_with_disease()  # (this isn't called by default when testing)
 
     # Nothing should have happended as we hadn't indicated a change in disease status
-    for p, act in zip([p1, p1, p2, p2], ["Home", "Retail", "Home", "Retail"]):
-        assert m.individuals.loc[p, f"{act}{ColumnNames.ACTIVITY_DURATION}"] == \
+    for p, act in zip([p1, p1, p2, p2], [ColumnNames.Activities.HOME, ColumnNames.Activities.RETAIL,
+                                         ColumnNames.Activities.HOME, ColumnNames.Activities.RETAIL]):
+            assert m.individuals.loc[p, f"{act}{ColumnNames.ACTIVITY_DURATION}"] == \
                m.individuals.loc[p, f"{act}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
     # Mark behaviour changed then try again
@@ -244,15 +246,15 @@ def test_change_behaviour_with_disease(test_microsim):
     m.change_behaviour_with_disease()  # (this isn't called by default when testing)
 
     # First person should spend more time at home and less at work
-    assert m.individuals.loc[p1, f"Retail{ColumnNames.ACTIVITY_DURATION}"] < m.individuals.loc[
-        p1, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
-    assert m.individuals.loc[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] > m.individuals.loc[
-        p1, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p1, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_DURATION}"] < m.individuals.loc[
+        p1, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p1, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] > m.individuals.loc[
+        p1, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
     # Second person should be unchanged
-    assert m.individuals.loc[p2, f"Retail{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
-        p2, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
-    assert m.individuals.loc[p2, f"Home{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
-        p2, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p2, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
+        p2, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p2, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
+        p2, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
     # Mark behaviour changed then try again
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS_CHANGED] = True
@@ -262,31 +264,179 @@ def test_change_behaviour_with_disease(test_microsim):
     m.change_behaviour_with_disease()  # (this isn't called by default when testing)
 
     # First person should spend more time at home and less at work
-    assert m.individuals.loc[p1, f"Retail{ColumnNames.ACTIVITY_DURATION}"] < m.individuals.loc[
-        p1, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
-    assert m.individuals.loc[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] > m.individuals.loc[
-        p1, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p1, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_DURATION}"] < m.individuals.loc[
+        p1, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p1, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] > m.individuals.loc[
+        p1, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
     # Second person should be unchanged
-    assert m.individuals.loc[p2, f"Retail{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
-        p2, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
-    assert m.individuals.loc[p2, f"Home{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
-        p2, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p2, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
+        p2, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p2, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
+        p2, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
     # First person no longer infectious, behaviour should go back to normal
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.RECOVERED
     m.step()
     m.change_behaviour_with_disease()  # (this isn't called by default when testing)
-    assert m.individuals.loc[p1, f"Retail{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
-        p1, f"Retail{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
-    assert m.individuals.loc[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
-        p1, f"Home{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p1, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
+        p1, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+    assert m.individuals.loc[p1, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] == m.individuals.loc[
+        p1, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
 
 def test_update_venue_danger_and_risks(test_microsim):
     """Check that the current risk is updated properly"""
     # This is actually tested as part of test_step
     assert True
+
+def test_hazard_multipliers(test_microsim):
+    """
+    This tests whether hazards for particular disease statuses or locations are multiplied properly.
+    The relevant code is in update_venue_danger_and_risks().
+
+    :param test_microsim: This is a pointer to the initialised model. Dummy data will have been read in,
+    but no stepping has taken place yet."""
+    m = copy.deepcopy(test_microsim)  # For less typing and so as not to interfere with other functions use test_microsim
+
+    # Note: the following is a useul way to get relevant info about the individuals
+    # m.individuals.loc[:, ["ID", "PID", "HID", "area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
+
+    # Set the hazard-related parameters.
+
+    # As we don't specify them when the tests are set up, they should be empty dictionaries
+    assert not m.hazard_location_multipliers
+    assert not m.hazard_individual_multipliers
+
+    # Manually create some hazards for individuals and locationsas per the parameters file
+    m.hazard_individual_multipliers["presymptomatic"] = 1.0
+    m.hazard_individual_multipliers["asymptomatic"] = 2.0
+    m.hazard_individual_multipliers["symptomatic"] = 3.0
+    for act in ColumnNames.Activities.ALL:
+        m.hazard_location_multipliers[act] = 1.0
+
+    # Step 0 (initialisation):
+
+    # Everyone should start without the disease (they will have been assigned a status as part of initialisation)
+    m.individuals[ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SUSCEPTIBLE
+
+    #
+    # Person 1: lives with one other person (p2). Both people spend all their time at home doing nothing else
+    #
+    p1 = 0
+    p2 = 1
+
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.PRESYMPTOMATIC  # Give p1 the disease
+    for p in [p1, p2]:  # Set their activity durations to 0 except for home
+        for name, activity in m.activity_locations.items():
+            m.individuals.at[p, f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
+        m.individuals.at[p, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = 1.0
+
+    m.step()
+
+    # Check the disease has spread to the house with a multiplier of 1.0, but nowhere else
+    _check_hazard_spread(p1, p2, m.individuals, m.households, 1.0)
+
+    # If the person is asymptomatic, we said the hazard should be doubled, so the risk should be doubled
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.ASYMPTOMATIC  # Give p1 the disease
+    m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SUSCEPTIBLE  # Make sure p2 is clean
+
+    m.step()
+    _check_hazard_spread(p1, p2, m.individuals, m.households, 2.0)
+
+    # And for symptomatic we said 3.0
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC  # Give p1 the disease
+    m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SUSCEPTIBLE  # Make sure p2 is clean
+
+    m.step()
+    _check_hazard_spread(p1, p2, m.individuals, m.households, 3.0)
+
+
+    # But if they both get sick then double danger and risk)
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC
+    m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC
+    m.step()
+    _check_hazard_spread(p1, p2, m.individuals, m.households, 6.0)
+
+    #
+    # Now see if the hazards for locations work. Check houses and schools
+    #
+
+    # Both people are symptomatic. And double the hazard for home. So in total the new risk should
+    # be 3 * 2 * 5 = 30
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC
+    m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC
+    m.hazard_location_multipliers[ColumnNames.Activities.HOME] = 5.0
+
+    m.step()
+    _check_hazard_spread(p1, p2, m.individuals, m.households, 30.0)
+
+
+    # Check for school as well. Now give durations for home and school as 0.5. Make them asymptomatic so the additional
+    # hazard is 2.0 (set above). And make the risks for home 5.35 and for school 2.9.
+
+    # Make sure all *other* individuals go to a different school (school 1), then make p1 and p2 go to the same school
+    # (school 0) below
+    # (annoying apply is because pandas doesn't like a list being assigned to a value in a cell)
+    m.individuals[f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"] = \
+        m.individuals.loc[:, f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"].apply(lambda x: [1])
+    m.individuals.loc[[p1, p2], f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"] = \
+        m.individuals.loc[[p1, p2], f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"].apply(lambda x: [0])
+    # All school flows need to be 1 (don't want the people to go to more than 1 school
+    m.individuals[f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_FLOWS}"] = \
+        m.individuals.loc[:, f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"].apply(lambda x: [1.0])
+
+    for p in [p1, p2]:  # Set their activity durations to 0.5 for home and school
+        for name, activity in m.activity_locations.items():
+            m.individuals.at[p, f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
+        m.individuals.at[p, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = 0.5
+        m.individuals.at[p, f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_DURATION}"] = 0.5
+    # Make them asymptomatic
+    m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.ASYMPTOMATIC
+    m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.ASYMPTOMATIC
+    # Set hazards for home and school
+    m.hazard_location_multipliers[ColumnNames.Activities.HOME] = 5.35
+    m.hazard_location_multipliers[ColumnNames.Activities.PRIMARY] = 2.9
+
+    m.step()
+
+    # Can't use _check_hazard_spread because it assumes only one activity (HOME)
+    # Current risks are:
+    # For home. 2 people * 2.0 asymptomatic hazard * 0.5 duration * 5.35 HOME risk = 10.7
+    # For school. 2 people * 2.0 asymptomatic hazard * 0.5 duration * 2.9 PRIMARY risk = 5.8
+    # Total risk for individuals: 10.7*0.5 + 5.8*0.5 = 8.25
+
+    # Individuals
+    for p in [p1, p2]:
+        assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 8.25
+    for p in range(2, len(m.individuals)):
+        assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
+
+    # Households
+    assert m.households.at[0, ColumnNames.LOCATION_DANGER] == 10.7
+    # (the self.households dataframe should be the same as the one stored in the activity_locations)
+    assert m.activity_locations[ColumnNames.Activities.HOME]._locations.at[0, ColumnNames.LOCATION_DANGER] == 10.7
+    for h in range(1, len(m.households)):  # all others are 0
+        assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+
+    # Schools
+    assert m.activity_locations[ColumnNames.Activities.PRIMARY]._locations.at[0, ColumnNames.LOCATION_DANGER] == 5.8
+    for h in range(1, len( m.activity_locations[ColumnNames.Activities.PRIMARY]._locations)):  # all others are 0
+        assert m.activity_locations[ColumnNames.Activities.PRIMARY]._locations.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+
+    print("End of test hazard multipliers")
+
+
+def _check_hazard_spread(p1, p2, individuals, households, risk):
+    """Checks how the disease is spreading. To save code repetition in test_hazard_multipliers"""
+    for p in [p1, p2]:
+        assert individuals.at[p, ColumnNames.CURRENT_RISK] == risk
+    for p in range(2, len(individuals)):
+        assert individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
+    assert households.at[0, ColumnNames.LOCATION_DANGER] == risk
+    for h in range(1, len(households)):  # all others are 0
+        assert households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+
 
 
 def test_step(test_microsim):
@@ -299,7 +449,7 @@ def test_step(test_microsim):
 
     :param test_microsim: This is a pointer to the initialised model. Dummy data will have been read in,
     but no stepping has taken place yet."""
-    m = test_microsim  # For less typing and so as not to interfere with other functions use test_microsim
+    m = copy.deepcopy(test_microsim)  # For less typing and so as not to interfere with other functions use test_microsim
 
     # Note: the following is a useul way to get relevant info about the individuals
     # m.individuals.loc[:, ["ID", "PID", "HID", "area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
@@ -308,10 +458,6 @@ def test_step(test_microsim):
 
     # Everyone should start without the disease (they will have been assigned a status as part of initialisation)
     m.individuals[ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SUSCEPTIBLE
-
-    # Set understandable multipliers
-    m.risk_multiplier = 1.0
-    m.danger_multiplier = 1.0
 
     #
     # Person 1: lives with one other person (p2). Both people spend all their time at home doing nothing else
@@ -322,8 +468,8 @@ def test_step(test_microsim):
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC  # Give them the disease
     for p in [p1, p2]:  # Set their activity durations to 0
         for name, activity in m.activity_locations.items():
-            m.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
-        m.individuals[f"Home{ColumnNames.ACTIVITY_DURATION}"] = 1.0  # Spend all their time at home
+            m.individuals.at[p, f"{name}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
+        m.individuals.at[p, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = 1.0  # Spend all their time at home
 
     m.step()
 
@@ -349,7 +495,7 @@ def test_step(test_microsim):
 
     # If the infected person doesn't go home (in this test they do absolutely nothing) then danger and risks should go
     # back to 0
-    m.individuals.at[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] = 0.0
+    m.individuals.at[p1, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = 0.0
     m.step()
     for p in range(len(m.individuals)):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
@@ -358,7 +504,7 @@ def test_step(test_microsim):
 
     # But if they both get sick then they should be 2.0 (double danger and risk)
     m.individuals.loc[p1:p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC  # Give them the disease
-    m.individuals.at[p1, f"Home{ColumnNames.ACTIVITY_DURATION}"] = 1.0  # Make the duration normal again
+    m.individuals.at[p1, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = 1.0  # Make the duration normal again
     m.step()
     for p in [p1, p2]:
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 2.0
