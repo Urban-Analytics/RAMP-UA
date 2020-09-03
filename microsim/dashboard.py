@@ -857,23 +857,23 @@ def create_dashboard(parameters_file):
       "dead": ColumnNames.DiseaseStatuses.DEAD,
     }
     # venues are coded as strings
-    # for backwards compatability
-    locations_dict = {
-      "PrimarySchool": "PrimarySchool",
-      "SecondarySchool": "SecondarySchool",
-      "Retail": "Retail",
-      "Work": "Work",
-      "Home": "Home",
-    }
-    # # new names
+    # # for backwards compatability
     # locations_dict = {
-    #   "PrimarySchool": "ColumnNames.Activities.PRIMARY",
-    #   "SecondarySchool": "ColumnNames.Activities.SECONDARY",
-    #   "Retail": "ColumnNames.Activities.RETAIL",
-    #   "Work": "ColumnNames.Activities.WORK",
-    #   "Home": "ColumnNames.Activities.HOME",
+    #   "PrimarySchool": "PrimarySchool",
+    #   "SecondarySchool": "SecondarySchool",
+    #   "Retail": "Retail",
+    #   "Work": "Work",
+    #   "Home": "Home",
     # }
-    
+    # new names
+    locations_dict = {
+      "PrimarySchool": ColumnNames.Activities.PRIMARY,
+      "SecondarySchool": ColumnNames.Activities.SECONDARY,
+      "Retail": ColumnNames.Activities.RETAIL,
+      "Work": ColumnNames.Activities.WORK,
+      "Home": ColumnNames.Activities.HOME,
+    }
+
     # default list of tools for plots
     tools = "crosshair,hover,pan,wheel_zoom,box_zoom,reset,box_select,lasso_select"
     
