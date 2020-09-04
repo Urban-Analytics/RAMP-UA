@@ -1,7 +1,7 @@
 # Utility parameters for the microsimulation (python) part.
 # These can also be passed as command line arguments
 microsim:
-  scenario: "BaseScenario" # name for scenario directory
+  scenario: "BaseWeightScenario" # name for scenario directory
   iterations: 100 # Number of model iterations. 0 means just run the initialisation.
   data-dir: devon_data # Root directory to load data from
   output: true # Whether to generate output or not
@@ -30,7 +30,7 @@ microsim_calibration:
 
 
 disease: # This is where the parameter for the disease model (the R part) can go (same format the 'microsim_calibration' above)
-  current_risk_beta: 0.0175
+  current_risk_beta: 0.0165
   risk_cap: 5
   seed_days: 10
   exposed_dist: "weibull"
@@ -45,4 +45,12 @@ disease: # This is where the parameter for the disease model (the R part) can go
   asymp_rate: 0.4
   output_switch: TRUE
   rank_assign: FALSE
+  overweight_mplier: 1.46
+  obesity_40: 1.9
+  obesity_35: 1.48
+  obesity_30: 1.48
+  overweight: 1
+  cvd: 1
+  diabetes: 1
+  bloodpressure: 1
 
