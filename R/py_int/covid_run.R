@@ -10,7 +10,7 @@ load_rpackages <- function() {
   rampr_version <- check_github("Urban-Analytics/rampuaR")
   if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
-  devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "obesity", force = T)
+  devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "overweight_scenario", force = T)
 
   library(tidyr)
   library(readr)
@@ -29,6 +29,7 @@ load_init_data <- function() {
 initialize_r <- function() {
   load_rpackages()
   load_init_data()
+}
 
 run_status <- function(pop,
                        timestep = 1,
@@ -53,7 +54,8 @@ run_status <- function(pop,
                        obesity_40 = 1.9,
                        cvd = 1,
                        diabetes = 1,
-                       bloodpressure = 1) {
+                       bloodpressure = 1,
+                       overweight_mplier = 1.46) {
 
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
 
@@ -106,7 +108,8 @@ run_status <- function(pop,
 
   df_sum_betas <- sum_betas(df = df_msoa,
                             betas = other_betas,
-                            risk_cap_val = risk_cap)
+                            risk_cap_val = risk_cap,
+                            multipliers = list(overweight_mplier = overweight_mplier))
   print("betas calculated")
 
   df_prob <- covid_prob(df = df_sum_betas)
