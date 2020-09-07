@@ -87,21 +87,21 @@ def test_get_place_data():
 
 
 def test_get_coordinates():
-    lat_lon_msoa_1 = [50.848446, -3.150362]
-    lat_lon_msoa_2 = [50.798812, -3.187370]
-    lat_lon_msoa_3 = [50.792060, -3.197727]
-    expected_place_coordinates = np.array([lat_lon_msoa_1,
-                                           lat_lon_msoa_2,
-                                           lat_lon_msoa_3,
-                                           lat_lon_coordinate_a,
-                                           lat_lon_coordinate_a,
-                                           lat_lon_coordinate_b,
-                                           lat_lon_coordinate_b,
-                                           lat_lon_coordinate_b])
+    # NB: since homes are randomly allocated within the MSOA area, it is hard to assert expected values for homes
+    # so only check locations of retail buildings
+    expected_non_home_place_coordinates = np.array([lat_lon_coordinate_a,
+                                                    lat_lon_coordinate_a,
+                                                    lat_lon_coordinate_b,
+                                                    lat_lon_coordinate_b,
+                                                    lat_lon_coordinate_b])
 
     place_coordinates = snapshotter.get_place_coordinates()
 
-    assert np.all(np.isclose(expected_place_coordinates, place_coordinates, atol=0.0001, equal_nan=True))
+    # select non-home coordinates
+    non_home_place_coordinates = place_coordinates[3:]
+
+    assert np.all(np.isclose(expected_non_home_place_coordinates, non_home_place_coordinates, atol=0.0001,
+                             equal_nan=True))
 
 
 def test_store_snapshots():
