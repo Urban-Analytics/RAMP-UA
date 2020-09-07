@@ -52,11 +52,14 @@ class Snapshotter:
 
     def store_snapshots(self):
         ages = self.get_people_ages()
+        area_codes = self.get_people_area_codes()
+        not_home_probs = self.get_not_home_probs()
         people_place_ids, people_flows = self.get_people_place_data()
 
         filepath = os.path.join(self.snapshot_dir, 'people.npz')
         print(f"Saving data for {self.num_people} people to {filepath}")
-        np.savez(filepath, ages=ages, people_place_ids=people_place_ids, people_baseline_flows=people_flows)
+        np.savez(filepath, ages=ages, people_place_ids=people_place_ids, people_baseline_flows=people_flows,
+                 area_codes=area_codes, not_home_probs=not_home_probs)
 
         activity_name_enum, place_activities = self.get_place_data()
         place_coordinates = self.get_place_coordinates()
@@ -97,6 +100,12 @@ class Snapshotter:
 
     def get_people_ages(self):
         return self.individuals['age'].to_numpy(dtype=np.uint16)
+
+    def get_people_area_codes(self):
+        return self.individuals['area'].to_numpy(dtype=np.object)
+
+    def get_not_home_probs(self):
+        return self.individuals['pnothome'].to_numpy(dtype=np.float32)
 
     def get_people_place_data(self, max_places_per_person=100, places_to_keep_per_person=16):
         """
