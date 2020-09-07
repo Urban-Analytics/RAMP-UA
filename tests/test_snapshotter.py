@@ -12,24 +12,19 @@ class TestActivityLocation:
         self._locations = locations
 
 
-people_data = {'ID': [0, 1, 3],
-               'age': [43, 22, 33],
-               'Home_Venues': [[0], [1], [2]],
-               'Home_Flows': [[1.0], [1.0], [1.0]],
-               'Home_Duration': [0.8, 0.7, 0.6],
-               'Retail_Venues': [[0, 2, 4], [1, 2, 3], [0, 3, 4]],
-               'Retail_Flows': [[0.2, 0.5, 0.3], [0.1, 0.6, 0.3], [0.5, 0.1, 0.4]],
-               'Retail_Duration': [0.2, 0.3, 0.4],
-               'pnothome': [0.2, 0.4, 0.5],
-               'area_codes': ["E02004143", "E02004144", "E02004145"]
-               }
+individuals_df = pd.DataFrame({'ID': [0, 1, 3],
+                               'age': [43, 22, 33],
+                               'Home_Venues': [[0], [1], [2]],
+                               'Home_Flows': [[1.0], [1.0], [1.0]],
+                               'Home_Duration': [0.8, 0.7, 0.6],
+                               'Retail_Venues': [[0, 2, 4], [1, 2, 3], [0, 3, 4]],
+                               'Retail_Flows': [[0.2, 0.5, 0.3], [0.1, 0.6, 0.3], [0.5, 0.1, 0.4]],
+                               'Retail_Duration': [0.2, 0.3, 0.4],
+                               'pnothome': [0.2, 0.4, 0.5],
+                               'area': np.array(["E02004143", "E02004144", "E02004145"]).astype(np.object)
+                               })
 
-individuals_df = pd.DataFrame(people_data,
-                              columns=['ID', 'age', 'Home_Venues', 'Home_Duration', 'Home_Flows', 'Retail_Venues',
-                                       'Retail_Flows', 'Retail_Duration', 'pnothome', 'area'])
-
-home_data = {'ID': [0, 1, 2], 'area': ['E02004129', 'E02004130', 'E02004131']}
-home_df = pd.DataFrame(home_data, columns=['ID', 'area'])
+home_df = pd.DataFrame({'ID': [0, 1, 2], 'area': ['E02004129', 'E02004130', 'E02004131']})
 
 bng_coordinate_a = [533494, 181851]
 lat_lon_coordinate_a = [51.519811, -0.077342]  # NB: converted BNG coordinates to lat long using online tool
@@ -91,7 +86,7 @@ def test_get_place_data():
     assert np.array_equal(expected_place_activities, place_activities)
 
 
-def te():
+def test_get_coordinates():
     lat_lon_msoa_1 = [50.848446, -3.150362]
     lat_lon_msoa_2 = [50.798812, -3.187370]
     lat_lon_msoa_3 = [50.792060, -3.197727]
