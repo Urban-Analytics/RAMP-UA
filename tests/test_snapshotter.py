@@ -19,12 +19,14 @@ people_data = {'ID': [0, 1, 3],
                'Home_Duration': [0.8, 0.7, 0.6],
                'Retail_Venues': [[0, 2, 4], [1, 2, 3], [0, 3, 4]],
                'Retail_Flows': [[0.2, 0.5, 0.3], [0.1, 0.6, 0.3], [0.5, 0.1, 0.4]],
-               'Retail_Duration': [0.2, 0.3, 0.4]
+               'Retail_Duration': [0.2, 0.3, 0.4],
+               'pnothome': [0.2, 0.3, 0.4],
+               'area_codes': ["E02004143", "E02004144", "E02004145"]
                }
 
 individuals_df = pd.DataFrame(people_data,
                               columns=['ID', 'age', 'Home_Venues', 'Home_Duration', 'Home_Flows', 'Retail_Venues',
-                                       'Retail_Duration', 'Retail_Flows'])
+                                       'Retail_Flows', 'Retail_Duration', 'pnothome', 'area'])
 
 home_data = {'ID': [0, 1, 2], 'area': ['E02004129', 'E02004130', 'E02004131']}
 home_df = pd.DataFrame(home_data, columns=['ID', 'area'])
@@ -50,7 +52,8 @@ base_dir = os.getcwd()
 data_dir = os.path.join(base_dir, "devon_data")
 test_dir = os.path.join(base_dir, "tests")
 snapshot_dir = os.path.join(test_dir, "test_snapshots")
-snapshotter = Snapshotter(individuals_df, activity_locations, snapshot_dir=snapshot_dir, data_dir=data_dir, cache_inputs=False)
+snapshotter = Snapshotter(individuals_df, activity_locations, snapshot_dir=snapshot_dir, data_dir=data_dir,
+                          cache_inputs=False)
 
 
 def test_global_id_lookup():
@@ -88,7 +91,7 @@ def test_get_place_data():
     assert np.array_equal(expected_place_activities, place_activities)
 
 
-def test_get_coordinates():
+def te():
     lat_lon_msoa_1 = [50.848446, -3.150362]
     lat_lon_msoa_2 = [50.798812, -3.187370]
     lat_lon_msoa_3 = [50.792060, -3.197727]
@@ -101,7 +104,7 @@ def test_get_coordinates():
                                            lat_lon_coordinate_b,
                                            lat_lon_coordinate_b])
 
-    place_coordinates = snapshotter.get_place_coordinates(add_jitter=False)
+    place_coordinates = snapshotter.get_place_coordinates()
 
     assert np.all(np.isclose(expected_place_coordinates, place_coordinates, atol=0.0001, equal_nan=True))
 
