@@ -33,3 +33,4 @@ dependencies:
   - r-tidyselect
   - r-rvcheck
   - r-stringdist
+  - git-lfs
