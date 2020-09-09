@@ -19,11 +19,11 @@ import sys
 #os.chdir(os.path.join(owd,"microsim"))
     
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
-from activity_location import ActivityLocation
-from r_interface import RInterface
-from column_names import ColumnNames
-from utilities import Optimise
-from snapshotter import Snapshotter
+from microsim.activity_location import ActivityLocation
+from microsim.r_interface import RInterface
+from microsim.column_names import ColumnNames
+from microsim.utilities import Optimise
+from microsim.snapshotter import Snapshotter
 import multiprocessing
 import copy
 

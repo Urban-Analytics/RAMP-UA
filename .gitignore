@@ -31,3 +31,9 @@ __pycache__
 # snapshot files
 *.npz
 *.pkl
+
+# setuptools items
+**/*.egg-info/*
+
+# vscode items
+**/.vscode/*
