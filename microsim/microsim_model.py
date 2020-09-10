@@ -51,6 +51,7 @@ from shutil import copyfile
 USE_QUANT_DATA = False  # Temorary flag to use UCL SIMs or Devon ones. Needs to become a command-line parameter
 import QUANTRampAPI2 as qa
 
+import itertools
 
 #import pandas.rpy.common as com # throws error and doesn't seem to be used?
 
@@ -238,7 +239,7 @@ class Microsim:
 
         # Read Retail flows data
         retail_name = ColumnNames.Activities.RETAIL  # How to refer to this in data frame columns etc.
-        stores, stores_flows = Microsim.read_retail_flows_data(self.all_msoas)  # (list of shops and a flow matrix)
+        stores, stores_flows = Microsim.read_retail_flows_data(self.all_msoas,QUANT_data)  # (list of shops and a flow matrix)
         Microsim.check_sim_flows(stores, stores_flows)
         # Assign Retail flows data to the individuals
         self.individuals = Microsim.add_individual_flows(retail_name, self.individuals, stores_flows)
@@ -1777,14 +1778,23 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
                 iters = (iterations for _ in range(repetitions))
                 repnr = (r for r in range(repetitions))
                 # Run the models by passing each model and the number of iterations
+                #itertools.starmap(_run_multicore, zip(models, iters,repnr))
                 pool.starmap(_run_multicore, zip(models, iters,repnr))
         finally:  # Make sure they get closed (shouldn't be necessary)
             pool.close()
+            
+        # Test - use if multicore fails
+#        m0 = Microsim(**msim_args)
+#        copyfile(parameters_file,os.path.join(m0.SCEN_DIR,"parameters.yml"))
+#        for r in range(repetitions):
+#            m = Microsim._make_a_copy(m0)
+#            m.run(iterations,r)
 
     print("End of program")
 
 
 def _run_multicore(m, iter,rep):
+    print("run multicore")
     return m.run(iter,rep)
 
 

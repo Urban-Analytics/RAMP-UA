@@ -922,6 +922,10 @@ def create_dashboard(parameters_file):
     
     # directory to read data from
     data_dir = "data" if (data_dir_user is None) else data_dir_user
+    if data_dir == "devon_data":
+        flag_QUANT = 0
+    else:
+        flag_QUANT = 1
     data_dir = os.path.join(base_dir, data_dir) # update data dir
     
     # check if this directory exists
@@ -973,22 +977,27 @@ def create_dashboard(parameters_file):
     # Read in third party data
     # ------------------------
     
-    # read in details about venues
-    data_file = os.path.join(data_dir, "devon-schools","exeter schools.csv")
-    schools = pd.read_csv(data_file)
-    data_file = os.path.join(data_dir, "devon-retail","devon smkt.csv")
-    retail = pd.read_csv(data_file)
-    
     # load in shapefile with England MSOAs for choropleth
     sh_file = os.path.join(data_dir, "MSOAS_shp","bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp")
     map_df = gpd.read_file(sh_file)
     # rename column to get ready for merging
     map_df.rename(index=str, columns={'msoa11cd': 'Area'},inplace=True)
     
-    # postcode to MSOA conversion (for retail data)
-    data_file = os.path.join(data_dir, "PCD_OA_LSOA_MSOA_LAD_AUG19_UK_LU.csv")
-    postcode_lu = pd.read_csv(data_file, encoding = "ISO-8859-1", usecols = ["pcds", "msoa11cd"])
+    if flag_QUANT == 0: # devon data
     
+        # read in details about venues
+        data_file = os.path.join(data_dir, "devon-schools","exeter schools.csv")
+        schools = pd.read_csv(data_file)
+        data_file = os.path.join(data_dir, "devon-retail","devon smkt.csv")
+        retail = pd.read_csv(data_file)
+        
+        # postcode to MSOA conversion (for retail data)
+        data_file = os.path.join(data_dir, "PCD_OA_LSOA_MSOA_LAD_AUG19_UK_LU.csv")
+        postcode_lu = pd.read_csv(data_file, encoding = "ISO-8859-1", usecols = ["pcds", "msoa11cd"])
+    
+    elif flag_QUANT == 1: # QUANT API data
+        
+        
     
     
     # Read in and process pickled output from microsim
