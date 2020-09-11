@@ -8,10 +8,9 @@ load_rpackages <- function() {
   library(rvcheck)
 
   rampr_version <- check_github("Urban-Analytics/rampuaR")
-  if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
+  if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "overweight_scenario")
 
-  #devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "overweight_scenario", force = T)
-
+  
   library(tidyr)
   library(readr)
   library(mixdist)
@@ -121,8 +120,7 @@ run_status <- function(pop,
 
   df_sum_betas <- sum_betas(df = df_msoa,
                             betas = other_betas,
-                            risk_cap_val = risk_cap,
-                            multipliers = list(overweight_mplier = overweight_mplier))
+                            risk_cap_val = risk_cap)
   print("betas calculated")
 
   df_prob <- covid_prob(df = df_sum_betas)
