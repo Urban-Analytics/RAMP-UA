@@ -45,7 +45,7 @@ disease: # This is where the parameter for the disease model (the R part) can go
   asymp_rate: 0.4
   output_switch: TRUE
   rank_assign: FALSE
-  overweight_mplier: 1.46
+  overweight_sympt_multiplier: 1.46
   obesity_40: 1.9
   obesity_35: 1.48
   obesity_30: 1.48
@@ -53,4 +53,5 @@ disease: # This is where the parameter for the disease model (the R part) can go
   cvd: 1
   diabetes: 1
   bloodpressure: 1
+  improve_health: FALSE
 
