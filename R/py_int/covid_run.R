@@ -3,7 +3,7 @@ load_rpackages <- function() {
   list.of.packages <- c("rampuaR")
   new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 
-  if(length(new.packages)) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
+  if(length(new.packages)) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "overweight_scenario")
 
   library(rvcheck)
 
@@ -47,7 +47,7 @@ run_status <- function(pop,
                        asymp_rate = 0.7,
                        output_switch = TRUE,
                        rank_assign = FALSE,
-                       overweight_sympt_multiplier = 1.46,
+                       overweight_sympt_mplier = 1.46,
                        overweight = 1,
                        obesity_30 = 1,
                        obesity_35 = 1.4,
@@ -60,7 +60,7 @@ run_status <- function(pop,
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
 
   print(paste("R timestep:", timestep))
-
+  
   if(timestep==1) {
     # windows does not allow colons in folder names so substitute sys.time() to hyphen
     tmp.dir <<- paste0(getwd(), "/output/", gsub(":","-", gsub(" ","-",Sys.time())))
@@ -172,7 +172,8 @@ run_status <- function(pop,
                              infection_dist = infection_dist,
                              infection_mean =  infection_mean,
                              infection_sd = infection_sd,
-                             asymp_rate = asymp_rate)
+                             asymp_rate = asymp_rate,
+                             overweight_sympt_mplier = overweight_sympt_mplier)
 
   print("infection and recovery lengths assigned")
 
