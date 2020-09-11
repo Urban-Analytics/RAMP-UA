@@ -10,7 +10,7 @@ load_rpackages <- function() {
   rampr_version <- check_github("Urban-Analytics/rampuaR")
   if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
-  devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "overweight_scenario", force = T)
+  #devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "overweight_scenario", force = T)
 
   library(tidyr)
   library(readr)
@@ -48,6 +48,7 @@ run_status <- function(pop,
                        asymp_rate = 0.7,
                        output_switch = TRUE,
                        rank_assign = FALSE,
+                       overweight_sympt_multiplier = 1.46,
                        overweight = 1,
                        obesity_30 = 1,
                        obesity_35 = 1.4,
@@ -55,7 +56,7 @@ run_status <- function(pop,
                        cvd = 1,
                        diabetes = 1,
                        bloodpressure = 1,
-                       overweight_mplier = 1.46) {
+                       improve_health = FALSE) {
 
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
 
@@ -70,8 +71,16 @@ run_status <- function(pop,
     }
   }
 
-  if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
 
+  if(improve_health == TRUE){
+    pop$BMIvg6  <- pop$BMI_healthier
+  }
+  
+  if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
+  print("health status")
+  print(table(pop$BMIvg6))
+  
+  
   df_cr_in <- create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
                                    "house_id",
@@ -84,6 +93,8 @@ run_status <- function(pop,
 
   other_betas <- list(current_risk = current_risk_beta)
   
+  print("health after format")
+  print(table(df_cr_in$BMIvg6))
   
   
   df_msoa <- mortality_risk(df = df_cr_in, 
@@ -94,7 +105,9 @@ run_status <- function(pop,
                               cvd = cvd,
                               diabetes = diabetes,
                               bloodpressure = bloodpressure)
-
+  print("NAs in mort risk")
+  print(sum(is.na(df_msoa$mortality_risk)))
+  
   #### seeding the first day in high risk MSOAs
   if(timestep==1){
   #  msoas <- read.csv(paste0(getwd(),"/msoa_danger_fn.csv"))
