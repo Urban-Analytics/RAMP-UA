@@ -6,17 +6,43 @@ This is the code repository for the RAMP Urban Analytics project.
 
 The microsimulation model that ties the different components together is in the [microsim](./microsim) folder.
 
-After cloning the repository, you will need to use [Git Large File Storage](https://git-lfs.github.com/) to download the input data. First install git-lfs, then run: 
+## Environment setup
+
+This project currently supports running on Linux and macOS.
+
+To start working with this repository you need to clone it onto your local machine:
+
+```bash
+$ git clone https://github.com/Urban-Analytics/RAMP-UA.git
+$ cd RAMP-UA
 ```
-git lfs fetch
-git lfs checkout
+
+This project requires a specific conda environment in order to run so you will need the [conda package manager system](https://docs.anaconda.com/anaconda/install/) installed. Once conda has been installed you can create an environment for this project using the provided environment file.
+
+```bash
+$ conda create env -f environment.yml
+```
+
+To retrieve data to run the mode you will need to use [Git Large File Storage](https://git-lfs.github.com/) to download the input data. Git-lfs is installed within the conda environment (you may need to run `git lfs install` on your first use of git lfs). To retrieve the data you run the following commands within the root of the project repository:
+
+```bash
+$ git lfs fetch
+$ git lfs checkout
 ``` 
-to download the data.
 
-Once you have the required libraries (see [microsim/README](./microsim/README.md)) you can run the model with:
+Next we install the RAMP-UA package into the environment using `setup.py`:
 
+```bash
+# if developing the code base use:
+$ python setup.py develop
+# for using the code base use
+$ python setup.py install
 ```
-python microsim/microsim_model.py
+
+Once the above is complete you can run the model using the following line:
+
+```bash
+$ python microsim/microsim_model.py
 ```
 
 Outputs are written to the [microsim/data/outputs](./microsim/data/outputs) directory.

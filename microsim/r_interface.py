@@ -4,7 +4,7 @@ import rpy2.robjects.packages as rpackages  # For installing packages
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 pandas2ri.activate()
-from column_names import ColumnNames
+from microsim.column_names import ColumnNames
 
 class RInterface():
     """

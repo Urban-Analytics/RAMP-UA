@@ -23,4 +23,13 @@ __pycache__
 
 # scrapbook 
 **/scrapbook/*
+<<<<<<< HEAD
 .Rproj.user
+=======
+
+# setuptools items
+**/*.egg-info/*
+
+# vscode items
+**/.vscode/*
+>>>>>>> master

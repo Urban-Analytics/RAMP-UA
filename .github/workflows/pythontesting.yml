@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        os: ["ubuntu-latest", "macos-latest"] # dropping windows-latest from test matrix due to issues with rpy2 issue #73
 
     steps:
     - uses: actions/checkout@v2
@@ -31,12 +31,23 @@ jobs:
         auto-activate-base: false
         activate-environment: ramp-ua
 
+    - name: run setup.py
+      shell: bash -l {0}
+      run: |
+        conda activate ramp-ua
+        python setup.py install
+
+    - name: install pytest-cov
+      shell: bash -l {0}
+      run: |
+        conda activate ramp-ua
+        pip install pytest-cov
+
     # run pytest within conda environment
     - name: Run pytest and generate coverage report
       shell: bash -l {0}
       run: |
         conda activate ramp-ua
-        pip install pytest-cov
         pytest --cov=microsim tests/ --cov-report=xml
     - name: Upload coverage report to codecov
       uses: codecov/codecov-action@v1
