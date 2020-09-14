@@ -12,6 +12,7 @@ The code is written in python. Most of the libraries used are fairly standard so
 
 ```
 conda env create -f environment.yml
+python setup.py develop
 ```
 
 Once you have your environment configured correctly, you can run the code by first returning to the main [RAMP-UA](..) directory and then running with:
