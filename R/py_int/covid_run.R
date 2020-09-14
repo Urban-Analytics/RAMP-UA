@@ -48,7 +48,9 @@ run_status <- function(pop,
                        asymp_rate = 0.7,
                        chance_recovery = 0.95,
                        output_switch = TRUE,
-                       rank_assign = FALSE) {
+                       rank_assign = FALSE,
+                       local_outbreak_timestep = 0,
+                       local_outbreak = FALSE) {
 
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
 
@@ -95,6 +97,15 @@ run_status <- function(pop,
 
   print("probabilities calculated")
 
+  if(local_outbreak == TRUE & timestep == local_outbreak_timestep){
+    df_prob <- local_outbreak(df=df_prob, 
+                              msoa_infect="E02004152",
+                              number_people=100,
+                              risk_prob=0.75)
+    print("Local outbreak - super spreader event!")
+  }
+  
+  
   if(timestep > 1){
     df_ass <- case_assign(df = df_prob,
                           tmp.dir=tmp.dir,
