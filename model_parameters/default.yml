@@ -2,12 +2,12 @@
 # These can also be passed as command line arguments
 microsim:
   scenario: "BaseScenario" # name for scenario directory
-  iterations: 100 # Number of model iterations. 0 means just run the initialisation.
+  iterations: 10 # Number of model iterations. 0 means just run the initialisation.
   data-dir: devon_data # Root directory to load data from
   output: true # Whether to generate output or not
   output-every-iteration: false # Can optionally write output at every iteration, not just at the end
   debug: false # Whether to run some more expensive checks
-  repetitions: 12 # How many times to run the model
+  repetitions: 1 # How many times to run the model
   lockdown-file: "google_mobility_lockdown_daily.csv" # Read lockdown mobility data from a file? (Empty string means no lockdown)
 
 # Parameters that are used to calibrate the model.
@@ -53,5 +53,5 @@ disease: # This is where the parameter for the disease model (the R part) can go
   cvd: 1
   diabetes: 1
   bloodpressure: 1
-  improve_health: FALSE
+  improve_health: TRUE
 
