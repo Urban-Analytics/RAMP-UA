@@ -15,27 +15,6 @@ import microsim.dashboard as dash
 from yaml import load, SafeLoader
 
 
-# Do the directories and data files exist
-# read in dashboard.py
-# def test_check_defaults_yml():
-#     base_dir = os.getcwd()
-#     parameters_file = os.path.join(base_dir, "model_parameters","default_dashboard.yml")
-#     # check if file exists
-#     assert os.path.isfile(parameters_file)
-#     with open(parameters_file, 'r') as f:
-#                 parameters = load(f, Loader=SafeLoader)
-#                 dash_params = parameters["dashboard"]  # Parameters for the dashboard
-#                 data_dir_user = dash_params["data_dir"]
-#                 start_day_user = dash_params["start_day"]
-#                 end_day_user = dash_params["end_day"]
-#                 start_run_user = dash_params["start_run"]
-#                 end_run_user = dash_params["end_run"]                
-#                 sc_dir = dash_params["scenario_dir"]
-#                 sc_nam = dash_params["scenario_name"]
-#     # check if output directory exisits
-#     outputpath = os.path.join(base_dir,data_dir_user,"output",sc_dir[0])
-#     assert os.path.isdir(outputpath) 
-#     assert os.path.isfile(os.path.join(outputpath,"0","Individuals.pickle")) 
 
 # Check preprocessing with dummy data
 
