@@ -3,12 +3,12 @@ load_rpackages <- function() {
   list.of.packages <- c("rampuaR")
   new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 
-  if(length(new.packages)) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
+  if(length(new.packages)) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F,  ref = "local_outbreak")
 
   library(rvcheck)
 
   rampr_version <- check_github("Urban-Analytics/rampuaR")
-  if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
+  if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F,  ref = "local_outbreak")
 
   #devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
