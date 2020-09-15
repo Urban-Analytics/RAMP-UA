@@ -983,19 +983,18 @@ def create_dashboard(parameters_file):
     # rename column to get ready for merging
     map_df.rename(index=str, columns={'msoa11cd': 'Area'},inplace=True)
     
-    if flag_QUANT == 0: # devon data
+    # devon data
     
-        # read in details about venues
-        data_file = os.path.join(data_dir, "devon-schools","exeter schools.csv")
-        schools = pd.read_csv(data_file)
-        data_file = os.path.join(data_dir, "devon-retail","devon smkt.csv")
-        retail = pd.read_csv(data_file)
-        
-        # postcode to MSOA conversion (for retail data)
-        data_file = os.path.join(data_dir, "PCD_OA_LSOA_MSOA_LAD_AUG19_UK_LU.csv")
-        postcode_lu = pd.read_csv(data_file, encoding = "ISO-8859-1", usecols = ["pcds", "msoa11cd"])
+    # read in details about venues
+    data_file = os.path.join(data_dir, "devon-schools","exeter schools.csv")
+    schools = pd.read_csv(data_file)
+    data_file = os.path.join(data_dir, "devon-retail","devon smkt.csv")
+    retail = pd.read_csv(data_file)
     
-    elif flag_QUANT == 1: # QUANT API data
+    # postcode to MSOA conversion (for retail data)
+    data_file = os.path.join(data_dir, "PCD_OA_LSOA_MSOA_LAD_AUG19_UK_LU.csv")
+    postcode_lu = pd.read_csv(data_file, encoding = "ISO-8859-1", usecols = ["pcds", "msoa11cd"])
+
         
         
     
