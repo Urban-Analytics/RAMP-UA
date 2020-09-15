@@ -1750,8 +1750,11 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
 
         if store_snapshot:
             # Store model state so it can be used by GPU model
+            print("Storing snapshots ...")
+            data_dir = os.path.join(base_dir, "devon_data")
+            snapshot_dir = os.path.join(base_dir, "snapshots")
             snapshotter = Snapshotter(individuals=m.individuals, activity_locations=m.activity_locations,
-                                      snapshot_dir=os.path.join(base_dir, "snapshots"), cache_inputs=True)
+                                      snapshot_dir=snapshot_dir, data_dir=data_dir, cache_inputs=True)
             snapshotter.store_snapshots()
 
         copyfile(parameters_file,os.path.join(m.SCEN_DIR,"parameters.yml"))
