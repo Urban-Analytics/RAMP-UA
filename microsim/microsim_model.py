@@ -47,11 +47,8 @@ import rpy2.robjects as ro  # For calling R scripts
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
 from shutil import copyfile
 
-
 USE_QUANT_DATA = False  # Temorary flag to use UCL SIMs or Devon ones. Needs to become a command-line parameter
-import QUANTRampAPI2 as qa
-
-import itertools
+#import QUANTRampAPI2 as qa
 
 #import pandas.rpy.common as com # throws error and doesn't seem to be used?
 
@@ -171,14 +168,6 @@ class Microsim:
         # Extract a list of all MSOAs in the study area. Will need this for the new SIMs
         self.all_msoas = Microsim.extract_msoas_from_indiviuals(self.individuals)
 
-        # in case QUANTRamp input data is used, read the csv files
-        if not os.path.basename(os.path.normpath(self.DATA_DIR)) == "devon_data":
-            print("reading in QUANTRamp data")
-            quant_dir = os.path.join(self.DATA_DIR, "QUANT_RAMP","model-runs")
-            assert os.path.isdir(quant_dir)
-            QUANT_data = qa.readQUANT(quant_dir)
-        else: # meed dummy variable
-            QUANT_data = 0
 
         #
         # ********** How to assign activities for the population **********
@@ -239,7 +228,7 @@ class Microsim:
 
         # Read Retail flows data
         retail_name = ColumnNames.Activities.RETAIL  # How to refer to this in data frame columns etc.
-        stores, stores_flows = Microsim.read_retail_flows_data(self.all_msoas,QUANT_data)  # (list of shops and a flow matrix)
+        stores, stores_flows = Microsim.read_retail_flows_data(self.all_msoas)  # (list of shops and a flow matrix)
         Microsim.check_sim_flows(stores, stores_flows)
         # Assign Retail flows data to the individuals
         self.individuals = Microsim.add_individual_flows(retail_name, self.individuals, stores_flows)
@@ -250,7 +239,7 @@ class Microsim:
         primary_name = ColumnNames.Activities.PRIMARY
         secondary_name = ColumnNames.Activities.SECONDARY
         primary_schools, secondary_schools, primary_flows, secondary_flows = \
-            Microsim.read_school_flows_data(self.all_msoas,QUANT_data)  # (list of schools and a flow matrix)
+            Microsim.read_school_flows_data(self.all_msoas)  # (list of schools and a flow matrix)
         Microsim.check_sim_flows(primary_schools, primary_flows)
         Microsim.check_sim_flows(secondary_schools, secondary_flows)
         # Assign Schools
@@ -675,7 +664,7 @@ class Microsim:
         return individuals
 
     @classmethod
-    def read_school_flows_data(cls, study_msoas: List[str], QUANT_data) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
+    def read_school_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
         """
         Read the flows between each MSOA and the most likely schools attended by pupils in this area.
         All schools are initially read together, but flows are separated into primary and secondary
@@ -818,7 +807,6 @@ class Microsim:
             # Read the secondary school flows
             # same thresholds as before
             secondary_flow_matrix = qa.get_flows(ColumnNames.Activities.SECONDARY, study_msoas,threshold,thresholdtype)
-
             
             
 
@@ -863,7 +851,7 @@ class Microsim:
         return workplaces.index[workplaces[ColumnNames.LOCATION_NAME] == job].values[0]
 
     @classmethod
-    def read_retail_flows_data(cls, study_msoas: List[str],QUANT_data) -> (pd.DataFrame, pd.DataFrame):
+    def read_retail_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
         """
         Read the flows between each MSOA and the most commonly visited shops
 
@@ -976,9 +964,7 @@ class Microsim:
             # Read the flows
             threshold = 10 # top 10
             thresholdtype = "nr" # threshold based on nr venues
-
             flow_matrix = qa.get_flows("Retail", study_msoas,threshold,thresholdtype)
-
 
         return stores, flow_matrix
 
@@ -1778,23 +1764,14 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
                 iters = (iterations for _ in range(repetitions))
                 repnr = (r for r in range(repetitions))
                 # Run the models by passing each model and the number of iterations
-                #itertools.starmap(_run_multicore, zip(models, iters,repnr))
                 pool.starmap(_run_multicore, zip(models, iters,repnr))
         finally:  # Make sure they get closed (shouldn't be necessary)
             pool.close()
-            
-        # Test - use if multicore fails
-#        m0 = Microsim(**msim_args)
-#        copyfile(parameters_file,os.path.join(m0.SCEN_DIR,"parameters.yml"))
-#        for r in range(repetitions):
-#            m = Microsim._make_a_copy(m0)
-#            m.run(iterations,r)
 
     print("End of program")
 
 
 def _run_multicore(m, iter,rep):
-    print("run multicore")
     return m.run(iter,rep)
 
 
