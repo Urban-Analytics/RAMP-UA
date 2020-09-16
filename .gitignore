@@ -23,6 +23,7 @@ __pycache__
 
 # scrapbook 
 **/scrapbook/*
+.Rproj.user
 
 # setuptools items
 **/*.egg-info/*
