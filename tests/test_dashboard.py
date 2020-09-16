@@ -15,6 +15,7 @@ import microsim.dashboard as dash
 from yaml import load, SafeLoader
 
 
+
 # Check preprocessing with dummy data
 
 # # code to create pickle files from csv
@@ -59,14 +60,6 @@ def example_input_params():
     params["nr_runs"] = params["end_run"] - params["start_run"] + 1
     params["r_range"] = range(params["start_run"], params["end_run"]+1)
     return params
-
-
-# just to check pytest
-# def test_always_passes():
-#     assert True
-    
-# def test_always_fails():
-#     assert False
 
 
 # check input parameters
@@ -133,15 +126,6 @@ def test_create_counts_dict(example_input_params):
     assert uniquecounts_dict['symptomatic'][0] == (uniquecounts_dict_3d['symptomatic'][0]  + uniquecounts_dict_3d['symptomatic'][1]) / 2
     assert uniquecounts_dict_std['dead'][0] == np.array([uniquecounts_dict_3d['dead'][0], uniquecounts_dict_3d['dead'][1]]).std()
     
-    assert cumcounts_dict_3d['exposed'].shape == (3,2)
-    assert cumcounts_dict_std['exposed'].shape == (3,)
-    assert cumcounts_dict['exposed'].shape == (3,)
-    assert cumcounts_dict_3d["asymptomatic"][2,0] == 1
-    assert cumcounts_dict_3d["susceptible"][2,1] == 4
-    assert cumcounts_dict['symptomatic'][1] == (cumcounts_dict_3d['symptomatic'][1,0]  + cumcounts_dict_3d['symptomatic'][1,1]) / 2
-    assert cumcounts_dict_std['dead'][0] == np.array([cumcounts_dict_3d['dead'][0,0], cumcounts_dict_3d['dead'][0,1]]).std()
-    
-    
     assert totalcounts_dict_3d['dead'].shape == (11,2)
     assert totalcounts_dict_std['dead'].shape == (11,)
     assert totalcounts_dict['dead'].shape == (11,)
@@ -162,6 +146,14 @@ def test_create_counts_dict(example_input_params):
     assert msoacounts_dict_3d["exposed"][1,6,1] == 3
     assert msoacounts_dict['presymptomatic'].iloc[1,5] == (msoacounts_dict_3d['presymptomatic'][1,5,0]  + msoacounts_dict_3d['presymptomatic'][1,5,1]) / 2
     assert msoacounts_dict_std['dead'].iloc[0,10] == np.array([msoacounts_dict_3d['dead'][0,10,0], msoacounts_dict_3d['dead'][0,10,1]]).std()
+    
+    assert cumcounts_dict_3d['exposed'].shape == (3,11,2)
+    assert cumcounts_dict_std['exposed'].shape == (3,11)
+    assert cumcounts_dict['exposed'].shape == (3,11)
+    assert cumcounts_dict_3d["susceptible"][2,10,1] == 4
+    assert cumcounts_dict['symptomatic'].iloc[1,5] == (cumcounts_dict_3d['symptomatic'][1,5,0]  + cumcounts_dict_3d['symptomatic'][1,5,1]) / 2
+    assert cumcounts_dict_std['dead'].iloc[0,10] == np.array([cumcounts_dict_3d['dead'][0,10,0], cumcounts_dict_3d['dead'][0,10,1]]).std()
+    
     
     
 
