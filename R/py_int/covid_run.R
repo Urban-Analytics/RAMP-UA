@@ -10,8 +10,6 @@ load_rpackages <- function() {
   rampr_version <- check_github("Urban-Analytics/rampuaR")
   if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
-  #devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
-
   library(tidyr)
   library(readr)
   library(mixdist)
@@ -29,12 +27,12 @@ load_init_data <- function() {
 initialize_r <- function() {
   load_rpackages()
   load_init_data()
-
 }
+
 
 run_status <- function(pop,
                        timestep = 1,
-                       current_risk_beta = 0.008,
+                       current_risk_beta = 0.0165,
                        risk_cap = 5,
                        seed_days = 10,
                        exposed_dist = "weibull",
@@ -43,18 +41,27 @@ run_status <- function(pop,
                        presymp_dist = "weibull",
                        presymp_mean = 2.3,
                        presymp_sd = 0.35,
-                       infection_dist = "normal",
-                       infection_mean =  16,
-                       infection_sd = 3,
+                       infection_dist = "lognormal",
+                       infection_mean =  18,
+                       infection_sd = 1.1,
                        asymp_rate = 0.7,
-                       chance_recovery = 0.95,
                        output_switch = TRUE,
-                       rank_assign = FALSE) {
+                       rank_assign = FALSE,
+                       overweight_sympt_mplier = 1.46,
+                       overweight = 1,
+                       obesity_30 = 1,
+                       obesity_35 = 1.4,
+                       obesity_40 = 1.9,
+                       cvd = 1,
+                       diabetes = 1,
+                       bloodpressure = 1,
+                       improve_health = FALSE) {
 
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
 
   print(paste("R timestep:", timestep))
-
+  print(improve_health)
+  
   if(timestep==1) {
     # windows does not allow colons in folder names so substitute sys.time() to hyphen
     tmp.dir <<- paste0(getwd(), "/output/", gsub(":","-", gsub(" ","-",Sys.time())))
@@ -64,18 +71,42 @@ run_status <- function(pop,
     }
   }
 
+  print("health status")
+  print(table(pop$BMIvg6))
+  
+  if(improve_health == TRUE){
+    pop$BMIvg6  <- pop$BMI_healthier
+  }
+  
+  print("health after format")
+  print(table(pop$BMIvg6))
+  
   if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
 
-  df_cr_in <-create_input(micro_sim_pop  = pop,
+  
+  df_cr_in <- create_input(micro_sim_pop  = pop,
                           vars = c("area",   # must match columns in the population data.frame
                                    "house_id",
                                    "id",
-                                   "current_risk"))
+                                   "current_risk",
+                                   "BMIvg6",
+                                   "cvd",
+                                   "diabetes",
+                                   "bloodpressure"))
 
   other_betas <- list(current_risk = current_risk_beta)
-
-  df_msoa <- df_cr_in
-
+  
+  df_msoa <- mortality_risk(df = df_cr_in, 
+                              obesity_40 = obesity_40,
+                              obesity_35 = obesity_35,
+                              obesity_30 = obesity_30,
+                              overweight = overweight,
+                              cvd = cvd,
+                              diabetes = diabetes,
+                              bloodpressure = bloodpressure)
+  print("NAs in mort risk")
+  print(sum(is.na(df_msoa$mortality_risk)))
+  
   #### seeding the first day in high risk MSOAs
   if(timestep==1){
   #  msoas <- read.csv(paste0(getwd(),"/msoa_danger_fn.csv"))
@@ -141,7 +172,8 @@ run_status <- function(pop,
                              infection_dist = infection_dist,
                              infection_mean =  infection_mean,
                              infection_sd = infection_sd,
-                             asymp_rate = asymp_rate)
+                             asymp_rate = asymp_rate,
+                             overweight_sympt_mplier = overweight_sympt_mplier)
 
   print("infection and recovery lengths assigned")
 
@@ -161,7 +193,6 @@ run_status <- function(pop,
                        presymp_days = df_msoa$presymp_days,
                        symp_days = df_msoa$symp_days)
 
-  if(output_switch){write.csv(df_out, paste0(tmp.dir, "/daily_out_", timestep, ".csv"))}
-
+  #if(output_switch){write.csv(df_out, paste0(tmp.dir, "/daily_out_", timestep, ".csv"))}
   return(df_out)
 }

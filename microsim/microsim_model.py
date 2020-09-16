@@ -422,7 +422,7 @@ class Microsim:
         # filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_Complete.txt")
         filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_keyworker_health.csv")
 
-        tuh = pd.read_csv(filename)
+        tuh = pd.read_csv(filename)#, encoding = "ISO-8859-1")
         tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.
 
         # Drop people that weren't matched to a household originally
@@ -1522,7 +1522,7 @@ class Microsim:
             total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
             for activity in non_home_activities:
                 #new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.10
-                new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.50
+                new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.10
                 total_duration += new_duration
                 row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] = new_duration
             # Now set home duration to fill in the time lost from doing other activities.

@@ -1,7 +1,7 @@
 # Utility parameters for the microsimulation (python) part.
 # These can also be passed as command line arguments
 microsim:
-  scenario: "TestScenario" # name for scenario directory
+  scenario: "BaseScenario" # name for scenario directory
   iterations: 10 # Number of model iterations. 0 means just run the initialisation.
   data-dir: devon_data # Root directory to load data from
   output: true # Whether to generate output or not
@@ -15,8 +15,8 @@ microsim:
 microsim_calibration:
   # These multiply the amount of hazard that individuals pass on to shops etc:
   hazard_individual_multipliers:
-    presymptomatic: 1.0
-    asymptomatic: 1.0
+    presymptomatic: 1
+    asymptomatic: 0.75
     symptomatic: 1.0
   # Different locations can also have their own multipliers (e.g. to make it easier to pass the disease on to shops than schools)
   hazard_location_multipliers:
@@ -30,19 +30,28 @@ microsim_calibration:
 
 
 disease: # This is where the parameter for the disease model (the R part) can go (same format the 'microsim_calibration' above)
-  current_risk_beta: 0.008
+  current_risk_beta: 0.0165
   risk_cap: 5
-  seed_days: 5
+  seed_days: 10
   exposed_dist: "weibull"
   exposed_mean: 2.56
   exposed_sd: 0.72
   presymp_dist: "weibull"
   presymp_mean: 2.3
   presymp_sd: 0.35
-  infection_dist: "normal"
-  infection_mean: 16
-  infection_sd: 3
-  asymp_rate: 0.35
+  infection_dist: "lognormal"
+  infection_mean: 18
+  infection_sd: 1.1
+  asymp_rate: 0.4
   output_switch: TRUE
   rank_assign: FALSE
-  
+  overweight_sympt_mplier: 1.46
+  obesity_40: 1.9
+  obesity_35: 1.48
+  obesity_30: 1.48
+  overweight: 1
+  cvd: 1
+  diabetes: 1
+  bloodpressure: 1
+  improve_health: TRUE
+
