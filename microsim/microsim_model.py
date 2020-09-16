@@ -422,7 +422,7 @@ class Microsim:
         # filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_Complete.txt")
         filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_keyworker_health.csv")
 
-        tuh = pd.read_csv(filename, encoding = "ISO-8859-1")
+        tuh = pd.read_csv(filename)#, encoding = "ISO-8859-1")
         tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.
 
         # Drop people that weren't matched to a household originally
