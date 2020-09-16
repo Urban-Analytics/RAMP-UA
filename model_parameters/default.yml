@@ -45,7 +45,7 @@ disease: # This is where the parameter for the disease model (the R part) can go
   asymp_rate: 0.35
   output_switch: TRUE
   rank_assign: FALSE
-  local_outbreak_timestep: 2
+  local_outbreak_timestep: 7
   local_outbreak: TRUE
   msoa_infect: "E02004161"
   number_people_local: 100

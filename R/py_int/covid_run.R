@@ -101,7 +101,8 @@ run_status <- function(pop,
   print("probabilities calculated")
 
   if(local_outbreak == TRUE & timestep == local_outbreak_timestep){
-    df_prob <- local_outbreak(df=df_prob, 
+    print("Local outbreak - super spreader event!")
+    df_prob <- local_outbreak(df=df_prob,
                               msoa_infect=msoa_infect,
                               number_people=number_people_local,
                               risk_prob=local_prob_increase)
