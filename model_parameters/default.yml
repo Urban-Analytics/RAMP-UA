@@ -47,7 +47,7 @@ disease: # This is where the parameter for the disease model (the R part) can go
   rank_assign: FALSE
   local_outbreak_timestep: 2
   local_outbreak: TRUE
-  msoa_infect: "E04152"
+  msoa_infect: "E02004161"
   number_people_local: 100
-  local_prob_increase: 0.75
+  local_prob_increase: 1.0
   
