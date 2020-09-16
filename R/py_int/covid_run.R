@@ -105,7 +105,6 @@ run_status <- function(pop,
                               msoa_infect=msoa_infect,
                               number_people=number_people_local,
                               risk_prob=local_prob_increase)
-    print("Local outbreak - super spreader event!")
   }
   
   
