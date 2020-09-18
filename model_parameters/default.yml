@@ -53,5 +53,5 @@ disease: # This is where the parameter for the disease model (the R part) can go
   cvd: 1
   diabetes: 1
   bloodpressure: 1
-  improve_health: TRUE
+  improve_health: FALSE
 
