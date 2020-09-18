@@ -47,6 +47,11 @@ run_status <- function(pop,
                        asymp_rate = 0.7,
                        output_switch = TRUE,
                        rank_assign = FALSE,
+                       local_outbreak_timestep = 0,
+                       local_outbreak = FALSE,
+                       msoa_infect="E02004152",
+                       number_people_local=100,
+                       local_prob_increase=0.75),
                        overweight_sympt_mplier = 1.46,
                        overweight = 1,
                        obesity_30 = 1,
@@ -127,6 +132,15 @@ run_status <- function(pop,
 
   print("probabilities calculated")
 
+  if(local_outbreak == TRUE & timestep == local_outbreak_timestep){
+    print("Local outbreak - super spreader event!")
+    df_prob <- local_outbreak(df=df_prob,
+                              msoa_infect=msoa_infect,
+                              number_people=number_people_local,
+                              risk_prob=local_prob_increase)
+  }
+  
+  
   if(timestep > 1){
     df_ass <- case_assign(df = df_prob,
                           tmp.dir=tmp.dir,
