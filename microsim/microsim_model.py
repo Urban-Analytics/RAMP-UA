@@ -23,6 +23,7 @@ from microsim.activity_location import ActivityLocation
 from microsim.r_interface import RInterface
 from microsim.column_names import ColumnNames
 from microsim.utilities import Optimise
+from microsim.quant_api import QuantRampAPI
 import multiprocessing
 import copy
 
@@ -47,8 +48,6 @@ import rpy2.robjects as ro  # For calling R scripts
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
 from shutil import copyfile
 
-USE_QUANT_DATA = False  # Temorary flag to use UCL SIMs or Devon ones. Needs to become a command-line parameter
-#import QUANTRampAPI2 as qa
 
 #import pandas.rpy.common as com # throws error and doesn't seem to be used?
 
@@ -1661,9 +1660,12 @@ class Microsim:
 @click.option('-l', '--lockdown-file', default="google_mobility_lockdown_daily.csv",
               help="Optionally read lockdown mobility data from a file (default use google mobility). To have no "
                    "lockdown pass an empty string, i.e. --lockdown-file='' ")
+@click.option('--quant-dir', default=None, help='Directory to QUANT data, set to None to use Devon data')
 
-def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, output_every_iteration, debug,
-               repetitions, lockdown_file, scenario):
+
+
+def run_script(parameters_file, no_parameters_file, iterations, scenario, data_dir, output, output_every_iteration, debug,
+               repetitions, lockdown_file, quant_dir):
 
     # First see if we're reading a parameters file or using command-line arguments.
     if no_parameters_file:
@@ -1687,6 +1689,8 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
             debug = sim_params["debug"]
             repetitions = sim_params["repetitions"]
             lockdown_file = sim_params["lockdown-file"]
+            quant_dir = sim_params["quant-dir"]
+
 
     # Check the parameters are sensible
     if iterations < 0:
@@ -1736,6 +1740,14 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
             # (If the 'disease_params' section is included but has no calibration variables then we want to ignore it -
             # it will be turned into an empty dictionary by the Microsim constructor)
             msim_args["disease_params"] = disease_params  # R parameters kept as a dictionary and unpacked later
+
+    # check whether to use QUANT or Devon data
+    if quant_dir is None:
+        USE_QUANT_DATA = False
+    else:
+        # we only need 1 QuantRampAPI object even if we do multiple iterations
+        # the qa object will be called by each microsim object
+        qa = QuantRampAPI(data_dir, quant_dir)
 
     # Temporily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")
