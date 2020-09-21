@@ -121,7 +121,6 @@ def create_msoa_dangers_dict(dangers_dict,keys,msoa_codes):
         msoa_avg =  msoa_sum.div(msoa_count, axis='index')
         dangers_msoa_dict[keys[k]] = msoa_avg
     return dangers_msoa_dict
-        
 
 
 def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_run,nr_runs,age_cat):
@@ -195,8 +194,7 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
             
         # add age brackets column to individuals_tmp
         individuals_tmp.insert(8, 'age0', age_cat_col)
-        
-        
+
         uniquecounts_df = pd.DataFrame()
         
         for key, value in conditions_dict.items():
@@ -234,8 +232,7 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
                 # count nr for this condition per area
                 #msoa_count_temp = individuals_tmp[individuals_tmp.iloc[:, -nr_days+day] == conditions_dict[key]].groupby(['area']).agg({individuals_tmp.columns[-nr_days+day]: ['count']})  
                 
-                msoa_count_temp = individuals_tmp[tmp.iloc[:,day] == conditions_dict[key]].groupby(['area']).agg({tmp.columns[day]: ['count']})  
-                
+                msoa_count_temp = individuals_tmp[tmp.iloc[:,day] == conditions_dict[key]].groupby(['area']).agg({tmp.columns[day]: ['count']})
                 
                 if msoa_count_temp.shape[0] == len(msoas):
                     msoa_count_temp = msoa_count_temp.values
@@ -345,37 +342,6 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
 
 
 
-# def calc_cumtotal_counts(cumcounts_dict_3d):
-#     """ Calculate cumulative total across time and space, returned as mean and std nr susceptible, presymptomatic, symptomatic, recovered and dead"""
-#     cumtotal_counts = np.zeros((5,nr_runs))
-#     for r in r_range:
-#         nr_dead = cumcounts_dict_3d["dead"][:,r-start_run].sum()
-#         nr_recovered = cumcounts_dict_3d["recovered"][:,r-start_run].sum()
-#         nr_symptomatic = cumcounts_dict_3d["symptomatic"][:,r-start_run].sum() - nr_dead - nr_recovered
-#         nr_presymptomatic = cumcounts_dict_3d["presymptomatic"][:,r-start_run].sum() - nr_dead - nr_recovered - nr_symptomatic
-#         nr_susceptible = cumcounts_dict_3d["susceptible"][:,r-start_run].sum() - nr_dead - nr_recovered - nr_symptomatic - nr_presymptomatic
-#         cumtotal_counts[0,r-start_run] = nr_susceptible
-#         cumtotal_counts[1,r-start_run] = nr_presymptomatic
-#         cumtotal_counts[2,r-start_run] = nr_symptomatic
-#         cumtotal_counts[3,r-start_run] = nr_recovered
-#         cumtotal_counts[4,r-start_run] = nr_dead
-#     cumtotal_counts_mean = cumtotal_counts.mean(axis=1)
-#     cumtotal_counts_std = cumtotal_counts.std(axis=1)      
-#     return cumtotal_counts_mean, cumtotal_counts_std
-
-   
-
-
-
-
-
-
-
-
-
-
-
-
 # ********
 # PROGRAM ENTRY POINT
 # Uses 'click' library so that it can be run from the command line
@@ -383,11 +349,7 @@ def create_counts_dict(conditions_dict,r_range,data_dir,start_day,end_day,start_
 @click.command()
 @click.option('-p', '--parameters_file', default="./model_parameters/default_dashboard.yml", type=click.Path(exists=True),
               help="Parameters file to use to configure the dashboard. Default: ./model_parameters/default_dashboard.yml")
-
-
 def create_dashboard(parameters_file):
-
-    
     # FUNCTIONS FOR PLOTTING
     # ----------------------
     
@@ -428,10 +390,7 @@ def create_dashboard(parameters_file):
         s1.toolbar.autohide = False
         plotref_dict[f"hm{condition2plot}"] = s1    
 
-        
-        
     # plot 2: disease conditions across time
-    
     def plot_cond_time():
         # build ColumnDataSource
         data_s2 = dict(totalcounts_dict)
@@ -461,10 +420,8 @@ def create_dashboard(parameters_file):
         s2.add_layout(legend, 'right')
         s2.toolbar.autohide = False
         plotref_dict["cond_time"] = s2    
-        
-        
+
     # plot 3: Conditions across MSOAs
-    
     def plot_cond_msoas():
         # build ColumnDataSource
         data_s3 = {}
@@ -496,10 +453,8 @@ def create_dashboard(parameters_file):
         s3.add_layout(legend, 'right')
         s3.toolbar.autohide = False
         plotref_dict["cond_msoas"] = s3
-    
-    
+
     # plot 4a: choropleth
-    
     def plot_choropleth_condition_slider(condition2plot):
         # Prepare data
         max_val = 0
@@ -727,16 +682,9 @@ def create_dashboard(parameters_file):
     dict_days = [] # empty list for column names 'Day0' etc
     for d in range(start_day, end_day+1):
         dict_days.append(f'Day{d}')
-    
-    
+
     # Read in third party data
     # ------------------------
-    
-    # read in details about venues
-    data_file = os.path.join(data_dir, "devon-schools","exeter schools.csv")
-    schools = pd.read_csv(data_file)
-    data_file = os.path.join(data_dir, "devon-retail","devon smkt.csv")
-    retail = pd.read_csv(data_file)
     
     # load in shapefile with England MSOAs for choropleth
     sh_file = os.path.join(data_dir, "MSOAS_shp","bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp")
@@ -748,30 +696,24 @@ def create_dashboard(parameters_file):
     data_file = os.path.join(data_dir, "PCD_OA_LSOA_MSOA_LAD_AUG19_UK_LU.csv")
     postcode_lu = pd.read_csv(data_file, encoding = "ISO-8859-1", usecols = ["pcds", "msoa11cd"])
     
-
-    # Read in and process pickled output from microsim
-    # ------------------------------------------------
-    
-    # read in and process pickle files location/venue dangers
-    # create one or more dangers_dict (only using means i.e. first output of function for now)
-
-    gpu_data_dir = data_dir + "/output/gpu/"
-
-    with open(gpu_data_dir + "total_counts.p", "rb") as f:
-        total_counts = pickle.load(f)
-
-    with open(gpu_data_dir + "age_counts.p", "rb") as f:
-        age_counts = pickle.load(f)
-
-    with open(gpu_data_dir + "area_counts.p", "rb") as f:
-        area_counts = pickle.load(f)
-    
     # age brackets
     age_cat = np.array([[0, 19], [20, 29], [30,44], [45,59], [60,74], [75,200]])    
     # label for plotting age categories
     age_cat_str = []
     for a in range(age_cat.shape[0]):
         age_cat_str.append(f"{age_cat[a,0]}-{age_cat[a,1]}")
+
+    # Read in and process pickled output from microsim
+
+    # load pickled data from GPU model
+    gpu_data_dir = data_dir + "/output/gpu/"
+    with open(gpu_data_dir + "total_counts.p", "rb") as f:
+        total_counts = pickle.load(f)
+    with open(gpu_data_dir + "age_counts.p", "rb") as f:
+        # TODO: replace index with strings of age categories
+        age_counts = pickle.load(f)
+    with open(gpu_data_dir + "area_counts.p", "rb") as f:
+        area_counts = pickle.load(f)
 
     # counts per condition
     results_tmp = create_counts_dict(conditions_dict,r_range,os.path.join(data_dir, sc_dir[0]),start_day,end_day,start_run,nr_runs,age_cat) # get all
@@ -788,7 +730,6 @@ def create_dashboard(parameters_file):
     
     # days (needs list to plot)
     days = [i for i in range(start_day,end_day+1)]
-
         
     # determine where/how the visualization will be rendered
     html_output = os.path.join(data_dir, f'{file_name}.html')
@@ -820,36 +761,25 @@ def create_dashboard(parameters_file):
     for key,value in conditions_dict.items():
         plot_choropleth_condition_slider(key)
 
-
     # conditions across time per age category
     plot_cond_time_age()
-
 
     # Layout and output
 
     tab1 = Panel(child=row(plotref_dict["cond_time"], plotref_dict["cond_msoas"]), title='Summary conditions')
-
     tab2 = Panel(child=row(plotref_dict["hmsusceptible"],column(plotref_dict["chslsusceptible"],plotref_dict["chplsusceptible"])), title='Susceptible')
-
     tab3 = Panel(child=row(plotref_dict["hmexposed"],column(plotref_dict["chslexposed"],plotref_dict["chplexposed"])), title='Exposed')
-
     tab4 = Panel(child=row(plotref_dict["hmpresymptomatic"],column(plotref_dict["chslpresymptomatic"],plotref_dict["chplpresymptomatic"])), title='Presymptomatic')
-
     tab5 = Panel(child=row(plotref_dict["hmsymptomatic"],column(plotref_dict["chslsymptomatic"],plotref_dict["chplsymptomatic"])), title='Symptomatic')
-
     tab6 = Panel(child=row(plotref_dict["hmasymptomatic"],column(plotref_dict["chslasymptomatic"],plotref_dict["chplasymptomatic"])), title='Asymptomatic')
-
     tab7 = Panel(child=row(plotref_dict["hmrecovered"],column(plotref_dict["chslrecovered"],plotref_dict["chplrecovered"])), title='Recovered')
-
     tab8 = Panel(child=row(plotref_dict["hmdead"],column(plotref_dict["chsldead"],plotref_dict["chpldead"])), title='Dead')
-
     tab9 = Panel(child=row(plotref_dict["cond_time_age_susceptible"],plotref_dict["cond_time_age_presymptomatic"],plotref_dict["cond_time_age_symptomatic"],plotref_dict["cond_time_age_recovered"],plotref_dict["cond_time_age_dead"]), title='Breakdown by age')
 
     # Put the Panels in a Tabs object
     tabs = Tabs(tabs=[tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9])
 
     show(tabs)
-        
 
 
 if __name__ == "__main__":
