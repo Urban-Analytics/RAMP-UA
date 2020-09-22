@@ -1,3 +1,8 @@
+import pandas as pd
+import numpy as np
+import pickle
+import os
+
 class QuantRampAPI:
     """
     Class that handles integration of QUANT data into the RAMP microsim model
@@ -7,19 +12,16 @@ class QuantRampAPI:
     """
 
     def __init__(self,
-                 data_dir: str = "./data/", 
                  quant_dir: str = "QUANT_RAMP"
                  ):
         """
         Initialiser for QuantRampAPI This reads all of the necessary data.
         ----------
-        :param data_dir: The base data directory, taken from Microsim object
-        :param quant_dir: Additional path from data_dir to QUANT files
+        :param quant_dir: Full path to QUANT files
     
         """
-        self.DATA_DIR = data_dir
-        self.QUANT_DIR = os.path.join(data_dir, quant_dir)
-        
+        self.QUANT_DIR = quant_dir
+        #QuantRampAPI.QUANT_DIR = quant_dir
 
         # read in and store data 
         self.read_data(self.QUANT_DIR)

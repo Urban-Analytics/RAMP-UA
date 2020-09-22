@@ -8,10 +8,10 @@ Created on Wed Apr 29 19:59:25 2020
 @author: nick
 """
 import os
-# directory to read data from
-tmp_base_dir = os.getcwd()  # get current directory (usually RAMP-UA)
-tmp_microsim_dir = os.path.join(tmp_base_dir, "microsim") # go to data dir
-os.chdir(tmp_microsim_dir)
+## directory to read data from
+#tmp_base_dir = os.getcwd()  # get current directory (usually RAMP-UA)
+#tmp_microsim_dir = os.path.join(tmp_base_dir, "microsim") # go to data dir
+#os.chdir(tmp_microsim_dir)
 
 import sys
 #import os
@@ -48,10 +48,9 @@ import rpy2.robjects as ro  # For calling R scripts
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
 from shutil import copyfile
 
-
 #import pandas.rpy.common as com # throws error and doesn't seem to be used?
 
-os.chdir(tmp_base_dir)
+#os.chdir(tmp_base_dir)
 
 #os.chdir(owd)
 
@@ -86,7 +85,8 @@ class Microsim:
                  output_every_iteration = False,
                  debug=False,
                  disable_disease_status=False,
-                 disease_params: Dict = {}
+                 disease_params: Dict = {},
+                 quant_object = None
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
@@ -117,6 +117,7 @@ class Microsim:
             disease status. Only good for testing.
         :param disease_params: Optional parameters that are passed to the R code that estimates disease status
             (a dictionary, assumed to be empty)
+        :param quant_object: optional parameter to use QUANT data, don't specify if you want to use Devon data
         """
 
         # Administrative variables that need to be defined
@@ -124,6 +125,11 @@ class Microsim:
         self.DATA_DIR = data_dir
         self.SCEN_DIR = scen_dir
         self.iteration = 0
+        if quant_object is None:
+            Microsim.quant_object = False
+        else:
+            Microsim.quant_object = quant_object
+        
         self.hazard_individual_multipliers = hazard_individual_multipliers
         Microsim.__check_hazard_location_multipliers(hazard_location_multipliers)
         self.hazard_location_multipliers = hazard_location_multipliers
@@ -154,6 +160,8 @@ class Microsim:
         # If we do output information, then it will go to this directory. This is determined in run(), rather than
         # here, because otherwise all copies of this object will have the same output directory.
         self.output_dir = None
+        
+        
 
         # Now the main chunk of initialisation is to read the input data.
 
@@ -676,7 +684,7 @@ class Microsim:
         
         
         # devon data
-        if not USE_QUANT_DATA:
+        if cls.quant_object is False:
             # TODO Need to read full school flows, not just those of Devon
             print("Reading school flow data for Devon...", )
             dir = os.path.join(cls.DATA_DIR, "devon-schools")
@@ -782,7 +790,7 @@ class Microsim:
         # QUANT data
         else:
             print("Reading school flow data...", )
-            dir = os.path.join(cls.DATA_DIR, "QUANT_RAMP","model-runs")
+            dir = cls.quant_object.QUANT_DIR
             
             # Read the primary schools
             primary_schools = pd.read_csv(os.path.join(dir, "primaryZones.csv"))
@@ -801,11 +809,11 @@ class Microsim:
             # Read the primary school flows
             threshold = 5 # top 5
             thresholdtype = "nr" # threshold based on nr venues
-            primary_flow_matrix = qa.get_flows(ColumnNames.Activities.PRIMARY, study_msoas,threshold,thresholdtype)
+            primary_flow_matrix = cls.quant_object.get_flows(ColumnNames.Activities.PRIMARY, study_msoas,threshold,thresholdtype)
             
             # Read the secondary school flows
             # same thresholds as before
-            secondary_flow_matrix = qa.get_flows(ColumnNames.Activities.SECONDARY, study_msoas,threshold,thresholdtype)
+            secondary_flow_matrix = cls.quant_object.get_flows(ColumnNames.Activities.SECONDARY, study_msoas,threshold,thresholdtype)
             
             
 
@@ -858,9 +866,9 @@ class Microsim:
         :return: A tuple of two dataframes. One containing all of the flows and another
         containing information about the stores themselves.
         """
-        
+
         # Devon data
-        if not USE_QUANT_DATA:
+        if cls.quant_object is False:
             # TODO Need to read full retail flows, not just those of Devon (temporarily created by Mark).
             # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
             # working with Devon subset of flows
@@ -952,7 +960,7 @@ class Microsim:
         # QUANT data
         else:
             print("Reading retail flow data...", )
-            dir = os.path.join(cls.DATA_DIR, "QUANT_RAMP","model-runs")
+            dir = cls.quant_object.QUANT_DIR
             # Read the stores
             stores = pd.read_csv(os.path.join(dir, "retailpointsZones.csv"))
             # Add some standard columns that all locations need
@@ -963,7 +971,7 @@ class Microsim:
             # Read the flows
             threshold = 10 # top 10
             thresholdtype = "nr" # threshold based on nr venues
-            flow_matrix = qa.get_flows("Retail", study_msoas,threshold,thresholdtype)
+            flow_matrix = cls.quant_object.get_flows("Retail", study_msoas,threshold,thresholdtype)
 
         return stores, flow_matrix
 
@@ -1726,11 +1734,24 @@ def run_script(parameters_file, no_parameters_file, iterations, scenario, data_d
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None,
                               names=["x", "y", "Num", "Code", "Desc"])
+    
+    # check whether to use QUANT or Devon data
+    if quant_dir is None:
+        quant_object = None
+        print("Using Devon data")
+    else:
+        print("Using QUANT data")
+        # we only need 1 QuantRampAPI object even if we do multiple iterations
+        # the quant_object object will be called by each microsim object
+        print(data_dir)
+        print(quant_dir)
+        quant_object = QuantRampAPI(os.path.join(data_dir, quant_dir))
+
 
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "scen_dir": scenario, "r_script_dir": r_script_dir,
                  "output": output, "output_every_iteration": output_every_iteration, "debug": debug,
-                 "lockdown_file": lockdown_file,
+                 "lockdown_file": lockdown_file, "quant_object" : quant_object
                  }
 
     if not no_parameters_file:  # When using a parameters file, include the calibration parameters
@@ -1741,13 +1762,7 @@ def run_script(parameters_file, no_parameters_file, iterations, scenario, data_d
             # it will be turned into an empty dictionary by the Microsim constructor)
             msim_args["disease_params"] = disease_params  # R parameters kept as a dictionary and unpacked later
 
-    # check whether to use QUANT or Devon data
-    if quant_dir is None:
-        USE_QUANT_DATA = False
-    else:
-        # we only need 1 QuantRampAPI object even if we do multiple iterations
-        # the qa object will be called by each microsim object
-        qa = QuantRampAPI(data_dir, quant_dir)
+    
 
     # Temporily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")
