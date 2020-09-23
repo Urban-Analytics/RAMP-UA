@@ -21,7 +21,7 @@ from bokeh.plotting import figure, show
 from bokeh.models import (BasicTicker, CDSView, ColorBar, ColumnDataSource,
                           CustomJS, CustomJSFilter, FactorRange, 
                           GeoJSONDataSource, HoverTool, Legend,
-                          LinearColorMapper, PrintfTickFormatter, Slider)
+                          LinearColorMapper, PrintfTickFormatter, Slider, Whisker)
 from bokeh.layouts import row, column, gridplot, grid, widgetbox
 from bokeh.models.widgets import Tabs, Panel
 from bokeh.palettes import brewer
@@ -31,7 +31,6 @@ import click  # command-line interface
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
 
 from microsim.column_names import ColumnNames
-
 
 
 # Functions for preprocessing
@@ -751,31 +750,40 @@ def create_dashboard(parameters_file):
     
     def plot_scenario_hist(scen_hist,category,label):
         max_plot = 0
+        data = scen_hist
         for s in sc_nam:
             if max_plot < max(scen_hist[s]):
                 max_plot = max(scen_hist[s])
-        data = scen_hist
+            data[f"{s}_std_upper"] = [a_i + b_i for a_i, b_i in zip(data[s], data[f"{s}_std"])]
+            data[f"{s}_std_lower"] = [a_i - b_i for a_i, b_i in zip(data[s], data[f"{s}_std"])]
+        
         Categories = scen_hist[category]
         Scenarios = sc_nam    
         x = []
         counts = []
+        std_lower = []
+        std_upper = []
         v = 0
         for c in Categories:
             for s in Scenarios:
                 x.append((c,s))
                 counts.append(scen_hist[s][v])
+                std_lower.append(scen_hist[f"{s}_std_lower"][v])
+                std_upper.append(scen_hist[f"{s}_std_upper"][v])
             v = v + 1
         counts = tuple(counts)
-        source = ColumnDataSource(data=dict(x=x, counts=counts))
+        source = ColumnDataSource(data=dict(x=x, counts=counts, std_lower=std_lower, std_upper=std_upper))
         p = figure(x_range=FactorRange(*x), plot_height=350, title=f"{label} across scenarios",y_axis_label=f"{label}")
         p.vbar(x='x', top='counts', width=0.9, source=source, line_color="white",
                    fill_color=factor_cmap('x', palette=scen_palette, factors=Scenarios, start=1, end=2))
+        p.add_layout(
+            Whisker(source=source, base="x", upper="std_upper", lower="std_lower", level="overlay")
+        )
         p.y_range.start = 0
         p.x_range.range_padding = 0.1
         p.xaxis.major_label_orientation = 1
         p.xgrid.grid_line_color = None
-        
-        #plotref_dict[f"cond_time_age_{key}"] = s2   
+
         tooltips = [(f'{label}','@counts'),]
         p.add_tools(HoverTool(
                 tooltips=tooltips,
@@ -789,8 +797,11 @@ def create_dashboard(parameters_file):
         # build ColumnDataSource
         data_s5 = scen_time[dkey].copy()
         data_s5["days"] = days
-        # add standard dev?
+        for s in sc_nam:  
+            data_s5[f"{s}_std_upper"] = data_s5[s] + data_s5[f"{s}_std"]
+            data_s5[f"{s}_std_lower"] = data_s5[s] - data_s5[f"{s}_std"]
         source_5 = ColumnDataSource(data=data_s5)
+        
         # Build figure
         s5 = figure(background_fill_color="#fafafa",title=f"{dkey}", x_axis_label='Time', y_axis_label=f"{label}", toolbar_location='above')
         legend_it = []
@@ -799,7 +810,8 @@ def create_dashboard(parameters_file):
         for s in sc_nam:  
             c1 = s5.line(x = 'days', y = s, source = source_5, line_width=2, line_color=scen_palette[snr], muted_color="grey", muted_alpha=0.2)
             c2 = s5.circle(x = 'days', y = s, source = source_5, fill_color=scen_palette[snr], line_color=scen_palette[snr], size=5)
-            legend_it.append((s, [c1,c2]))
+            c5 = s5.segment('days', f"{s}_std_lower", 'days', f"{s}_std_upper", source = source_5, line_color="black",muted_color="grey", muted_alpha=0.2)           
+            legend_it.append((s, [c1,c2,c5]))
             tooltips.append(tuple(( f"{s}",   f"@{s}")))
             snr = snr + 1
         legend = Legend(items=legend_it)
@@ -922,10 +934,6 @@ def create_dashboard(parameters_file):
     
     # directory to read data from
     data_dir = "data" if (data_dir_user is None) else data_dir_user
-    if data_dir == "devon_data":
-        flag_QUANT = 0
-    else:
-        flag_QUANT = 1
     data_dir = os.path.join(base_dir, data_dir) # update data dir
     
     # check if this directory exists
@@ -983,7 +991,12 @@ def create_dashboard(parameters_file):
     # rename column to get ready for merging
     map_df.rename(index=str, columns={'msoa11cd': 'Area'},inplace=True)
     
-    # devon data
+    
+    
+    
+    ##########################################################################
+    
+    # OPTION devon data
     
     # read in details about venues
     data_file = os.path.join(data_dir, "devon-schools","exeter schools.csv")
@@ -996,7 +1009,16 @@ def create_dashboard(parameters_file):
     postcode_lu = pd.read_csv(data_file, encoding = "ISO-8859-1", usecols = ["pcds", "msoa11cd"])
 
         
-        
+    ##########################################################################
+    
+    # # OPTION QUANT data
+    
+    # # read in details about venues
+    # primary_schools = pd.read_csv(os.path.join(quant_dir, "primaryZones.csv"))
+    # secondary_schools = pd.read_csv(os.path.join(quant_dir, "secondaryZones.csv"))
+    # retail = pd.read_csv(os.path.join(quant_dir, "retailZones.csv"))
+    
+    ##########################################################################
     
     
     # Read in and process pickled output from microsim
@@ -1025,14 +1047,17 @@ def create_dashboard(parameters_file):
         for s in range(0,nr_scenarios):
             dangers_dict_tmp = create_venue_dangers_dict(locations_dict,r_range,os.path.join(data_dir,sc_dir[s]),start_day,end_day,start_run,nr_runs)[0]
             scen_hist_venues[sc_nam[s]] = []
+            scen_hist_venues[f"{sc_nam[s]}_std"] = []
         
             for key, value in dangers_dict.items():
                 if s == 0:
                     scen_hist_venues["Venues"].append(key)
-                    scen_time_venues[key] =  dict({"Day":dict_days, sc_nam[0]:dangers_dict_tmp[key].mean(axis=0)})
-                else:
-                    scen_time_venues[key][sc_nam[s]] = dangers_dict_tmp[key].mean(axis=0)
+                    scen_time_venues[key] =  dict({"Day":dict_days})
+                scen_time_venues[key][sc_nam[s]] = dangers_dict_tmp[key].mean(axis=0)
+                scen_time_venues[key][f"{sc_nam[s]}_std"] = dangers_dict_tmp[key].std(axis=0)
                 scen_hist_venues[sc_nam[s]].append(dangers_dict_tmp[key].mean(axis=0).mean())
+                scen_hist_venues[f"{sc_nam[s]}_std"].append(dangers_dict_tmp[key].mean(axis=1).std())
+                
                 
 
         # retrieve data
@@ -1041,6 +1066,11 @@ def create_dashboard(parameters_file):
     
     if nr_scenarios <= 2:
         # Add additional info about schools and retail including spatial coordinates
+        
+        #######################################################################
+        
+        # for devon_data
+        
         # merge
         primaryschools = pd.merge(schools, dangers_dict["PrimarySchool"], left_index=True, right_index=True)
         secondaryschools = pd.merge(schools, dangers_dict["SecondarySchool"], left_index=True, right_index=True)
@@ -1055,6 +1085,20 @@ def create_dashboard(parameters_file):
         # normalised danger scores per msoa for schools and retail (for choropleth)
         dangers_msoa_dict = create_msoa_dangers_dict(dangers_dict,['Retail','PrimarySchool','SecondarySchool'],[retail.MSOA_code,schools.MSOA_code,schools.MSOA_code])
     
+        #######################################################################
+        
+        # # for QUANT data
+        
+        # # merge
+        # primaryschools = pd.merge(primary_schools, dangers_dict["PrimarySchool"], left_index=True, right_index=True)
+        # secondaryschools = pd.merge(secondary_schools, dangers_dict["SecondarySchool"], left_index=True, right_index=True)
+        # retail = pd.merge(retail, dangers_dict["Retail"], left_index=True, right_index=True)
+        
+        # # normalised danger scores per msoa for schools and retail (for choropleth)
+        # dangers_msoa_dict = create_msoa_dangers_dict(dangers_dict,['Retail','PrimarySchool','SecondarySchool'],[retail.MSOA,primary_schools.MSOA,secondary_schools.MSOA])
+    
+        
+        #######################################################################
     
     # age brackets
     age_cat = np.array([[0, 19], [20, 29], [30,44], [45,59], [60,74], [75,200]])    # original categories (Age1 column)
@@ -1097,6 +1141,7 @@ def create_dashboard(parameters_file):
         
 
     if nr_scenarios >= 2:
+        
         scen_hist_conditions = {}
         scen_hist_conditions["Condition"] = []
         scen_time_conditions = {}
@@ -1104,18 +1149,22 @@ def create_dashboard(parameters_file):
         for s in range(0,nr_scenarios):
             result_tmp =  create_counts_dict(conditions_dict,r_range,os.path.join(data_dir, sc_dir[s]),start_day,end_day,start_run,nr_runs,age_cat)
             totalcounts_dict_tmp = result_tmp[1]
-            uniquecounts_dict_tmp = result_tmp[-1]
+            totalcounts_dict_std_tmp = result_tmp[6]
+            uniquecounts_dict_std_tmp, uniquecounts_dict_tmp = results_tmp[14:16]
  
             scen_hist_conditions[sc_nam[s]] = []
+            scen_hist_conditions[f"{sc_nam[s]}_std"] = []
         
             for key, value in conditions_dict.items():
                 if s == 0:
                     scen_hist_conditions["Condition"].append(key)
-                    scen_time_conditions[key] =  dict({"Day":dict_days, sc_nam[0]:totalcounts_dict_tmp[key]})
-                else:
-                    scen_time_conditions[key][sc_nam[s]] = totalcounts_dict_tmp[key]
+                    scen_time_conditions[key] =  dict({"Day":dict_days})
+                scen_time_conditions[key][sc_nam[s]] = totalcounts_dict_tmp[key]
+                scen_time_conditions[key][f"{sc_nam[s]}_std"] = totalcounts_dict_std_tmp[key]
                 scen_hist_conditions[sc_nam[s]].append(uniquecounts_dict_tmp[key].values[0])
-        
+                scen_hist_conditions[f"{sc_nam[s]}_std"].append(uniquecounts_dict_std_tmp[key].values[0])
+    
+    
     
     # Plotting
     # --------
