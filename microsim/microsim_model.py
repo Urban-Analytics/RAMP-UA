@@ -1743,8 +1743,10 @@ def run_script(parameters_file, no_parameters_file, iterations, scenario, data_d
         print("Using QUANT data")
         # we only need 1 QuantRampAPI object even if we do multiple iterations
         # the quant_object object will be called by each microsim object
-        print(data_dir)
-        print(quant_dir)
+        if os.path.isdir(os.path.join(data_dir, quant_dir)):
+            print(os.path.join(data_dir, quant_dir))
+        else:
+           raise Exception("QUANT directory does not exist, please check input")
         quant_object = QuantRampAPI(os.path.join(data_dir, quant_dir))
 
 
