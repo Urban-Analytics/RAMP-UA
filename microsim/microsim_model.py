@@ -1542,6 +1542,15 @@ class Microsim:
         m.random.seed()
         return copy.deepcopy(m)
 
+    def tourism_scenario:
+        #### function for tourism scenario
+        #tourism_df = sample(pop_df, x)
+        #tourism_df['status'] = new_status
+        #tourism_df['workflow'] = 0
+        #tourism_df['schoolflow'] = 0
+        #new_df = append(pop_df, tourism_df)
+        #return new_df
+
     def step(self) -> None:
         """
         Step (iterate) the model for 1 iteration
@@ -1551,6 +1560,10 @@ class Microsim:
         self.iteration += 1
 
         print(f"\nIteration: {self.iteration}\n")
+
+        if not self.disable_tourism:
+            if self.iteration == tourism_timestep:
+                # run tourism function
 
         # Unilaterally adjust the proportions of time that people spend doing different activities after lockdown
         self.update_behaviour_during_lockdown()
