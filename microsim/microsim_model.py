@@ -1561,7 +1561,7 @@ class Microsim:
 
         print(f"\nIteration: {self.iteration}\n")
 
-        if not self.disable_tourism:
+        if self.tourism:
             if self.iteration == tourism_timestep:
                 # run tourism function
 
