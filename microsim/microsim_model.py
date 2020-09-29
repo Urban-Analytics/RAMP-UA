@@ -1544,12 +1544,12 @@ class Microsim:
 
     def tourism_scenario:
         #### function for tourism scenario
-        #tourism_df = sample(pop_df, x)
-        #tourism_df['status'] = new_status
-        #tourism_df['workflow'] = 0
-        #tourism_df['schoolflow'] = 0
-        #new_df = append(pop_df, tourism_df)
-        #return new_df
+        tourism_df = pop_df.sample(frac=0.2, replace=False, random_state=1) # what is the individual dataframe called?
+        tourism_df['status'] = np.random.randint(0, 5, tourism_df.shape[0])
+        tourism_df['workflow_locations'] = [0.85, 0.10, 0.05]  # Flows to workplaces
+        tourism_df['workflow_flows'] = [98, 11, 13]  # IDs of workplaces
+        new_df = pop_df.append(tourism_df, ignore_index=True) # what is the individual dataframe called?
+        return new_df
 
     def step(self) -> None:
         """
@@ -1563,7 +1563,7 @@ class Microsim:
 
         if self.tourism:
             if self.iteration == tourism_timestep:
-                # run tourism function
+                self.tourism_scenario() # not sure that this will work
 
         # Unilaterally adjust the proportions of time that people spend doing different activities after lockdown
         self.update_behaviour_during_lockdown()
