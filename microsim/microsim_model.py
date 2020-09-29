@@ -1546,7 +1546,7 @@ class Microsim:
         #### function for tourism scenario
         tourism_df = pop_df.sample(frac=0.2, replace=False, random_state=1) # what is the individual dataframe called?
         tourism_df['status'] = np.random.randint(0, 5, tourism_df.shape[0]) # randomly sample individuals from population dataframe
-        tourism_df['Work_Locations'] = [98, 11, 13]  # IDs of workplaces
+        tourism_df['Work_Venues'] = [98, 11, 13]  # IDs of workplaces
         tourism_df['Work_Flows'] = [0.85, 0.10, 0.05]  # Flows to workplaces
         new_df = pop_df.append(tourism_df, ignore_index=True) # what is the individual dataframe called?
         return new_df
