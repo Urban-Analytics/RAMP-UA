@@ -48,3 +48,18 @@ $ python microsim/microsim_model.py
 Outputs are written to the [microsim/data/outputs](./microsim/data/outputs) directory.
 
 For more details, see the full project repository on OSF.IO: https://osf.io/qzw6f/ (currently this is private, sorry, while we work out which data sources can be shared and which can't be, but the whole project will become public asap).
+
+## Creating releases
+
+This repository takes advantage of a GitHub action for [creating tagged releases](https://github.com/marvinpinto/action-automatic-releases) using [semantic versioning](https://semver.org/).
+
+To initiate the GitHub action and create a release:
+
+```bash
+$ git checkout branch
+
+$ git tag -a v0.1.2 -m 'tag comment about release'
+
+$ git push --tags
+```
+Once pushed the action will initiate and attempt to create a release.
