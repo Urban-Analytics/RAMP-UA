@@ -4,6 +4,14 @@ microsim package
 Submodules
 ----------
 
+microsim.microsim\_model module
+-------------------------------
+
+.. automodule:: microsim.microsim_model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 microsim.QUANTRampAPI2 module
 -----------------------------
 
@@ -48,14 +56,6 @@ microsim.microsim\_initialisation module
 ----------------------------------------
 
 .. automodule:: microsim.microsim_initialisation
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-microsim.microsim\_model module
--------------------------------
-
-.. automodule:: microsim.microsim_model
    :members:
    :undoc-members:
    :show-inheritance:
