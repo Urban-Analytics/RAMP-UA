@@ -851,10 +851,23 @@ class Microsim:
         print(f"\tRead {len(pd.unique(commuting_flows['Orig']))} orgins and {len(pd.unique(commuting_flows['Dest']))} "
               f"destinations (MSOAs in the study area: {len(study_msoas)})")
 
-        # TODO some checks. Remove areas outside study area?
-        
-        return commuting_flows
+        # TEMP: remove areas outside the study area (just while the correct files are being prepared)
+        if len(commuting_flows.loc[~commuting_flows.Orig.isin(study_msoas)]) > 0 or \
+                len(commuting_flows.loc[~commuting_flows.Dest.isin(study_msoas)]) > 0:
+            warnings.warn(f"Some origins ({len(pd.unique(commuting_flows.loc[~commuting_flows.Orig.isin(study_msoas),'Orig']))}) "
+                          f"and destinations ({len(pd.unique(commuting_flows.loc[~commuting_flows.Dest.isin(study_msoas),'Dest']))}) "
+                          f"are outside the study area. Removing them.")
+            commuting_flows = commuting_flows.loc[commuting_flows.Orig.isin(study_msoas)]
+            commuting_flows = commuting_flows.loc[commuting_flows.Dest.isin(study_msoas)]
+        assert len(commuting_flows.loc[~commuting_flows.Orig.isin(study_msoas)]) == 0
+        assert len(commuting_flows.loc[~commuting_flows.Dest.isin(study_msoas)]) == 0
+        assert len(pd.unique(commuting_flows["Orig"])) == len(study_msoas)
+        assert len(pd.unique(commuting_flows["Dest"])) == len(study_msoas)
 
+        # There should be a flow between every possible combionation of areas:
+        assert len(study_msoas)**2 == len(commuting_flows)
+
+        return commuting_flows
 
     @classmethod
     def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame,
@@ -883,17 +896,20 @@ class Microsim:
 
         # Do all individuals in an MSOA at once
         for msoa in tqdm(pd.unique(individuals.area), desc="Assigning work flows"):
+            #if msoa not in individuals.area:
+            #    warnings.warn(f"\tWhen assigning commuting, no individuals found in area: {msoa})")
+            #    continue
             # Destinations with positive flows and the flows themselves
-            dests_and_flows = commuting_flows.loc[commuting_flows.Orig == msoa, ]
+            dests_and_flows = commuting_flows.loc[(commuting_flows.Orig == msoa) & (commuting_flows.Total_Flow > 0),]
             dests = dests_and_flows["Dest"].values
             flows = Microsim._normalise(dests_and_flows["Total_Flow"].values)
             assert len(dests) == len(flows)
             assert True in [x > 0.0 for x in flows]  # Check that there is a non-zero flow
 
-            individuals.loc[msoa, venues_col] = \
-                individuals.loc[msoa, venues_col].apply(lambda _: dests).values
-            individuals.loc[msoa, flows_col] = \
-                individuals.loc[msoa, flows_col].apply(lambda _: flows).values
+            individuals.loc[individuals.area == msoa, venues_col] = \
+                individuals.loc[individuals.area == msoa, venues_col].apply(lambda _: dests).values
+            individuals.loc[individuals.area == msoa, flows_col] = \
+                individuals.loc[individuals.area == msoa, flows_col].apply(lambda _: flows).values
 
         # Check everyone has some flows (all list lengths are >0)
         assert False not in (individuals.loc[:, venues_col].apply(lambda cell: len(cell)) > 0).values
