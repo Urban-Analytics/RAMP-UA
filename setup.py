@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="RAMP-UA",
-    version="0.2.1dev",
+    version="0.3.0dev",
     author="RAMP UA Team",
     author_email="N.S.Malleson@leeds.ac.uk",
     description="The RAMP Urban Analytics package",
