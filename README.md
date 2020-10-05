@@ -20,7 +20,7 @@ $ cd RAMP-UA
 This project requires a specific conda environment in order to run so you will need the [conda package manager system](https://docs.anaconda.com/anaconda/install/) installed. Once conda has been installed you can create an environment for this project using the provided environment file.
 
 ```bash
-$ conda create env -f environment.yml
+$ conda env create -f environment.yml
 ```
 
 To retrieve data to run the mode you will need to use [Git Large File Storage](https://git-lfs.github.com/) to download the input data. Git-lfs is installed within the conda environment (you may need to run `git lfs install` on your first use of git lfs). To retrieve the data you run the following commands within the root of the project repository:
@@ -48,3 +48,18 @@ $ python microsim/microsim_model.py
 Outputs are written to the [microsim/data/outputs](./microsim/data/outputs) directory.
 
 For more details, see the full project repository on OSF.IO: https://osf.io/qzw6f/ (currently this is private, sorry, while we work out which data sources can be shared and which can't be, but the whole project will become public asap).
+
+## Creating releases
+
+This repository takes advantage of a GitHub action for [creating tagged releases](https://github.com/marvinpinto/action-automatic-releases) using [semantic versioning](https://semver.org/).
+
+To initiate the GitHub action and create a release:
+
+```bash
+$ git checkout branch
+
+$ git tag -a v0.1.2 -m 'tag comment about release'
+
+$ git push --tags
+```
+Once pushed the action will initiate and attempt to create a release.
