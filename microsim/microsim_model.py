@@ -285,6 +285,7 @@ class Microsim:
             'MSOA': workplace_msoas,
             'SOC': workplace_socs
         })
+        assert len(workplaces) == len(self.all_msoas) * len(possible_jobs)  # One location per job per msoa
         Microsim._add_location_columns(workplaces, location_names=workplace_names)
         work_name = ColumnNames.Activities.WORK
         # Workplaces dataframe is ready. Now read commuting flows
@@ -886,36 +887,69 @@ class Microsim:
         # Names for the columns and empty lists to store the venues and flows
         venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
         flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
-        individuals[venues_col] = [ [] for _ in range(len(individuals))]
-        individuals[flows_col] = [ [] for _ in range(len(individuals))]
+        individuals[venues_col] = [[] for _ in range(len(individuals))]
+        individuals[flows_col] = [[] for _ in range(len(individuals))]
 
         # Later we also record the individual risks for each activity per individual. It's nice if the columns for
         # each activity are grouped together, so create that column now.
         individuals[f"{flow_type}{ColumnNames.ACTIVITY_RISK}"] = [-1] * len(individuals)
 
+        with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
 
-        # Do all individuals in an MSOA at once
-        for msoa in tqdm(pd.unique(individuals.area), desc="Assigning work flows"):
-            #if msoa not in individuals.area:
-            #    warnings.warn(f"\tWhen assigning commuting, no individuals found in area: {msoa})")
-            #    continue
-            # Destinations with positive flows and the flows themselves
-            dests_and_flows = commuting_flows.loc[(commuting_flows.Orig == msoa) & (commuting_flows.Total_Flow > 0),]
-            dests = dests_and_flows["Dest"].values
-            flows = Microsim._normalise(dests_and_flows["Total_Flow"].values)
-            assert len(dests) == len(flows)
-            assert True in [x > 0.0 for x in flows]  # Check that there is a non-zero flow
+            # Do all individuals in an MSOA at once
+            for msoa in tqdm(pd.unique(individuals.area), desc="Assigning work flows"):
+                # Get the indices of the individuals in this msoa
+                individuals_idx = individuals.index[individuals.area == msoa]
 
-            individuals.loc[individuals.area == msoa, venues_col] = \
-                individuals.loc[individuals.area == msoa, venues_col].apply(lambda _: dests).values
-            individuals.loc[individuals.area == msoa, flows_col] = \
-                individuals.loc[individuals.area == msoa, flows_col].apply(lambda _: flows).values
+                # Destinations with positive flows and the flows themselves
+                dests_and_flows = commuting_flows.loc[(commuting_flows.Orig == msoa) & (commuting_flows.Total_Flow > 0),]
+                dests_msoas = dests_and_flows["Dest"].values  # The MSOA destinations
+                flows = Microsim._normalise(dests_and_flows["Total_Flow"].values)
+                assert len(dests_msoas) == len(flows)
+                assert True in [x > 0.0 for x in flows]  # Check that there is a non-zero flow
+
+                # Now have destination MSOAs (list), flows (list), need to work out, for each individual
+                # what the destination activity place is called (MSOA+SOC), get that place's ID and assign
+                # those IDs as the destinations.
+                socs = list(individuals.loc[individuals_idx, "soc2010"].values)  # SOC for each individual
+                individuals_venues = np.array(pool.starmap(Microsim._calc_workplace_indices, zip(
+                    socs,  # A 1D list; one soc for each individual in this msoa
+                    (dests_msoas for _ in range(len(socs))),  # list of dests, 2D, one list for each individual
+                    (workplaces for _ in range(len(socs)))  # list of pointers to the workplaces df,
+                )))
+                # Only way I can get pandas to correctly assign the list to each cell is with a for loop
+                #individuals.loc[individuals_idx, venues_col]  = individuals_venues  # Doesn't work
+                for i, idx in enumerate(individuals_idx):
+                    individuals.at[idx, venues_col] = individuals_venues[i]
+
+                # Flows are easier as every individual in this msoa has the same flows
+                individuals.loc[individuals_idx, flows_col] = \
+                    individuals.loc[individuals_idx, flows_col].apply(lambda _: flows).values
 
         # Check everyone has some flows (all list lengths are >0)
         assert False not in (individuals.loc[:, venues_col].apply(lambda cell: len(cell)) > 0).values
         assert False not in (individuals.loc[:, flows_col].apply(lambda cell: len(cell)) > 0).values
-
+        x=1
         return individuals
+
+    @staticmethod
+    def _calc_workplace_indices(soc: str, dest_msoas: List, workplace_df: pd.DataFrame):
+        """
+        Work out the workplaces where an individual might work, given their soc,
+        the names of the destination MSOAs where they might work, and the workplaces dataframe so that
+        they can work out what the index of the workplace is. This works because each virtual workplace is uniquely
+        named by it's msoa and industry type (i.e. f"{msoa}-{row['soc2010']}")
+
+        :param soc: A individuals's soc (industry where they work)
+        :param dest_msoas: A list of the destination MSOA names for the individual
+        :param workplace_df: The dataframe containing all workplaces
+        :return:
+        """
+        workplace_ids = [
+            int(workplace_df.loc[workplace_df[ColumnNames.LOCATION_NAME] == f"{msoa}-{soc}"].index[0])
+            for msoa in dest_msoas ]
+        assert False not in (isinstance(id, int) for id in workplace_ids)  # Check all are ints (not lists etc)
+        return workplace_ids
 
     @staticmethod
     def _assign_work_flow(job, workplaces):
@@ -1432,6 +1466,8 @@ class Microsim:
 
             # It's useful to report the specific risks associated with *this* activity for each individual
             activity_specific_risk = [0] * len(self.individuals)
+            if activty_name == "Work":
+                x=1  # TEMP BREAKPOINT
 
             for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)):  # For each individual
                 # v and f are lists of flows and venues for the individual. Go through each one
