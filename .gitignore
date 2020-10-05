@@ -27,6 +27,8 @@ __pycache__
 
 # setuptools items
 **/*.egg-info/*
+**/build/*
+**/dist/*
 
 # vscode items
 **/.vscode/*
