@@ -290,7 +290,7 @@ class Microsim:
         work_name = ColumnNames.Activities.WORK
         # Workplaces dataframe is ready. Now read commuting flows
         commuting_flows = Microsim.read_commuting_flows_data(self.all_msoas)
-        self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces, commuting_flows)
+        self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces, commuting_flows, 5)
         self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
                                                               individuals=self.individuals, duration_col="pwork")
 
@@ -872,7 +872,7 @@ class Microsim:
 
     @classmethod
     def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame,
-                       commuting_flows: pd.DataFrame) -> (pd.DataFrame):
+                       commuting_flows: pd.DataFrame, flow_threshold) -> (pd.DataFrame):
         """
         Create a dataframe of work locations that individuals travel to. The flows are based on general commuting
         patterns and assume one work location per industry type MSOA.
@@ -880,6 +880,7 @@ class Microsim:
         :param individuals: The dataframe of synthetic individuals
         :param workplaces:  The dataframe of workplaces (i.e. occupations)
         :param commuting_flows: The general commuting flows between MSOAs (an O-D matrix)
+        :param flow_threshold: Only include the top x destinations as possible flows. 'None' means no limit.
         :return: The new 'individuals' dataframe (with new columns)
         """
         # The logic of this function is basically copied from add_individual_flows()
@@ -901,8 +902,13 @@ class Microsim:
                 # Get the indices of the individuals in this msoa
                 individuals_idx = individuals.index[individuals.area == msoa]
 
-                # Destinations with positive flows and the flows themselves
-                dests_and_flows = commuting_flows.loc[(commuting_flows.Orig == msoa) & (commuting_flows.Total_Flow > 0),]
+                # Destinations with positive flows and the flows themselves.
+                dests_and_flows = commuting_flows.loc[
+                    (commuting_flows.Orig == msoa) & (commuting_flows.Total_Flow > 0), ]
+                if flow_threshold is not None and len(dests_and_flows) > flow_threshold:
+                    # Keep only the x destinations with largest flows
+                    dests_and_flows = \
+                        dests_and_flows.sort_values(by="Total_Flow", ascending=False).iloc[0:flow_threshold].copy()
                 dests_msoas = dests_and_flows["Dest"].values  # The MSOA destinations
                 flows = Microsim._normalise(dests_and_flows["Total_Flow"].values)
                 assert len(dests_msoas) == len(flows)
@@ -929,7 +935,6 @@ class Microsim:
         # Check everyone has some flows (all list lengths are >0)
         assert False not in (individuals.loc[:, venues_col].apply(lambda cell: len(cell)) > 0).values
         assert False not in (individuals.loc[:, flows_col].apply(lambda cell: len(cell)) > 0).values
-        x=1
         return individuals
 
     @staticmethod
