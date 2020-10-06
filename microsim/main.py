@@ -26,6 +26,7 @@ from microsim.population_initialisation import PopulationInitialisation
 from microsim.microsim_model import Microsim
 from microsim.opencl.ramp.run import run_opencl
 from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
+from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.initialisation_cache import InitialisationCache
 
 
@@ -159,27 +160,31 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
     # generate new population dataframes if we aren't using the cache
     if not use_cache:
         population = PopulationInitialisation(**population_args)
-        individuals_df, activity_locations_df, time_activity_multiplier = population.generate()
+        individuals, activity_locations, time_activity_multiplier = population.generate()
 
         # store in cache so we can load later
-        cache.store_in_cache(individuals_df, activity_locations_df, time_activity_multiplier)
+        cache.store_in_cache(individuals, activity_locations, time_activity_multiplier)
     else:
-        individuals_df, activity_locations_df, time_activity_multiplier = cache.read_from_cache()
+        individuals, activity_locations, time_activity_multiplier = cache.read_from_cache()
 
     # Select which model implementation to run
     if opencl:
-        run_opencl_model(individuals_df, activity_locations_df, time_activity_multiplier, iterations, data_dir,
-                         opencl_gui, opencl_gpu)
+        run_opencl_model(individuals, activity_locations, time_activity_multiplier, iterations, data_dir,
+                         opencl_gui, opencl_gpu, use_cache)
     else:
-        run_python_model(individuals_df, activity_locations_df, time_activity_multiplier, msim_args, iterations,
+        run_python_model(individuals, activity_locations, time_activity_multiplier, msim_args, iterations,
                          repetitions, parameters_file)
 
 
 def run_opencl_model(individuals_df, activity_locations_df, time_activity_multiplier, iterations, data_dir, use_gui,
-                     use_gpu):
+                     use_gpu, use_cache):
     print("\nRunning OpenCL model")
-    snapshot_converter = SnapshotConvertor(individuals_df, activity_locations_df, time_activity_multiplier, data_dir)
-    snapshot = snapshot_converter.generate_snapshot()
+
+    if use_cache:
+        snapshot_converter = SnapshotConvertor(individuals_df, activity_locations_df, time_activity_multiplier, data_dir)
+        snapshot = snapshot_converter.generate_snapshot()
+    else:
+        snapshot = Snapshot.load_full_snapshot(path="snapshots/devon.npz")
 
     # set the random seed of the model
     snapshot.seed_prngs(42)
