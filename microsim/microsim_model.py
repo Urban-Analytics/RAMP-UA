@@ -86,6 +86,7 @@ class Microsim:
                  debug=False,
                  disable_disease_status=False,
                  disease_params: Dict = {},
+                 use_cache = True,
                  quant_object = None
                  ):
         """
@@ -117,6 +118,7 @@ class Microsim:
             disease status. Only good for testing.
         :param disease_params: Optional parameters that are passed to the R code that estimates disease status
             (a dictionary, assumed to be empty)
+        :param use_cache: Optionlly turn off any caching (caching saves time during initialisation)
         :param quant_object: optional parameter to use QUANT data, don't specify if you want to use Devon data
         """
 
@@ -143,6 +145,7 @@ class Microsim:
         Microsim.debug = debug
         self.disable_disease_status = disable_disease_status
         self.disease_params = disease_params
+        self.use_cache = use_cache
         Microsim.testing = testing
         if self.testing:
             warnings.warn("Running in testing mode. Some exceptions will be disabled.")
@@ -290,7 +293,16 @@ class Microsim:
         work_name = ColumnNames.Activities.WORK
         # Workplaces dataframe is ready. Now read commuting flows
         commuting_flows = Microsim.read_commuting_flows_data(self.all_msoas)
-        self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces, commuting_flows, 5)
+        num_individuals = len(self.individuals)  # (sanity check)
+        cols = self.individuals.columns
+        self.individuals = Microsim.add_work_flows(flow_type=work_name, individuals=self.individuals,
+                                                   workplaces=workplaces, commuting_flows=commuting_flows,
+                                                   flow_threshold=5, use_cache=self.use_cache)
+        assert num_individuals == len(self.individuals), \
+            "There was an error reading workplaces (caching?) and the number of individuals has changed!"
+        assert (self.individuals.columns[0:-3] == cols).all(), \
+            "There was an error reading workplaces (caching?) the column names don't match!"
+        del num_individuals, cols
         self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
                                                               individuals=self.individuals, duration_col="pwork")
 
@@ -873,7 +885,7 @@ class Microsim:
 
     @classmethod
     def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame,
-                       commuting_flows: pd.DataFrame, flow_threshold) -> (pd.DataFrame):
+                       commuting_flows: pd.DataFrame, flow_threshold, use_cache) -> (pd.DataFrame):
         """
         Create a dataframe of work locations that individuals travel to. The flows are based on general commuting
         patterns and assume one work location per industry type MSOA.
@@ -882,9 +894,29 @@ class Microsim:
         :param workplaces:  The dataframe of workplaces (i.e. occupations)
         :param commuting_flows: The general commuting flows between MSOAs (an O-D matrix)
         :param flow_threshold: Only include the top x destinations as possible flows. 'None' means no limit.
+        :param use_cache: Whether to use a cache of pre-calculated work flows (quick)
         :return: The new 'individuals' dataframe (with new columns)
         """
         # The logic of this function is basically copied from add_individual_flows()
+
+        # Read from cache or re-calculate workplace location (takes ages)
+        cache_file = None
+        if use_cache:
+            cache_file = os.path.join(cls.DATA_DIR, "caches", "work_flows_cache.pickle")
+            print(f"\tAttemting to use cache file for worklplaces: {cache_file}.")
+            if os.path.isfile(cache_file):
+                print(f"\t\tCache file exists. Loading from file.")
+                cached_individuals = pd.read_pickle(cache_file)
+                if len(individuals) != len(cached_individuals):
+                    raise Exception(f"The cache file ({cache_file}) for workplaces has a different number of individuals "
+                                    f"in ({len(cached_individuals)} than the number of individuals currently in "
+                                    f"the model ({len(individuals)}. It's probably an old file, if you delete it"
+                                    f"the workplaces will be recalutaced.")
+                return cached_individuals
+            else:
+                print("\t\tNo cache file exists. Will cache after calculating workplcaes.")
+        else:
+            print("\tCaching disabled. Calculating workplaces:")
 
         # Names for the columns and empty lists to store the venues and flows
         venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
@@ -936,6 +968,11 @@ class Microsim:
         # Check everyone has some flows (all list lengths are >0)
         assert False not in (individuals.loc[:, venues_col].apply(lambda cell: len(cell)) > 0).values
         assert False not in (individuals.loc[:, flows_col].apply(lambda cell: len(cell)) > 0).values
+
+        if use_cache:
+            print(f"\t\tFinished calculating workplaces. Caching to: {cache_file}")
+            individuals.to_pickle(cache_file)  # where to save it, usually as a .pkl
+
         return individuals
 
     @staticmethod
@@ -1472,8 +1509,6 @@ class Microsim:
 
             # It's useful to report the specific risks associated with *this* activity for each individual
             activity_specific_risk = [0] * len(self.individuals)
-            if activty_name == "Work":
-                x=1  # TEMP BREAKPOINT
 
             for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)):  # For each individual
                 # v and f are lists of flows and venues for the individual. Go through each one
@@ -1859,9 +1894,7 @@ def run_script(parameters_file, no_parameters_file, iterations, scenario, data_d
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "scen_dir": scenario, "r_script_dir": r_script_dir,
                  "output": output, "output_every_iteration": output_every_iteration, "debug": debug,
-                 "lockdown_file": lockdown_file, "quant_object" : quant_object
-                 }
-
+                 "lockdown_file": lockdown_file, "use_cache": True, "quant_object": quant_object }
     if not no_parameters_file:  # When using a parameters file, include the calibration parameters
         msim_args.update(**calibration_params)  # python calibration parameters are unpacked now
         # Also read the R calibration parameters (this is a separate section in the .yml file)
