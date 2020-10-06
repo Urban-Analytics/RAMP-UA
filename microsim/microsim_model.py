@@ -896,7 +896,7 @@ class Microsim:
         # each activity are grouped together, so create that column now.
         individuals[f"{flow_type}{ColumnNames.ACTIVITY_RISK}"] = [-1] * len(individuals)
 
-        with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
+        with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
 
             # Do all individuals in an MSOA at once
             for msoa in tqdm(pd.unique(individuals.area), desc="Assigning work flows"):
