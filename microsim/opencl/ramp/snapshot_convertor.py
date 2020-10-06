@@ -1,9 +1,7 @@
 import numpy as np
-import pandas as pd
 import random
 import os
 import json
-import pickle
 from tqdm import tqdm
 from convertbng.util import convert_lonlat
 
@@ -17,35 +15,15 @@ class SnapshotConvertor:
     Convert dataframe of individuals and activity locations into a Snapshot object that can be used by the OpenCL model
     """
 
-    def __init__(self, individuals, activity_locations, time_activity_multiplier, data_dir, cache_inputs=True):
+    def __init__(self, individuals, activity_locations, time_activity_multiplier, data_dir):
         self.data_dir = data_dir
 
-        # load individuals dataframe from cache
-        if individuals is None:
-            self.individuals = self.load_from_cache("individuals_cache.pkl", is_dataframe=True)
-        else:
-            self.individuals = individuals
-            if cache_inputs:
-                self.write_to_cache("individuals_cache.pkl", self.individuals, is_dataframe=True)
+        self.individuals = individuals
+        self.activity_names = list(activity_locations.keys())
 
-        # load names of activities from cache
-        if activity_locations is None:
-            self.activity_names = self.load_from_cache("activity_names.pkl")
-        else:
-            self.activity_names = list(activity_locations.keys())
-            if cache_inputs:
-                self.write_to_cache("activity_names.pkl", self.activity_names, is_dataframe=False)
-
-        # load locations dataframe from cache
         self.locations = dict()
         for activity_name in self.activity_names:
-            cache_filename = "activity_locations_" + activity_name + "_cache.pkl"
-            if activity_locations is None:
-                self.locations[activity_name] = self.load_from_cache(cache_filename, is_dataframe=True)
-            else:
-                self.locations[activity_name] = activity_locations[activity_name]._locations
-                if cache_inputs:
-                    self.write_to_cache(cache_filename, self.locations[activity_name], is_dataframe=True)
+            self.locations[activity_name] = activity_locations[activity_name]._locations
 
         # TODO: extract lockdown multipliers correctly
         # def load_lockdown_data():
@@ -237,22 +215,3 @@ class SnapshotConvertor:
             lons[i] = building[1]
 
         return lats, lons
-
-    def load_from_cache(self, cache_filename, is_dataframe=False):
-        cache_filepath = os.path.join(self.snapshot_dir, cache_filename)
-        if os.path.isfile(cache_filepath):
-            print(f"Reading cached data from {cache_filepath}")
-            if is_dataframe:
-                return pd.read_pickle(cache_filepath)
-            else:
-                return pickle.load(open(cache_filepath, "rb"))
-        else:
-            print(f"WARNING: Could not load {cache_filepath} from cache, file does not exist")
-
-    def write_to_cache(self, cache_filename, data, is_dataframe=False):
-        cache_filepath = os.path.join(self.snapshot_dir, cache_filename)
-        print(f"Writing cache data to {cache_filepath}")
-        if is_dataframe:
-            data.to_pickle(cache_filepath)
-        else:
-            pickle.dump(data, open(cache_filepath, "wb"))
