@@ -3,11 +3,11 @@ import pickle
 from tqdm import tqdm
 import pandas as pd
 
-from ramp.params import Params
-from ramp.simulator import Simulator
-from ramp.snapshot import Snapshot
-from ramp.summary import Summary
-from ramp.disease_statuses import DiseaseStatus
+from microsim.opencl.ramp.params import Params
+from microsim.opencl.ramp.simulator import Simulator
+from microsim.opencl.ramp.snapshot import Snapshot
+from microsim.opencl.ramp.summary import Summary
+from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 
 
 def main():

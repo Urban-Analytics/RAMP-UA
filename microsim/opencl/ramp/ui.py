@@ -1,8 +1,8 @@
 import argparse
 
-from ramp.inspector import Inspector
-from ramp.simulator import Simulator
-from ramp.snapshot import Snapshot
+from microsim.opencl.ramp.inspector import Inspector
+from microsim.opencl.ramp.simulator import Simulator
+from microsim.opencl.ramp.snapshot import Snapshot
 
 
 def main():

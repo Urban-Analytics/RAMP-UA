@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 
-from ramp.buffers import Buffers
-from ramp.params import Params
-from ramp.disease_statuses import DiseaseStatus
+from microsim.opencl.ramp.buffers import Buffers
+from microsim.opencl.ramp.params import Params
+from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 
 
 class Snapshot:

@@ -1,10 +1,10 @@
 import numpy as np
 import pyopencl as cl
 
-from ramp.buffers import Buffers
-from ramp.kernels import Kernels
-from ramp.params import Params
-from ramp.snapshot import Snapshot
+from microsim.opencl.ramp.buffers import Buffers
+from microsim.opencl.ramp.kernels import Kernels
+from microsim.opencl.ramp.params import Params
+from microsim.opencl.ramp.snapshot import Snapshot
 
 
 class Simulator:

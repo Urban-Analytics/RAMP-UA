@@ -6,13 +6,13 @@ import os
 from imgui.integrations.glfw import GlfwRenderer
 from OpenGL.GL import *
 
-from ramp.activity import Activity
-from ramp.params import Params
-from ramp.projections import latlon_to_km
-from ramp.shader import load_shader
-from ramp.snapshot import Snapshot
-from ramp.style import set_styles
-from ramp.summary import Summary
+from microsim.opencl.ramp.activity import Activity
+from microsim.opencl.ramp.params import Params
+from microsim.opencl.ramp.projections import latlon_to_km
+from microsim.opencl.ramp.shader import load_shader
+from microsim.opencl.ramp.snapshot import Snapshot
+from microsim.opencl.ramp.style import set_styles
+from microsim.opencl.ramp.summary import Summary
 
 default_flags = imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_COLLAPSE
 
