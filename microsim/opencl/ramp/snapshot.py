@@ -15,14 +15,14 @@ class Snapshot:
     which is not used in the runtime simulation but may be used for seeding infections at the snapshot stage.
     """
 
-    def __init__(self, nplaces, npeople, nslots, time, area_codes, not_home_probs, buffers):
+    def __init__(self, nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers):
         self.nplaces = nplaces
         self.npeople = npeople
         self.nslots = nslots
         self.time = time
         self.area_codes = area_codes
         self.not_home_probs = not_home_probs
-        self.lockdown_multipliers = load_lockdown_data()
+        self.lockdown_multipliers = lockdown_multipliers
         self.buffers = buffers
 
     @classmethod
@@ -34,6 +34,8 @@ class Snapshot:
         time = np.uint32(0)
         area_codes = np.full("", npeople)
         not_home_probs = np.zeros(npeople).astype(np.float32)
+
+        lockdown_multipliers = np.ones(100)
 
         buffers = Buffers(
             place_activities=np.zeros(nplaces, dtype=np.uint32),
@@ -53,7 +55,7 @@ class Snapshot:
             params=Params().asarray(),
         )
 
-        return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, buffers)
+        return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers)
 
     @classmethod
     def random(cls, nplaces, npeople, nslots, lat=50.7, lon=-3.5):
@@ -64,6 +66,8 @@ class Snapshot:
         time = np.uint32(0)
         area_codes = np.full("", npeople)
         not_home_probs = np.random.rand(npeople).astype(np.float32)
+
+        lockdown_multipliers = np.ones(100)
 
         buffers = Buffers(
             place_activities=np.random.randint(5, size=nplaces, dtype=np.uint32),
@@ -93,30 +97,11 @@ class Snapshot:
         buffers.place_coords[1::2] += lon - 0.5
         buffers.place_coords[:] += np.random.randn(2 * nplaces) / 100.0
 
-        return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, buffers)
-        
-    @classmethod
-    def load_initial_snapshot(cls, people_filepath, places_filepath):
-        """Fills static arrays from "partial snapshots" generated from RAMP-UA data preprocessing,
-        and fills dynamic arrays with zeros. This is used to join partial snapshots"""
-
-        with np.load(people_filepath, allow_pickle=True) as people_data:
-            people_place_ids = people_data["people_place_ids"]
-            people_baseline_flows = people_data["people_baseline_flows"]
-            people_ages = people_data["ages"]
-            area_codes = people_data["area_codes"]
-            not_home_probs = people_data["not_home_probs"]
-
-        with np.load(places_filepath, allow_pickle=True) as places_data:
-            place_activities = places_data["place_activities"]
-            place_coords = places_data["place_coordinates"]
-        
-        return Snapshot.from_arrays(people_ages, people_place_ids, people_baseline_flows, area_codes, not_home_probs,
-                                    place_activities, place_coords)
+        return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers)
     
     @classmethod
     def from_arrays(cls, people_ages, people_place_ids, people_baseline_flows, area_codes, not_home_probs,
-                    place_activities, place_coords):
+                    place_activities, place_coords, lockdown_multipliers):
 
         nplaces = place_activities.shape[0]
         npeople = people_place_ids.shape[0]
@@ -150,7 +135,7 @@ class Snapshot:
             params=Params().asarray(),
         )
 
-        return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, buffers)
+        return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers)
 
     def seed_initial_infections(self, num_seed_days=5):
         """
@@ -203,15 +188,16 @@ class Snapshot:
             time = file_data["time"]
             area_codes = file_data["area_codes"]
             not_home_probs = file_data["not_home_probs"]
+            lockdown_multipliers = file_data["lockdown_multipliers"]
 
             buffers = Buffers(**{name: file_data[name] for name in Buffers._fields})
-            return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, buffers)
+            return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers)
 
     def save(self, path):
         """Saves this snapshot to the provided path as a .npz file."""
         np.savez(path, nplaces=self.nplaces, npeople=self.npeople, nslots=self.nslots,
                  time=self.time, area_codes=self.area_codes, not_home_probs=self.not_home_probs,
-                 **self.buffers._asdict())
+                 lockdown_multipliers=self.lockdown_multipliers, **self.buffers._asdict())
 
     def num_bytes(self):
         """Returns size in bytes of this snapshot."""
@@ -224,13 +210,3 @@ class Snapshot:
         """Sets all zero coordinate to nan so they can be discarded by the renderer."""
         self.buffers.place_coords[:] = np.where(self.buffers.place_coords == 0.0, np.nan, self.buffers.place_coords)
 
-
-def load_lockdown_data():
-    """Load lockdown multipliers for each day from csv file of google mobility data."""
-    lockdown_mobility_df = pd.read_csv("data/devon_google_mobility_lockdown_daily.csv")
-    lockdown_multipliers = lockdown_mobility_df.loc[:, "timeout_multiplier"].to_numpy().astype(np.float32)
-
-    # cap multipliers to maximum of 1.0
-    lockdown_multipliers[lockdown_multipliers > 1] = 1.0
-
-    return lockdown_multipliers

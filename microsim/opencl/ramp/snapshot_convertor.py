@@ -17,7 +17,7 @@ class SnapshotConvertor:
     Convert dataframe of individuals and activity locations into a Snapshot object that can be used by the OpenCL model
     """
 
-    def __init__(self, individuals, activity_locations, data_dir, cache_inputs=True):
+    def __init__(self, individuals, activity_locations, time_activity_multiplier, data_dir, cache_inputs=True):
         self.data_dir = data_dir
 
         # load individuals dataframe from cache
@@ -47,6 +47,18 @@ class SnapshotConvertor:
                 if cache_inputs:
                     self.write_to_cache(cache_filename, self.locations[activity_name], is_dataframe=True)
 
+        # TODO: extract lockdown multipliers correctly
+        # def load_lockdown_data():
+        #     """Load lockdown multipliers for each day from csv file of google mobility data."""
+        #     lockdown_mobility_df = pd.read_csv("data/devon_google_mobility_lockdown_daily.csv")
+        #     lockdown_multipliers = lockdown_mobility_df.loc[:, "timeout_multiplier"].to_numpy().astype(np.float32)
+        #
+        #     # cap multipliers to maximum of 1.0
+        #     lockdown_multipliers[lockdown_multipliers > 1] = 1.0
+        #
+        #     return lockdown_multipliers
+        self.lockdown_multipliers = time_activity_multiplier
+
         self.num_people = self.individuals['ID'].count()
         self.global_place_id_lookup, self.num_places = self.create_global_place_ids()
 
@@ -59,7 +71,7 @@ class SnapshotConvertor:
         place_activities = self.get_place_data()
         place_coordinates = self.get_place_coordinates()
         return Snapshot.from_arrays(people_ages, people_place_ids, people_flows, area_codes, not_home_probs,
-                                    place_activities, place_coordinates)
+                                    place_activities, place_coordinates, self.lockdown_multipliers)
 
     def create_global_place_ids(self):
         max_id = 0

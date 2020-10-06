@@ -168,8 +168,11 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
 def run_opencl_model(individuals_df, activity_locations_df, time_activity_multiplier, iterations, data_dir, use_gui,
                      use_gpu):
     print("\nRunning OpenCL model")
-    snapshot_converter = SnapshotConvertor(individuals_df, activity_locations_df, data_dir)
+    snapshot_converter = SnapshotConvertor(individuals_df, activity_locations_df, time_activity_multiplier, data_dir)
     snapshot = snapshot_converter.generate_snapshot()
+
+    # set the random seed of the model
+    snapshot.seed_prngs(42)
 
     run_opencl(snapshot, iterations, data_dir, use_gui, use_gpu, quiet=False)
 
