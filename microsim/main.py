@@ -26,6 +26,7 @@ from microsim.population_initialisation import PopulationInitialisation
 from microsim.microsim_model import Microsim
 from microsim.opencl.ramp.run import run_opencl
 from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
+from microsim.initialisation_cache import InitialisationCache
 
 
 # ********
@@ -153,8 +154,17 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
     # data_dir = os.path.join(base_dir, "dummy_data")
     # m = Microsim(data_dir=data_dir, testing=True, output=output)
 
-    population = PopulationInitialisation(**population_args)
-    individuals_df, activity_locations_df, time_activity_multiplier = population.generate()
+    cache = InitialisationCache()
+
+    # generate new population dataframes if we aren't using the cache
+    if not cache_initialisation:
+        population = PopulationInitialisation(**population_args)
+        individuals_df, activity_locations_df, time_activity_multiplier = population.generate()
+
+        # store in cache so we can load later
+        cache.store_in_cache(individuals_df, activity_locations_df, time_activity_multiplier)
+    else:
+        individuals_df, activity_locations_df, time_activity_multiplier = cache.read_from_cache()
 
     # Select which model implementation to run
     if opencl:
