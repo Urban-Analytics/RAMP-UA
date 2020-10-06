@@ -34,3 +34,4 @@ dependencies:
   - r-rvcheck
   - r-stringdist
   - git-lfs
+  - convertbng=0.6.25
