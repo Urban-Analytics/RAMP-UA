@@ -127,7 +127,8 @@ def run_script(parameters_file, no_parameters_file, iterations, scenario, data_d
         quant_object = QuantRampAPI(os.path.join(data_dir, quant_dir))
 
     # args for population initialisation
-    population_args = {"debug": debug, "lockdown_file": lockdown_file, "use_cache": True, "quant_object": quant_object}
+    population_args = {"data_dir": data_dir, "debug": debug, "lockdown_file": lockdown_file, "use_cache": True,
+                       "quant_object": quant_object}
 
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir, "output": output,
