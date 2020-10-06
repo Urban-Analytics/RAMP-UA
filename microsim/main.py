@@ -182,11 +182,11 @@ def run_opencl_model(individuals_df, activity_locations_df, time_activity_multip
 
     snapshot_cache_filepath = base_dir + "/microsim/opencl/snapshots/cache.npz"
 
-    if use_cache:
+    if not use_cache:
         snapshot_converter = SnapshotConvertor(individuals_df, activity_locations_df, time_activity_multiplier, data_dir)
         snapshot = snapshot_converter.generate_snapshot()
-        snapshot.save(snapshot_cache_filepath)
-    else:
+        snapshot.save(snapshot_cache_filepath) # store snapshot in cache so we can load later
+    else:  # load cached snapshot
         snapshot = Snapshot.load_full_snapshot(path=snapshot_cache_filepath)
 
     # set the random seed of the model
