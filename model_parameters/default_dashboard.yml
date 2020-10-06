@@ -5,7 +5,7 @@ dashboard: # Parameters for the dashboard (visualisation), all are optional
   start_day: 0    # Start day
   end_day: 99      # End day (inclusive)
   start_run: 0   # Iteration/run to start
-  end_run: 0     # Last iteration/run to include
+  end_run: 10     # Last iteration/run to include
   # define scenarios (first will be used as control), any number
   scenario_name: # names for scenario
   - Control

@@ -23,6 +23,7 @@ __pycache__
 
 # scrapbook 
 **/scrapbook/*
+.Rproj.user
 
 # RStudio
 .Rproj.user/
@@ -34,6 +35,8 @@ __pycache__
 
 # setuptools items
 **/*.egg-info/*
+**/build/*
+**/dist/*
 
 # vscode items
 **/.vscode/*

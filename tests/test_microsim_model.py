@@ -18,7 +18,8 @@ test_dir = os.path.dirname(os.path.abspath(__file__))
 microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
                  "r_script_dir": os.path.normpath(os.path.join(test_dir, "..", "R/py_int")),
                  "testing": True, "debug": True,
-                 "disable_disease_status": True, 'lockdown_file': ""}
+                 "disable_disease_status": True, 'lockdown_file': "",
+                 "use_cache": False}
 
 
 # This 'fixture' means that other functions (e.g. step) can use the object created here.
@@ -60,20 +61,44 @@ def test_microsim():
     assert list(m.individuals.loc[13:15, :][f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_VENUES}"].values) == [[6], [6], [6]]
 
     # Workplaces
-    # All flows should be to one location (single element [1.0])
-    for flow in m.individuals[f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_FLOWS}"]:
-        assert flow == [1.0]
-    # First person is the only one who does that job
-    assert len(list(m.individuals.loc[0:0, ][f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"]))
-    job_index = list(m.individuals.loc[0:0, ][f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"])[0][0]
-    for work_id in m.individuals.loc[1:len(m.individuals), f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"]:
-        assert work_id[0] != job_index
-    # Three people do the same job as second person
-    job_index = list(m.individuals.loc[1:1, ][f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"])[0]
-    assert list(m.individuals.loc[4:4, f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"])[0] == job_index
-    assert list(m.individuals.loc[13:13, f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"])[0] == job_index
-    # Not this person:
-    assert list(m.individuals.loc[15:15, f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"])[0] != job_index
+    # For convenience:
+    work_venues = f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"
+    work_flows = f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_FLOWS}"
+    workplaces = m.activity_locations[ColumnNames.Activities.WORK]._locations
+    # Check no non-unique workplace names
+    assert len(workplaces) == len(workplaces.loc[:, ColumnNames.LOCATION_NAME].unique())
+    # Check the total number of workplaces created is correct (one per soc per area)
+    assert len(workplaces) == len(m.individuals.loc[:, 'soc2010'].unique()) * len(m.all_msoas)
+    # These people should all have single flows to a workplace in their home area
+    for p in range(5, len(m.individuals)):
+        assert len(m.individuals.at[p, work_venues]) == 1
+        assert len(m.individuals.at[p, work_flows]) == 1
+        venue_number = m.individuals.at[p, work_venues][0]
+        venue = workplaces.iloc[venue_number]
+        # check the area and soc of the venue (these are unique fields for workplaces and not used in the model)
+        assert venue['MSOA'] == m.individuals.at[p, "area"]  # This workplace is in the person's home msoa
+        assert venue['SOC'] == m.individuals.at[p, "soc2010"]
+        # check the name is correct (this is a unique identifier of the workplace)
+        assert venue[ColumnNames.LOCATION_NAME]==f"{m.individuals.at[p, 'area']}-{m.individuals.at[p,'soc2010']}"
+    # These should have four workpaces with flows 0.5, 0.15, 0.1, 0.25
+    for p in range(0, 2):
+        assert m.individuals.at[p, work_flows] == [0.5, 0.15, 0.1, 0.25]  # CHeck flows
+        # Check the SOC of the workplace is the same as the individual
+        for venue_number in m.individuals.at[p, work_venues]:
+            venue = workplaces.iloc[venue_number]
+            assert venue['SOC'] == m.individuals.at[p, "soc2010"]
+        # The destination areas of the workplace should be as follows:
+        assert set(workplaces.loc[m.individuals.at[p, "Work_Venues"], "MSOA"]) ==\
+            set(['E00101308', 'E02004132', 'E02004147', 'E02004151'])
+    # These should have 5 workplaces (assuming the total number of workplaces threshold is 5)
+    for p in range(2, 5):
+        assert len(m.individuals.at[p, work_venues]) == 5
+        assert len(m.individuals.at[p, work_flows]) == 5
+        for venue_number in m.individuals.at[p, work_venues]:
+            venue = workplaces.iloc[venue_number]
+            assert venue['SOC'] == m.individuals.at[p, "soc2010"]
+        assert set(workplaces.loc[m.individuals.at[p, "Work_Venues"], "MSOA"]) == \
+            set(['E02004158', 'E02004147', 'E02004132', 'E02004138', 'E02004159'])
 
     # Test Shops
     shop_locs = m.activity_locations[ColumnNames.Activities.RETAIL]._locations

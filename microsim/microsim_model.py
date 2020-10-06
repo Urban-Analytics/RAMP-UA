@@ -8,10 +8,10 @@ Created on Wed Apr 29 19:59:25 2020
 @author: nick
 """
 import os
-# directory to read data from
-tmp_base_dir = os.getcwd()  # get current directory (usually RAMP-UA)
-tmp_microsim_dir = os.path.join(tmp_base_dir, "microsim") # go to data dir
-os.chdir(tmp_microsim_dir)
+## directory to read data from
+#tmp_base_dir = os.getcwd()  # get current directory (usually RAMP-UA)
+#tmp_microsim_dir = os.path.join(tmp_base_dir, "microsim") # go to data dir
+#os.chdir(tmp_microsim_dir)
 
 import sys
 #import os
@@ -24,6 +24,7 @@ from microsim.r_interface import RInterface
 from microsim.column_names import ColumnNames
 from microsim.utilities import Optimise
 from microsim.snapshotter import Snapshotter
+from microsim.quant_api import QuantRampAPI
 import multiprocessing
 import copy
 
@@ -48,12 +49,9 @@ import rpy2.robjects as ro  # For calling R scripts
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
 from shutil import copyfile
 
-USE_QUANT_DATA = False  # Temorary flag to use UCL SIMs or Devon ones. Needs to become a command-line parameter
-#import QUANTRampAPI2 as qa
-
 #import pandas.rpy.common as com # throws error and doesn't seem to be used?
 
-os.chdir(tmp_base_dir)
+#os.chdir(tmp_base_dir)
 
 #os.chdir(owd)
 
@@ -88,7 +86,9 @@ class Microsim:
                  output_every_iteration = False,
                  debug=False,
                  disable_disease_status=False,
-                 disease_params: Dict = {}
+                 disease_params: Dict = {},
+                 use_cache = True,
+                 quant_object = None
                  ):
         """
         Microsim constructor. This reads all of the necessary data to run the microsimulation.
@@ -119,6 +119,8 @@ class Microsim:
             disease status. Only good for testing.
         :param disease_params: Optional parameters that are passed to the R code that estimates disease status
             (a dictionary, assumed to be empty)
+        :param use_cache: Optionlly turn off any caching (caching saves time during initialisation)
+        :param quant_object: optional parameter to use QUANT data, don't specify if you want to use Devon data
         """
 
         # Administrative variables that need to be defined
@@ -126,6 +128,11 @@ class Microsim:
         self.DATA_DIR = data_dir
         self.SCEN_DIR = scen_dir
         self.iteration = 0
+        if quant_object is None:
+            Microsim.quant_object = False
+        else:
+            Microsim.quant_object = quant_object
+        
         self.hazard_individual_multipliers = hazard_individual_multipliers
         Microsim.__check_hazard_location_multipliers(hazard_location_multipliers)
         self.hazard_location_multipliers = hazard_location_multipliers
@@ -139,6 +146,7 @@ class Microsim:
         Microsim.debug = debug
         self.disable_disease_status = disable_disease_status
         self.disease_params = disease_params
+        self.use_cache = use_cache
         Microsim.testing = testing
         if self.testing:
             warnings.warn("Running in testing mode. Some exceptions will be disabled.")
@@ -156,6 +164,8 @@ class Microsim:
         # If we do output information, then it will go to this directory. This is determined in run(), rather than
         # here, because otherwise all copies of this object will have the same output directory.
         self.output_dir = None
+        
+        
 
         # Now the main chunk of initialisation is to read the input data.
 
@@ -257,15 +267,43 @@ class Microsim:
             ActivityLocation(secondary_name, secondary_schools.copy(), secondary_flows, self.individuals, "pschool-secondary")
         del primary_schools,secondary_schools  # No longer needed as we gave copies to the ActivityLocation
 
-        # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go
-        # to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
+        # Assign work. Use a flow matrix of general commuting flows. Assume one office for each different employment
+        # type exists in each MSOA. An individual is assigned flows and office locations according to the general
+        # flows from their home MSOA.
         # Occupation is taken from column soc2010 in individuals df
         self.individuals['soc2010'] = self.individuals['soc2010'].astype(str)  # These are integers but we need string
         possible_jobs = sorted(self.individuals.soc2010.unique())  # list of possible jobs in alphabetical order
-        workplaces = pd.DataFrame({'ID': range(0, 0 + len(possible_jobs))})  # df with all possible 'virtual offices'
-        Microsim._add_location_columns(workplaces, location_names=possible_jobs)
+        workplace_names = []  # Creat a list of workplace names, built from the MSOA code and the SOC
+        workplace_msoas = []
+        workplace_socs = []
+        for msoa in self.all_msoas:
+            for soc in possible_jobs:
+                workplace_msoas.append(msoa)
+                workplace_socs.append(soc)
+                workplace_names.append(msoa+"-"+soc)
+        assert len(workplace_names) == len(self.all_msoas) * len(possible_jobs)
+        assert len(pd.unique(workplace_names)) == len(workplace_names)  # Each name should be unique
+
+        workplaces = pd.DataFrame({
+            'ID': range(0, len(workplace_names)),
+            'MSOA': workplace_msoas,
+            'SOC': workplace_socs
+        })
+        assert len(workplaces) == len(self.all_msoas) * len(possible_jobs)  # One location per job per msoa
+        Microsim._add_location_columns(workplaces, location_names=workplace_names)
         work_name = ColumnNames.Activities.WORK
-        self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces)
+        # Workplaces dataframe is ready. Now read commuting flows
+        commuting_flows = Microsim.read_commuting_flows_data(self.all_msoas)
+        num_individuals = len(self.individuals)  # (sanity check)
+        cols = self.individuals.columns
+        self.individuals = Microsim.add_work_flows(flow_type=work_name, individuals=self.individuals,
+                                                   workplaces=workplaces, commuting_flows=commuting_flows,
+                                                   flow_threshold=5, use_cache=self.use_cache)
+        assert num_individuals == len(self.individuals), \
+            "There was an error reading workplaces (caching?) and the number of individuals has changed!"
+        assert (self.individuals.columns[0:-3] == cols).all(), \
+            "There was an error reading workplaces (caching?) the column names don't match!"
+        del num_individuals, cols
         self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
                                                               individuals=self.individuals, duration_col="pwork")
 
@@ -423,7 +461,7 @@ class Microsim:
         # filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_Complete.txt")
         filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_keyworker_health.csv")
 
-        tuh = pd.read_csv(filename)
+        tuh = pd.read_csv(filename)#, encoding = "ISO-8859-1")
         tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.
 
         # Drop people that weren't matched to a household originally
@@ -678,7 +716,7 @@ class Microsim:
         
         
         # devon data
-        if not USE_QUANT_DATA:
+        if cls.quant_object is False:
             # TODO Need to read full school flows, not just those of Devon
             print("Reading school flow data for Devon...", )
             dir = os.path.join(cls.DATA_DIR, "devon-schools")
@@ -784,7 +822,7 @@ class Microsim:
         # QUANT data
         else:
             print("Reading school flow data...", )
-            dir = os.path.join(cls.DATA_DIR, "QUANT_RAMP","model-runs")
+            dir = cls.quant_object.QUANT_DIR
             
             # Read the primary schools
             primary_schools = pd.read_csv(os.path.join(dir, "primaryZones.csv"))
@@ -803,49 +841,159 @@ class Microsim:
             # Read the primary school flows
             threshold = 5 # top 5
             thresholdtype = "nr" # threshold based on nr venues
-            primary_flow_matrix = qa.get_flows(ColumnNames.Activities.PRIMARY, study_msoas,threshold,thresholdtype)
+            primary_flow_matrix = cls.quant_object.get_flows(ColumnNames.Activities.PRIMARY, study_msoas,threshold,thresholdtype)
             
             # Read the secondary school flows
             # same thresholds as before
-            secondary_flow_matrix = qa.get_flows(ColumnNames.Activities.SECONDARY, study_msoas,threshold,thresholdtype)
+            secondary_flow_matrix = cls.quant_object.get_flows(ColumnNames.Activities.SECONDARY, study_msoas,threshold,thresholdtype)
             
-            
-
         return primary_schools, secondary_schools, primary_flow_matrix, secondary_flow_matrix
 
     @classmethod
-    def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame) \
-            -> (pd.DataFrame):
+    def read_commuting_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
         """
-        Create a dataframe of (virtual) work locations that individuals
-        travel to. Unlike retail etc, each individual will have only one work location with 100% of flows there.
+        Read the commuting flows between each MSOA
+
+        :param study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
+        :return: A dataframe with origin and destination flows in all MSOAs in the study area
+        """
+        print("Reading commuting flow data for Devon...", )
+        commuting_flows = pd.read_csv(os.path.join(cls.DATA_DIR, "devon-commuting", "commuting_od.csv"),
+                                      dtype={'HomeMSOA':str, 'DestinationMSOA':str, 'Total_Flow':int})
+        # Need to append the devon code to the areas (they're integers in the csv file)
+        commuting_flows["Orig"] = commuting_flows["HomeMSOA"].apply(lambda x: "E0"+x)
+        commuting_flows["Dest"] = commuting_flows["DestinationMSOA"].apply(lambda x: "E0"+x)
+        print(f"\tRead {len(pd.unique(commuting_flows['Orig']))} orgins and {len(pd.unique(commuting_flows['Dest']))} "
+              f"destinations (MSOAs in the study area: {len(study_msoas)})")
+
+        # TEMP: remove areas outside the study area (just while the correct files are being prepared)
+        if len(commuting_flows.loc[~commuting_flows.Orig.isin(study_msoas)]) > 0 or \
+                len(commuting_flows.loc[~commuting_flows.Dest.isin(study_msoas)]) > 0:
+            warnings.warn(f"Some origins ({len(pd.unique(commuting_flows.loc[~commuting_flows.Orig.isin(study_msoas),'Orig']))}) "
+                          f"and destinations ({len(pd.unique(commuting_flows.loc[~commuting_flows.Dest.isin(study_msoas),'Dest']))}) "
+                          f"are outside the study area. Removing them.")
+            commuting_flows = commuting_flows.loc[commuting_flows.Orig.isin(study_msoas)]
+            commuting_flows = commuting_flows.loc[commuting_flows.Dest.isin(study_msoas)]
+        assert len(commuting_flows.loc[~commuting_flows.Orig.isin(study_msoas)]) == 0
+        assert len(commuting_flows.loc[~commuting_flows.Dest.isin(study_msoas)]) == 0
+        assert len(pd.unique(commuting_flows["Orig"])) == len(study_msoas)
+        assert len(pd.unique(commuting_flows["Dest"])) == len(study_msoas)
+
+        # There should be a flow between every possible combionation of areas:
+        assert len(study_msoas)**2 == len(commuting_flows)
+
+        return commuting_flows
+
+    @classmethod
+    def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame,
+                       commuting_flows: pd.DataFrame, flow_threshold, use_cache) -> (pd.DataFrame):
+        """
+        Create a dataframe of work locations that individuals travel to. The flows are based on general commuting
+        patterns and assume one work location per industry type MSOA.
         :param flow_type: The name for these flows (probably something like 'Work')
         :param individuals: The dataframe of synthetic individuals
         :param workplaces:  The dataframe of workplaces (i.e. occupations)
+        :param commuting_flows: The general commuting flows between MSOAs (an O-D matrix)
+        :param flow_threshold: Only include the top x destinations as possible flows. 'None' means no limit.
+        :param use_cache: Whether to use a cache of pre-calculated work flows (quick)
         :return: The new 'individuals' dataframe (with new columns)
         """
-        # Later on, add a check to see if occupations in individuals df are same as those in workplaces df??
-        # Tell the individuals about which virtual workplace they go to
+        # The logic of this function is basically copied from add_individual_flows()
+
+        # Read from cache or re-calculate workplace location (takes ages)
+        cache_file = None
+        if use_cache:
+            cache_file = os.path.join(cls.DATA_DIR, "caches", "work_flows_cache.pickle")
+            print(f"\tAttemting to use cache file for worklplaces: {cache_file}.")
+            if os.path.isfile(cache_file):
+                print(f"\t\tCache file exists. Loading from file.")
+                cached_individuals = pd.read_pickle(cache_file)
+                if len(individuals) != len(cached_individuals):
+                    raise Exception(f"The cache file ({cache_file}) for workplaces has a different number of individuals "
+                                    f"in ({len(cached_individuals)} than the number of individuals currently in "
+                                    f"the model ({len(individuals)}. It's probably an old file, if you delete it"
+                                    f"the workplaces will be recalutaced.")
+                return cached_individuals
+            else:
+                print("\t\tNo cache file exists. Will cache after calculating workplcaes.")
+        else:
+            print("\tCaching disabled. Calculating workplaces:")
+
+        # Names for the columns and empty lists to store the venues and flows
         venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
         flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
+        individuals[venues_col] = [[] for _ in range(len(individuals))]
+        individuals[flows_col] = [[] for _ in range(len(individuals))]
 
-        # Lists showing where individuals go, and what proption (here only 1 flow as only 1 workplace)
-        # Need to do the flows in venues in 2 stages: first just add the venue, then turn that venu into a single-element
-        # list (pandas complains about 'TypeError: unhashable type: 'list'' if you try to make the single-item lists
-        # directly in the apply
-        with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
-            print("Assigning work venues ... ",)
-            venues = pool.starmap(Microsim._assign_work_flow,
-                                  zip(list(individuals["soc2010"]), (workplaces for _ in range(len(individuals))) ) )
-        #venues = list(individuals["soc2010"].swifter.progress_bar(True, desc="Assigning work venues").apply(
-        #    lambda job: workplaces.index[workplaces[ColumnNames.LOCATION_NAME] == job].values[0]))
-        venues = [[x] for x in venues]
-        individuals[venues_col] = venues
-        individuals[flows_col] = [[1.0] for _ in range(len(individuals))]  # Flows are easy, [1.0] to the single venue
         # Later we also record the individual risks for each activity per individual. It's nice if the columns for
         # each activity are grouped together, so create that column now.
         individuals[f"{flow_type}{ColumnNames.ACTIVITY_RISK}"] = [-1] * len(individuals)
+
+        with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
+
+            # Do all individuals in an MSOA at once
+            for msoa in tqdm(pd.unique(individuals.area), desc="Assigning work flows"):
+                # Get the indices of the individuals in this msoa
+                individuals_idx = individuals.index[individuals.area == msoa]
+
+                # Destinations with positive flows and the flows themselves.
+                dests_and_flows = commuting_flows.loc[
+                    (commuting_flows.Orig == msoa) & (commuting_flows.Total_Flow > 0), ]
+                if flow_threshold is not None and len(dests_and_flows) > flow_threshold:
+                    # Keep only the x destinations with largest flows
+                    dests_and_flows = \
+                        dests_and_flows.sort_values(by="Total_Flow", ascending=False).iloc[0:flow_threshold].copy()
+                dests_msoas = dests_and_flows["Dest"].values  # The MSOA destinations
+                flows = Microsim._normalise(dests_and_flows["Total_Flow"].values)
+                assert len(dests_msoas) == len(flows)
+                assert True in [x > 0.0 for x in flows]  # Check that there is a non-zero flow
+
+                # Now have destination MSOAs (list), flows (list), need to work out, for each individual
+                # what the destination activity place is called (MSOA+SOC), get that place's ID and assign
+                # those IDs as the destinations.
+                socs = list(individuals.loc[individuals_idx, "soc2010"].values)  # SOC for each individual
+                individuals_venues = np.array(pool.starmap(Microsim._calc_workplace_indices, zip(
+                    socs,  # A 1D list; one soc for each individual in this msoa
+                    (dests_msoas for _ in range(len(socs))),  # list of dests, 2D, one list for each individual
+                    (workplaces for _ in range(len(socs)))  # list of pointers to the workplaces df,
+                )))
+                # Only way I can get pandas to correctly assign the list to each cell is with a for loop
+                #individuals.loc[individuals_idx, venues_col]  = individuals_venues  # Doesn't work
+                for i, idx in enumerate(individuals_idx):
+                    individuals.at[idx, venues_col] = individuals_venues[i]
+
+                # Flows are easier as every individual in this msoa has the same flows
+                individuals.loc[individuals_idx, flows_col] = \
+                    individuals.loc[individuals_idx, flows_col].apply(lambda _: flows).values
+
+        # Check everyone has some flows (all list lengths are >0)
+        assert False not in (individuals.loc[:, venues_col].apply(lambda cell: len(cell)) > 0).values
+        assert False not in (individuals.loc[:, flows_col].apply(lambda cell: len(cell)) > 0).values
+
+        if use_cache:
+            print(f"\t\tFinished calculating workplaces. Caching to: {cache_file}")
+            individuals.to_pickle(cache_file)  # where to save it, usually as a .pkl
+
         return individuals
+
+    @staticmethod
+    def _calc_workplace_indices(soc: str, dest_msoas: List, workplace_df: pd.DataFrame):
+        """
+        Work out the workplaces where an individual might work, given their soc,
+        the names of the destination MSOAs where they might work, and the workplaces dataframe so that
+        they can work out what the index of the workplace is. This works because each virtual workplace is uniquely
+        named by it's msoa and industry type (i.e. f"{msoa}-{row['soc2010']}")
+
+        :param soc: A individuals's soc (industry where they work)
+        :param dest_msoas: A list of the destination MSOA names for the individual
+        :param workplace_df: The dataframe containing all workplaces
+        :return:
+        """
+        workplace_ids = [
+            int(workplace_df.loc[workplace_df[ColumnNames.LOCATION_NAME] == f"{msoa}-{soc}"].index[0])
+            for msoa in dest_msoas ]
+        assert False not in (isinstance(id, int) for id in workplace_ids)  # Check all are ints (not lists etc)
+        return workplace_ids
 
     @staticmethod
     def _assign_work_flow(job, workplaces):
@@ -860,9 +1008,9 @@ class Microsim:
         :return: A tuple of two dataframes. One containing all of the flows and another
         containing information about the stores themselves.
         """
-        
+
         # Devon data
-        if not USE_QUANT_DATA:
+        if cls.quant_object is False:
             # TODO Need to read full retail flows, not just those of Devon (temporarily created by Mark).
             # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
             # working with Devon subset of flows
@@ -954,7 +1102,7 @@ class Microsim:
         # QUANT data
         else:
             print("Reading retail flow data...", )
-            dir = os.path.join(cls.DATA_DIR, "QUANT_RAMP","model-runs")
+            dir = cls.quant_object.QUANT_DIR
             # Read the stores
             stores = pd.read_csv(os.path.join(dir, "retailpointsZones.csv"))
             # Add some standard columns that all locations need
@@ -965,7 +1113,7 @@ class Microsim:
             # Read the flows
             threshold = 10 # top 10
             thresholdtype = "nr" # threshold based on nr venues
-            flow_matrix = qa.get_flows("Retail", study_msoas,threshold,thresholdtype)
+            flow_matrix = cls.quant_object.get_flows("Retail", study_msoas,threshold,thresholdtype)
 
         return stores, flow_matrix
 
@@ -1349,12 +1497,12 @@ class Microsim:
                         # print(i, venue_idx, flow, duration)
                         # Increase the danger by the flow multiplied by some disease risk
                         danger_increase = (flow * duration * individual_hazard_multiplier * location_hazard_multiplier)
-                        if activty_name == ColumnNames.Activities.WORK:
-                            warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
-                            work_danger = float(danger_increase / 20)
-                            loc_dangers[venue_idx] += work_danger
-                        else:
-                            loc_dangers[venue_idx] += danger_increase
+                        #if activty_name == ColumnNames.Activities.WORK:
+                        #    warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
+                        #    work_danger = float(danger_increase / 20)
+                        #    loc_dangers[venue_idx] += work_danger
+                        #else:
+                        loc_dangers[venue_idx] += danger_increase
 
             #
             # ***** 2 - risks for individuals who visit dangerous venues
@@ -1523,7 +1671,7 @@ class Microsim:
             total_duration = 0.0  # Need to remember the total duration of time lost for non-home activities
             for activity in non_home_activities:
                 #new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.10
-                new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.50
+                new_duration = row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] * 0.10
                 total_duration += new_duration
                 row[f"{activity}{ColumnNames.ACTIVITY_DURATION}"] = new_duration
             # Now set home duration to fill in the time lost from doing other activities.
@@ -1664,9 +1812,9 @@ class Microsim:
 @click.option('-l', '--lockdown-file', default="google_mobility_lockdown_daily.csv",
               help="Optionally read lockdown mobility data from a file (default use google mobility). To have no "
                    "lockdown pass an empty string, i.e. --lockdown-file='' ")
-def run_script(parameters_file, no_parameters_file, iterations, data_dir, output, output_every_iteration, debug,
-               repetitions, lockdown_file, store_snapshot, scenario):
-
+@click.option('--quant-dir', default=None, help='Directory to QUANT data, set to None to use Devon data')
+def run_script(parameters_file, no_parameters_file, iterations, scenario, data_dir, output, output_every_iteration,
+               debug, repetitions, store_snapshot, lockdown_file, quant_dir):
     # First see if we're reading a parameters file or using command-line arguments.
     if no_parameters_file:
         print("Not reading a parameters file")
@@ -1689,6 +1837,8 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
             debug = sim_params["debug"]
             repetitions = sim_params["repetitions"]
             lockdown_file = sim_params["lockdown-file"]
+            quant_dir = sim_params["quant-dir"]
+
 
     # Check the parameters are sensible
     if iterations < 0:
@@ -1724,13 +1874,26 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
     # Temporarily only want to use Devon MSOAs
     devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None,
                               names=["x", "y", "Num", "Code", "Desc"])
+    
+    # check whether to use QUANT or Devon data
+    if quant_dir is None:
+        quant_object = None
+        print("Using Devon data")
+    else:
+        print("Using QUANT data")
+        # we only need 1 QuantRampAPI object even if we do multiple iterations
+        # the quant_object object will be called by each microsim object
+        if os.path.isdir(os.path.join(data_dir, quant_dir)):
+            print(os.path.join(data_dir, quant_dir))
+        else:
+           raise Exception("QUANT directory does not exist, please check input")
+        quant_object = QuantRampAPI(os.path.join(data_dir, quant_dir))
+
 
     # Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "scen_dir": scenario, "r_script_dir": r_script_dir,
                  "output": output, "output_every_iteration": output_every_iteration, "debug": debug,
-                 "lockdown_file": lockdown_file,
-                 }
-
+                 "lockdown_file": lockdown_file, "use_cache": True, "quant_object": quant_object }
     if not no_parameters_file:  # When using a parameters file, include the calibration parameters
         msim_args.update(**calibration_params)  # python calibration parameters are unpacked now
         # Also read the R calibration parameters (this is a separate section in the .yml file)
@@ -1738,6 +1901,8 @@ def run_script(parameters_file, no_parameters_file, iterations, data_dir, output
             # (If the 'disease_params' section is included but has no calibration variables then we want to ignore it -
             # it will be turned into an empty dictionary by the Microsim constructor)
             msim_args["disease_params"] = disease_params  # R parameters kept as a dictionary and unpacked later
+
+    
 
     # Temporily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")

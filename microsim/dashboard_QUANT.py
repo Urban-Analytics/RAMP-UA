@@ -996,27 +996,27 @@ def create_dashboard(parameters_file):
     
     ##########################################################################
     
-    # OPTION devon data
+    # # OPTION devon data
     
-    # read in details about venues
-    data_file = os.path.join(data_dir, "devon-schools","exeter schools.csv")
-    schools = pd.read_csv(data_file)
-    data_file = os.path.join(data_dir, "devon-retail","devon smkt.csv")
-    retail = pd.read_csv(data_file)
+    # # read in details about venues
+    # data_file = os.path.join(data_dir, "devon-schools","exeter schools.csv")
+    # schools = pd.read_csv(data_file)
+    # data_file = os.path.join(data_dir, "devon-retail","devon smkt.csv")
+    # retail = pd.read_csv(data_file)
     
-    # postcode to MSOA conversion (for retail data)
-    data_file = os.path.join(data_dir, "PCD_OA_LSOA_MSOA_LAD_AUG19_UK_LU.csv")
-    postcode_lu = pd.read_csv(data_file, encoding = "ISO-8859-1", usecols = ["pcds", "msoa11cd"])
+    # # postcode to MSOA conversion (for retail data)
+    # data_file = os.path.join(data_dir, "PCD_OA_LSOA_MSOA_LAD_AUG19_UK_LU.csv")
+    # postcode_lu = pd.read_csv(data_file, encoding = "ISO-8859-1", usecols = ["pcds", "msoa11cd"])
 
         
     ##########################################################################
     
-    # # OPTION QUANT data
+    # OPTION QUANT data
     
-    # # read in details about venues
-    # primary_schools = pd.read_csv(os.path.join(quant_dir, "primaryZones.csv"))
-    # secondary_schools = pd.read_csv(os.path.join(quant_dir, "secondaryZones.csv"))
-    # retail = pd.read_csv(os.path.join(quant_dir, "retailZones.csv"))
+    # read in details about venues
+    primary_schools = pd.read_csv(os.path.join(quant_dir, "primaryZones.csv"))
+    secondary_schools = pd.read_csv(os.path.join(quant_dir, "secondaryZones.csv"))
+    retail = pd.read_csv(os.path.join(quant_dir, "retailZones.csv"))
     
     ##########################################################################
     
@@ -1069,33 +1069,33 @@ def create_dashboard(parameters_file):
         
         #######################################################################
         
-        # for devon_data
+        # # for devon_data
         
-        # merge
-        primaryschools = pd.merge(schools, dangers_dict["PrimarySchool"], left_index=True, right_index=True)
-        secondaryschools = pd.merge(schools, dangers_dict["SecondarySchool"], left_index=True, right_index=True)
-        retail = pd.merge(retail, dangers_dict["Retail"], left_index=True, right_index=True)
+        # # merge
+        # primaryschools = pd.merge(schools, dangers_dict["PrimarySchool"], left_index=True, right_index=True)
+        # secondaryschools = pd.merge(schools, dangers_dict["SecondarySchool"], left_index=True, right_index=True)
+        # retail = pd.merge(retail, dangers_dict["Retail"], left_index=True, right_index=True)
         
-        # creat LUT
-        lookup = dict(zip(postcode_lu.pcds, postcode_lu.msoa11cd)) # zip together the lists and make a dict from it
-        # use LUT and add column to retail variable
-        msoa_code = [lookup.get(retail.postcode[i]) for i in range(0, len(retail.postcode), 1)]
-        retail.insert(2, 'MSOA_code', msoa_code)
+        # # creat LUT
+        # lookup = dict(zip(postcode_lu.pcds, postcode_lu.msoa11cd)) # zip together the lists and make a dict from it
+        # # use LUT and add column to retail variable
+        # msoa_code = [lookup.get(retail.postcode[i]) for i in range(0, len(retail.postcode), 1)]
+        # retail.insert(2, 'MSOA_code', msoa_code)
         
-        # normalised danger scores per msoa for schools and retail (for choropleth)
-        dangers_msoa_dict = create_msoa_dangers_dict(dangers_dict,['Retail','PrimarySchool','SecondarySchool'],[retail.MSOA_code,schools.MSOA_code,schools.MSOA_code])
+        # # normalised danger scores per msoa for schools and retail (for choropleth)
+        # dangers_msoa_dict = create_msoa_dangers_dict(dangers_dict,['Retail','PrimarySchool','SecondarySchool'],[retail.MSOA_code,schools.MSOA_code,schools.MSOA_code])
     
         #######################################################################
         
-        # # for QUANT data
+        # for QUANT data
         
-        # # merge
-        # primaryschools = pd.merge(primary_schools, dangers_dict["PrimarySchool"], left_index=True, right_index=True)
-        # secondaryschools = pd.merge(secondary_schools, dangers_dict["SecondarySchool"], left_index=True, right_index=True)
-        # retail = pd.merge(retail, dangers_dict["Retail"], left_index=True, right_index=True)
+        # merge
+        primaryschools = pd.merge(primary_schools, dangers_dict["PrimarySchool"], left_index=True, right_index=True)
+        secondaryschools = pd.merge(secondary_schools, dangers_dict["SecondarySchool"], left_index=True, right_index=True)
+        retail = pd.merge(retail, dangers_dict["Retail"], left_index=True, right_index=True)
         
-        # # normalised danger scores per msoa for schools and retail (for choropleth)
-        # dangers_msoa_dict = create_msoa_dangers_dict(dangers_dict,['Retail','PrimarySchool','SecondarySchool'],[retail.MSOA,primary_schools.MSOA,secondary_schools.MSOA])
+        # normalised danger scores per msoa for schools and retail (for choropleth)
+        dangers_msoa_dict = create_msoa_dangers_dict(dangers_dict,['Retail','PrimarySchool','SecondarySchool'],[retail.MSOA,primary_schools.MSOA,secondary_schools.MSOA])
     
         
         #######################################################################

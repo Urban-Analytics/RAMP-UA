@@ -1,0 +1,2 @@
+# this is a config file for the issue-branch action
+branchName: '${assignee.login}-issue-${issue.number}-${issue.title}' 
