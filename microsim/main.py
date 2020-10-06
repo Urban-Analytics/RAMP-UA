@@ -177,7 +177,7 @@ def run_opencl_model(individuals_df, activity_locations_df, time_activity_multip
 def run_python_model(individuals_df, activity_locations_df, time_activity_multiplier, msim_args, iterations,
                      repetitions, parameters_file):
     print("\nRunning Python / R model")
-    
+
     # Create a microsim object
     m = Microsim(individuals_df, activity_locations_df, time_activity_multiplier, **msim_args)
     copyfile(parameters_file, os.path.join(m.SCEN_DIR, "parameters.yml"))
@@ -203,8 +203,10 @@ def run_python_model(individuals_df, activity_locations_df, time_activity_multip
         finally:  # Make sure they get closed (shouldn't be necessary)
             pool.close()
 
+
 def _run_multicore(m, iter, rep):
     return m.run(iter, rep)
+
 
 if __name__ == "__main__":
     main()
