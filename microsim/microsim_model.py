@@ -1496,12 +1496,12 @@ class Microsim:
                         # print(i, venue_idx, flow, duration)
                         # Increase the danger by the flow multiplied by some disease risk
                         danger_increase = (flow * duration * individual_hazard_multiplier * location_hazard_multiplier)
-                        if activty_name == ColumnNames.Activities.WORK:
-                            warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
-                            work_danger = float(danger_increase / 20)
-                            loc_dangers[venue_idx] += work_danger
-                        else:
-                            loc_dangers[venue_idx] += danger_increase
+                        #if activty_name == ColumnNames.Activities.WORK:
+                        #    warnings.warn("Temporarily reduce danger for work while we have virtual work locations")
+                        #    work_danger = float(danger_increase / 20)
+                        #    loc_dangers[venue_idx] += work_danger
+                        #else:
+                        loc_dangers[venue_idx] += danger_increase
 
             #
             # ***** 2 - risks for individuals who visit dangerous venues
