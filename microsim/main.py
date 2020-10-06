@@ -169,22 +169,25 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
 
     # Select which model implementation to run
     if opencl:
-        run_opencl_model(individuals, activity_locations, time_activity_multiplier, iterations, data_dir,
+        run_opencl_model(individuals, activity_locations, time_activity_multiplier, iterations, data_dir, base_dir,
                          opencl_gui, opencl_gpu, use_cache)
     else:
         run_python_model(individuals, activity_locations, time_activity_multiplier, msim_args, iterations,
                          repetitions, parameters_file)
 
 
-def run_opencl_model(individuals_df, activity_locations_df, time_activity_multiplier, iterations, data_dir, use_gui,
-                     use_gpu, use_cache):
+def run_opencl_model(individuals_df, activity_locations_df, time_activity_multiplier, iterations, data_dir, base_dir,
+                     use_gui, use_gpu, use_cache):
     print("\nRunning OpenCL model")
+
+    snapshot_cache_filepath = base_dir + "/microsim/opencl/snapshots/cache.npz"
 
     if use_cache:
         snapshot_converter = SnapshotConvertor(individuals_df, activity_locations_df, time_activity_multiplier, data_dir)
         snapshot = snapshot_converter.generate_snapshot()
+        snapshot.save(snapshot_cache_filepath)
     else:
-        snapshot = Snapshot.load_full_snapshot(path="snapshots/devon.npz")
+        snapshot = Snapshot.load_full_snapshot(path=snapshot_cache_filepath)
 
     # set the random seed of the model
     snapshot.seed_prngs(42)

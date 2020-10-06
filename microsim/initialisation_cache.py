@@ -24,7 +24,7 @@ class InitialisationCache:
     def read_from_cache(self):
         if self.cache_files_exist():
             individuals = pd.read_pickle(self.individuals_filepath)
-            with open(self.time_activity_multiplier_filepath, 'rb') as handle:
+            with open(self.activity_locations_filepath, 'rb') as handle:
                 activity_locations = pickle.load(handle)
             time_activity_multiplier = pd.read_pickle(self.time_activity_multiplier_filepath)
             return individuals, activity_locations, time_activity_multiplier
