@@ -845,10 +845,11 @@ class Microsim:
         :return: A dataframe with origin and destination flows in all MSOAs in the study area
         """
         print("Reading commuting flow data for Devon...", )
-        commuting_flows = pd.read_csv(os.path.join(cls.DATA_DIR, "devon-commuting", "commuting_od.csv"))
+        commuting_flows = pd.read_csv(os.path.join(cls.DATA_DIR, "devon-commuting", "commuting_od.csv"),
+                                      dtype={'HomeMSOA':str, 'DestinationMSOA':str, 'Total_Flow':int})
         # Need to append the devon code to the areas (they're integers in the csv file)
-        commuting_flows["Orig"] = commuting_flows["HomeMSOA"].apply(lambda x: "E0"+str(x))
-        commuting_flows["Dest"] = commuting_flows["DestinationMSOA"].apply(lambda x: "E0"+str(x))
+        commuting_flows["Orig"] = commuting_flows["HomeMSOA"].apply(lambda x: "E0"+x)
+        commuting_flows["Dest"] = commuting_flows["DestinationMSOA"].apply(lambda x: "E0"+x)
         print(f"\tRead {len(pd.unique(commuting_flows['Orig']))} orgins and {len(pd.unique(commuting_flows['Dest']))} "
               f"destinations (MSOAs in the study area: {len(study_msoas)})")
 
