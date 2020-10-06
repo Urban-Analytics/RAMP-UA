@@ -263,15 +263,34 @@ class Microsim:
             ActivityLocation(secondary_name, secondary_schools.copy(), secondary_flows, self.individuals, "pschool-secondary")
         del primary_schools,secondary_schools  # No longer needed as we gave copies to the ActivityLocation
 
-        # Assign work. Each individual will go to a virtual office depending on their occupation (all accountants go
-        # to the virtual accountant office etc). This means we don't have to calculate a flows matrix (similar to homes)
+        # Assign work. Use a flow matrix of general commuting flows. Assume one office for each different employment
+        # type exists in each MSOA. An individual is assigned flows and office locations according to the general
+        # flows from their home MSOA.
         # Occupation is taken from column soc2010 in individuals df
         self.individuals['soc2010'] = self.individuals['soc2010'].astype(str)  # These are integers but we need string
         possible_jobs = sorted(self.individuals.soc2010.unique())  # list of possible jobs in alphabetical order
-        workplaces = pd.DataFrame({'ID': range(0, 0 + len(possible_jobs))})  # df with all possible 'virtual offices'
-        Microsim._add_location_columns(workplaces, location_names=possible_jobs)
+        workplace_names = []  # Creat a list of workplace names, built from the MSOA code and the SOC
+        workplace_msoas = []
+        workplace_socs = []
+        for msoa in self.all_msoas:
+            for soc in possible_jobs:
+                workplace_msoas.append(msoa)
+                workplace_socs.append(soc)
+                workplace_names.append(msoa+"-"+soc)
+        assert len(workplace_names) == len(self.all_msoas) * len(possible_jobs)
+        assert len(pd.unique(workplace_names)) == len(workplace_names)  # Each name should be unique
+
+        workplaces = pd.DataFrame({
+            'ID': range(0, len(workplace_names)),
+            'MSOA': workplace_msoas,
+            'SOC': workplace_socs
+        })
+        assert len(workplaces) == len(self.all_msoas) * len(possible_jobs)  # One location per job per msoa
+        Microsim._add_location_columns(workplaces, location_names=workplace_names)
         work_name = ColumnNames.Activities.WORK
-        self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces)
+        # Workplaces dataframe is ready. Now read commuting flows
+        commuting_flows = Microsim.read_commuting_flows_data(self.all_msoas)
+        self.individuals = Microsim.add_work_flows(work_name, self.individuals, workplaces, commuting_flows, 5)
         self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
                                                               individuals=self.individuals, duration_col="pwork")
 
@@ -815,43 +834,128 @@ class Microsim:
             # same thresholds as before
             secondary_flow_matrix = cls.quant_object.get_flows(ColumnNames.Activities.SECONDARY, study_msoas,threshold,thresholdtype)
             
-            
-
         return primary_schools, secondary_schools, primary_flow_matrix, secondary_flow_matrix
 
     @classmethod
-    def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame) \
-            -> (pd.DataFrame):
+    def read_commuting_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
         """
-        Create a dataframe of (virtual) work locations that individuals
-        travel to. Unlike retail etc, each individual will have only one work location with 100% of flows there.
+        Read the commuting flows between each MSOA
+
+        :param study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
+        :return: A dataframe with origin and destination flows in all MSOAs in the study area
+        """
+        print("Reading commuting flow data for Devon...", )
+        commuting_flows = pd.read_csv(os.path.join(cls.DATA_DIR, "devon-commuting", "commuting_od.csv"),
+                                      dtype={'HomeMSOA':str, 'DestinationMSOA':str, 'Total_Flow':int})
+        # Need to append the devon code to the areas (they're integers in the csv file)
+        commuting_flows["Orig"] = commuting_flows["HomeMSOA"].apply(lambda x: "E0"+x)
+        commuting_flows["Dest"] = commuting_flows["DestinationMSOA"].apply(lambda x: "E0"+x)
+        print(f"\tRead {len(pd.unique(commuting_flows['Orig']))} orgins and {len(pd.unique(commuting_flows['Dest']))} "
+              f"destinations (MSOAs in the study area: {len(study_msoas)})")
+
+        # TEMP: remove areas outside the study area (just while the correct files are being prepared)
+        if len(commuting_flows.loc[~commuting_flows.Orig.isin(study_msoas)]) > 0 or \
+                len(commuting_flows.loc[~commuting_flows.Dest.isin(study_msoas)]) > 0:
+            warnings.warn(f"Some origins ({len(pd.unique(commuting_flows.loc[~commuting_flows.Orig.isin(study_msoas),'Orig']))}) "
+                          f"and destinations ({len(pd.unique(commuting_flows.loc[~commuting_flows.Dest.isin(study_msoas),'Dest']))}) "
+                          f"are outside the study area. Removing them.")
+            commuting_flows = commuting_flows.loc[commuting_flows.Orig.isin(study_msoas)]
+            commuting_flows = commuting_flows.loc[commuting_flows.Dest.isin(study_msoas)]
+        assert len(commuting_flows.loc[~commuting_flows.Orig.isin(study_msoas)]) == 0
+        assert len(commuting_flows.loc[~commuting_flows.Dest.isin(study_msoas)]) == 0
+        assert len(pd.unique(commuting_flows["Orig"])) == len(study_msoas)
+        assert len(pd.unique(commuting_flows["Dest"])) == len(study_msoas)
+
+        # There should be a flow between every possible combionation of areas:
+        assert len(study_msoas)**2 == len(commuting_flows)
+
+        return commuting_flows
+
+    @classmethod
+    def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame,
+                       commuting_flows: pd.DataFrame, flow_threshold) -> (pd.DataFrame):
+        """
+        Create a dataframe of work locations that individuals travel to. The flows are based on general commuting
+        patterns and assume one work location per industry type MSOA.
         :param flow_type: The name for these flows (probably something like 'Work')
         :param individuals: The dataframe of synthetic individuals
         :param workplaces:  The dataframe of workplaces (i.e. occupations)
+        :param commuting_flows: The general commuting flows between MSOAs (an O-D matrix)
+        :param flow_threshold: Only include the top x destinations as possible flows. 'None' means no limit.
         :return: The new 'individuals' dataframe (with new columns)
         """
-        # Later on, add a check to see if occupations in individuals df are same as those in workplaces df??
-        # Tell the individuals about which virtual workplace they go to
+        # The logic of this function is basically copied from add_individual_flows()
+
+        # Names for the columns and empty lists to store the venues and flows
         venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
         flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
+        individuals[venues_col] = [[] for _ in range(len(individuals))]
+        individuals[flows_col] = [[] for _ in range(len(individuals))]
 
-        # Lists showing where individuals go, and what proption (here only 1 flow as only 1 workplace)
-        # Need to do the flows in venues in 2 stages: first just add the venue, then turn that venu into a single-element
-        # list (pandas complains about 'TypeError: unhashable type: 'list'' if you try to make the single-item lists
-        # directly in the apply
-        with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
-            print("Assigning work venues ... ",)
-            venues = pool.starmap(Microsim._assign_work_flow,
-                                  zip(list(individuals["soc2010"]), (workplaces for _ in range(len(individuals))) ) )
-        #venues = list(individuals["soc2010"].swifter.progress_bar(True, desc="Assigning work venues").apply(
-        #    lambda job: workplaces.index[workplaces[ColumnNames.LOCATION_NAME] == job].values[0]))
-        venues = [[x] for x in venues]
-        individuals[venues_col] = venues
-        individuals[flows_col] = [[1.0] for _ in range(len(individuals))]  # Flows are easy, [1.0] to the single venue
         # Later we also record the individual risks for each activity per individual. It's nice if the columns for
         # each activity are grouped together, so create that column now.
         individuals[f"{flow_type}{ColumnNames.ACTIVITY_RISK}"] = [-1] * len(individuals)
+
+        with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
+
+            # Do all individuals in an MSOA at once
+            for msoa in tqdm(pd.unique(individuals.area), desc="Assigning work flows"):
+                # Get the indices of the individuals in this msoa
+                individuals_idx = individuals.index[individuals.area == msoa]
+
+                # Destinations with positive flows and the flows themselves.
+                dests_and_flows = commuting_flows.loc[
+                    (commuting_flows.Orig == msoa) & (commuting_flows.Total_Flow > 0), ]
+                if flow_threshold is not None and len(dests_and_flows) > flow_threshold:
+                    # Keep only the x destinations with largest flows
+                    dests_and_flows = \
+                        dests_and_flows.sort_values(by="Total_Flow", ascending=False).iloc[0:flow_threshold].copy()
+                dests_msoas = dests_and_flows["Dest"].values  # The MSOA destinations
+                flows = Microsim._normalise(dests_and_flows["Total_Flow"].values)
+                assert len(dests_msoas) == len(flows)
+                assert True in [x > 0.0 for x in flows]  # Check that there is a non-zero flow
+
+                # Now have destination MSOAs (list), flows (list), need to work out, for each individual
+                # what the destination activity place is called (MSOA+SOC), get that place's ID and assign
+                # those IDs as the destinations.
+                socs = list(individuals.loc[individuals_idx, "soc2010"].values)  # SOC for each individual
+                individuals_venues = np.array(pool.starmap(Microsim._calc_workplace_indices, zip(
+                    socs,  # A 1D list; one soc for each individual in this msoa
+                    (dests_msoas for _ in range(len(socs))),  # list of dests, 2D, one list for each individual
+                    (workplaces for _ in range(len(socs)))  # list of pointers to the workplaces df,
+                )))
+                # Only way I can get pandas to correctly assign the list to each cell is with a for loop
+                #individuals.loc[individuals_idx, venues_col]  = individuals_venues  # Doesn't work
+                for i, idx in enumerate(individuals_idx):
+                    individuals.at[idx, venues_col] = individuals_venues[i]
+
+                # Flows are easier as every individual in this msoa has the same flows
+                individuals.loc[individuals_idx, flows_col] = \
+                    individuals.loc[individuals_idx, flows_col].apply(lambda _: flows).values
+
+        # Check everyone has some flows (all list lengths are >0)
+        assert False not in (individuals.loc[:, venues_col].apply(lambda cell: len(cell)) > 0).values
+        assert False not in (individuals.loc[:, flows_col].apply(lambda cell: len(cell)) > 0).values
         return individuals
+
+    @staticmethod
+    def _calc_workplace_indices(soc: str, dest_msoas: List, workplace_df: pd.DataFrame):
+        """
+        Work out the workplaces where an individual might work, given their soc,
+        the names of the destination MSOAs where they might work, and the workplaces dataframe so that
+        they can work out what the index of the workplace is. This works because each virtual workplace is uniquely
+        named by it's msoa and industry type (i.e. f"{msoa}-{row['soc2010']}")
+
+        :param soc: A individuals's soc (industry where they work)
+        :param dest_msoas: A list of the destination MSOA names for the individual
+        :param workplace_df: The dataframe containing all workplaces
+        :return:
+        """
+        workplace_ids = [
+            int(workplace_df.loc[workplace_df[ColumnNames.LOCATION_NAME] == f"{msoa}-{soc}"].index[0])
+            for msoa in dest_msoas ]
+        assert False not in (isinstance(id, int) for id in workplace_ids)  # Check all are ints (not lists etc)
+        return workplace_ids
 
     @staticmethod
     def _assign_work_flow(job, workplaces):
@@ -1368,6 +1472,8 @@ class Microsim:
 
             # It's useful to report the specific risks associated with *this* activity for each individual
             activity_specific_risk = [0] * len(self.individuals)
+            if activty_name == "Work":
+                x=1  # TEMP BREAKPOINT
 
             for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)):  # For each individual
                 # v and f are lists of flows and venues for the individual. Go through each one
