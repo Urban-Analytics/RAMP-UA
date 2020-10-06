@@ -1,5 +1,5 @@
 import pandas as pd
-from os import path
+import os
 
 
 class InitialisationCache:
@@ -8,9 +8,9 @@ class InitialisationCache:
     """
     def __init__(self, cache_dir="./temp_cache"):
         self.cache_dir = cache_dir
-        self.individuals_filepath = self.cache_dir + "./individuals.pkl"
-        self.activity_locations_filepaths = self.cache_dir + "./activity_locations.pkl"
-        self.time_activity_multiplier_filepath = self.cache_dir + "./time_activity_multiplier.pkl"
+        self.individuals_filepath = self.cache_dir + "individuals.pkl"
+        self.activity_locations_filepaths = self.cache_dir + "activity_locations.pkl"
+        self.time_activity_multiplier_filepath = self.cache_dir + "time_activity_multiplier.pkl"
         self.all_cache_filepaths = [self.individuals_filepath, self.activity_locations_filepaths,
                                     self.time_activity_multiplier_filepath]
 
@@ -29,5 +29,5 @@ class InitialisationCache:
             print("\nWARNING: attempting to load files from cache but they do not exist!")
 
     def cache_files_exist(self):
-        files_exist = [path.exists(cache_file) for cache_file in self.all_cache_filepaths]
+        files_exist = [os.path.exists(cache_file) for cache_file in self.all_cache_filepaths]
         return all(files_exist)

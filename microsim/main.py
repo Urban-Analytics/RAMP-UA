@@ -52,7 +52,7 @@ from microsim.initialisation_cache import InitialisationCache
               help="Optionally read lockdown mobility data from a file (default use google mobility). To have no "
                    "lockdown pass an empty string, i.e. --lockdown-file='' ")
 @click.option('--quant-dir', default=None, help='Directory to QUANT data, set to None to use Devon data')
-@click.option('-s', '--cache-initialisation/--dont-cache-initialisation', default=False,
+@click.option('-s', '--use-cache/--dont-use-cache', default=False,
               help="Whether to cache the population data initialisation")
 @click.option('-s', '--opencl/--no-opencl', default=False, help="Run OpenCL model")
 @click.option('-s', '--opencl-gui/--no-opencl-gui', default=False,
@@ -60,7 +60,7 @@ from microsim.initialisation_cache import InitialisationCache
 @click.option('-s', '--opencl-gpu/--no-opencl-gpu', default=False,
               help="Run OpenCL model on the GPU (if false then run using CPU")
 def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, output, output_every_iteration,
-               debug, repetitions, lockdown_file, quant_dir, cache_initialisation, opencl, opencl_gui, opencl_gpu):
+               debug, repetitions, lockdown_file, quant_dir, use_cache, opencl, opencl_gui, opencl_gpu):
     # First see if we're reading a parameters file or using command-line arguments.
     if no_parameters_file:
         print("Not reading a parameters file")
@@ -154,10 +154,10 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
     # data_dir = os.path.join(base_dir, "dummy_data")
     # m = Microsim(data_dir=data_dir, testing=True, output=output)
 
-    cache = InitialisationCache()
+    cache = InitialisationCache(cache_dir=base_dir + "/microsim/temp_cache/")
 
     # generate new population dataframes if we aren't using the cache
-    if not cache_initialisation:
+    if not use_cache:
         population = PopulationInitialisation(**population_args)
         individuals_df, activity_locations_df, time_activity_multiplier = population.generate()
 
