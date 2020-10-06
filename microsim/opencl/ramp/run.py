@@ -1,48 +1,54 @@
-import argparse
 import pickle
 from tqdm import tqdm
 import pandas as pd
 
+from microsim.opencl.ramp.inspector import Inspector
 from microsim.opencl.ramp.params import Params
 from microsim.opencl.ramp.simulator import Simulator
-from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.summary import Summary
 from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 
 
-def main():
+def run_opencl(snapshot, iterations=100, data_dir="./data", use_gui=True, use_gpu=False, quiet=False):
     """
-    Entry point for running the OpenCL simulation in "headless" mode, ie. without the UI.
-    The results will be stored in a "Summary" object.
+    Entry point for running the OpenCL simulation either with the UI or headless
     """
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--steps", help="Number of timesteps to run", type=int, default=10)
-    parser.add_argument("--gpu", help="Whether to run on the GPU", action='store_const', const=True, default=False)
-    parser.add_argument("--quiet", help="Suppress printouts", action='store_const', const=True, default=False)
-    parser.add_argument("--no-detailed-counts", help="Don't store detailed counts in summary", action='store_const',
-                        const=True, default=False)
-    parsed_args = parser.parse_args()
-    steps = parsed_args.steps
-    gpu = parsed_args.gpu
-    quiet = parsed_args.quiet
-    store_detailed_counts = not parsed_args.no_detailed_counts
-
-    snapshot = Snapshot.load_full_snapshot("snapshots/devon.npz")
     if not quiet:
         print(f"\nSnapshot Size:\t{int(snapshot.num_bytes() / 1000000)} MB\n")
 
-    simulator = Simulator(snapshot, gpu)
+    simulator = Simulator(snapshot, use_gpu)
     if not quiet:
         print(f"Platform:\t{simulator.platform_name()}\nDevice:\t\t{simulator.device_name()}\n")
 
-    params = Params()
-    summary = Summary(snapshot, store_detailed_counts=store_detailed_counts, max_time=steps)
-
-    # Upload the snapshot to OpenCL
+    # Create a simulator and upload the snapshot data to the OpenCL device
+    simulator = Simulator(snapshot, use_gpu)
     simulator.upload_all(snapshot.buffers)
 
-    for time in tqdm(range(steps), desc="Running simulation"):
+    if use_gui:
+        run_with_gui(simulator, snapshot)
+    else:
+        run_headless(simulator, snapshot, iterations, quiet, data_dir)
+
+
+def run_with_gui(simulator, snapshot):
+    width = 2560  # Initial window width in pixels
+    height = 1440  # Initial window height in pixels
+    nlines = 4  # Number of visualised connections per person
+    # Create an inspector and upload static data
+    inspector = Inspector(simulator, snapshot, nlines, "Ramp UA", width, height)
+
+    # Main UI loop
+    while inspector.is_active():
+        inspector.update()
+
+
+def run_headless(simulator, snapshot, iterations, quiet, data_dir):
+    """Run the simulation in headless mode and store summary data.
+    NB: running in this mode is required in order to view output data in the dashboard"""
+    params = Params()
+    summary = Summary(snapshot, store_detailed_counts=True, max_time=iterations)
+    for time in tqdm(range(iterations), desc="Running simulation"):
         # Update parameters based on lockdown
         params.set_lockdown_multiplier(snapshot.lockdown_multipliers, time)
         simulator.upload("params", params.asarray())
@@ -55,7 +61,7 @@ def main():
         summary.update(time, snapshot.buffers.people_statuses)
 
     if not quiet:
-        for i in range(steps):
+        for i in range(iterations):
             print(f"\nDay {i}")
             summary.print_counts(i)
 
@@ -64,12 +70,10 @@ def main():
     if not quiet:
         print("\nFinished")
 
-    store_summary_data(summary, store_detailed_counts)
+    store_summary_data(summary, store_detailed_counts=True, data_dir=data_dir)
 
 
-def store_summary_data(summary, store_detailed_counts):
-    data_dir = "data/output/"
-
+def store_summary_data(summary, store_detailed_counts, data_dir):
     # convert total_counts to dict of pandas dataseries
     total_counts_dict = {}
     for status, timeseries in enumerate(summary.total_counts):
@@ -96,7 +100,3 @@ def store_summary_data(summary, store_detailed_counts):
             pickle.dump(age_counts_dict, f)
         with open(data_dir + "area_counts.p", "wb") as f:
             pickle.dump(area_counts_dict, f)
-
-
-if __name__ == "__main__":
-    main()

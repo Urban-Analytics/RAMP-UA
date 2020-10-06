@@ -7,17 +7,17 @@ import pickle
 from tqdm import tqdm
 from convertbng.util import convert_lonlat
 
+from microsim.opencl.ramp.snapshot import Snapshot
+
 sentinel_value = (1 << 31) - 1
 
 
-class Snapshotter:
+class SnapshotConvertor:
     """
-    Take snapshot of internal model state before running the python model, so this "snapshot" of model
-    state can be saved and transferred to the GPU version of the model
+    Convert dataframe of individuals and activity locations into a Snapshot object that can be used by the OpenCL model
     """
 
-    def __init__(self, individuals, activity_locations, snapshot_dir, data_dir, cache_inputs=True):
-        self.snapshot_dir = snapshot_dir
+    def __init__(self, individuals, activity_locations, data_dir, cache_inputs=True):
         self.data_dir = data_dir
 
         # load individuals dataframe from cache
@@ -50,25 +50,16 @@ class Snapshotter:
         self.num_people = self.individuals['ID'].count()
         self.global_place_id_lookup, self.num_places = self.create_global_place_ids()
 
-    def store_snapshots(self):
-        ages = self.get_people_ages()
+    def generate_snapshot(self):
+        people_ages = self.get_people_ages()
         area_codes = self.get_people_area_codes()
         not_home_probs = self.get_not_home_probs()
         people_place_ids, people_flows = self.get_people_place_data()
 
-        filepath = os.path.join(self.snapshot_dir, 'people.npz')
-        print(f"Saving data for {self.num_people} people to {filepath}")
-        np.savez(filepath, ages=ages, people_place_ids=people_place_ids, people_baseline_flows=people_flows,
-                 area_codes=area_codes, not_home_probs=not_home_probs)
-
-        activity_name_enum, place_activities = self.get_place_data()
+        place_activities = self.get_place_data()
         place_coordinates = self.get_place_coordinates()
-        filepath = os.path.join(self.snapshot_dir, 'places.npz')
-        print(f"Saving data for {self.num_places} people to {filepath}")
-        np.savez(filepath,
-                 activity_names=activity_name_enum,
-                 place_activities=place_activities,
-                 place_coordinates=place_coordinates)
+        return Snapshot.from_arrays(people_ages, people_place_ids, people_flows, area_codes, not_home_probs,
+                                    place_activities, place_coordinates)
 
     def create_global_place_ids(self):
         max_id = 0
@@ -161,11 +152,9 @@ class Snapshotter:
         return people_place_ids, people_place_flows
 
     def get_place_data(self):
-        activity_name_enum = np.zeros(len(self.activity_names), dtype=object)
         place_activities = np.zeros(self.num_places, dtype=np.uint32)
 
         for activity_index, activity_name in enumerate(self.activity_names):
-            activity_name_enum[activity_index] = activity_name
             activity_locations_df = self.locations[activity_name]
 
             ids = activity_locations_df.loc[:, "ID"]
@@ -175,7 +164,7 @@ class Snapshotter:
                 global_place_id = self.get_global_place_id(activity_name, local_place_id)
                 place_activities[global_place_id] = activity_index
 
-        return activity_name_enum, place_activities
+        return place_activities
 
     def get_place_coordinates(self):
         place_coordinates = np.zeros((self.num_places, 2), dtype=np.float32)
@@ -255,15 +244,3 @@ class Snapshotter:
             data.to_pickle(cache_filepath)
         else:
             pickle.dump(data, open(cache_filepath, "wb"))
-
-
-def main():
-    base_dir = os.getcwd()
-    snapshot_dir = os.path.join(base_dir, "snapshots")
-    data_dir = os.path.join(base_dir, "devon_data")
-    snapshotter = Snapshotter(individuals=None, activity_locations=None, snapshot_dir=snapshot_dir, data_dir=data_dir)
-    snapshotter.store_snapshots()
-
-
-if __name__ == '__main__':
-    main()

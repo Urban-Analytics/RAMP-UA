@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
-from microsim.snapshotter import Snapshotter
+from microsim.opencl.ramp.snapshot_convertor import Snapshotter
 
 sentinel_value = (1 << 31) - 1
 

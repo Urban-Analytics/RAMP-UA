@@ -94,7 +94,7 @@ class Snapshot:
         buffers.place_coords[:] += np.random.randn(2 * nplaces) / 100.0
 
         return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, buffers)
-
+        
     @classmethod
     def load_initial_snapshot(cls, people_filepath, places_filepath):
         """Fills static arrays from "partial snapshots" generated from RAMP-UA data preprocessing,
@@ -110,6 +110,13 @@ class Snapshot:
         with np.load(places_filepath, allow_pickle=True) as places_data:
             place_activities = places_data["place_activities"]
             place_coords = places_data["place_coordinates"]
+        
+        return Snapshot.from_arrays(people_ages, people_place_ids, people_baseline_flows, area_codes, not_home_probs,
+                                    place_activities, place_coords)
+    
+    @classmethod
+    def from_arrays(cls, people_ages, people_place_ids, people_baseline_flows, area_codes, not_home_probs,
+                    place_activities, place_coords):
 
         nplaces = place_activities.shape[0]
         npeople = people_place_ids.shape[0]

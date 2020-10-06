@@ -10,10 +10,6 @@ Created on Wed Apr 29 19:59:25 2020
 import sys
 
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
-from microsim.snapshotter import Snapshotter
-from microsim.quant_api import QuantRampAPI
-from microsim.population_initialisation import PopulationInitialisation
-from microsim.microsim_model import Microsim
 import multiprocessing
 import pandas as pd
 
@@ -24,6 +20,12 @@ import click  # command-line interface
 import pickle  # to save data
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
 from shutil import copyfile
+
+from microsim.quant_api import QuantRampAPI
+from microsim.population_initialisation import PopulationInitialisation
+from microsim.microsim_model import Microsim
+from microsim.opencl.ramp.run import run_opencl
+from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
 
 
 # ********
@@ -45,14 +47,19 @@ from shutil import copyfile
               help='Whether to generate output data at every iteration rather than just at the end (default no).')
 @click.option('--debug/--no-debug', default=False, help="Whether to run some more expensive checks (default no debug)")
 @click.option('-r', '--repetitions', default=1, help="How many times to run the model (default 1)")
-@click.option('-s', '--store-snapshot/--dont-store-snapshot', default=False,
-              help="Store internal model state to .npz files")
 @click.option('-l', '--lockdown-file', default="google_mobility_lockdown_daily.csv",
               help="Optionally read lockdown mobility data from a file (default use google mobility). To have no "
                    "lockdown pass an empty string, i.e. --lockdown-file='' ")
 @click.option('--quant-dir', default=None, help='Directory to QUANT data, set to None to use Devon data')
-def run_script(parameters_file, no_parameters_file, iterations, scenario, data_dir, output, output_every_iteration,
-               debug, repetitions, store_snapshot, lockdown_file, quant_dir):
+@click.option('-s', '--cache-initialisation/--dont-cache-initialisation', default=False,
+              help="Whether to cache the population data initialisation")
+@click.option('-s', '--opencl/--no-opencl', default=False, help="Run OpenCL model")
+@click.option('-s', '--opencl-gui/--no-opencl-gui', default=False,
+              help="Use GUI visualisation for OpenCL model (if false then run in headless mode")
+@click.option('-s', '--opencl-gpu/--no-opencl-gpu', default=False,
+              help="Run OpenCL model on the GPU (if false then run using CPU")
+def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, output, output_every_iteration,
+               debug, repetitions, lockdown_file, quant_dir, cache_initialisation, opencl, opencl_gui, opencl_gpu):
     # First see if we're reading a parameters file or using command-line arguments.
     if no_parameters_file:
         print("Not reading a parameters file")
@@ -149,10 +156,28 @@ def run_script(parameters_file, no_parameters_file, iterations, scenario, data_d
     population = PopulationInitialisation(**population_args)
     individuals_df, activity_locations_df, time_activity_multiplier = population.generate()
 
-    # TODO: select which model implementation to run
+    # Select which model implementation to run
+    if opencl:
+        run_opencl_model(individuals_df, activity_locations_df, time_activity_multiplier, iterations, data_dir,
+                         opencl_gui, opencl_gpu)
+    else:
+        run_python_model(individuals_df, activity_locations_df, time_activity_multiplier, msim_args, iterations,
+                         repetitions, parameters_file)
 
-    # TODO: create snapshot and run OpenCL model and pass individuals_df, activity_locations_df
 
+def run_opencl_model(individuals_df, activity_locations_df, time_activity_multiplier, iterations, data_dir, use_gui,
+                     use_gpu):
+    print("\nRunning OpenCL model")
+    snapshot_converter = SnapshotConvertor(individuals_df, activity_locations_df, data_dir)
+    snapshot = snapshot_converter.generate_snapshot()
+
+    run_opencl(snapshot, iterations, data_dir, use_gui, use_gpu, quiet=False)
+
+
+def run_python_model(individuals_df, activity_locations_df, time_activity_multiplier, msim_args, iterations,
+                     repetitions, parameters_file):
+    print("\nRunning Python / R model")
+    
     # Create a microsim object
     m = Microsim(individuals_df, activity_locations_df, time_activity_multiplier, **msim_args)
     copyfile(parameters_file, os.path.join(m.SCEN_DIR, "parameters.yml"))
@@ -178,13 +203,9 @@ def run_script(parameters_file, no_parameters_file, iterations, scenario, data_d
         finally:  # Make sure they get closed (shouldn't be necessary)
             pool.close()
 
-    print("End of program")
-
-
 def _run_multicore(m, iter, rep):
     return m.run(iter, rep)
 
-
 if __name__ == "__main__":
-    run_script()
+    main()
     print("End of program")
