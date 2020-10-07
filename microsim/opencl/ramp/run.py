@@ -1,6 +1,7 @@
 import pickle
 from tqdm import tqdm
 import pandas as pd
+import os
 
 from microsim.opencl.ramp.inspector import Inspector
 from microsim.opencl.ramp.params import Params
@@ -80,6 +81,10 @@ def store_summary_data(summary, store_detailed_counts, data_dir):
         total_counts_dict[DiseaseStatus(status).name.lower()] = pd.Series(timeseries)
 
     output_dir = data_dir + "/output/OpenCL/"
+
+    # create output directory if it doesn't exist
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     with open(output_dir + "total_counts.pkl", "wb") as f:
         pickle.dump(total_counts_dict, f)
