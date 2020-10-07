@@ -25,17 +25,7 @@ class SnapshotConvertor:
         for activity_name in self.activity_names:
             self.locations[activity_name] = activity_locations[activity_name]._locations
 
-        # TODO: extract lockdown multipliers correctly
-        # def load_lockdown_data():
-        #     """Load lockdown multipliers for each day from csv file of google mobility data."""
-        #     lockdown_mobility_df = pd.read_csv("data/devon_google_mobility_lockdown_daily.csv")
-        #     lockdown_multipliers = lockdown_mobility_df.loc[:, "timeout_multiplier"].to_numpy().astype(np.float32)
-        #
-        #     # cap multipliers to maximum of 1.0
-        #     lockdown_multipliers[lockdown_multipliers > 1] = 1.0
-        #
-        #     return lockdown_multipliers
-        self.lockdown_multipliers = time_activity_multiplier
+        self.lockdown_multipliers = time_activity_multiplier.loc[:, "timeout_multiplier"].to_numpy().astype(np.float32)
 
         self.num_people = self.individuals['ID'].count()
         self.global_place_id_lookup, self.num_places = self.create_global_place_ids()
@@ -112,7 +102,7 @@ class SnapshotConvertor:
             for people_id, (local_place_ids, flows, duration) in tqdm(
                     enumerate(zip(activity_venues, activity_flows, activity_durations)),
                     total=self.num_people,
-                    desc=f"Calculating {activity_name} flows for all people"):
+                    desc=f"Converting {activity_name} flows for all people"):
                 flows = np.array(flows) * duration
 
                 # check dimensions match
