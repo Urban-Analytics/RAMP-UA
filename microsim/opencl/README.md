@@ -1,7 +1,6 @@
-# RAMP GPU
+# RAMP OpenCL
 
-Implementation of the [RAMP Urban Analytics
-model](https://github.com/Urban-Analytics/RAMP-UA) in OpenCL. This can run with
+This contains the code for the OpenCL implementation of the timestep model. This can run with
 high performance on the GPU or CPU.
 
 ![User Interface](img/ramp_ui.png)
@@ -86,23 +85,8 @@ drivers, or if you do not have a dedicated GPU, you may need to download Intel's
 
 ## Running
 
-Once dependencies are installed, simply run the ui script:
-
-``` sh
-python -m ramp.ui
-```
-
-This should result in a UI similar to the screenshot at the start of this
-README. By default it will run on the CPU, to run on the GPU use the `--gpu`
-flag on the command line.
-
-
-#### Run in headless mode
-
-To run the simulation without the UI, use the headless script, eg.
-``` sh
-python -m ramp.headless
-```
+Once dependencies are installed, you can run using the [microsim/main.py](./microsim/main.py) script. 
+Please see further instructions in the main project [README](../../README.md#opencl-model) 
 
 
 #### Run tests with pytest
@@ -119,9 +103,6 @@ python -m pytest
 All source code is stored in the **ramp/** directory, this includes OpenCL c
 kernel code, OpenGL shaders, and the python code for managing the UI and the
 simulation.
-
-The two entry points are **ramp/ui.py** and **ramp/headless.py**, to run the
-simulation with or without the UI, respectively.
 
 
 #### Directories
