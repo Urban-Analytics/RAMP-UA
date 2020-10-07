@@ -29,7 +29,7 @@ def test_save_and_load_full_snapshot():
     nslots = 16
     generated_snapshot = Snapshot.random(nplaces=nplaces, npeople=npeople, nslots=nslots)
 
-    snapshot_path = "tests/random.npz"
+    snapshot_path = "tests/opencl/random.npz"
 
     generated_snapshot.save(snapshot_path)
 
