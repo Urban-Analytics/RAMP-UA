@@ -18,94 +18,81 @@ population_init_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
                         "use_cache": False}
 
 
-def test_bad_directory_throws_error():
-    """Test the PopulationInitialisation constructor by reading dummy data. The microsim object created here can then
-    be passed to other functions for them to do their tests
-    """
-    with pytest.raises(FileNotFoundError):
-        # This should fail because the directory doesn't exist
-        args = population_init_args.copy()
-        args['data_dir'] = "./bad_directory"
-        p = PopulationInitialisation(**args)
-        p.generate()
-
-
 # This 'fixture' means that other test functions can use the object created here.
 # Note: Don't try to run this test, it will be called when running the others that need it,
 # like `test_add_home_flows()`.
 @pytest.fixture()
-def test_generate_population():
-    test_population_init = PopulationInitialisation(**population_init_args)
-    individuals, activity_locations, time_activity_multiplier, households = test_population_init.generate()
+def test_population_init():
+    population_init = PopulationInitialisation(**population_init_args)
 
     # Check that the dummy data have been read in correctly. E.g. check the number of individuals is
     # accurate, that they link to households correctly, that they have the right *flows* to the right
     # *destinations* and the right *durations* etc.
 
-    assert len(individuals) == 17
+    assert len(population_init.individuals) == 17
 
     # Households
     # (The households df should be the same as the one in the corresponding activity location)
-    assert activity_locations[f"{ColumnNames.Activities.HOME}"]._locations.equals(households)
+    assert population_init.activity_locations[f"{ColumnNames.Activities.HOME}"]._locations.equals(population_init.households)
     # All flows should be to one location (single element [1.0])
-    for flow in individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_FLOWS}"]:
+    for flow in population_init.individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_FLOWS}"]:
         assert flow == [1.0]
 
     # House IDs are the same as the row index
-    assert False not in list(households.index == households.ID)
+    assert False not in list(population_init.households.index == population_init.households.ID)
 
     # First two people live together in first household
-    assert list(individuals.loc[0:1, :][f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_VENUES}"].values) == [[0], [0]]
+    assert list(population_init.individuals.loc[0:1, :][f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_VENUES}"].values) == [[0], [0]]
     # This one lives on their own in the fourth house
-    assert list(individuals.loc[9:9, :][f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_VENUES}"].values) == [[3]]
+    assert list(population_init.individuals.loc[9:9, :][f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_VENUES}"].values) == [[3]]
     # These three live together in the last house
-    assert list(individuals.loc[13:15, :][f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_VENUES}"].values) == [[6], [6], [6]]
+    assert list(population_init.individuals.loc[13:15, :][f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_VENUES}"].values) == [[6], [6], [6]]
 
     # Workplaces
     # For convenience:
     work_venues = f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_VENUES}"
     work_flows = f"{ColumnNames.Activities.WORK}{ColumnNames.ACTIVITY_FLOWS}"
-    workplaces = activity_locations[ColumnNames.Activities.WORK]._locations
+    workplaces = population_init.activity_locations[ColumnNames.Activities.WORK]._locations
     # Check no non-unique workplace names
     assert len(workplaces) == len(workplaces.loc[:, ColumnNames.LOCATION_NAME].unique())
     # Check the total number of workplaces created is correct (one per soc per area)
-    assert len(workplaces) == len(individuals.loc[:, 'soc2010'].unique()) * len(test_population_init.all_msoas)
+    assert len(workplaces) == len(population_init.individuals.loc[:, 'soc2010'].unique()) * len(population_init.all_msoas)
     # These people should all have single flows to a workplace in their home area
-    for p in range(5, len(individuals)):
-        assert len(individuals.at[p, work_venues]) == 1
-        assert len(individuals.at[p, work_flows]) == 1
-        venue_number = individuals.at[p, work_venues][0]
+    for p in range(5, len(population_init.individuals)):
+        assert len(population_init.individuals.at[p, work_venues]) == 1
+        assert len(population_init.individuals.at[p, work_flows]) == 1
+        venue_number = population_init.individuals.at[p, work_venues][0]
         venue = workplaces.iloc[venue_number]
         # check the area and soc of the venue (these are unique fields for workplaces and not used in the model)
-        assert venue['MSOA'] == individuals.at[p, "area"]  # This workplace is in the person's home msoa
-        assert venue['SOC'] == individuals.at[p, "soc2010"]
+        assert venue['MSOA'] == population_init.individuals.at[p, "area"]  # This workplace is in the person's home msoa
+        assert venue['SOC'] == population_init.individuals.at[p, "soc2010"]
         # check the name is correct (this is a unique identifier of the workplace)
-        assert venue[ColumnNames.LOCATION_NAME]==f"{individuals.at[p, 'area']}-{individuals.at[p,'soc2010']}"
+        assert venue[ColumnNames.LOCATION_NAME]==f"{population_init.individuals.at[p, 'area']}-{population_init.individuals.at[p,'soc2010']}"
     # These should have four workpaces with flows 0.5, 0.15, 0.1, 0.25
     for p in range(0, 2):
-        assert individuals.at[p, work_flows] == [0.5, 0.15, 0.1, 0.25]  # CHeck flows
+        assert population_init.individuals.at[p, work_flows] == [0.5, 0.15, 0.1, 0.25]  # CHeck flows
         # Check the SOC of the workplace is the same as the individual
-        for venue_number in individuals.at[p, work_venues]:
+        for venue_number in population_init.individuals.at[p, work_venues]:
             venue = workplaces.iloc[venue_number]
-            assert venue['SOC'] == individuals.at[p, "soc2010"]
+            assert venue['SOC'] == population_init.individuals.at[p, "soc2010"]
         # The destination areas of the workplace should be as follows:
-        assert set(workplaces.loc[individuals.at[p, "Work_Venues"], "MSOA"]) ==\
+        assert set(workplaces.loc[population_init.individuals.at[p, "Work_Venues"], "MSOA"]) ==\
             set(['E00101308', 'E02004132', 'E02004147', 'E02004151'])
     # These should have 5 workplaces (assuming the total number of workplaces threshold is 5)
     for p in range(2, 5):
-        assert len(individuals.at[p, work_venues]) == 5
-        assert len(individuals.at[p, work_flows]) == 5
-        for venue_number in individuals.at[p, work_venues]:
+        assert len(population_init.individuals.at[p, work_venues]) == 5
+        assert len(population_init.individuals.at[p, work_flows]) == 5
+        for venue_number in population_init.individuals.at[p, work_venues]:
             venue = workplaces.iloc[venue_number]
-            assert venue['SOC'] == individuals.at[p, "soc2010"]
-        assert set(workplaces.loc[individuals.at[p, "Work_Venues"], "MSOA"]) == \
+            assert venue['SOC'] == population_init.individuals.at[p, "soc2010"]
+        assert set(workplaces.loc[population_init.individuals.at[p, "Work_Venues"], "MSOA"]) == \
             set(['E02004158', 'E02004147', 'E02004132', 'E02004138', 'E02004159'])
 
     # Test Shops
-    shop_locs = activity_locations[ColumnNames.Activities.RETAIL]._locations
+    shop_locs = population_init.activity_locations[ColumnNames.Activities.RETAIL]._locations
     assert len(shop_locs) == 248
     # First person has these flows and venues
-    venue_ids = list(individuals.loc[0:0, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_VENUES}"])[0]
+    venue_ids = list(population_init.individuals.loc[0:0, f"{ColumnNames.Activities.RETAIL}{ColumnNames.ACTIVITY_VENUES}"])[0]
     # flows = list(m.individuals.loc[0:0, f"Retail{ColumnNames.ACTIVITY_FLOWS}"])[0]
     # These are the venues in the filename:
     raw_venues = sorted([24, 23, 22, 21, 19, 12, 13, 25, 20, 17])
@@ -116,25 +103,25 @@ def test_generate_population():
     assert shop_locs.loc[18:18, ColumnNames.LOCATION_NAME].values[0] == "Aldi Honiton"
 
     # Test Schools (similar to house/work above) (need to do for primary and secondary)
-    primary_locs = activity_locations[f"{ColumnNames.Activities.PRIMARY}"]._locations
-    secondary_locs = activity_locations[f"{ColumnNames.Activities.SECONDARY}"]._locations
+    primary_locs = population_init.activity_locations[f"{ColumnNames.Activities.PRIMARY}"]._locations
+    secondary_locs = population_init.activity_locations[f"{ColumnNames.Activities.SECONDARY}"]._locations
     # All schools are read in from one file, both primary and secondary
     assert len(primary_locs) == 350
     assert len(secondary_locs) == 350
     assert primary_locs.equals(secondary_locs)
     # Check primary and secondary indexes point to primary and secondary schools respectively
-    for indexes in individuals.loc[:, f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"]:
+    for indexes in population_init.individuals.loc[:, f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"]:
         for index in indexes:
             assert primary_locs.loc[index, "PhaseOfEducation_name"] == "Primary"
-    for indexes in individuals.loc[:, f"{ColumnNames.Activities.SECONDARY}{ColumnNames.ACTIVITY_VENUES}"]:
+    for indexes in population_init.individuals.loc[:, f"{ColumnNames.Activities.SECONDARY}{ColumnNames.ACTIVITY_VENUES}"]:
         for index in indexes:
             assert secondary_locs.loc[index, "PhaseOfEducation_name"] == "Secondary"
 
     # First person has these flows and venues to primary school
     # (we know this because, by coincidence, the first person lives in the area that has the
     # first area name if they were ordered alphabetically)
-    assert list(individuals.loc[0:0, "area"])[0] == "E00101308"
-    venue_ids = list(individuals.loc[0:0, f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"])[0]
+    assert list(population_init.individuals.loc[0:0, "area"])[0] == "E00101308"
+    venue_ids = list(population_init.individuals.loc[0:0, f"{ColumnNames.Activities.PRIMARY}{ColumnNames.ACTIVITY_VENUES}"])[0]
     raw_venues = sorted([12, 110, 118, 151, 163, 180, 220, 249, 280])
     # Mark counts from 1, so these should be 1 greater than the ids
     assert [x - 1 for x in raw_venues] == venue_ids
@@ -143,8 +130,8 @@ def test_generate_population():
     assert primary_locs.loc[163:163, ColumnNames.LOCATION_NAME].values[0] == "Milton Abbot School"
 
     # Second to last person lives in 'E02004138' which will be the last area recorded in Mark's file
-    assert list(individuals.loc[9:9, "area"])[0] == "E02004159"
-    venue_ids = list(individuals.loc[9:9, f"{ColumnNames.Activities.SECONDARY}{ColumnNames.ACTIVITY_VENUES}"])[0]
+    assert list(population_init.individuals.loc[9:9, "area"])[0] == "E02004159"
+    venue_ids = list(population_init.individuals.loc[9:9, f"{ColumnNames.Activities.SECONDARY}{ColumnNames.ACTIVITY_VENUES}"])[0]
     raw_venues = sorted([335, 346])
     # Mark counts from 1, so these should be 1 greater than the ids
     assert [x - 1 for x in raw_venues] == venue_ids
@@ -155,14 +142,25 @@ def test_generate_population():
     assert secondary_locs.loc[335:335, ColumnNames.LOCATION_NAME].values[0] == "South Dartmoor Community College"
 
     # Finished initialising the model. Pass it to other tests who need it.
-    yield test_population_init  # (this could be 'return' but 'yield' means that any cleaning can be done here
+    yield population_init  # (this could be 'return' but 'yield' means that any cleaning can be done here
 
     print("Cleaning up .... (actually nothing to clean up at the moment)")
 
 
+def test_bad_directory_path_throws_error():
+    """Test the PopulationInitialisation constructor by reading dummy data. The microsim object created here can then
+    be passed to other functions for them to do their tests
+    """
+    with pytest.raises(FileNotFoundError):
+        # This should fail because the directory doesn't exist
+        args = population_init_args.copy()
+        args['data_dir'] = "./bad_directory"
+        p = PopulationInitialisation(**args)
+
+
 # Test the home flows on the dummy data
 def test_add_home_flows(test_population_init):
-    ind = test_population_init.individuals  # save typine
+    ind = test_population_init.individuals  # save typing
     # Using dummy data I know that there should be 2 person in household ID 0:
     assert len(ind.loc[ind.House_ID == 0, :]) == 2
     # And 4 people in house ID 2
@@ -210,7 +208,8 @@ def test_read_msm_data(test_population_init):
     assert len(test_population_init.households) == 8
     # Check correct number of 'homeless' (this is OK because of how I set up the data)
     with pytest.raises(Exception) as e:
-        PopulationInitialisation._check_no_homeless(test_population_init.individuals, test_population_init.households, warn=False)
+        PopulationInitialisation._check_no_homeless(test_population_init.individuals, test_population_init.households,
+                                                    warn=False)
         # This should reaise an exception. Get the number of homeless. Should be 15
         num_homeless = [int(s) for s in e.message.split() if s.isdigit()][0]
         print(f"Correctly found homeless: {num_homeless}")
@@ -221,11 +220,11 @@ def test_read_msm_data(test_population_init):
 # ********************************************************
 
 
-def _get_rand(population_init, N=100):
-    """Get a random number using the PopulationInitialisationulation object's random number generator"""
+def _get_rand(test_population_initialisation, N=100):
+    """Get a random number using the PopulationInitialisation object's random number generator"""
     for _ in range(N):
-        population_init.random.random()
-    return population_init.random.random()
+        test_population_initialisation.random.random()
+    return test_population_initialisation.random.random()
 
 
 def test_random():
@@ -255,7 +254,7 @@ def test_random():
 def test_extract_msoas_from_individuals():
     """Check that a list of areas can be successfully extracted from a DataFrame of indviduals"""
     individuals = pd.DataFrame(data={"area": ["C", "A", "F", "A", "A", "F"]})
-    areas = PopulationInitialisation.extract_msoas_from_indiviuals(individuals)
+    areas = PopulationInitialisation.extract_msoas_from_individuals(individuals)
     assert len(areas) == 3
     # Check the order is correct too
     assert False not in [x == y for (x, y) in zip(areas, ["A", "C", "F"])]
@@ -303,7 +302,7 @@ def test__add_location_columns():
     assert False not in list(df.index == range(0, 4))
 
     # TODO dest that the _add_location_columns function correctly adds the required standard columns
-    # to a locaitons dataframe, and does appropriate checks for correct lengths of input lists etc.
+    # to a locations dataframe, and does appropriate checks for correct lengths of input lists etc.
 
 
 def test__normalise():

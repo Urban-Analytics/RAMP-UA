@@ -19,29 +19,28 @@ population_init_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
 # arguments used when calling the Microsim constructor. Usually these are the same
 microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
                  "r_script_dir": os.path.normpath(os.path.join(test_dir, "..", "R/py_int")),
-                 "testing": True, "debug": True,
-                 "disable_disease_status": True, 'time_activity_multiplier': None,
-                 "use_cache": False}
+                 "disable_disease_status": True}
 
 
 # This 'fixture' means that other test functions can use the object created here.
 # Note: Don't try to run this test, it will be called when running the others that need it,
 # like `test_step()`.
 @pytest.fixture()
-def test_generate_microsim():
+def test_microsim():
     population_init = PopulationInitialisation(**population_init_args)
-    individuals, activity_locations, time_activity_multiplier, households = population_init.generate()
 
-    test_microsim = Microsim(individuals, activity_locations, time_activity_multiplier, **microsim_args)
+    microsim = Microsim(population_init.individuals, population_init.activity_locations,
+                        population_init.time_activity_multiplier, **microsim_args)
 
     # TODO add some assertions here
 
-    yield test_microsim, households
+    yield microsim, population_init.households
 
 
-def test_change_behaviour_with_disease(test_microsim, households):
+def test_change_behaviour_with_disease(test_microsim):
+    microsim, households = test_microsim
     """Check that individuals behaviour changed correctly with the disease status"""
-    m = copy.deepcopy(test_microsim)  # less typing and so as not to interfere with other tests
+    m = copy.deepcopy(microsim)  # less typing and so as not to interfere with other tests
     # Give some people the disease (these two chosen because they both spend a bit of time in retail
     p1 = 1
     p2 = 6
@@ -104,20 +103,21 @@ def test_change_behaviour_with_disease(test_microsim, households):
         p1, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
 
-def test_update_venue_danger_and_risks(test_microsim, households):
+def test_update_venue_danger_and_risks(test_microsim):
     """Check that the current risk is updated properly"""
     # This is actually tested as part of test_step
     assert True
 
 
-def test_hazard_multipliers(test_microsim, households):
+def test_hazard_multipliers(test_microsim):
+    microsim, households = test_microsim
     """
     This tests whether hazards for particular disease statuses or locations are multiplied properly.
     The relevant code is in update_venue_danger_and_risks().
 
     :param test_microsim: This is a pointer to the initialised model. Dummy data will have been read in,
     but no stepping has taken place yet."""
-    m = copy.deepcopy(test_microsim)  # For less typing and so as not to interfere with other functions use test_microsim
+    m = copy.deepcopy(microsim)  # For less typing and so as not to interfere with other functions use microsim
 
     # Note: the following is a useul way to get relevant info about the individuals
     # m.individuals.loc[:, ["ID", "PID", "HID", "area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
@@ -258,7 +258,8 @@ def _check_hazard_spread(p1, p2, individuals, households, risk):
         assert households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
 
-def test_step(test_microsim, households):
+def test_step(test_microsim):
+    microsim, households = test_microsim
     """
     Test the step method. This is the main test of the model. Simulate a deterministic run through and
     make sure that the model runs as expected.
@@ -268,7 +269,7 @@ def test_step(test_microsim, households):
 
     :param test_microsim: This is a pointer to the initialised model. Dummy data will have been read in,
     but no stepping has taken place yet."""
-    m = copy.deepcopy(test_microsim)  # For less typing and so as not to interfere with other functions use test_microsim
+    m = copy.deepcopy(microsim)  # For less typing and so as not to interfere with other functions use microsim
 
     # Note: the following is a useul way to get relevant info about the individuals
     # m.individuals.loc[:, ["ID", "PID", "HID", "area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]

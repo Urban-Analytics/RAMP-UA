@@ -80,18 +80,19 @@ class PopulationInitialisation:
         if not read_data:  # Optionally can not do this, usually for debugging
             return
 
-    def generate(self):
-        """Generate population and places dataframes"""
+        # *********
+        # Generate population and places dataframes
+        # *********
 
         # Begin by reading the individuals. This includes core information about the population as well as the
         # durations that people spend doing activities.
         # This also creates flows and venues columns for the journeys of individuals to households, and makes a new
         # households dataset to replace the one we read in above.
         home_name = ColumnNames.Activities.HOME  # How to describe flows to people's houses
-        individuals, households = PopulationInitialisation.read_individual_time_use_and_health_data(home_name)
+        self.individuals, self.households = PopulationInitialisation.read_individual_time_use_and_health_data(home_name)
 
         # Extract a list of all MSOAs in the study area. Will need this for the new SIMs
-        all_msoas = PopulationInitialisation.extract_msoas_from_indiviuals(individuals)
+        self.all_msoas = PopulationInitialisation.extract_msoas_from_individuals(self.individuals)
 
         #
         # ********** How to assign activities for the population **********
@@ -132,12 +133,12 @@ class PopulationInitialisation:
 
         # For each type of activity (store, retail, etc), create ActivityLocation objects to keep all the
         # required information together.
-        activity_locations: Dict[str, ActivityLocation] = {}
+        self.activity_locations: Dict[str, ActivityLocation] = {}
 
         # Create 'activity locations' for the activity of being at home. (This is done for other activities,
         # like retail etc, when those data are read in later.
-        activity_locations[home_name] = ActivityLocation(name=home_name, locations=households,
-                                                              flows=None, individuals=individuals,
+        self.activity_locations[home_name] = ActivityLocation(name=home_name, locations=self.households,
+                                                              flows=None, individuals=self.individuals,
                                                               duration_col="phome")
 
         # Generate travel time columns and assign travel modes to some kind of risky activity (not doing this yet)
@@ -147,22 +148,22 @@ class PopulationInitialisation:
         for col in ["punknown", "phome", "pworkhome", "pwork", "_pschool", "pshop", "pservices", "pleisure",
                     "pescort", "ptransport", "pnothome", "phometot", "pmwalk", "pmcycle", "pmprivate",
                     "pmpublic", "pmunknown"]:
-            individuals[col].fillna(0, inplace=True)
+            self.individuals[col].fillna(0, inplace=True)
 
         # Read Retail flows data
         retail_name = ColumnNames.Activities.RETAIL  # How to refer to this in data frame columns etc.
-        stores, stores_flows = PopulationInitialisation.read_retail_flows_data(all_msoas)  # (list of shops and a flow matrix)
+        stores, stores_flows = PopulationInitialisation.read_retail_flows_data(self.all_msoas)  # (list of shops and a flow matrix)
         PopulationInitialisation.check_sim_flows(stores, stores_flows)
         # Assign Retail flows data to the individuals
-        individuals = PopulationInitialisation.add_individual_flows(retail_name, individuals, stores_flows)
-        activity_locations[retail_name] = \
-            ActivityLocation(retail_name, stores, stores_flows, individuals, "pshop")
+        self.individuals = PopulationInitialisation.add_individual_flows(retail_name, self.individuals, stores_flows)
+        self.activity_locations[retail_name] = \
+            ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
 
         # Read Schools (primary and secondary)
         primary_name = ColumnNames.Activities.PRIMARY
         secondary_name = ColumnNames.Activities.SECONDARY
         primary_schools, secondary_schools, primary_flows, secondary_flows = \
-            PopulationInitialisation.read_school_flows_data(all_msoas)  # (list of schools and a flow matrix)
+            PopulationInitialisation.read_school_flows_data(self.all_msoas)  # (list of schools and a flow matrix)
         PopulationInitialisation.check_sim_flows(primary_schools, primary_flows)
         PopulationInitialisation.check_sim_flows(secondary_schools, secondary_flows)
         # Assign Schools
@@ -171,12 +172,12 @@ class PopulationInitialisation:
         # seconary school duration, regardless of their age. I think the only way round this is to
         # make two new columns - 'pschool_primary' and 'pschool_seconary', and set these to either 'pschool'
         # or 0 depending on the age of the child.
-        individuals = PopulationInitialisation.add_individual_flows(primary_name, individuals, primary_flows)
-        activity_locations[primary_name] = \
-            ActivityLocation(primary_name, primary_schools.copy(), primary_flows, individuals, "pschool-primary")
-        individuals = PopulationInitialisation.add_individual_flows(secondary_name, individuals, secondary_flows)
-        activity_locations[secondary_name] = \
-            ActivityLocation(secondary_name, secondary_schools.copy(), secondary_flows, individuals,
+        self.individuals = PopulationInitialisation.add_individual_flows(primary_name, self.individuals, primary_flows)
+        self.activity_locations[primary_name] = \
+            ActivityLocation(primary_name, primary_schools.copy(), primary_flows, self.individuals, "pschool-primary")
+        self.individuals = PopulationInitialisation.add_individual_flows(secondary_name, self.individuals, secondary_flows)
+        self.activity_locations[secondary_name] = \
+            ActivityLocation(secondary_name, secondary_schools.copy(), secondary_flows, self.individuals,
                              "pschool-secondary")
         del primary_schools, secondary_schools  # No longer needed as we gave copies to the ActivityLocation
 
@@ -184,17 +185,17 @@ class PopulationInitialisation:
         # type exists in each MSOA. An individual is assigned flows and office locations according to the general
         # flows from their home MSOA.
         # Occupation is taken from column soc2010 in individuals df
-        individuals['soc2010'] = individuals['soc2010'].astype(str)  # These are integers but we need string
-        possible_jobs = sorted(individuals.soc2010.unique())  # list of possible jobs in alphabetical order
+        self.individuals['soc2010'] = self.individuals['soc2010'].astype(str)  # These are integers but we need string
+        possible_jobs = sorted(self.individuals.soc2010.unique())  # list of possible jobs in alphabetical order
         workplace_names = []  # Creat a list of workplace names, built from the MSOA code and the SOC
         workplace_msoas = []
         workplace_socs = []
-        for msoa in all_msoas:
+        for msoa in self.all_msoas:
             for soc in possible_jobs:
                 workplace_msoas.append(msoa)
                 workplace_socs.append(soc)
                 workplace_names.append(msoa + "-" + soc)
-        assert len(workplace_names) == len(all_msoas) * len(possible_jobs)
+        assert len(workplace_names) == len(self.all_msoas) * len(possible_jobs)
         assert len(pd.unique(workplace_names)) == len(workplace_names)  # Each name should be unique
 
         workplaces = pd.DataFrame({
@@ -202,23 +203,23 @@ class PopulationInitialisation:
             'MSOA': workplace_msoas,
             'SOC': workplace_socs
         })
-        assert len(workplaces) == len(all_msoas) * len(possible_jobs)  # One location per job per msoa
+        assert len(workplaces) == len(self.all_msoas) * len(possible_jobs)  # One location per job per msoa
         PopulationInitialisation._add_location_columns(workplaces, location_names=workplace_names)
         work_name = ColumnNames.Activities.WORK
         # Workplaces dataframe is ready. Now read commuting flows
-        commuting_flows = PopulationInitialisation.read_commuting_flows_data(all_msoas)
-        num_individuals = len(individuals)  # (sanity check)
-        cols = individuals.columns
-        individuals = PopulationInitialisation.add_work_flows(flow_type=work_name, individuals=individuals,
-                                                   workplaces=workplaces, commuting_flows=commuting_flows,
-                                                   flow_threshold=5, use_cache=self.use_cache)
-        assert num_individuals == len(individuals), \
+        commuting_flows = PopulationInitialisation.read_commuting_flows_data(self.all_msoas)
+        num_individuals = len(self.individuals)  # (sanity check)
+        cols = self.individuals.columns
+        self.individuals = PopulationInitialisation.add_work_flows(flow_type=work_name, individuals=self.individuals,
+                                                            workplaces=workplaces, commuting_flows=commuting_flows,
+                                                            flow_threshold=5, use_cache=self.use_cache)
+        assert num_individuals == len(self.individuals), \
             "There was an error reading workplaces (caching?) and the number of individuals has changed!"
-        assert (individuals.columns[0:-3] == cols).all(), \
+        assert (self.individuals.columns[0:-3] == cols).all(), \
             "There was an error reading workplaces (caching?) the column names don't match!"
         del num_individuals, cols
-        activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
-                                                              individuals=individuals, duration_col="pwork")
+        self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
+                                                              individuals=self.individuals, duration_col="pwork")
 
         ## Some flows will be very complicated numbers. Reduce the numbers of decimal places across the board.
         ## This makes it easier to write out the files and to make sure that the proportions add up properly
@@ -234,35 +235,32 @@ class PopulationInitialisation:
         #   #            apply(lambda flows: [round(flow, 5) for flow in flows])
 
         # Round the durations
-        for name in tqdm(activity_locations.keys(), desc="Rounding all durations"):
-            individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = \
-                individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"].apply(lambda x: round(x, 5))
+        for name in tqdm(self.activity_locations.keys(), desc="Rounding all durations"):
+            self.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = \
+                self.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"].apply(lambda x: round(x, 5))
 
         # Some people's activity durations will not add up to 1.0 because we don't model all their activities.
         # Extend the amount of time at home to make up for this
-        individuals = PopulationInitialisation.pad_durations(individuals, activity_locations)
+        self.individuals = PopulationInitialisation.pad_durations(self.individuals, self.activity_locations)
 
         # Now that we have everone's initial activities, remember the proportions of times that they spend doing things
         # so that if these change (e.g. under lockdown) they can return to 'normality' later
-        for activity_name in activity_locations.keys():
-            individuals[f"{activity_name}{ColumnNames.ACTIVITY_DURATION_INITIAL}"] = \
-                individuals[f"{activity_name}{ColumnNames.ACTIVITY_DURATION}"]
+        for activity_name in self.activity_locations.keys():
+            self.individuals[f"{activity_name}{ColumnNames.ACTIVITY_DURATION_INITIAL}"] = \
+                self.individuals[f"{activity_name}{ColumnNames.ACTIVITY_DURATION}"]
 
         # Add some necessary columns for the disease
-        individuals = PopulationInitialisation.add_disease_columns(individuals)
+        self.individuals = PopulationInitialisation.add_disease_columns(self.individuals)
 
         # Read a file that tells us how much more time people should spend at home than normal (this is much greater
         # after lockdown
         if self.do_lockdown:
-            time_activity_multiplier: pd.DataFrame = \
+            self.time_activity_multiplier: pd.DataFrame = \
                 PopulationInitialisation.read_time_activity_multiplier(self.lockdown_file)
         else:
-            time_activity_multiplier = None
+            self.time_activity_multiplier = None
 
         print(" ... finished initialisation.")
-
-        return individuals, activity_locations, time_activity_multiplier, households
-
 
     @staticmethod
     def _round_flows(flows):
@@ -309,7 +307,7 @@ class PopulationInitialisation:
         return True
 
     @classmethod
-    def extract_msoas_from_indiviuals(cls, individuals: pd.DataFrame) -> List[str]:
+    def extract_msoas_from_individuals(cls, individuals: pd.DataFrame) -> List[str]:
         """
         Analyse a DataFrame of individuals and extract the unique MSOA codes, returning them as a list in ascending
         order
