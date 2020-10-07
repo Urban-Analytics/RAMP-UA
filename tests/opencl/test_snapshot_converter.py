@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
-from microsim.opencl.ramp.snapshot_convertor import Snapshotter
+from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
 
 sentinel_value = (1 << 31) - 1
 
@@ -46,9 +46,8 @@ activity_locations = {
 base_dir = os.getcwd()
 data_dir = os.path.join(base_dir, "devon_data")
 test_dir = os.path.join(base_dir, "tests")
-snapshot_dir = os.path.join(test_dir, "test_snapshots")
-snapshotter = Snapshotter(individuals_df, activity_locations, snapshot_dir=snapshot_dir, data_dir=data_dir,
-                          cache_inputs=False)
+snapshot_dir = os.path.join(test_dir, "../test_snapshots")
+snapshotter = SnapshotConvertor(individuals_df, activity_locations, data_dir=data_dir)
 
 
 def test_global_id_lookup():

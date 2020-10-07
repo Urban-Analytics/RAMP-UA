@@ -37,7 +37,7 @@ def run_with_gui(simulator, snapshot):
     width = 2560  # Initial window width in pixels
     height = 1440  # Initial window height in pixels
     nlines = 4  # Number of visualised connections per person
-    
+
     # Create an inspector and upload static data
     inspector = Inspector(simulator, snapshot, nlines, "Ramp UA", width, height)
 
