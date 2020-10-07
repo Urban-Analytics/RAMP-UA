@@ -58,10 +58,12 @@ class Simulator:
             params=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, Params().num_bytes()),
         )
 
+        kernels_path = "microsim/opencl/ramp/kernels/"
+
         # Load the OpenCL kernel programs
-        with open("ramp/kernels/ramp_ua.cl") as f:
+        with open(kernels_path + "ramp_ua.cl") as f:
             program = cl.Program(ctx, f.read())
-            program.build(options=["-I ramp/kernels/"])
+            program.build(options=[f"-I {kernels_path}"])
 
         kernels = Kernels(
             places_reset=program.places_reset,
