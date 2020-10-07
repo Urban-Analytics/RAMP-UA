@@ -25,7 +25,11 @@ class SnapshotConvertor:
         for activity_name in self.activity_names:
             self.locations[activity_name] = activity_locations[activity_name]._locations
 
-        self.lockdown_multipliers = time_activity_multiplier.loc[:, "timeout_multiplier"].to_numpy().astype(np.float32)
+        if time_activity_multiplier is not None:
+            self.lockdown_multipliers = time_activity_multiplier.loc[:, "timeout_multiplier"].to_numpy()\
+                .astype(np.float32)
+        else:
+            self.lockdown_multipliers = np.ones(100)
 
         self.num_people = self.individuals['ID'].count()
         self.global_place_id_lookup, self.num_places = self.create_global_place_ids()

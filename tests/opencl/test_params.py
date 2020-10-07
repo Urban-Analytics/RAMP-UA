@@ -1,6 +1,7 @@
 import numpy as np
 
-from ramp.params import Params
+from microsim.opencl.ramp.params import Params
+
 
 def test_params_to_from_array():
     params = Params()

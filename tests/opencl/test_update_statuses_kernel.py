@@ -1,8 +1,8 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from ramp.simulator import Simulator
-from ramp.snapshot import Snapshot
-from ramp.disease_statuses import DiseaseStatus
+from microsim.opencl.ramp.simulator import Simulator
+from microsim.opencl.ramp.snapshot import Snapshot
+from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 
 nplaces = 8
 npeople = 10000

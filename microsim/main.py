@@ -156,7 +156,7 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
             # it will be turned into an empty dictionary by the Microsim constructor)
             msim_args["disease_params"] = disease_params  # R parameters kept as a dictionary and unpacked later
 
-    # Temporily use dummy data for testing
+    # Temporarily use dummy data for testing
     # data_dir = os.path.join(base_dir, "dummy_data")
     # m = Microsim(data_dir=data_dir, testing=True, output=output)
 
@@ -184,14 +184,14 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
                          repetitions, parameters_file)
 
 
-def run_opencl_model(individuals_df, activity_locations_df, time_activity_multiplier, iterations, data_dir, base_dir,
+def run_opencl_model(individuals_df, activity_locations, time_activity_multiplier, iterations, data_dir, base_dir,
                      use_gui, use_gpu, use_cache):
     snapshot_cache_filepath = base_dir + "/microsim/opencl/snapshots/cache.npz"
 
     # Choose whether to load snapshot file from cache, or create a snapshot from population data
     if not use_cache or not os.path.exists(snapshot_cache_filepath):
         print("\nGenerating Snapshot for OpenCL model")
-        snapshot_converter = SnapshotConvertor(individuals_df, activity_locations_df, time_activity_multiplier,
+        snapshot_converter = SnapshotConvertor(individuals_df, activity_locations, time_activity_multiplier,
                                                data_dir)
         snapshot = snapshot_converter.generate_snapshot()
         snapshot.save(snapshot_cache_filepath)  # store snapshot in cache so we can load later

@@ -1,16 +1,18 @@
 import numpy as np
 import scipy.stats as stats
 
+
 def rand_exp(nums):
     return -np.log(1.0 - nums)
+
 
 def rand_weibull(nums, scale, shape):
     return scale * np.power(rand_exp(nums), 1.0 / shape)
 
+
 # These tests verify that the exponential and weibull samplers in
 # the kernels produce the summary statistics expected when they
 # are not rounded to integers.
-
 def test_exp_is_exp():
     n = 100000
     expected_rate = 1.0
@@ -18,6 +20,7 @@ def test_exp_is_exp():
     _, rate = stats.expon.fit(exps, floc=0.0)
 
     assert np.isclose(expected_rate, rate, atol=0.1)
+
 
 def test_weibull_is_weibull():
     n = 100000
@@ -28,6 +31,7 @@ def test_weibull_is_weibull():
 
     assert np.isclose(expected_scale, scale, atol=0.1)
     assert np.isclose(expected_shape, shape, atol=0.1)
+
 
 def test_exposed_dist():
     n = 100000
@@ -40,6 +44,7 @@ def test_exposed_dist():
 
     assert np.isclose(expected_mean, mean, atol=0.1)
     assert np.isclose(expected_std, std, atol=0.1)
+
 
 def test_presymptomatic_dist():
     n = 100000

@@ -1,4 +1,4 @@
-from ramp.snapshot import Snapshot
+from microsim.opencl.ramp.snapshot import Snapshot
 import numpy as np
 import os
 

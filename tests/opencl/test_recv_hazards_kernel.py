@@ -1,7 +1,7 @@
 import numpy as np
-from ramp.simulator import Simulator
-from ramp.snapshot import Snapshot
-from ramp.disease_statuses import DiseaseStatus
+from microsim.opencl.ramp.simulator import Simulator
+from microsim.opencl.ramp.snapshot import Snapshot
+from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 
 sentinel_value = (1 << 31) - 1
 fixed_factor = 8388608.0

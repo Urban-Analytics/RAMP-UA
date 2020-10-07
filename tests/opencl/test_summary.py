@@ -1,7 +1,7 @@
 import numpy as np
 
-from ramp.summary import Summary
-from ramp.snapshot import Snapshot
+from microsim.opencl.ramp.summary import Summary
+from microsim.opencl.ramp.snapshot import Snapshot
 
 
 def test_summary_update():

@@ -1,6 +1,6 @@
 import numpy as np
-from ramp.simulator import Simulator
-from ramp.snapshot import Snapshot
+from microsim.opencl.ramp.simulator import Simulator
+from microsim.opencl.ramp.snapshot import Snapshot
 
 nplaces = 5
 npeople = 100

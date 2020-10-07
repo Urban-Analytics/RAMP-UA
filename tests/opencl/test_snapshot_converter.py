@@ -45,14 +45,17 @@ activity_locations = {
 
 base_dir = os.getcwd()
 data_dir = os.path.join(base_dir, "devon_data")
-test_dir = os.path.join(base_dir, "tests")
-snapshot_dir = os.path.join(test_dir, "../test_snapshots")
-snapshotter = SnapshotConvertor(individuals_df, activity_locations, data_dir=data_dir)
+opencl_test_dir = os.path.join(base_dir, "tests/opencl")
+
+snapshot_converter = SnapshotConvertor(individuals_df, activity_locations, time_activity_multiplier=None,
+                                       data_dir=data_dir)
+snapshot = snapshot_converter.generate_snapshot()
+snapshot.save(opencl_test_dir + "/test_snapshot.npz")
 
 
 def test_global_id_lookup():
-    home_global_id = snapshotter.get_global_place_id("Home", 0)
-    retail_global_id = snapshotter.get_global_place_id("Retail", 0)
+    home_global_id = snapshot_converter.get_global_place_id("Home", 0)
+    retail_global_id = snapshot_converter.get_global_place_id("Retail", 0)
     assert home_global_id != retail_global_id
     assert home_global_id == 0
     assert retail_global_id == 3
@@ -68,8 +71,8 @@ def test_processes_people_flows():
                                       [0.6, 0.2, 0.16, 0.04, 0.0, 0.0, 0.0, 0.0]
                                       ])
 
-    people_place_ids, people_flows = snapshotter.get_people_place_data(max_places_per_person=20,
-                                                                       places_to_keep_per_person=8)
+    people_place_ids, people_flows = snapshot_converter.get_people_place_data(max_places_per_person=20,
+                                                                              places_to_keep_per_person=8)
 
     assert np.array_equal(expected_people_place_ids, people_place_ids)
     assert np.all(np.isclose(expected_people_flows, people_flows))
@@ -79,7 +82,7 @@ def test_get_place_data():
     expected_place_activity_enum = np.array(["Home", "Retail"])
     expected_place_activities = np.array([0, 0, 0, 1, 1, 1, 1, 1])
 
-    place_activity_enum, place_activities = snapshotter.get_place_data()
+    place_activity_enum, place_activities = snapshot_converter.get_place_data()
 
     assert np.array_equal(expected_place_activity_enum, place_activity_enum)
     assert np.array_equal(expected_place_activities, place_activities)
@@ -94,18 +97,10 @@ def test_get_coordinates():
                                                     lat_lon_coordinate_b,
                                                     lat_lon_coordinate_b])
 
-    place_coordinates = snapshotter.get_place_coordinates()
+    place_coordinates = snapshot_converter.get_place_coordinates()
 
     # select non-home coordinates
     non_home_place_coordinates = place_coordinates[3:]
 
     assert np.all(np.isclose(expected_non_home_place_coordinates, non_home_place_coordinates, atol=0.0001,
                              equal_nan=True))
-
-
-def test_store_snapshots():
-    snapshotter.store_snapshots()
-
-    # check npz files exist
-    assert os.path.isfile(os.path.join(snapshot_dir, "people.npz"))
-    assert os.path.isfile(os.path.join(snapshot_dir, "places.npz"))
