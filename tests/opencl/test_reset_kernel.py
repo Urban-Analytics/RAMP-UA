@@ -16,7 +16,7 @@ def test_places_are_reset_to_zero():
     snapshot.buffers.place_hazards[:] = hazards_test_data
     snapshot.buffers.place_counts[:] = counts_test_data
 
-    simulator = Simulator(snapshot, gpu=True)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     place_hazards_before = np.zeros(nplaces, dtype=np.uint32)

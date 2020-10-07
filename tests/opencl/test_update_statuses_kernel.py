@@ -26,7 +26,7 @@ def test_susceptible_become_infected():
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
 
-    simulator = Simulator(snapshot, gpu=True)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     people_statuses_before = np.zeros(npeople, dtype=np.uint32)
@@ -53,7 +53,7 @@ def test_transmission_times_decremented():
     people_transition_times_test_data = np.full(npeople, 3, dtype=np.uint32)
     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
 
-    simulator = Simulator(snapshot, gpu=True)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     # check decremented after one step
@@ -87,7 +87,7 @@ def test_exposed_become_presymptomatic():
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
 
-    simulator = Simulator(snapshot, gpu=True)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     people_statuses_before = np.zeros(npeople, dtype=np.uint32)
@@ -123,7 +123,7 @@ def test_presymptomatic_update_status():
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
 
-    simulator = Simulator(snapshot, gpu=True)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     people_statuses_before = np.zeros(npeople, dtype=np.uint32)
@@ -172,7 +172,7 @@ def test_symptomatic_become_recovered_or_dead_young_age():
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
 
-    simulator = Simulator(snapshot, gpu=True)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     people_statuses_before = np.zeros(npeople, dtype=np.uint32)
@@ -220,7 +220,7 @@ def test_symptomatic_become_recovered_or_dead_old_age():
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
 
-    simulator = Simulator(snapshot, gpu=True)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     people_statuses_before = np.zeros(npeople, dtype=np.uint32)
@@ -260,7 +260,7 @@ def test_all_asymptomatic_become_recovered():
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
 
-    simulator = Simulator(snapshot, gpu=True)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     people_statuses_before = np.zeros(npeople, dtype=np.uint32)
@@ -300,7 +300,7 @@ def test_transition_times_distribution():
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
 
-    simulator = Simulator(snapshot, gpu=True)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     simulator.step_kernel("people_update_statuses")

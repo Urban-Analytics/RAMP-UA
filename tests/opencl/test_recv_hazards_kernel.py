@@ -10,6 +10,7 @@ nplaces = 8
 npeople = 3
 nslots = 8
 
+
 def test_correct_send_hazard():
     # Set up and upload the test data
     snapshot = Snapshot.random(nplaces, npeople, nslots)
@@ -38,7 +39,7 @@ def test_correct_send_hazard():
     snapshot.buffers.place_hazards[:] = place_hazards
     snapshot.buffers.people_hazards[:] = people_hazards
 
-    simulator = Simulator(snapshot)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     # Run the kernel

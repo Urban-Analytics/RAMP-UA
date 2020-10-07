@@ -79,12 +79,8 @@ def test_processes_people_flows():
 
 
 def test_get_place_data():
-    expected_place_activity_enum = np.array(["Home", "Retail"])
     expected_place_activities = np.array([0, 0, 0, 1, 1, 1, 1, 1])
-
-    place_activity_enum, place_activities = snapshot_converter.get_place_data()
-
-    assert np.array_equal(expected_place_activity_enum, place_activity_enum)
+    place_activities = snapshot_converter.get_place_data()
     assert np.array_equal(expected_place_activities, place_activities)
 
 

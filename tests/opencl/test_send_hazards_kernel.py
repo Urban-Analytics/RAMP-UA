@@ -36,7 +36,7 @@ def test_correct_send_hazard():
     params.place_hazard_multipliers = np.ones(5, dtype=np.float32)
     snapshot.buffers.params[:] = params.asarray()
 
-    simulator = Simulator(snapshot)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     # Run the kernel

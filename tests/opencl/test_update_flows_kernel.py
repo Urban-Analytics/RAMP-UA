@@ -38,7 +38,7 @@ def test_correct_flow_calculation_no_lockdown():
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.place_activities[:] = place_activities_test_data
 
-    simulator = Simulator(snapshot)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     people_flows_before = np.zeros(npeople*nslots, dtype=np.float32)
@@ -90,7 +90,7 @@ def test_correct_flow_calculation_with_lockdown():
     params.set_lockdown_multiplier(snapshot.lockdown_multipliers, 0)
     snapshot.buffers.params[:] = params.asarray()
 
-    simulator = Simulator(snapshot)
+    simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
     people_flows_before = np.zeros(npeople*nslots, dtype=np.float32)
