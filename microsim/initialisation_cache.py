@@ -34,3 +34,6 @@ class InitialisationCache:
     def cache_files_exist(self):
         files_exist = [os.path.exists(cache_file) for cache_file in self.all_cache_filepaths]
         return all(files_exist)
+
+    def is_empty(self):
+        return not self.cache_files_exist()

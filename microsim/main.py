@@ -62,6 +62,11 @@ from microsim.initialisation_cache import InitialisationCache
               help="Run OpenCL model on the GPU (if false then run using CPU")
 def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, output, output_every_iteration,
                debug, repetitions, lockdown_file, quant_dir, use_cache, opencl, opencl_gui, opencl_gpu):
+    """
+    Main function which runs the population initialisation, then chooses which model to run, either the Python/R
+    model or the OpenCL model
+    """
+
     # First see if we're reading a parameters file or using command-line arguments.
     if no_parameters_file:
         print("Not reading a parameters file")
@@ -139,7 +144,7 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
     population_args = {"data_dir": data_dir, "debug": debug, "lockdown_file": lockdown_file, "use_cache": True,
                        "quant_object": quant_object}
 
-    # Use same arguments whether running 1 repetition or many
+    # args for Python/R Microsim. Use same arguments whether running 1 repetition or many
     msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir, "output": output,
                  "output_every_iteration": output_every_iteration}
 
@@ -155,16 +160,17 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
     # data_dir = os.path.join(base_dir, "dummy_data")
     # m = Microsim(data_dir=data_dir, testing=True, output=output)
 
+    # cache to hold previously calculate population data
     cache = InitialisationCache(cache_dir=base_dir + "/microsim/temp_cache/")
 
-    # generate new population dataframes if we aren't using the cache, or there are no files in the cache
-    if not use_cache or not cache.cache_files_exist():
+    # generate new population dataframes if we aren't using the cache, or if the cache is empty
+    if not use_cache or cache.is_empty():
         population = PopulationInitialisation(**population_args)
         individuals, activity_locations, time_activity_multiplier = population.generate()
 
         # store in cache so we can load later
         cache.store_in_cache(individuals, activity_locations, time_activity_multiplier)
-    else:
+    else: # load from cache
         individuals, activity_locations, time_activity_multiplier = cache.read_from_cache()
 
     # Select which model implementation to run
@@ -180,9 +186,11 @@ def run_opencl_model(individuals_df, activity_locations_df, time_activity_multip
                      use_gui, use_gpu, use_cache):
     snapshot_cache_filepath = base_dir + "/microsim/opencl/snapshots/cache.npz"
 
+    # Choose whether to load snapshot file from cache, or create a snapshot from population data
     if not use_cache or not os.path.exists(snapshot_cache_filepath):
         print("\nGenerating Snapshot for OpenCL model")
-        snapshot_converter = SnapshotConvertor(individuals_df, activity_locations_df, time_activity_multiplier, data_dir)
+        snapshot_converter = SnapshotConvertor(individuals_df, activity_locations_df, time_activity_multiplier,
+                                               data_dir)
         snapshot = snapshot_converter.generate_snapshot()
         snapshot.save(snapshot_cache_filepath)  # store snapshot in cache so we can load later
     else:  # load cached snapshot
@@ -194,7 +202,7 @@ def run_opencl_model(individuals_df, activity_locations_df, time_activity_multip
     # seed initial infections using GAM initial cases
     snapshot.seed_initial_infections(num_seed_days=5)
 
-    run_mode = "GUI" if use_gui else "Headless"
+    run_mode = "GUI" if use_gui else "headless"
     print(f"\nRunning OpenCL model in {run_mode} mode")
     run_opencl(snapshot, iterations, data_dir, use_gui, use_gpu, quiet=False)
 

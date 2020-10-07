@@ -12,7 +12,8 @@ from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 
 def run_opencl(snapshot, iterations=100, data_dir="./data", use_gui=True, use_gpu=False, quiet=False):
     """
-    Entry point for running the OpenCL simulation either with the UI or headless
+    Entry point for running the OpenCL simulation either with the UI or in headless mode.
+    NB: in order to write output data for the OpenCL dashboard you must run in headless mode.
     """
 
     if not quiet:
@@ -36,6 +37,7 @@ def run_with_gui(simulator, snapshot):
     width = 2560  # Initial window width in pixels
     height = 1440  # Initial window height in pixels
     nlines = 4  # Number of visualised connections per person
+    
     # Create an inspector and upload static data
     inspector = Inspector(simulator, snapshot, nlines, "Ramp UA", width, height)
 
@@ -44,11 +46,14 @@ def run_with_gui(simulator, snapshot):
         inspector.update()
 
 
-def run_headless(simulator, snapshot, iterations, quiet, data_dir):
-    """Run the simulation in headless mode and store summary data.
-    NB: running in this mode is required in order to view output data in the dashboard"""
+def run_headless(simulator, snapshot, iterations, quiet, data_dir, store_detailed_counts=True):
+    """
+    Run the simulation in headless mode and store summary data.
+    NB: running in this mode is required in order to view output data in the dashboard. Also store_detailed_counts must
+    be set to True to output the required data for the dashboard, however the model runs faster with this set to False.
+    """
     params = Params()
-    summary = Summary(snapshot, store_detailed_counts=True, max_time=iterations)
+    summary = Summary(snapshot, store_detailed_counts=store_detailed_counts, max_time=iterations)
     for time in tqdm(range(iterations), desc="Running simulation"):
         # Update parameters based on lockdown
         params.set_lockdown_multiplier(snapshot.lockdown_multipliers, time)
@@ -71,7 +76,7 @@ def run_headless(simulator, snapshot, iterations, quiet, data_dir):
     if not quiet:
         print("\nFinished")
 
-    store_summary_data(summary, store_detailed_counts=True, data_dir=data_dir)
+    store_summary_data(summary, store_detailed_counts=store_detailed_counts, data_dir=data_dir)
 
 
 def store_summary_data(summary, store_detailed_counts, data_dir):

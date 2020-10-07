@@ -18,6 +18,7 @@ import copy
 class Microsim:
     """
     Class containing code for running timesteps of the Python/ R microsim model.
+    This operates on two main dataframes: individuals and activity_locations.
     """
     def __init__(self,
                  individuals,

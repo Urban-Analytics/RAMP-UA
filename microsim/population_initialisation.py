@@ -30,8 +30,8 @@ from tqdm import tqdm  # For a progress bar
 
 class PopulationInitialisation:
     """
-    A class used to generate the population of people, this produces dataframes of people and places ready to start
-    the PopulationInitialisation.
+    A class used to load different datasources and generate the population of people ready to be iterated.
+    This produces dataframes of people and places ready to start either model implementation.
     """
 
     def __init__(self,
