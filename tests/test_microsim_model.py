@@ -32,7 +32,8 @@ def test_microsim():
     microsim = Microsim(population_init.individuals, population_init.activity_locations,
                         population_init.time_activity_multiplier, **microsim_args)
 
-    # TODO add some assertions here
+    # do_lockdown should be false since time_activitiy_multiplier is None
+    assert not microsim.do_lockdown
 
     yield microsim
 
