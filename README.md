@@ -4,9 +4,17 @@
 
 This is the code repository for the RAMP Urban Analytics project.
 
-The microsimulation model that ties the different components together is in the [microsim](./microsim) folder.
+This project contains two implementations of a microsim model which runs on a synthetic population:
+1. Python / R implementation, found in [microsim/microsim_model.py](./microsim/microsim_model.py)
+2. High performance OpenCL implementation, which can run on both CPU and CPU, 
+which is found in the [microsim/opencl](./microsim/opencl) folder. 
+
+Further documentation on the OpenCL model can be found [microsim/opencl/doc](./microsim/opencl/doc)
 
 ## Environment setup
+
+**NB:** The OpenCL model requires following additional installation instructions located in the 
+[OpenCL Readme](./microsim/opencl/README.md)
 
 This project currently supports running on Linux and macOS.
 
@@ -39,18 +47,56 @@ $ python setup.py develop
 $ python setup.py install
 ```
 
-Once the above is complete you can run the model using the following line:
+### Running the models
+Both models can be run from the [microsim/main.py](./microsim/main.py) script, which can be configured with various arguments
+to choose which model implementation to run.
+
+#### Python / R model
+
+The Python / R model runs by default, so simply run the main script with no argument.s
 
 ```bash
-$ python microsim/microsim_model.py
+$ python microsim/main.py 
 ```
 
-Outputs are written to the [microsim/data/outputs](./microsim/data/outputs) directory.
+#### OpenCL model
+To run the OpenCL model pass the `--opencl` flag to the main script, as below.
 
-For more details, see the full project repository on OSF.IO: https://osf.io/qzw6f/ (currently this is private, sorry, while we work out which data sources can be shared and which can't be, but the whole project will become public asap).
+The OpenCL model runs in "headless" mode by default, however it can also be run with an interactive GUI and visualisation,
+to run with the GUI pass the `--opencl-gui` flag, as below.
+
+Run Headless
+```bash
+$ python microsim/main.py --opencl
+```
+
+Run with GUI
+```bash
+$ python microsim/main.py --opencl --opencl-gui
+```
+
+#### Caching of population initialisation
+The population initialisation step runs before either of the models and can be time consuming (~10 minutes). In order to run
+the models using a cache of previous results simply pass the `--use-cache` flag.
+
+### Output Dashboards
+Outputs are currently written to the [devon_data/output](./devon_data/output) directory.
+
+Interactive HTML dashboards can be created using the Bokeh library.
+ 
+Run the command below to generate the full dashboard for the Python / R model output, which should automatically open
+the HTML file when it finishes.
+ ```bash
+$ python microsim/dashboard.py
+```
+Configuration YAML files for the dashboard are located in the [model_parameters](./model_parameters) folder.
+
+The OpenCL model has a more limited dashboard (this may be extended soon), which can be run as follows:
+ ```bash
+$ python microsim/opencl/ramp/opencl_dashboard.py
+```
 
 ## Creating releases
-
 This repository takes advantage of a GitHub action for [creating tagged releases](https://github.com/marvinpinto/action-automatic-releases) using [semantic versioning](https://semver.org/).
 
 To initiate the GitHub action and create a release:
