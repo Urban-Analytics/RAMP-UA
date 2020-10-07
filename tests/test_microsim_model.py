@@ -34,13 +34,13 @@ def test_microsim():
 
     # TODO add some assertions here
 
-    yield microsim, population_init.households
+    yield microsim
 
 
 def test_change_behaviour_with_disease(test_microsim):
-    microsim, households = test_microsim
     """Check that individuals behaviour changed correctly with the disease status"""
-    m = copy.deepcopy(microsim)  # less typing and so as not to interfere with other tests
+    m = copy.deepcopy(test_microsim)  # less typing and so as not to interfere with other tests
+
     # Give some people the disease (these two chosen because they both spend a bit of time in retail
     p1 = 1
     p2 = 6
@@ -50,11 +50,11 @@ def test_change_behaviour_with_disease(test_microsim):
     m.step()
     m.change_behaviour_with_disease()  # (this isn't called by default when testing)
 
-    # Nothing should have happended as we hadn't indicated a change in disease status
+    # Nothing should have happened as we hadn't indicated a change in disease status
     for p, act in zip([p1, p1, p2, p2], [ColumnNames.Activities.HOME, ColumnNames.Activities.RETAIL,
                                          ColumnNames.Activities.HOME, ColumnNames.Activities.RETAIL]):
-            assert m.individuals.loc[p, f"{act}{ColumnNames.ACTIVITY_DURATION}"] == \
-               m.individuals.loc[p, f"{act}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
+        assert m.individuals.loc[p, f"{act}{ColumnNames.ACTIVITY_DURATION}"] == \
+           m.individuals.loc[p, f"{act}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
     # Mark behaviour changed then try again
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS_CHANGED] = True
@@ -110,16 +110,16 @@ def test_update_venue_danger_and_risks(test_microsim):
 
 
 def test_hazard_multipliers(test_microsim):
-    microsim, households = test_microsim
     """
     This tests whether hazards for particular disease statuses or locations are multiplied properly.
     The relevant code is in update_venue_danger_and_risks().
 
     :param test_microsim: This is a pointer to the initialised model. Dummy data will have been read in,
     but no stepping has taken place yet."""
-    m = copy.deepcopy(microsim)  # For less typing and so as not to interfere with other functions use microsim
+    m = copy.deepcopy(test_microsim)  # For less typing and so as not to interfere with other functions use microsim
+    households = m.activity_locations[f"{ColumnNames.Activities.HOME}"]._locations
 
-    # Note: the following is a useul way to get relevant info about the individuals
+    # Note: the following is a useful way to get relevant info about the individuals
     # m.individuals.loc[:, ["ID", "PID", "HID", "area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
 
     # Set the hazard-related parameters.
@@ -128,7 +128,7 @@ def test_hazard_multipliers(test_microsim):
     assert not m.hazard_location_multipliers
     assert not m.hazard_individual_multipliers
 
-    # Manually create some hazards for individuals and locationsas per the parameters file
+    # Manually create some hazards for individuals and locations as per the parameters file
     m.hazard_individual_multipliers["presymptomatic"] = 1.0
     m.hazard_individual_multipliers["asymptomatic"] = 2.0
     m.hazard_individual_multipliers["symptomatic"] = 3.0
@@ -155,28 +155,28 @@ def test_hazard_multipliers(test_microsim):
     m.step()
 
     # Check the disease has spread to the house with a multiplier of 1.0, but nowhere else
-    _check_hazard_spread(p1, p2, m.individuals, m.households, 1.0)
+    _check_hazard_spread(p1, p2, m.individuals, households, 1.0)
 
     # If the person is asymptomatic, we said the hazard should be doubled, so the risk should be doubled
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.ASYMPTOMATIC  # Give p1 the disease
     m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SUSCEPTIBLE  # Make sure p2 is clean
 
     m.step()
-    _check_hazard_spread(p1, p2, m.individuals, m.households, 2.0)
+    _check_hazard_spread(p1, p2, m.individuals, households, 2.0)
 
     # And for symptomatic we said 3.0
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC  # Give p1 the disease
     m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SUSCEPTIBLE  # Make sure p2 is clean
 
     m.step()
-    _check_hazard_spread(p1, p2, m.individuals, m.households, 3.0)
+    _check_hazard_spread(p1, p2, m.individuals, households, 3.0)
 
 
     # But if they both get sick then double danger and risk)
     m.individuals.loc[p1, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC
     m.individuals.loc[p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC
     m.step()
-    _check_hazard_spread(p1, p2, m.individuals, m.households, 6.0)
+    _check_hazard_spread(p1, p2, m.individuals, households, 6.0)
 
     #
     # Now see if the hazards for locations work. Check houses and schools
@@ -189,7 +189,7 @@ def test_hazard_multipliers(test_microsim):
     m.hazard_location_multipliers[ColumnNames.Activities.HOME] = 5.0
 
     m.step()
-    _check_hazard_spread(p1, p2, m.individuals, m.households, 30.0)
+    _check_hazard_spread(p1, p2, m.individuals, households, 30.0)
 
 
     # Check for school as well. Now give durations for home and school as 0.5. Make them asymptomatic so the additional
@@ -233,11 +233,11 @@ def test_hazard_multipliers(test_microsim):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
 
     # Households
-    assert m.households.at[0, ColumnNames.LOCATION_DANGER] == 10.7
+    assert households.at[0, ColumnNames.LOCATION_DANGER] == 10.7
     # (the self.households dataframe should be the same as the one stored in the activity_locations)
     assert m.activity_locations[ColumnNames.Activities.HOME]._locations.at[0, ColumnNames.LOCATION_DANGER] == 10.7
-    for h in range(1, len(m.households)):  # all others are 0
-        assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+    for h in range(1, len(households)):  # all others are 0
+        assert households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     # Schools
     assert m.activity_locations[ColumnNames.Activities.PRIMARY]._locations.at[0, ColumnNames.LOCATION_DANGER] == 5.8
@@ -259,7 +259,6 @@ def _check_hazard_spread(p1, p2, individuals, households, risk):
 
 
 def test_step(test_microsim):
-    microsim, households = test_microsim
     """
     Test the step method. This is the main test of the model. Simulate a deterministic run through and
     make sure that the model runs as expected.
@@ -269,9 +268,10 @@ def test_step(test_microsim):
 
     :param test_microsim: This is a pointer to the initialised model. Dummy data will have been read in,
     but no stepping has taken place yet."""
-    m = copy.deepcopy(microsim)  # For less typing and so as not to interfere with other functions use microsim
+    m = copy.deepcopy(test_microsim)  # For less typing and so as not to interfere with other functions use microsim
+    households = m.activity_locations[f"{ColumnNames.Activities.HOME}"]._locations
 
-    # Note: the following is a useul way to get relevant info about the individuals
+    # Note: the following is a useful way to get relevant info about the individuals
     # m.individuals.loc[:, ["ID", "PID", "HID", "area", ColumnNames.DISEASE_STATUS, "MSOA_Cases", "HID_Cases"]]
 
     # Step 0 (initialisation):
@@ -298,9 +298,10 @@ def test_step(test_microsim):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 1.0
     for p in range(2, len(m.individuals)):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
-    assert m.households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
-    for h in range(1, len(m.households)):  # all others are 0
-        assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+
+    assert households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
+    for h in range(1, len(households)):  # all others are 0
+        assert households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     m.step()
 
@@ -310,8 +311,8 @@ def test_step(test_microsim):
     for p in range(2, len(m.individuals)):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
     assert households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
-    for h in range(1, len(m.households)):
-        assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+    for h in range(1, len(households)):
+        assert households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     # If the infected person doesn't go home (in this test they do absolutely nothing) then danger and risks should go
     # back to 0
@@ -319,8 +320,8 @@ def test_step(test_microsim):
     m.step()
     for p in range(len(m.individuals)):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
-    for h in range(0, len(m.households)):
-        assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+    for h in range(0, len(households)):
+        assert households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     # But if they both get sick then they should be 2.0 (double danger and risk)
     m.individuals.loc[p1:p2, ColumnNames.DISEASE_STATUS] = ColumnNames.DiseaseStatuses.SYMPTOMATIC  # Give them the disease
@@ -328,8 +329,8 @@ def test_step(test_microsim):
     m.step()
     for p in [p1, p2]:
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 2.0
-    assert m.households.at[0, ColumnNames.LOCATION_DANGER] == 2.0
-    for h in range(1, len(m.households)):  # All other houses are danger free
+    assert households.at[0, ColumnNames.LOCATION_DANGER] == 2.0
+    for h in range(1, len(households)):  # All other houses are danger free
         assert households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     #
