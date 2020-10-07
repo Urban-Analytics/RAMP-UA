@@ -10,13 +10,14 @@ def load_shader(shader_name):
     Returns:
         program: Compiled OpenGL shader program.
     """
+    shader_path = "microsim/opencl/ramp/shaders/"
     vert = glCreateShader(GL_VERTEX_SHADER)
-    with open("ramp/shaders/{}.vert".format(shader_name)) as f:
+    with open(f"{shader_path}{shader_name}.vert") as f:
         glShaderSource(vert, f.read())
     glCompileShader(vert)
 
     frag = glCreateShader(GL_FRAGMENT_SHADER)
-    with open("ramp/shaders/{}.frag".format(shader_name)) as f:
+    with open(f"{shader_path}{shader_name}.frag") as f:
         glShaderSource(frag, f.read())
     glCompileShader(frag)
 

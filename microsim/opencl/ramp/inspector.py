@@ -20,7 +20,8 @@ default_flags = imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_
 class Inspector:
     """User Interface: manager for all user input and rendering for the application."""
 
-    def __init__(self, simulator, snapshot, nlines, window_name, width, height, font_path="fonts/RobotoMono.ttf"):
+    def __init__(self, simulator, snapshot, nlines, window_name, width, height,
+                 font_path="microsim/opencl/fonts/RobotoMono.ttf"):
         """Create the window, imgui renderer, and all background renderers.
 
         Args:
@@ -163,7 +164,7 @@ class Inspector:
         self.move_sensitivity = 10.0
         self.zoom_multiplier = 1.01
         self.position = position
-        self.snapshots = [f for f in os.listdir("snapshots") if f.endswith(".npz")]
+        self.snapshots = [f for f in os.listdir("microsim/opencl/snapshots") if f.endswith(".npz")]
         self.current_snapshot = self.snapshots.index("devon.npz")
         self.selected_snapshot = self.current_snapshot
         self.saveas_file = self.snapshots[self.current_snapshot]
