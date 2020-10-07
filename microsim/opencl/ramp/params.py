@@ -4,7 +4,14 @@ import numpy as np
 class Params:
     """Convenience class for setting simulator parameters. Also holds the default values."""
 
-    def __init__(self):
+    def __init__(self,
+                 retail_multiplier=1.0,
+                 primary_school_multiplier=1.0,
+                 secondary_school_multiplier=1.0,
+                 home_multiplier=1.0,
+                 work_multiplier=1.0,
+                 current_risk_beta=0.0165
+                 ):
         """Create a simulator with the default parameters."""
         self.symptomatic_multiplier = 0.5
         self.proportion_asymptomatic = 0.5
@@ -15,7 +22,11 @@ class Params:
         self.infection_scale = 3.0
         self.infection_location = 16.0
         self.lockdown_multiplier = 1.0
-        self.place_hazard_multipliers = np.array([0.0165, 0.0165, 0.0165, 0.0165, 0.0165], dtype=np.float32)
+        self.place_hazard_multipliers = np.array([retail_multiplier, primary_school_multiplier,
+                                                  secondary_school_multiplier, home_multiplier,
+                                                  work_multiplier], dtype=np.float32)
+        self.place_hazard_multipliers *= current_risk_beta
+
         self.recovery_probs = np.array([0.9999839, 0.9999305, 0.999691, 0.999156,
                                         0.99839, 0.99405, 0.9807, 0.9572, 0.922],
                                        dtype=np.float32)

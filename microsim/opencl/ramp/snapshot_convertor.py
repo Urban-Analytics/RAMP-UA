@@ -6,6 +6,7 @@ from tqdm import tqdm
 from convertbng.util import convert_lonlat
 
 from microsim.opencl.ramp.snapshot import Snapshot
+from microsim.opencl.ramp.params import Params
 
 sentinel_value = (1 << 31) - 1
 
@@ -15,8 +16,14 @@ class SnapshotConvertor:
     Convert dataframe of individuals and activity locations into a Snapshot object that can be used by the OpenCL model
     """
 
-    def __init__(self, individuals, activity_locations, time_activity_multiplier, data_dir):
+    def __init__(self, individuals, activity_locations, time_activity_multiplier, calibration_params, disease_params,
+                 data_dir):
         self.data_dir = data_dir
+
+        if calibration_params is not None and disease_params is not None:
+            self.params = create_params(calibration_params, disease_params)
+        else:
+            self.params = Params()
 
         self.individuals = individuals
         self.activity_names = list(activity_locations.keys())
@@ -43,7 +50,7 @@ class SnapshotConvertor:
         place_activities = self.get_place_data()
         place_coordinates = self.get_place_coordinates()
         return Snapshot.from_arrays(people_ages, people_place_ids, people_flows, area_codes, not_home_probs,
-                                    place_activities, place_coordinates, self.lockdown_multipliers)
+                                    place_activities, place_coordinates, self.lockdown_multipliers, self.params)
 
     def create_global_place_ids(self):
         max_id = 0
@@ -209,3 +216,15 @@ class SnapshotConvertor:
             lons[i] = building[1]
 
         return lats, lons
+
+
+def create_params(calibration_params, disease_params):
+    hazard_location_multipliers = calibration_params["hazard_location_multipliers"]
+    return Params(
+        retail_multiplier=hazard_location_multipliers["Retail"],
+        primary_school_multiplier=hazard_location_multipliers["PrimarySchool"],
+        secondary_school_multiplier=hazard_location_multipliers["SecondarySchool"],
+        home_multiplier=hazard_location_multipliers["Home"],
+        work_multiplier=hazard_location_multipliers["Work"],
+        current_risk_beta=disease_params["current_risk_beta"]
+    )

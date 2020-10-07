@@ -103,7 +103,7 @@ class Snapshot:
     
     @classmethod
     def from_arrays(cls, people_ages, people_place_ids, people_baseline_flows, area_codes, not_home_probs,
-                    place_activities, place_coords, lockdown_multipliers):
+                    place_activities, place_coords, lockdown_multipliers, params=Params()):
 
         nplaces = place_activities.shape[0]
         npeople = people_place_ids.shape[0]
@@ -134,7 +134,7 @@ class Snapshot:
             people_hazards=np.zeros(npeople, dtype=np.float32),
             people_prngs=np.random.randint(np.uint32((1 << 32) - 1), size=npeople * 4, dtype=np.uint32),
 
-            params=Params().asarray(),
+            params=params.asarray(),
         )
 
         return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers)

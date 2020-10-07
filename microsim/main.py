@@ -141,7 +141,7 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
         quant_object = QuantRampAPI(os.path.join(data_dir, quant_dir))
 
     # args for population initialisation
-    population_args = {"data_dir": data_dir, "debug": debug, "lockdown_file": lockdown_file, "use_cache": True,
+    population_args = {"data_dir": data_dir, "debug": debug, "lockdown_file": lockdown_file, "use_cache": use_cache,
                        "quant_object": quant_object}
 
     # args for Python/R Microsim. Use same arguments whether running 1 repetition or many
@@ -161,7 +161,7 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
     # m = Microsim(data_dir=data_dir, testing=True, output=output)
 
     # cache to hold previously calculate population data
-    cache = InitialisationCache(cache_dir=base_dir + "/microsim/temp_cache/")
+    cache = InitialisationCache(cache_dir=data_dir + "/caches/")
 
     # generate new population dataframes if we aren't using the cache, or if the cache is empty
     if not use_cache or cache.is_empty():
@@ -178,21 +178,21 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
     # Select which model implementation to run
     if opencl:
         run_opencl_model(individuals, activity_locations, time_activity_multiplier, iterations, data_dir, base_dir,
-                         opencl_gui, opencl_gpu, use_cache)
+                         opencl_gui, opencl_gpu, use_cache, calibration_params, disease_params)
     else:
         run_python_model(individuals, activity_locations, time_activity_multiplier, msim_args, iterations,
                          repetitions, parameters_file)
 
 
 def run_opencl_model(individuals_df, activity_locations, time_activity_multiplier, iterations, data_dir, base_dir,
-                     use_gui, use_gpu, use_cache):
+                     use_gui, use_gpu, use_cache, calibration_params, disease_params):
     snapshot_cache_filepath = base_dir + "/microsim/opencl/snapshots/cache.npz"
 
     # Choose whether to load snapshot file from cache, or create a snapshot from population data
     if not use_cache or not os.path.exists(snapshot_cache_filepath):
         print("\nGenerating Snapshot for OpenCL model")
         snapshot_converter = SnapshotConvertor(individuals_df, activity_locations, time_activity_multiplier,
-                                               data_dir)
+                                               calibration_params, disease_params, data_dir)
         snapshot = snapshot_converter.generate_snapshot()
         snapshot.save(snapshot_cache_filepath)  # store snapshot in cache so we can load later
     else:  # load cached snapshot
@@ -202,7 +202,7 @@ def run_opencl_model(individuals_df, activity_locations, time_activity_multiplie
     snapshot.seed_prngs(42)
 
     # seed initial infections using GAM initial cases
-    snapshot.seed_initial_infections(num_seed_days=5)
+    snapshot.seed_initial_infections(num_seed_days=disease_params["seed_days"])
 
     run_mode = "GUI" if use_gui else "headless"
     print(f"\nRunning OpenCL model in {run_mode} mode")
