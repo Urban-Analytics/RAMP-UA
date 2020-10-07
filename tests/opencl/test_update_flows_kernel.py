@@ -1,15 +1,29 @@
 import numpy as np
+import os
+
 from microsim.opencl.ramp.activity import Activity
 from microsim.opencl.ramp.params import Params
 from microsim.opencl.ramp.simulator import Simulator
 from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.disease_statuses import DiseaseStatus
+from microsim.population_initialisation import PopulationInitialisation
 
 sentinel_value = (1 << 31) - 1
 
 nplaces = 8
 npeople = 3
 nslots = 8
+
+test_dir = "tests/"
+
+# arguments used when calling the PopulationInitialisation constructor. Usually these are the same
+population_init_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
+                        "testing": True, "debug": True, 'lockdown_file': "google_mobility_lockdown_daily.csv",
+                        "use_cache": False}
+
+population_init = PopulationInitialisation(**population_init_args)
+time_activity_multiplier = population_init.time_activity_multiplier
+lockdown_multipliers = time_activity_multiplier.loc[:, "timeout_multiplier"]
 
 
 def test_correct_flow_calculation_no_lockdown():
@@ -87,7 +101,7 @@ def test_correct_flow_calculation_with_lockdown():
     snapshot.buffers.place_activities[:] = place_activities_test_data
 
     params = Params()
-    params.set_lockdown_multiplier(snapshot.lockdown_multipliers, 0)
+    params.set_lockdown_multiplier(lockdown_multipliers, 0)
     snapshot.buffers.params[:] = params.asarray()
 
     simulator = Simulator(snapshot, gpu=False)
@@ -114,8 +128,8 @@ def test_correct_flow_calculation_with_lockdown():
     assert np.allclose(expected_symptomatic_flows_after, symptomatic_flows_after)
 
     # assert correct flows for person who is not symptomatic
-    # adjustments calculated using first lockdown multiplier (approx. 0.930517)
-    expected_non_symptomatic_flows_after = np.array([0.6277932, 0.1861034, 0.14888272, 0.03722068])
+    # adjustments calculated using first lockdown multiplier (approx. 0.9084687)
+    expected_non_symptomatic_flows_after = np.array([0.63661252, 0.18169374, 0.145354992, 0.036338748])
     non_symptomatic_person_id = 2
     person_start_idx = non_symptomatic_person_id * nslots
     non_symptomatic_flows_after = people_flows_after[person_start_idx:person_start_idx + 4]
