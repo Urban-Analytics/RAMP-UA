@@ -103,7 +103,7 @@ class Snapshot:
     
     @classmethod
     def from_arrays(cls, people_ages, people_place_ids, people_baseline_flows, area_codes, not_home_probs,
-                    place_activities, place_coords, lockdown_multipliers, params=Params()):
+                    place_activities, place_coords, lockdown_multipliers):
 
         nplaces = place_activities.shape[0]
         npeople = people_place_ids.shape[0]

@@ -27,6 +27,7 @@ from microsim.microsim_model import Microsim
 from microsim.opencl.ramp.run import run_opencl
 from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
 from microsim.opencl.ramp.snapshot import Snapshot
+from microsim.opencl.ramp.params import Params
 from microsim.initialisation_cache import InitialisationCache
 
 
@@ -191,8 +192,7 @@ def run_opencl_model(individuals_df, activity_locations, time_activity_multiplie
     # Choose whether to load snapshot file from cache, or create a snapshot from population data
     if not use_cache or not os.path.exists(snapshot_cache_filepath):
         print("\nGenerating Snapshot for OpenCL model")
-        snapshot_converter = SnapshotConvertor(individuals_df, activity_locations, time_activity_multiplier,
-                                               calibration_params, disease_params, data_dir)
+        snapshot_converter = SnapshotConvertor(individuals_df, activity_locations, time_activity_multiplier, data_dir)
         snapshot = snapshot_converter.generate_snapshot()
         snapshot.save(snapshot_cache_filepath)  # store snapshot in cache so we can load later
     else:  # load cached snapshot
@@ -200,6 +200,10 @@ def run_opencl_model(individuals_df, activity_locations, time_activity_multiplie
 
     # set the random seed of the model
     snapshot.seed_prngs(42)
+
+    # set params
+    if calibration_params is not None and disease_params is not None:
+        snapshot.params = create_params(calibration_params, disease_params)
 
     # seed initial infections using GAM initial cases
     snapshot.seed_initial_infections(num_seed_days=disease_params["seed_days"])
@@ -241,6 +245,18 @@ def run_python_model(individuals_df, activity_locations_df, time_activity_multip
 
 def _run_multicore(m, iter, rep):
     return m.run(iter, rep)
+
+
+def create_params(calibration_params, disease_params):
+    hazard_location_multipliers = calibration_params["hazard_location_multipliers"]
+    return Params(
+        retail_multiplier=hazard_location_multipliers["Retail"],
+        primary_school_multiplier=hazard_location_multipliers["PrimarySchool"],
+        secondary_school_multiplier=hazard_location_multipliers["SecondarySchool"],
+        home_multiplier=hazard_location_multipliers["Home"],
+        work_multiplier=hazard_location_multipliers["Work"],
+        current_risk_beta=disease_params["current_risk_beta"]
+    )
 
 
 if __name__ == "__main__":

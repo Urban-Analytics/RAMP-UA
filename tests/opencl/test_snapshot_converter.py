@@ -48,7 +48,7 @@ data_dir = os.path.join(base_dir, "devon_data")
 opencl_test_dir = os.path.join(base_dir, "tests/opencl")
 
 snapshot_converter = SnapshotConvertor(individuals_df, activity_locations, time_activity_multiplier=None,
-                                       calibration_params=None, disease_params=None, data_dir=data_dir)
+                                       data_dir=data_dir)
 snapshot = snapshot_converter.generate_snapshot()
 snapshot.save(opencl_test_dir + "/test_snapshot.npz")
 
