@@ -184,12 +184,15 @@ def run_opencl_model(individuals_df, activity_locations_df, time_activity_multip
         print("\nGenerating Snapshot for OpenCL model")
         snapshot_converter = SnapshotConvertor(individuals_df, activity_locations_df, time_activity_multiplier, data_dir)
         snapshot = snapshot_converter.generate_snapshot()
-        snapshot.save(snapshot_cache_filepath) # store snapshot in cache so we can load later
+        snapshot.save(snapshot_cache_filepath)  # store snapshot in cache so we can load later
     else:  # load cached snapshot
         snapshot = Snapshot.load_full_snapshot(path=snapshot_cache_filepath)
 
     # set the random seed of the model
     snapshot.seed_prngs(42)
+
+    # seed initial infections using GAM initial cases
+    snapshot.seed_initial_infections(num_seed_days=5)
 
     run_mode = "GUI" if use_gui else "Headless"
     print(f"\nRunning OpenCL model in {run_mode} mode")

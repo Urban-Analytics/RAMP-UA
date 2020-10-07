@@ -15,7 +15,9 @@ class Snapshot:
     which is not used in the runtime simulation but may be used for seeding infections at the snapshot stage.
     """
 
-    def __init__(self, nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers):
+    def __init__(self, nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers,
+                 name="cache"):
+        self.name = name
         self.nplaces = nplaces
         self.npeople = npeople
         self.nslots = nslots
@@ -145,11 +147,13 @@ class Snapshot:
         Initial cases are assigned to people from higher risk area codes who spend more time outside of their home.
         """
 
+        data_dir = "microsim/opencl/data/"
+
         # load initial case data
-        initial_cases = pd.read_csv("data/devon_initial_cases.csv")
+        initial_cases = pd.read_csv(data_dir + "devon_initial_cases.csv")
         num_cases = initial_cases.loc[:num_seed_days - 1, "num_cases"].sum()
 
-        msoa_risks_df = pd.read_csv("data/msoas.csv", usecols=[1, 2])
+        msoa_risks_df = pd.read_csv(data_dir + "msoas.csv", usecols=[1, 2])
 
         # combine into a single dataframe to allow easy filtering based on high risk area codes and
         # not home probabilities

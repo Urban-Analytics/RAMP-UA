@@ -164,8 +164,9 @@ class Inspector:
         self.move_sensitivity = 10.0
         self.zoom_multiplier = 1.01
         self.position = position
-        self.snapshots = [f for f in os.listdir("microsim/opencl/snapshots") if f.endswith(".npz")]
-        self.current_snapshot = self.snapshots.index("devon.npz")
+        self.snapshot_dir = "microsim/opencl/snapshots"
+        self.snapshots = [f for f in os.listdir(self.snapshot_dir) if f.endswith(".npz")]
+        self.current_snapshot = self.snapshots.index(f"{snapshot.name}.npz")
         self.selected_snapshot = self.current_snapshot
         self.saveas_file = self.snapshots[self.current_snapshot]
         self.summary = Summary(snapshot, store_detailed_counts=False)
@@ -348,7 +349,7 @@ class Inspector:
         if imgui.button("Step"):
             self.update_sim()
         if imgui.button("Rollback"):
-            self.snapshot = Snapshot.load_full_snapshot(f"snapshots/{self.snapshots[self.current_snapshot]}")
+            self.snapshot = Snapshot.load_full_snapshot(f"{self.snapshot_dir}/{self.snapshots[self.current_snapshot]}")
             self.simulator.upload_all(self.snapshot.buffers)
             self.simulator.time = self.snapshot.time
         _, self.do_lockdown = imgui.checkbox("Lockdown", self.do_lockdown)

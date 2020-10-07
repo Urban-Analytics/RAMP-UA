@@ -40,3 +40,7 @@ __pycache__
 
 # vscode items
 **/.vscode/*
+
+# imgui
+imgui.ini
+
