@@ -11,6 +11,8 @@ which is found in the [microsim/opencl](./microsim/opencl) folder.
 
 Further documentation on the OpenCL model can be found [microsim/opencl/doc](./microsim/opencl/doc)
 
+Both models should be logically equivalent (with some minor differences). 
+
 ## Environment setup
 
 **NB:** The OpenCL model requires following additional installation instructions located in the 
