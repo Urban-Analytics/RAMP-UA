@@ -1,18 +1,20 @@
 import os
 import pytest
-import multiprocessing
-import pandas as pd
-import numpy as np
 import copy
 from microsim.microsim_model import Microsim
 from microsim.column_names import ColumnNames
-from microsim.activity_location import ActivityLocation
+from microsim.population_initialisation import PopulationInitialisation
 
 # ********************************************************
 # These tests run through a whole dummy model process
 # ********************************************************
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
+
+# arguments used when calling the PopulationInitialisation constructor. Usually these are the same
+population_init_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
+                        "testing": True, "debug": True, 'lockdown_file': "",
+                        "use_cache": False}
 
 # arguments used when calling the Microsim constructor. Usually these are the same
 microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
@@ -22,8 +24,22 @@ microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
                  "use_cache": False}
 
 
+# This 'fixture' means that other test functions can use the object created here.
+# Note: Don't try to run this test, it will be called when running the others that need it,
+# like `test_step()`.
+@pytest.fixture()
+def test_generate_microsim():
+    population_init = PopulationInitialisation(**population_init_args)
+    individuals, activity_locations, time_activity_multiplier, households = population_init.generate()
 
-def test_change_behaviour_with_disease(test_microsim):
+    test_microsim = Microsim(individuals, activity_locations, time_activity_multiplier, **microsim_args)
+
+    # TODO add some assertions here
+
+    yield test_microsim, households
+
+
+def test_change_behaviour_with_disease(test_microsim, households):
     """Check that individuals behaviour changed correctly with the disease status"""
     m = copy.deepcopy(test_microsim)  # less typing and so as not to interfere with other tests
     # Give some people the disease (these two chosen because they both spend a bit of time in retail
@@ -88,13 +104,13 @@ def test_change_behaviour_with_disease(test_microsim):
         p1, f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION_INITIAL}"]
 
 
-def test_update_venue_danger_and_risks(test_microsim):
+def test_update_venue_danger_and_risks(test_microsim, households):
     """Check that the current risk is updated properly"""
     # This is actually tested as part of test_step
     assert True
 
 
-def test_hazard_multipliers(test_microsim):
+def test_hazard_multipliers(test_microsim, households):
     """
     This tests whether hazards for particular disease statuses or locations are multiplied properly.
     The relevant code is in update_venue_danger_and_risks().
@@ -242,8 +258,7 @@ def _check_hazard_spread(p1, p2, individuals, households, risk):
         assert households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
 
-
-def test_step(test_microsim):
+def test_step(test_microsim, households):
     """
     Test the step method. This is the main test of the model. Simulate a deterministic run through and
     make sure that the model runs as expected.
@@ -293,7 +308,7 @@ def test_step(test_microsim):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 1.0
     for p in range(2, len(m.individuals)):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 0.0
-    m.households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
+    assert households.at[0, ColumnNames.LOCATION_DANGER] == 1.0
     for h in range(1, len(m.households)):
         assert m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
@@ -314,7 +329,7 @@ def test_step(test_microsim):
         assert m.individuals.at[p, ColumnNames.CURRENT_RISK] == 2.0
     assert m.households.at[0, ColumnNames.LOCATION_DANGER] == 2.0
     for h in range(1, len(m.households)):  # All other houses are danger free
-        m.households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
+        assert households.at[h, ColumnNames.LOCATION_DANGER] == 0.0
 
     #
     # Now see what happens when one person gets the disease and spreads it to schools, shops and work
@@ -344,41 +359,6 @@ def test_step(test_microsim):
             for idx in visited_idx:
                 if idx in row[f"{name}{ColumnNames.ACTIVITY_VENUES}"]:
                     assert row[ColumnNames.CURRENT_RISK] > 0
-                    # Note: can't check if risk is equal to 0 becuase it might come from another activity
+                    # Note: can't check if risk is equal to 0 because it might come from another activity
 
     print("End of test step")
-
-
-# ********************************************************
-# Other (unit) tests
-# ********************************************************
-
-def _get_rand(microsim, N=100):
-    """Get a random number using the Microsimulation object's random number generator"""
-    for _ in range(N):
-        microsim.random.random()
-    return microsim.random.random()
-
-
-def test_random():
-    """
-    Checks that random classes are produce different (or the same!) numbers when they should do
-    :return:
-    """
-    m1 = Microsim(**microsim_args, read_data=False)
-    m2 = Microsim(**microsim_args, random_seed=2.0, read_data=False)
-    m3 = Microsim(**microsim_args, random_seed=2.0, read_data=False)
-
-    # Genrate a random number from each model. The second two numbers should be the same
-    r1, r2, r3 = [_get_rand(x) for x in [m1, m2, m3]]
-
-    assert r1 != r2
-    assert r2 == r3
-
-    # Check that this still happens even if they are executed in pools.
-    # Create a large number of microsims and check that all random numbers are unique
-    pool = multiprocessing.Pool()
-    num_reps = 1000
-    m = [Microsim(**microsim_args, read_data=False) for _ in range(num_reps)]
-    r = pool.map(_get_rand, m)
-    assert len(r) == len(set(r))

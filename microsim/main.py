@@ -166,11 +166,11 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
     # generate new population dataframes if we aren't using the cache, or if the cache is empty
     if not use_cache or cache.is_empty():
         population = PopulationInitialisation(**population_args)
-        individuals, activity_locations, time_activity_multiplier = population.generate()
+        individuals, activity_locations, time_activity_multiplier, _ = population.generate()
 
         # store in cache so we can load later
         cache.store_in_cache(individuals, activity_locations, time_activity_multiplier)
-    else: # load from cache
+    else:  # load from cache
         individuals, activity_locations, time_activity_multiplier = cache.read_from_cache()
 
     # Select which model implementation to run

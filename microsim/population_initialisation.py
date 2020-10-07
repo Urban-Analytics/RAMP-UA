@@ -261,7 +261,8 @@ class PopulationInitialisation:
 
         print(" ... finished initialisation.")
 
-        return individuals, activity_locations, time_activity_multiplier
+        return individuals, activity_locations, time_activity_multiplier, households
+
 
     @staticmethod
     def _round_flows(flows):

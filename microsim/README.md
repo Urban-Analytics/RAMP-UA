@@ -88,5 +88,4 @@ Because we want some flexibility in the types of activities that people do, each
 
 
 ## Testing
-
-The tests are being implemented in the `microsim.test_microsim_model.py` script. These need some serious development.
+All tests are contained in the top level [./tests](../tests/) directory. These include tests for the OpenCL model.
