@@ -29,7 +29,7 @@ def test_save_and_load_full_snapshot():
     nslots = 16
     generated_snapshot = Snapshot.random(nplaces=nplaces, npeople=npeople, nslots=nslots)
 
-    snapshot_path = "tests/test_snapshots/random.npz"
+    snapshot_path = "tests/random.npz"
 
     generated_snapshot.save(snapshot_path)
 
@@ -45,10 +45,9 @@ def test_save_and_load_full_snapshot():
     assert loaded_snapshot.nslots == nslots
 
 
-def test_load_initial_snapshot():
-    # Load initial snapshot generated from the test data in the RAMP-UA repo
-    loaded_snapshot = Snapshot.load_initial_snapshot(people_filepath="tests/test_snapshots/people.npz",
-                                                     places_filepath="tests/test_snapshots/places.npz")
+def test_load_existing_snapshot():
+    # Load initial snapshot generated from the SnapshotConverter test
+    loaded_snapshot = Snapshot.load_full_snapshot("tests/opencl/test_snapshot.npz")
 
     expected_nplaces = 8
     expected_npeople = 3
@@ -75,9 +74,8 @@ def test_load_initial_snapshot():
 
 
 def test_seed_initial_infections():
-    # Load initial snapshot generated from the test data in the RAMP-UA repo
-    snapshot = Snapshot.load_initial_snapshot(people_filepath="tests/test_snapshots/people.npz",
-                                              places_filepath="tests/test_snapshots/places.npz")
+    # Load initial snapshot generated from the SnapshotConverter test
+    snapshot = Snapshot.load_full_snapshot("tests/opencl/test_snapshot.npz")
 
     # assert that no people are infected before seeding
     assert not snapshot.buffers.people_statuses.any()
