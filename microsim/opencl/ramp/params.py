@@ -15,12 +15,10 @@ class Params:
         self.infection_scale = 3.0
         self.infection_location = 16.0
         self.lockdown_multiplier = 1.0
-        self.place_hazard_multipliers = np.array(
-            [0.0165, 0.0165, 0.0165, 0.0165, 0.00], dtype=np.float32)
-        self.recovery_probs = np.array(
-            [0.9999839, 0.9999305, 0.999691, 0.999156,
-             0.99839, 0.99405, 0.9807, 0.9572, 0.922],
-            dtype=np.float32)
+        self.place_hazard_multipliers = np.array([0.0165, 0.0165, 0.0165, 0.0165, 0.0165], dtype=np.float32)
+        self.recovery_probs = np.array([0.9999839, 0.9999305, 0.999691, 0.999156,
+                                        0.99839, 0.99405, 0.9807, 0.9572, 0.922],
+                                       dtype=np.float32)
 
     def asarray(self):
         """Pack the parameters into a flat array for uploading."""
@@ -61,7 +59,7 @@ class Params:
 
     def set_lockdown_multiplier(self, lockdown_multipliers, timestep):
         """Update the lockdown multiplier based on the current time."""
-        self.lockdown_multiplier = lockdown_multipliers[np.minimum(lockdown_multipliers.shape[0]-1, timestep)]
+        self.lockdown_multiplier = lockdown_multipliers[np.minimum(lockdown_multipliers.shape[0] - 1, timestep)]
 
     def num_bytes(self):
-        return 4*self.asarray().size
+        return 4 * self.asarray().size

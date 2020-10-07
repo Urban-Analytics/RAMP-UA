@@ -17,10 +17,10 @@ from bokeh.models import (BasicTicker, CDSView, ColorBar, ColumnDataSource,
                           CustomJS, CustomJSFilter, FactorRange, 
                           GeoJSONDataSource, HoverTool, Legend,
                           LinearColorMapper, PrintfTickFormatter, Slider)
-from bokeh.layouts import row, column, gridplot, grid, widgetbox
+from bokeh.layouts import row, column
 from bokeh.models.widgets import Tabs, Panel
 from bokeh.palettes import brewer
-from bokeh.transform import transform, factor_cmap
+from bokeh.transform import transform
 
 import click  # command-line interface
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
@@ -78,9 +78,6 @@ def create_dashboard(parameters_file):
         # build ColumnDataSource
         data_s2 = dict(totalcounts_dict)
         data_s2["days"] = days
-        # for key, value in totalcounts_dict.items():
-        #     data_s2[f"{key}_std_upper"] = totalcounts_dict[key] + totalcounts_dict_std[key]
-        #     data_s2[f"{key}_std_lower"] = totalcounts_dict[key] - totalcounts_dict_std[key]
         source_2 = ColumnDataSource(data=data_s2)
         # Create fig
         s2 = figure(background_fill_color="#fafafa",title="Time", x_axis_label='Time', y_axis_label='Nr of people',toolbar_location='above')
@@ -88,9 +85,6 @@ def create_dashboard(parameters_file):
         for key, value in totalcounts_dict.items():
             c1 = s2.line(x = 'days', y = key, source = source_2, line_width=2, line_color=colour_dict[key],muted_color="grey", muted_alpha=0.2)   
             c2 = s2.square(x = 'days', y = key, source = source_2, fill_color=colour_dict[key], line_color=colour_dict[key], size=5, muted_color="grey", muted_alpha=0.2)
-            # c3 = s2.rect('days', f"{key}_std_upper", 0.2, 0.01, source = source_2, line_color="black",muted_color="grey", muted_alpha=0.2)
-            # c4 = s2.rect('days', f"{key}_std_lower", 0.2, 0.01, source = source_2, line_color="black",muted_color="grey", muted_alpha=0.2)
-            # c5 = s2.segment('days', f"{key}_std_lower", 'days', f"{key}_std_upper", source = source_2, line_color="black",muted_color="grey", muted_alpha=0.2)
             legend_it.append((f"nr {key}", [c1,c2]))
         legend = Legend(items=legend_it)
         legend.click_policy="hide"
@@ -102,40 +96,7 @@ def create_dashboard(parameters_file):
         ))
         s2.add_layout(legend, 'right')
         s2.toolbar.autohide = False
-        plotref_dict["cond_time"] = s2    
-
-    # # plot 3: Conditions across MSOAs
-    # def plot_cond_msoas():
-    #     # build ColumnDataSource
-    #     data_s3 = {}
-    #     data_s3["msoa_nr"] = msoas_nr
-    #     data_s3["msoa_name"] = msoas
-    #     for key, value in cumcounts_dict.items():
-    #         data_s3[key] = cumcounts_dict[key]
-    #         data_s3[f"{key}_std_upper"] = cumcounts_dict[key] + cumcounts_dict_std[key]
-    #         data_s3[f"{key}_std_lower"] = cumcounts_dict[key] - cumcounts_dict_std[key]
-    #     source_3 = ColumnDataSource(data=data_s3)
-    #     # Create fig
-    #     s3 = figure(background_fill_color="#fafafa",title="MSOA", x_axis_label='Nr people', y_axis_label='MSOA',toolbar_location='above')
-    #     legend_it = []
-    #     for key, value in msoacounts_dict.items():
-    #         c1 = s3.circle(x = key, y = 'msoa_nr', source = source_3, fill_color=colour_dict[key], line_color=colour_dict[key], size=5,muted_color="grey", muted_alpha=0.2)
-    #         c2 = s3.segment(f"{key}_std_lower", 'msoa_nr', f"{key}_std_upper", 'msoa_nr', source = source_3, line_color="black",muted_color="grey", muted_alpha=0.2)
-    #         legend_it.append((key, [c1,c2]))
-    #     legend = Legend(items=legend_it)
-    #     legend.click_policy="hide"
-    #     # Misc
-    #     s3.yaxis.ticker = data_s3["msoa_nr"]
-    #     MSOA_dict = dict(zip(data_s3["msoa_nr"], data_s3["msoa_name"]))
-    #     s3.yaxis.major_label_overrides = MSOA_dict
-    #     tooltips = tooltips_cond_basic.copy()
-    #     tooltips.append(tuple(( 'MSOA',  '@msoa_name' )))
-    #     s3.add_tools(HoverTool(
-    #         tooltips=tooltips,
-    #     ))
-    #     s3.add_layout(legend, 'right')
-    #     s3.toolbar.autohide = False
-    #     plotref_dict["cond_msoas"] = s3
+        plotref_dict["cond_time"] = s2
 
     # plot 4a: choropleth
     def plot_choropleth_condition_slider(condition2plot):
@@ -220,10 +181,7 @@ def create_dashboard(parameters_file):
             data_s2["days"] = days
             tooltips = []
             for a in range(len(age_cat_str)):
-                age_cat_str[a]
                 data_s2[f"c{a}"] = agecounts_dict[key].iloc[a]
-            #     data_s2[f"{age_cat_str[a]}_std_upper"] = agecounts_dict[key].iloc[a] + agecounts_dict_std[key].iloc[a]
-            #     data_s2[f"{age_cat_str[a]}_std_lower"] = agecounts_dict[key].iloc[a] - agecounts_dict_std[key].iloc[a]
             source_2 = ColumnDataSource(data=data_s2)
             # Create fig
             s2 = figure(background_fill_color="#fafafa",title=f"{key}", x_axis_label='Time', y_axis_label=f'Nr of people - {key}',toolbar_location='above')
@@ -231,7 +189,6 @@ def create_dashboard(parameters_file):
             for a in range(len(age_cat_str)):
                 c1 = s2.line(x = 'days', y = f"c{a}", source = source_2, line_width=2, line_color=colour_dict_age[a],muted_color="grey", muted_alpha=0.2)   
                 c2 = s2.square(x = 'days', y = f"c{a}", source = source_2, fill_color=colour_dict_age[a], line_color=colour_dict_age[a], size=5, muted_color="grey", muted_alpha=0.2)
-                # c5 = s2.segment('days', f"{age_cat_str[a]}_std_lower", 'days', f"{age_cat_str[a]}_std_upper", source = source_2, line_color="black",muted_color="grey", muted_alpha=0.2)
                 legend_it.append((f"nr {age_cat_str[a]}", [c1,c2]))
                 tooltips.append(tuple(( f"{age_cat_str[a]}",  f"@c{a}" )))
                 
@@ -261,12 +218,12 @@ def create_dashboard(parameters_file):
     
     # read from file
     with open(parameters_file, 'r') as f:
-                parameters = load(f, Loader=SafeLoader)
-                dash_params = parameters["dashboard"]  # Parameters for the dashboard
-                output_name_user = dash_params["output_name"]
-                data_dir_user = dash_params["data_dir"]
-                sc_dir = dash_params["scenario_dir"]
-                sc_nam = dash_params["scenario_name"]
+        parameters = load(f, Loader=SafeLoader)
+        dash_params = parameters["dashboard"]  # Parameters for the dashboard
+        output_name_user = dash_params["output_name"]
+        data_dir_user = dash_params["data_dir"]
+        sc_dir = dash_params["scenario_dir"]
+        sc_nam = dash_params["scenario_name"]
     
     # Set parameters (advanced)
     # -------------------------
@@ -320,27 +277,13 @@ def create_dashboard(parameters_file):
       "recovered": brewer['Greens'][8][::-1],
       "dead": brewer['YlOrRd'][8][::-1],
     }
-    colours_ch_danger = brewer['YlOrRd'][8][::-1]
-    # other good palettes / way to define:
-    # palette = brewer['BuGn'][8][::-1]    # -1 reverses the order
-    # palette = = ["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41", "#550b1d"]
-    
-    # Nr days, runs, scenarios
-    # ------------------------    
-    # check user input or revert to default
-    
-    if sc_nam is None: # no scenarios defined, use output directory
-        sc_dir = ["output"]
-    else:  # add output to each directory
-        for d in range(0,len(sc_dir)):
-            sc_dir[d] = os.path.join("output", sc_dir[d])
-    
+
     # directory to read data from
     data_dir = "data" if (data_dir_user is None) else data_dir_user
     data_dir = os.path.join(base_dir, data_dir) # update data dir
 
     # base file name
-    file_name = "dashboard" if (output_name_user is None) else output_name_user
+    file_name = "opencl_dashboard" if (output_name_user is None) else output_name_user
 
     # Read in third party data
     # ------------------------
@@ -364,16 +307,16 @@ def create_dashboard(parameters_file):
 
     # Read in and process pickled output from microsim
 
-    # load pickled data from GPU model
-    gpu_data_dir = data_dir + "/output/gpu/"
-    with open(gpu_data_dir + "total_counts.p", "rb") as f:
+    # load pickled data from OpenCL model
+    opencl_data_dir = data_dir + "/output/OpenCL/"
+    with open(opencl_data_dir + "total_counts.pkl", "rb") as f:
         totalcounts_dict = pickle.load(f)
-    with open(gpu_data_dir + "age_counts.p", "rb") as f:
+    with open(opencl_data_dir + "age_counts.pkl", "rb") as f:
         agecounts_dict = pickle.load(f)
         for age_count_df in agecounts_dict.values():
             age_count_df['age_cat'] = age_cat_str
             age_count_df.set_index('age_cat', inplace=True)
-    with open(gpu_data_dir + "area_counts.p", "rb") as f:
+    with open(opencl_data_dir + "area_counts.pkl", "rb") as f:
         msoacounts_dict = pickle.load(f)
 
         # store list of MSOAs from dataframe
@@ -398,7 +341,7 @@ def create_dashboard(parameters_file):
         
     # determine where/how the visualization will be rendered
     html_output = os.path.join(data_dir, f'{file_name}.html')
-    output_file(html_output, title='RAMP-UA microsim output') # Render to static HTML
+    output_file(html_output, title='RAMP-UA microsim output')  # Render to static HTML
 
     # optional: threshold map to only use MSOAs currently in the study or selection
     map_df = map_df[map_df['Area'].isin(msoas)]

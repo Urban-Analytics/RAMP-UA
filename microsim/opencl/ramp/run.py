@@ -79,7 +79,9 @@ def store_summary_data(summary, store_detailed_counts, data_dir):
     for status, timeseries in enumerate(summary.total_counts):
         total_counts_dict[DiseaseStatus(status).name.lower()] = pd.Series(timeseries)
 
-    with open(data_dir + "total_counts.p", "wb") as f:
+    output_dir = data_dir + "/output/OpenCL/"
+
+    with open(output_dir + "total_counts.pkl", "wb") as f:
         pickle.dump(total_counts_dict, f)
 
     if store_detailed_counts:
@@ -96,7 +98,7 @@ def store_summary_data(summary, store_detailed_counts, data_dir):
                                                                  index=summary.unique_area_codes)
 
         # Store pickled summary objects
-        with open(data_dir + "age_counts.p", "wb") as f:
+        with open(output_dir + "age_counts.pkl", "wb") as f:
             pickle.dump(age_counts_dict, f)
-        with open(data_dir + "area_counts.p", "wb") as f:
+        with open(output_dir + "area_counts.pkl", "wb") as f:
             pickle.dump(area_counts_dict, f)
