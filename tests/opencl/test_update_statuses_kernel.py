@@ -5,7 +5,7 @@ from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 
 nplaces = 8
-npeople = 10000
+npeople = 50000
 nslots = 8
 
 visualize = False
