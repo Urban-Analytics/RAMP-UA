@@ -44,7 +44,7 @@ activity_locations = {
 }
 
 base_dir = os.getcwd()
-data_dir = os.path.join(base_dir, "devon_data")
+data_dir = os.path.join(base_dir, "tests/dummy_data")
 opencl_test_dir = os.path.join(base_dir, "tests/opencl")
 
 snapshot_converter = SnapshotConvertor(individuals_df, activity_locations, time_activity_multiplier=None,
