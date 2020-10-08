@@ -36,6 +36,7 @@ dependencies:
   - r-rvcheck
   - r-stringdist
   - git-lfs
+  - pocl
   - pip=20
   - pip:
      - convertbng==0.6.25

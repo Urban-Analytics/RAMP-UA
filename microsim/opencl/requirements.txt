@@ -9,4 +9,3 @@ six==1.15.0
 pytest==5.4.1
 scipy==1.5.2
 tqdm
-pyopencl
