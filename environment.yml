@@ -36,5 +36,7 @@ dependencies:
   - r-rvcheck
   - r-stringdist
   - git-lfs
+  - pip=20
   - pip:
      - convertbng==0.6.25
+     - -r file:microsim/opencl/requirements.txt
