@@ -104,8 +104,8 @@ class Summary:
 
     def print_counts(self, time):
         """Print out the counts at time to stdout."""
-        print(f"\tExposed: {int(self.total_counts[0][time])}")
-        print(f"\tSusceptible: {int(self.total_counts[1][time])}")
+        print(f"\tSusceptible: {int(self.total_counts[0][time])}")
+        print(f"\tExposed: {int(self.total_counts[1][time])}")
         print(f"\tPresymptomatic: {int(self.total_counts[2][time])}")
         print(f"\tAsymptomatic: {int(self.total_counts[3][time])}")
         print(f"\tSymptomatic: {int(self.total_counts[4][time])}")
