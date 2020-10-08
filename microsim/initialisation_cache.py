@@ -7,9 +7,9 @@ class InitialisationCache:
     """
     Class to handle caching of initialisation data, eg. individuals and activity locations dataframes
     """
-    def __init__(self, cache_dir="./temp_cache"):
+    def __init__(self, cache_dir):
         self.cache_dir = cache_dir
-        self.individuals_filepath = self.cache_dir + "individuals.pkl"
+        self.individuals_filepath = os.path.join(self.cache_dir, "individuals.pkl")
         self.activity_locations_filepath = self.cache_dir + "activity_locations.pkl"
         self.time_activity_multiplier_filepath = self.cache_dir + "time_activity_multiplier.pkl"
         self.all_cache_filepaths = [self.individuals_filepath, self.activity_locations_filepath,
@@ -22,14 +22,11 @@ class InitialisationCache:
         time_activity_multiplier.to_pickle(self.time_activity_multiplier_filepath)
 
     def read_from_cache(self):
-        if self.cache_files_exist():
-            individuals = pd.read_pickle(self.individuals_filepath)
-            with open(self.activity_locations_filepath, 'rb') as handle:
-                activity_locations = pickle.load(handle)
-            time_activity_multiplier = pd.read_pickle(self.time_activity_multiplier_filepath)
-            return individuals, activity_locations, time_activity_multiplier
-        else:
-            print("\nWARNING: attempting to load files from cache but they do not exist!")
+        individuals = pd.read_pickle(self.individuals_filepath)
+        with open(self.activity_locations_filepath, 'rb') as handle:
+            activity_locations = pickle.load(handle)
+        time_activity_multiplier = pd.read_pickle(self.time_activity_multiplier_filepath)
+        return individuals, activity_locations, time_activity_multiplier
 
     def cache_files_exist(self):
         files_exist = [os.path.exists(cache_file) for cache_file in self.all_cache_filepaths]

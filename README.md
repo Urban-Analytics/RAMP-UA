@@ -6,10 +6,10 @@ This is the code repository for the RAMP Urban Analytics project.
 
 This project contains two implementations of a microsim model which runs on a synthetic population:
 1. Python / R implementation, found in [microsim/microsim_model.py](./microsim/microsim_model.py)
-2. High performance OpenCL implementation, which can run on both CPU and CPU, 
+2. High performance OpenCL implementation, which can run on both CPU and GPU, 
 which is found in the [microsim/opencl](./microsim/opencl) folder. 
 
-Further documentation on the OpenCL model can be found [microsim/opencl/doc](./microsim/opencl/doc)
+Further documentation on the OpenCL model can be found at [microsim/opencl/doc](./microsim/opencl/doc)
 
 Both models should be logically equivalent (with some minor differences). 
 
@@ -55,7 +55,7 @@ to choose which model implementation to run.
 
 #### Python / R model
 
-The Python / R model runs by default, so simply run the main script with no argument.s
+The Python / R model runs by default, so simply run the main script with no arguments.
 
 ```bash
 $ python microsim/main.py 
@@ -74,7 +74,7 @@ $ python microsim/main.py --opencl
 
 Run with GUI
 ```bash
-$ python microsim/main.py --opencl --opencl-gui
+$ python microsim/main.py --opencl-gui
 ```
 
 #### Caching of population initialisation

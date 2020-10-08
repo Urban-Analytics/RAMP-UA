@@ -56,9 +56,9 @@ from microsim.initialisation_cache import InitialisationCache
 @click.option('--quant-dir', default=None, help='Directory to QUANT data, set to None to use Devon data')
 @click.option('-s', '--use-cache/--dont-use-cache', default=False,
               help="Whether to cache the population data initialisation")
-@click.option('-s', '--opencl/--no-opencl', default=False, help="Run OpenCL model")
+@click.option('-s', '--opencl/--no-opencl', default=False, help="Run OpenCL model (runs in headless mode by default")
 @click.option('-s', '--opencl-gui/--no-opencl-gui', default=False,
-              help="Use GUI visualisation for OpenCL model (if false then run in headless mode")
+              help="Run the OpenCL model with GUI visualisation for OpenCL model")
 @click.option('-s', '--opencl-gpu/--no-opencl-gpu', default=False,
               help="Run OpenCL model on the GPU (if false then run using CPU")
 def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, output, output_every_iteration,
@@ -67,6 +67,10 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
     Main function which runs the population initialisation, then chooses which model to run, either the Python/R
     model or the OpenCL model
     """
+
+    # If we are running with opencl_gui then set opencl to True, so you only need to pass one flag
+    if opencl_gui:
+        opencl = True
 
     # First see if we're reading a parameters file or using command-line arguments.
     if no_parameters_file:
