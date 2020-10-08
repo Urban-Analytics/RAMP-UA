@@ -134,7 +134,7 @@ class Snapshot:
             people_hazards=np.zeros(npeople, dtype=np.float32),
             people_prngs=np.random.randint(np.uint32((1 << 32) - 1), size=npeople * 4, dtype=np.uint32),
 
-            params=params.asarray(),
+            params=Params().asarray(),
         )
 
         return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers)
