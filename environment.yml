@@ -22,6 +22,7 @@ dependencies:
   - r-curl
   - bokeh=2.1.0
   - geopandas=0.7.0
+  - descartes
   - imageio=2.8.0
   - r-janitor=2.0.1
   - r-stringi=1.4.6

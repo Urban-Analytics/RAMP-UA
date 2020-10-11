@@ -41,8 +41,8 @@ class Summary:
             # get integer ids for area code strings
             self.unique_area_codes = np.unique(snapshot.area_codes)
 
-            area_code_id_lookup = {area_code: i for (i, area_code) in enumerate(self.unique_area_codes)}
-            area_ids = np.array([area_code_id_lookup[area_code] for area_code in snapshot.area_codes],
+            self.area_code_id_lookup = {area_code: i for (i, area_code) in enumerate(self.unique_area_codes)}
+            area_ids = np.array([self.area_code_id_lookup[area_code] for area_code in snapshot.area_codes],
                                 dtype=np.uint32)
 
             self.individuals_df = pd.DataFrame({'status': np.zeros(snapshot.npeople),
@@ -70,6 +70,24 @@ class Summary:
                 DiseaseStatus.Recovered.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
                 DiseaseStatus.Dead.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
             }
+
+    def get_df_columns(self):
+        return [f"Day{i}" for i in range(self.max_time)]
+
+    def get_age_dataframes(self):
+        columns = self.get_df_columns()
+        age_counts_dict = {}
+        for status, age_count_array in self.age_counts.items():
+            age_counts_dict[status] = pd.DataFrame.from_records(age_count_array, columns=columns)
+        return age_counts_dict
+
+    def get_area_dataframes(self):
+        columns = self.get_df_columns()
+        area_counts_dict = {}
+        for status, area_count_array in self.area_counts.items():
+            area_counts_dict[status] = pd.DataFrame.from_records(area_count_array, columns=columns,
+                                                                 index=self.unique_area_codes)
+        return area_counts_dict
 
     def update(self, time, statuses):
         """Given an array of status enums, compute and save counts."""

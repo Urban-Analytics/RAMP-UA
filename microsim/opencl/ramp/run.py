@@ -96,16 +96,8 @@ def store_summary_data(summary, store_detailed_counts, data_dir):
 
     if store_detailed_counts:
         # turn 2D arrays into dataframes for ages and areas
-        columns = [f"Day{i}" for i in range(summary.max_time)]
-
-        age_counts_dict = {}
-        for status, age_count_array in summary.age_counts.items():
-            age_counts_dict[status] = pd.DataFrame.from_records(age_count_array, columns=columns)
-
-        area_counts_dict = {}
-        for status, area_count_array in summary.area_counts.items():
-            area_counts_dict[status] = pd.DataFrame.from_records(area_count_array, columns=columns,
-                                                                 index=summary.unique_area_codes)
+        age_counts_dict = summary.get_age_dataframes()
+        area_counts_dict = summary.get_area_dataframes()
 
         # Store pickled summary objects
         with open(output_dir + "age_counts.pkl", "wb") as f:
