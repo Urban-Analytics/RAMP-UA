@@ -172,9 +172,6 @@ class Snapshot:
         # Set initial transition times to 1
         self.buffers.people_transition_times[initial_case_ids] = 1
 
-        # set to current timestep
-        self.time = num_seed_days
-
     def seed_prngs(self, seed):
         """
         Recomputes the random states of the PRNGs passed to the kernels.
