@@ -35,7 +35,7 @@ class Summary:
             # process age data into buckets
             ages = snapshot.buffers.people_ages
             age_thresholds = np.array([20, 30, 45, 60, 75, 200])
-            age_bins = np.digitize(ages, age_thresholds)
+            self.age_bins = np.digitize(ages, age_thresholds)
 
             # get integer ids for area code strings
             self.unique_area_codes = np.unique(snapshot.area_codes)
@@ -45,7 +45,7 @@ class Summary:
                                 dtype=np.uint32)
 
             self.individuals_df = pd.DataFrame({'status': np.zeros(snapshot.npeople),
-                                                'age_bin': age_bins,
+                                                'age_bin': self.age_bins,
                                                 'area_id': area_ids,
                                                 })
 
