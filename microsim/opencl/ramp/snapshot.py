@@ -139,15 +139,13 @@ class Snapshot:
 
         return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers)
 
-    def seed_initial_infections(self, num_seed_days=5):
+    def seed_initial_infections(self, num_seed_days=5, data_dir="microsim/opencl/data/"):
         """
         Seeds initial infections by assigning initial cases based on the GAM assigned cases data.
         The cases for the first num_seed_days days are all seeded at once, eg. they are in the snapshot before the
         simulation is run.
         Initial cases are assigned to people from higher risk area codes who spend more time outside of their home.
         """
-
-        data_dir = "microsim/opencl/data/"
 
         # load initial case data
         initial_cases = pd.read_csv(data_dir + "devon_initial_cases.csv")

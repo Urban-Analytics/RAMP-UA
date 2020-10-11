@@ -13,7 +13,7 @@ class Simulator:
     and a step() method to execute the kernels to calculate one timestep of the model.
     """
 
-    def __init__(self, snapshot, gpu=True):
+    def __init__(self, snapshot, kernel_dir="microsim/opencl/ramp/kernels/", gpu=True):
         """Initialise OpenCL context, kernels, and buffers for the simulator.
 
         Args:
@@ -58,12 +58,10 @@ class Simulator:
             params=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, Params().num_bytes()),
         )
 
-        kernels_path = "microsim/opencl/ramp/kernels/"
-
         # Load the OpenCL kernel programs
-        with open(kernels_path + "ramp_ua.cl") as f:
+        with open(kernel_dir + "ramp_ua.cl") as f:
             program = cl.Program(ctx, f.read())
-            program.build(options=[f"-I {kernels_path}"])
+            program.build(options=[f"-I {kernel_dir}"])
 
         kernels = Kernels(
             places_reset=program.places_reset,
