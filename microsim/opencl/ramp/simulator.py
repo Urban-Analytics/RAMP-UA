@@ -1,5 +1,6 @@
 import numpy as np
 import pyopencl as cl
+import os
 
 from microsim.opencl.ramp.buffers import Buffers
 from microsim.opencl.ramp.kernels import Kernels
@@ -59,7 +60,7 @@ class Simulator:
         )
 
         # Load the OpenCL kernel programs
-        with open(kernel_dir + "ramp_ua.cl") as f:
+        with open(os.path.join(kernel_dir, "ramp_ua.cl")) as f:
             program = cl.Program(ctx, f.read())
             program.build(options=[f"-I {kernel_dir}"])
 

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import os
 
 from microsim.opencl.ramp.buffers import Buffers
 from microsim.opencl.ramp.params import Params
@@ -148,10 +149,10 @@ class Snapshot:
         """
 
         # load initial case data
-        initial_cases = pd.read_csv(data_dir + "devon_initial_cases.csv")
+        initial_cases = pd.read_csv(os.path.join(data_dir, "devon_initial_cases.csv"))
         num_cases = initial_cases.loc[:num_seed_days - 1, "num_cases"].sum()
 
-        msoa_risks_df = pd.read_csv(data_dir + "msoas.csv", usecols=[1, 2])
+        msoa_risks_df = pd.read_csv(os.path.join(data_dir, "msoas.csv"), usecols=[1, 2])
 
         # combine into a single dataframe to allow easy filtering based on high risk area codes and
         # not home probabilities
