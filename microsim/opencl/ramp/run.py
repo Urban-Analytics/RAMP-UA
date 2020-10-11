@@ -19,18 +19,17 @@ def run_opencl(snapshot, iterations=100, data_dir="./data", use_gui=True, use_gp
     if not quiet:
         print(f"\nSnapshot Size:\t{int(snapshot.num_bytes() / 1000000)} MB\n")
 
-    simulator = Simulator(snapshot, use_gpu)
-    if not quiet:
-        print(f"Platform:\t{simulator.platform_name()}\nDevice:\t\t{simulator.device_name()}\n")
-
     # Create a simulator and upload the snapshot data to the OpenCL device
     simulator = Simulator(snapshot, use_gpu)
     simulator.upload_all(snapshot.buffers)
+    if not quiet:
+        print(f"Platform:\t{simulator.platform_name()}\nDevice:\t\t{simulator.device_name()}\n")
 
     if use_gui:
         run_with_gui(simulator, snapshot)
     else:
-        run_headless(simulator, snapshot, iterations, quiet, data_dir)
+        summary, final_state = run_headless(simulator, snapshot, iterations, quiet)
+        store_summary_data(summary, store_detailed_counts=True, data_dir=data_dir)
 
 
 def run_with_gui(simulator, snapshot):
@@ -46,7 +45,7 @@ def run_with_gui(simulator, snapshot):
         inspector.update()
 
 
-def run_headless(simulator, snapshot, iterations, quiet, data_dir, store_detailed_counts=True):
+def run_headless(simulator, snapshot, iterations, quiet, store_detailed_counts=True):
     """
     Run the simulation in headless mode and store summary data.
     NB: running in this mode is required in order to view output data in the dashboard. Also store_detailed_counts must
@@ -71,12 +70,13 @@ def run_headless(simulator, snapshot, iterations, quiet, data_dir, store_detaile
             print(f"\nDay {i}")
             summary.print_counts(i)
 
-    # Download the snapshot from OpenCL to host memory
-    simulator.download_all(snapshot.buffers)
     if not quiet:
         print("\nFinished")
 
-    store_summary_data(summary, store_detailed_counts=store_detailed_counts, data_dir=data_dir)
+    # Download the snapshot from OpenCL to host memory
+    final_state = simulator.download_all(snapshot.buffers)
+
+    return summary, final_state
 
 
 def store_summary_data(summary, store_detailed_counts, data_dir):
