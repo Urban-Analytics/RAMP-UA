@@ -14,7 +14,7 @@ class Simulator:
     and a step() method to execute the kernels to calculate one timestep of the model.
     """
 
-    def __init__(self, snapshot, kernel_dir="microsim/opencl/ramp/kernels/", gpu=True):
+    def __init__(self, snapshot, gpu=True, kernel_dir="microsim/opencl/ramp/kernels/"):
         """Initialise OpenCL context, kernels, and buffers for the simulator.
 
         Args:
