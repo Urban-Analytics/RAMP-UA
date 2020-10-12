@@ -54,9 +54,9 @@ from microsim.initialisation_cache import InitialisationCache
               help="Optionally read lockdown mobility data from a file (default use google mobility). To have no "
                    "lockdown pass an empty string, i.e. --lockdown-file='' ")
 @click.option('--quant-dir', default=None, help='Directory to QUANT data, set to None to use Devon data')
-@click.option('-c', '--use-cache/--dont-use-cache', default=True,
+@click.option('-c', '--use-cache/--no-use-cache', default=True,
               help="Whether to cache the population data initialisation")
-@click.option('-ogl', '--opencl/--no-opencl', default=False, help="Run OpenCL model (runs in headless mode by default")
+@click.option('-ocl', '--opencl/--no-opencl', default=False, help="Run OpenCL model (runs in headless mode by default")
 @click.option('-gui', '--opencl-gui/--no-opencl-gui', default=False,
               help="Run the OpenCL model with GUI visualisation for OpenCL model")
 @click.option('-gpu', '--opencl-gpu/--no-opencl-gpu', default=False,
