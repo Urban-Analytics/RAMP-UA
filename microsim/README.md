@@ -1,26 +1,48 @@
 # Microsimulation
+Code for running both implementations of the main RAMP-UA microsimulation. The program(s) collect required data, stitch them together, 
+and then choose one of the Python/R or OpenCL models to iterate through dynamically.
 
-Code for running the main RAMP-UA microsimulation. The program(s) collect required data, stitch them together, and then iterate a dynamic model.
-
-The purpose of the model is to create a synthetic population of indivuals and houses, simulate some common movements (e.g. shopping, schooling, leisure, etc.) and look at how different policies might be able to suppress the spread of COVID over the period of a few weeks or months.
+The purpose of the model is to create a synthetic population of individuals and houses, 
+simulate some common movements (e.g. shopping, schooling, leisure, etc.) and look at how different policies might 
+be able to suppress the spread of COVID over the period of a few weeks or months.
 
 ## Setting up
 
 Most of the data files that the code requires are quite big and are not stored in the repository. They will need to be downloaded separately. For instructions see the [README file in the `data` directory](./data/README.md).
 
-The code is written in python. Most of the libraries used are fairly standard so should not cause too many problems. An [Anaconda environment (yml) file](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file) has been included ([../environment.yml](environment.yml)) which can be used to create an anaconda environment automatically with the following command:
+The majority of the code is written in python. Most of the libraries used are fairly standard so should not cause too many problems. 
+An [Anaconda environment (yml) file](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file) has been included ([../environment.yml](environment.yml)) which can be used to create an anaconda environment automatically with the following command:
 
 ```
 conda env create -f environment.yml
 ```
 
-Once you have your environment configured correctly, you can run the code by first returning to the main [RAMP-UA](..) directory and then running with:
+Once you have your environment configured correctly, you can run the code by first returning to the main [RAMP-UA](..) directory 
+and then running each model as follows:
 
-```
-python microsim/microsim_model.py
+#### Python / R model
+
+The Python / R model runs by default, so simply run the main script with no argument.s
+
+```bash
+$ python microsim/main.py 
 ```
 
-Outputs are written to the [data/outputs](./data/outputs) directory.
+#### OpenCL model
+To run the OpenCL model pass the `--opencl` flag to the main script, as below.
+
+The OpenCL model runs in "headless" mode by default, however it can also be run with an interactive GUI and visualisation,
+to run with the GUI pass the `--opencl-gui` flag, as below.
+
+Run Headless
+```bash
+$ python microsim/main.py --opencl
+```
+
+Run with GUI
+```bash
+$ python microsim/main.py --opencl --opencl-gui
+```
 
 ## Process overview
 
@@ -37,19 +59,24 @@ The 'stepping' procedure involves two stages:
   1. People who have the disease visit locations (e.g. shops) and impart some risk onto those places.
   1. Other people visit their most likely places, and receive some of that risk. This will influence the probability of them becoming infected.
 
-Note that until a synthetic individual is actually assigned a disease, the process is deterministic. E.g. if one of the spatial interaction models estimates that an indivdiual will visit two shops with probabilities 0.8 and 0.2, then when they 'visit' those places the risks are assigned proportionally based on those probabilities. Once an individual is assigned a disease status, the model becomes probabilistic.
+Note that until a synthetic individual is actually assigned a disease, the process is deterministic. E.g. if one of the spatial interaction models estimates that an individual will visit two shops with probabilities 0.8 and 0.2, then when they 'visit' those places the risks are assigned proportionally based on those probabilities. Once an individual is assigned a disease status, the model becomes probabilistic.
 
 ## Code organisation / overview
 
-_The code is under development so this rough sketch needs improving and is likely to change_
+The code is under development so this rough sketch needs improving and is likely to change_
 
-The main file is [microsim.py](microsim.py). This contains the `microsim.Microsim` class, which does most of the work. The `__init__()` function initialises the population; reading the data and creating a population that is ready to be iterated. Then the `step()` function iterates the model.
+The main file is [main.py](main.py). This parses the arguments, runs the population initialisation then chooses which 
+timestep model to run (either the Python/R model or the OpenCL model). 
 
-The code mainly works by creating pandas dataframes and operating on them. The most important dataframes are:
+The `PopulationInitialisation` class reads and combines all the data sources and creates a population in a form ready to be iterated by either timestep model. 
+The output of this is the `individuals` and `activity_locations` dataframes, described below. 
+
+The `microsim.Microsim` class contains the Python / R model, the `step()` function runs timesteps of the model. 
+This mainly works by operating on pandas dataframes them. The most important dataframes are:
 
 ### `individuals` dataframe
 
-A table for the individual-level population, containing things like thier age, health status, disease status, etc.
+A table for the individual-level population, containing things like their age, health status, disease status, etc.
 
 There are also columns to record where the individuals do their activities. Because an individual might visit many locations (e.g. shops), we store all possible locations they could visit, and the associated flows/proportions. E.g the column `Retail_Venues` contains a list of the IDs of the venues that the individual might visit (e.g. `[5, 11, 14]`) and `Retail_Flows` contains the probabilities of visitting each venue (e.g. `[0.1, 0.85, 0.05]`). Each possible activity will have a `*_Flows` and `*_Venues` column. The `*_Time` columns store the proportion of time that the individual spends doing the activity.
 
@@ -61,5 +88,4 @@ Because we want some flexibility in the types of activities that people do, each
 
 
 ## Testing
-
-The tests are being implemented in the `microsim.test_microsim_model.py` script. These need some serious development.
+All tests are contained in the top level [./tests](../tests/) directory. These include tests for the OpenCL model.

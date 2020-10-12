@@ -25,6 +25,14 @@ __pycache__
 **/scrapbook/*
 .Rproj.user
 
+# RStudio
+.Rproj.user/
+*.Rproj
+
+# snapshot files
+*.npz
+*.pkl
+
 # setuptools items
 **/*.egg-info/*
 **/build/*
@@ -32,3 +40,7 @@ __pycache__
 
 # vscode items
 **/.vscode/*
+
+# imgui
+imgui.ini
+

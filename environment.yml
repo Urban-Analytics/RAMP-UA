@@ -6,11 +6,13 @@ dependencies:
   - numpy=1.18.5
   - tqdm
   - pandas=1.0.3
+  - scipy=1.5.2 
   - python=3.7
   - click
   - pytest=5.4.1
   - matplotlib=3.1.3
   - swifter=0.304
+  - pyopencl=2020.2.2 
   - rpy2=3.3.2
   - tzlocal
   - r-mixdist
@@ -20,6 +22,7 @@ dependencies:
   - r-curl
   - bokeh=2.1.0
   - geopandas=0.7.0
+  - descartes
   - imageio=2.8.0
   - r-janitor=2.0.1
   - r-stringi=1.4.6
@@ -34,3 +37,8 @@ dependencies:
   - r-rvcheck
   - r-stringdist
   - git-lfs
+  - pocl
+  - pip=20
+  - pip:
+     - convertbng==0.6.25
+     - -r file:microsim/opencl/requirements.txt
