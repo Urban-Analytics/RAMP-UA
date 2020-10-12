@@ -18,7 +18,7 @@ pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displ
 import os
 import click  # command-line interface
 import pickle  # to save data
-from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
+from yaml import load, SafeLoader  # pyyaml library for reading the parameters.yml file
 from shutil import copyfile
 
 from microsim.quant_api import QuantRampAPI
@@ -27,7 +27,7 @@ from microsim.microsim_model import Microsim
 from microsim.opencl.ramp.run import run_opencl
 from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
 from microsim.opencl.ramp.snapshot import Snapshot
-from microsim.opencl.ramp.params import Params
+from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
 from microsim.initialisation_cache import InitialisationCache
 
 
@@ -213,7 +213,7 @@ def run_opencl_model(individuals_df, activity_locations, time_activity_multiplie
 
     # set params
     if calibration_params is not None and disease_params is not None:
-        snapshot.params = create_params(calibration_params, disease_params)
+        snapshot.update_params(create_params(calibration_params, disease_params))
 
     # seed initial infections using GAM initial cases
     snapshot.seed_initial_infections(num_seed_days=disease_params["seed_days"])
@@ -258,14 +258,29 @@ def _run_multicore(m, iter, rep):
 
 
 def create_params(calibration_params, disease_params):
-    hazard_location_multipliers = calibration_params["hazard_location_multipliers"]
+    current_risk_beta = disease_params["current_risk_beta"]
+
+    # NB: OpenCL model incorporates the current risk beta by pre-multiplying the hazard multipliers with it
+    location_hazard_multipliers = LocationHazardMultipliers(
+        retail=calibration_params["hazard_location_multipliers"]["Retail"] * current_risk_beta,
+        primary_school=calibration_params["hazard_location_multipliers"]["PrimarySchool"] * current_risk_beta,
+        secondary_school=calibration_params["hazard_location_multipliers"]["SecondarySchool"] * current_risk_beta,
+        home=calibration_params["hazard_location_multipliers"]["Home"] * current_risk_beta,
+        work=calibration_params["hazard_location_multipliers"]["Work"] * current_risk_beta,
+    )
+
+    individual_hazard_multipliers = IndividualHazardMultipliers(
+        presymptomatic=calibration_params["hazard_individual_multipliers"]["presymptomatic"],
+        asymptomatic=calibration_params["hazard_individual_multipliers"]["asymptomatic"],
+        symptomatic=calibration_params["hazard_individual_multipliers"]["symptomatic"]
+    )
+
+    proportion_asymptomatic = disease_params["asymp_rate"]
+
     return Params(
-        retail_multiplier=hazard_location_multipliers["Retail"],
-        primary_school_multiplier=hazard_location_multipliers["PrimarySchool"],
-        secondary_school_multiplier=hazard_location_multipliers["SecondarySchool"],
-        home_multiplier=hazard_location_multipliers["Home"],
-        work_multiplier=hazard_location_multipliers["Work"],
-        current_risk_beta=disease_params["current_risk_beta"]
+        location_hazard_multipliers=location_hazard_multipliers,
+        individual_hazard_multipliers=individual_hazard_multipliers,
+        proportion_asymptomatic=proportion_asymptomatic
     )
 
 
