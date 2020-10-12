@@ -171,9 +171,7 @@ class Snapshot:
         self.buffers.people_transition_times[initial_case_ids] = 1
 
     def update_params(self, new_params):
-        new_params_array = new_params.asarray()
-        for i in range(len(self.buffers.params)):
-            self.buffers.params[i] = new_params_array[i]
+        self.buffers.params[:] = new_params.asarray()
 
     def seed_prngs(self, seed):
         """
