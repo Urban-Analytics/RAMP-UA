@@ -35,7 +35,7 @@ def test_correct_send_hazard():
 
     params = Params()
     params.place_hazard_multipliers = np.ones(5, dtype=np.float32)
-    snapshot.buffers.params[:] = params.asarray()
+    snapshot.update_params(params)
 
     simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
