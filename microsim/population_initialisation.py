@@ -778,7 +778,7 @@ class PopulationInitialisation:
         # Read from cache or re-calculate workplace location (takes ages)
         cache_file = None
         if use_cache:
-            cache_file = os.path.join(cls.DATA_DIR, "caches", "work_flows_cache.pickle")
+            cache_file = os.path.join(cls.DATA_DIR, "caches", "work_flows_cache.pkl")
             print(f"\tAttemting to use cache file for worklplaces: {cache_file}.")
             if os.path.isfile(cache_file):
                 print(f"\t\tCache file exists. Loading from file.")
@@ -846,9 +846,9 @@ class PopulationInitialisation:
         assert False not in (individuals.loc[:, venues_col].apply(lambda cell: len(cell)) > 0).values
         assert False not in (individuals.loc[:, flows_col].apply(lambda cell: len(cell)) > 0).values
 
-        if use_cache:
-            print(f"\t\tFinished calculating workplaces. Caching to: {cache_file}")
-            individuals.to_pickle(cache_file)  # where to save it, usually as a .pkl
+        # Cache the file (even if caching has been disabled; can't hurt to save/override the file)
+        print(f"\t\tFinished calculating workplaces. Caching to: {cache_file}")
+        individuals.to_pickle(cache_file)  # where to save it, usually as a .pkl
 
         return individuals
 
