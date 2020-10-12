@@ -1,15 +1,51 @@
 import numpy as np
+from collections import namedtuple
+
+LocationHazardMultipliers = namedtuple(
+    "LocationHazardMultipliers",
+    [
+        "retail",
+        "primary_school",
+        "secondary_school",
+        "home",
+        "work"
+    ]
+)
+
+IndividualHazardMultipliers = namedtuple(
+    "IndividualHazardMultipliers",
+    [
+        "presymptomatic",
+        "asymptomatic",
+        "symptomatic"
+    ]
+)
+
+default_location_hazard_multipliers = LocationHazardMultipliers(
+            retail=1.0,
+            primary_school=1.0,
+            secondary_school=1.0,
+            home=1.0,
+            work=0.0
+        )
 
 
 class Params:
     """Convenience class for setting simulator parameters. Also holds the default values."""
 
     def __init__(self,
-                 retail_multiplier=1.0,
-                 primary_school_multiplier=1.0,
-                 secondary_school_multiplier=1.0,
-                 home_multiplier=1.0,
-                 work_multiplier=1.0,
+                 location_hazard_multipliers=LocationHazardMultipliers(
+                        retail=1.0,
+                        primary_school=1.0,
+                        secondary_school=1.0,
+                        home=1.0,
+                        work=0.0
+                    ),
+                 individual_hazard_multipliers=IndividualHazardMultipliers(
+                        presymptomatic=1.0,
+                        asymptomatic=0.75,
+                        symptomatic=1.0
+                    ),
                  current_risk_beta=0.0165
                  ):
         """Create a simulator with the default parameters."""
@@ -22,10 +58,17 @@ class Params:
         self.infection_scale = 3.0
         self.infection_location = 16.0
         self.lockdown_multiplier = 1.0
-        self.place_hazard_multipliers = np.array([retail_multiplier, primary_school_multiplier,
-                                                  secondary_school_multiplier, home_multiplier,
-                                                  work_multiplier], dtype=np.float32)
+        self.current_risk_beta = current_risk_beta
+        self.place_hazard_multipliers = np.array([location_hazard_multipliers.retail,
+                                                  location_hazard_multipliers.primary_school,
+                                                  location_hazard_multipliers.secondary_school,
+                                                  location_hazard_multipliers.home,
+                                                  location_hazard_multipliers.work], dtype=np.float32)
         self.place_hazard_multipliers *= current_risk_beta
+
+        self.individual_hazard_multipliers = np.array([individual_hazard_multipliers.presymptomatic,
+                                                       individual_hazard_multipliers.asymptomatic,
+                                                       individual_hazard_multipliers.symptomatic], dtype=np.float32)
 
         self.recovery_probs = np.array([0.9999839, 0.9999305, 0.999691, 0.999156,
                                         0.99839, 0.99405, 0.9807, 0.9572, 0.922],
@@ -45,27 +88,41 @@ class Params:
                     self.infection_scale,
                     self.infection_location,
                     self.lockdown_multiplier,
+                    self.current_risk_beta,
                 ],
                 dtype=np.float32,
             ),
             self.place_hazard_multipliers,
+            self.individual_hazard_multipliers,
             self.recovery_probs,
         ])
 
     @classmethod
-    def fromarray(cls, array):
-        p = cls()
-        p.symptomatic_multiplier = array[0]
-        p.proportion_asymptomatic = array[1]
-        p.exposed_scale = array[2]
-        p.exposed_shape = array[3]
-        p.presymptomatic_scale = array[4]
-        p.presymptomatic_shape = array[5]
-        p.infection_scale = array[6]
-        p.infection_location = array[7]
-        p.lockdown_multiplier = array[8]
-        p.place_hazard_multipliers = array[9:14]
-        p.recovery_probs = array[14:23]
+    def fromarray(cls, params_array):
+        current_risk_beta = params_array[9]
+        location_hazard_multipliers = LocationHazardMultipliers(
+            retail=params_array[10],
+            primary_school=params_array[11],
+            secondary_school=params_array[12],
+            home=params_array[13],
+            work=params_array[14]
+        )
+        individual_hazard_multipliers = IndividualHazardMultipliers(
+            presymptomatic=params_array[15],
+            asymptomatic=params_array[16],
+            symptomatic=params_array[17]
+        )
+        p = cls(location_hazard_multipliers, individual_hazard_multipliers, current_risk_beta)
+        p.symptomatic_multiplier = params_array[0]
+        p.proportion_asymptomatic = params_array[1]
+        p.exposed_scale = params_array[2]
+        p.exposed_shape = params_array[3]
+        p.presymptomatic_scale = params_array[4]
+        p.presymptomatic_shape = params_array[5]
+        p.infection_scale = params_array[6]
+        p.infection_location = params_array[7]
+        p.lockdown_multiplier = params_array[8]
+        p.recovery_probs = params_array[18:27]
         return p
 
     def set_lockdown_multiplier(self, lockdown_multipliers, timestep):

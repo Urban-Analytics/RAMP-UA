@@ -62,8 +62,15 @@ typedef struct Params {
   float infection_loc; // The location of the distribution of infected durations
   float lockdown_multiplier; // Increase in time at home due to lockdown
   float place_hazard_multipliers[5]; // Hazard multipliers by activity
+  float individual_hazard_multipliers[3]; // Hazard multipliers by activity
   float recovery_probs[9]; // Recovery probabilities by age group
 } Params;
+
+bool get_individual_multiplier_for_status(global const struct Params* params, DiseaseStatus status) {
+  int status_idx = (int)status - 2;
+
+  return params->individual_hazard_multipliers[status_idx];
+}
 
 /*
   Utility functions
@@ -185,14 +192,18 @@ kernel void people_send_hazards(uint npeople,
 
     float flow = people_flows[flow_idx];
     uint activity = place_activities[place_id];
+
     //check it is a valid activity and select hazard multiplier
-    flow *= (0 <= activity && activity <= 4) ? params->place_hazard_multipliers[activity] : 1.0;
+    float place_multiplier = (0 <= activity && activity <= 4) ? params->place_hazard_multipliers[activity] : 1.0;
+    float individual_multiplier = get_individual_multiplier_for_status(params, person_status);
+
+    float hazard_increase = flow * place_multiplier * individual_multiplier;
 
     // Convert the flow to fixed point
-    uint fixed_flow = (uint)(fixed_factor * flow);
+    uint fixed_hazard_increase = (uint)(fixed_factor * hazard_increase);
 
-    // Atomically increment hazards and counts for this place
-    atomic_add(&place_hazards[place_id], fixed_flow);
+    // Atomically add hazard increase and increment counts for this place
+    atomic_add(&place_hazards[place_id], fixed_hazard_increase);
     atomic_add(&place_counts[place_id], 1);
   }
 }

@@ -27,7 +27,7 @@ from microsim.microsim_model import Microsim
 from microsim.opencl.ramp.run import run_opencl
 from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
 from microsim.opencl.ramp.snapshot import Snapshot
-from microsim.opencl.ramp.params import Params
+from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
 from microsim.initialisation_cache import InitialisationCache
 
 
@@ -252,13 +252,23 @@ def _run_multicore(m, iter, rep):
 
 
 def create_params(calibration_params, disease_params):
-    hazard_location_multipliers = calibration_params["hazard_location_multipliers"]
+    location_hazard_multipliers = LocationHazardMultipliers(
+        retail=calibration_params["hazard_location_multipliers"]["Retail"],
+        primary_school=calibration_params["hazard_location_multipliers"]["PrimarySchool"],
+        secondary_school=calibration_params["hazard_location_multipliers"]["SecondarySchool"],
+        home=calibration_params["hazard_location_multipliers"]["Home"],
+        work=calibration_params["hazard_location_multipliers"]["Work"],
+    )
+
+    individual_hazard_multipliers = IndividualHazardMultipliers(
+        presymptomatic=calibration_params["hazard_individual_multipliers"]["presymptomatic"],
+        asymptomatic=calibration_params["hazard_individual_multipliers"]["asymptomatic"],
+        symptomatic=calibration_params["hazard_individual_multipliers"]["symptomatic"]
+    )
+
     return Params(
-        retail_multiplier=hazard_location_multipliers["Retail"],
-        primary_school_multiplier=hazard_location_multipliers["PrimarySchool"],
-        secondary_school_multiplier=hazard_location_multipliers["SecondarySchool"],
-        home_multiplier=hazard_location_multipliers["Home"],
-        work_multiplier=hazard_location_multipliers["Work"],
+        location_hazard_multipliers=location_hazard_multipliers,
+        individual_hazard_multipliers=individual_hazard_multipliers,
         current_risk_beta=disease_params["current_risk_beta"]
     )
 
