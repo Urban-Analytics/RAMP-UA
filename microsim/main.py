@@ -152,7 +152,7 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
         quant_object = QuantRampAPI(os.path.join(data_dir, quant_dir))
 
     # args for population initialisation
-    population_args = {"data_dir": data_dir, "debug": debug, "lockdown_file": lockdown_file, "use_cache": use_cache,
+    population_args = {"data_dir": data_dir, "debug": debug, "lockdown_file": lockdown_file,
                        "quant_object": quant_object}
 
     # args for Python/R Microsim. Use same arguments whether running 1 repetition or many
