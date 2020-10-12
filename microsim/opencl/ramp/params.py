@@ -47,8 +47,8 @@ class Params:
         self.exposed_shape = 3.93
         self.presymptomatic_scale = 2.45
         self.presymptomatic_shape = 7.12
-        self.infection_log_scale = 3.0
-        self.infection_mode = 10.0
+        self.infection_log_scale = 0.75
+        self.infection_mode = 7.0
         self.lockdown_multiplier = 1.0
         self.place_hazard_multipliers = np.array([location_hazard_multipliers.retail,
                                                   location_hazard_multipliers.primary_school,
