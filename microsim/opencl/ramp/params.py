@@ -37,11 +37,12 @@ class Params:
                         presymptomatic=1.0,
                         asymptomatic=0.75,
                         symptomatic=1.0
-                    )
+                    ),
+                 proportion_asymptomatic=0.4
                  ):
         """Create a simulator with the default parameters."""
         self.symptomatic_multiplier = 0.5
-        self.proportion_asymptomatic = 0.5
+        self.proportion_asymptomatic = proportion_asymptomatic
         self.exposed_scale = 2.82
         self.exposed_shape = 3.93
         self.presymptomatic_scale = 2.45

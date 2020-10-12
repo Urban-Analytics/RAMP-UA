@@ -275,9 +275,12 @@ def create_params(calibration_params, disease_params):
         symptomatic=calibration_params["hazard_individual_multipliers"]["symptomatic"]
     )
 
+    proportion_asymptomatic = disease_params["asymp_rate"]
+
     return Params(
         location_hazard_multipliers=location_hazard_multipliers,
         individual_hazard_multipliers=individual_hazard_multipliers,
+        proportion_asymptomatic=proportion_asymptomatic
     )
 
 
