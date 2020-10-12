@@ -152,7 +152,7 @@ def test_presymptomatic_update_status():
     num_symptomatic = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Symptomatic.value)
     proportion_symptomatic = num_symptomatic / npeople
 
-    expected_proportion_asymptomatic = 0.5
+    expected_proportion_asymptomatic = 0.4
     expected_proportion_symptomatic = 1 - expected_proportion_asymptomatic
 
     assert np.isclose(expected_proportion_asymptomatic, proportion_asymptomatic, atol=0.01)

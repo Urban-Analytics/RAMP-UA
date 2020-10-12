@@ -58,7 +58,7 @@ def test_correct_send_hazard():
     assert np.array_equal(expected_place_counts, place_counts)
 
 
-def test_individual_hazard():
+def test_asymptomatics_add_less_hazard():
     # Set up and upload the test data
     snapshot = Snapshot.random(nplaces, npeople, nslots)
 
