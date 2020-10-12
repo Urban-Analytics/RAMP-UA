@@ -21,32 +21,23 @@ IndividualHazardMultipliers = namedtuple(
     ]
 )
 
-default_location_hazard_multipliers = LocationHazardMultipliers(
-            retail=1.0,
-            primary_school=1.0,
-            secondary_school=1.0,
-            home=1.0,
-            work=0.0
-        )
-
 
 class Params:
     """Convenience class for setting simulator parameters. Also holds the default values."""
 
     def __init__(self,
                  location_hazard_multipliers=LocationHazardMultipliers(
-                        retail=1.0,
-                        primary_school=1.0,
-                        secondary_school=1.0,
-                        home=1.0,
+                        retail=0.0165,
+                        primary_school=0.0165,
+                        secondary_school=0.0165,
+                        home=0.0165,
                         work=0.0
                     ),
                  individual_hazard_multipliers=IndividualHazardMultipliers(
                         presymptomatic=1.0,
                         asymptomatic=0.75,
                         symptomatic=1.0
-                    ),
-                 current_risk_beta=0.0165
+                    )
                  ):
         """Create a simulator with the default parameters."""
         self.symptomatic_multiplier = 0.5
@@ -58,13 +49,11 @@ class Params:
         self.infection_scale = 3.0
         self.infection_location = 16.0
         self.lockdown_multiplier = 1.0
-        self.current_risk_beta = current_risk_beta
         self.place_hazard_multipliers = np.array([location_hazard_multipliers.retail,
                                                   location_hazard_multipliers.primary_school,
                                                   location_hazard_multipliers.secondary_school,
                                                   location_hazard_multipliers.home,
                                                   location_hazard_multipliers.work], dtype=np.float32)
-        self.place_hazard_multipliers *= current_risk_beta
 
         self.individual_hazard_multipliers = np.array([individual_hazard_multipliers.presymptomatic,
                                                        individual_hazard_multipliers.asymptomatic,
@@ -88,7 +77,6 @@ class Params:
                     self.infection_scale,
                     self.infection_location,
                     self.lockdown_multiplier,
-                    self.current_risk_beta,
                 ],
                 dtype=np.float32,
             ),
@@ -99,20 +87,19 @@ class Params:
 
     @classmethod
     def fromarray(cls, params_array):
-        current_risk_beta = params_array[9]
         location_hazard_multipliers = LocationHazardMultipliers(
-            retail=params_array[10],
-            primary_school=params_array[11],
-            secondary_school=params_array[12],
-            home=params_array[13],
-            work=params_array[14]
+            retail=params_array[9],
+            primary_school=params_array[10],
+            secondary_school=params_array[11],
+            home=params_array[12],
+            work=params_array[13]
         )
         individual_hazard_multipliers = IndividualHazardMultipliers(
-            presymptomatic=params_array[15],
-            asymptomatic=params_array[16],
-            symptomatic=params_array[17]
+            presymptomatic=params_array[14],
+            asymptomatic=params_array[15],
+            symptomatic=params_array[16]
         )
-        p = cls(location_hazard_multipliers, individual_hazard_multipliers, current_risk_beta)
+        p = cls(location_hazard_multipliers, individual_hazard_multipliers)
         p.symptomatic_multiplier = params_array[0]
         p.proportion_asymptomatic = params_array[1]
         p.exposed_scale = params_array[2]
@@ -122,7 +109,7 @@ class Params:
         p.infection_scale = params_array[6]
         p.infection_location = params_array[7]
         p.lockdown_multiplier = params_array[8]
-        p.recovery_probs = params_array[18:27]
+        p.recovery_probs = params_array[17:26]
         return p
 
     def set_lockdown_multiplier(self, lockdown_multipliers, timestep):

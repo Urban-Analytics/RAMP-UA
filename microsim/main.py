@@ -258,12 +258,15 @@ def _run_multicore(m, iter, rep):
 
 
 def create_params(calibration_params, disease_params):
+    current_risk_beta = disease_params["current_risk_beta"]
+
+    # NB: OpenCL model incorporates the current risk beta by pre-multiplying the hazard multipliers with it
     location_hazard_multipliers = LocationHazardMultipliers(
-        retail=calibration_params["hazard_location_multipliers"]["Retail"],
-        primary_school=calibration_params["hazard_location_multipliers"]["PrimarySchool"],
-        secondary_school=calibration_params["hazard_location_multipliers"]["SecondarySchool"],
-        home=calibration_params["hazard_location_multipliers"]["Home"],
-        work=calibration_params["hazard_location_multipliers"]["Work"],
+        retail=calibration_params["hazard_location_multipliers"]["Retail"] * current_risk_beta,
+        primary_school=calibration_params["hazard_location_multipliers"]["PrimarySchool"] * current_risk_beta,
+        secondary_school=calibration_params["hazard_location_multipliers"]["SecondarySchool"] * current_risk_beta,
+        home=calibration_params["hazard_location_multipliers"]["Home"] * current_risk_beta,
+        work=calibration_params["hazard_location_multipliers"]["Work"] * current_risk_beta,
     )
 
     individual_hazard_multipliers = IndividualHazardMultipliers(
@@ -275,7 +278,6 @@ def create_params(calibration_params, disease_params):
     return Params(
         location_hazard_multipliers=location_hazard_multipliers,
         individual_hazard_multipliers=individual_hazard_multipliers,
-        current_risk_beta=disease_params["current_risk_beta"]
     )
 
 
