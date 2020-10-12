@@ -71,7 +71,6 @@ float get_individual_multiplier_for_status(global const struct Params* params, D
 
   float individual_multiplier = params->individual_hazard_multipliers[status_idx];
   
-  printf("\nStatus: %d, status idx: %d, Individual multiplier %f", status, status_idx, individual_multiplier);
   return individual_multiplier;
 }
 
@@ -181,8 +180,6 @@ kernel void people_send_hazards(uint npeople,
   int person_id = get_global_id(0);
   if (person_id >= npeople) return;
 
-  printf("\n\nrunning send hazards kernel");
-
   // Early return for non infectious people
   DiseaseStatus person_status = (DiseaseStatus)people_statuses[person_id];
   if (!is_infectious(person_status)) return;
@@ -206,7 +203,6 @@ kernel void people_send_hazards(uint npeople,
 
     // Convert the flow to fixed point
     uint fixed_hazard_increase = (uint)(fixed_factor * hazard_increase);
-    printf("\nhazard increase: %f, fixed hazard increase: %d", hazard_increase, fixed_hazard_increase);
 
     // Atomically add hazard increase and increment counts for this place
     atomic_add(&place_hazards[place_id], fixed_hazard_increase);
