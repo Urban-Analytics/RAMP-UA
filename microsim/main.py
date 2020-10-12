@@ -213,7 +213,7 @@ def run_opencl_model(individuals_df, activity_locations, time_activity_multiplie
 
     # set params
     if calibration_params is not None and disease_params is not None:
-        snapshot.params = create_params(calibration_params, disease_params)
+        snapshot.update_params(create_params(calibration_params, disease_params))
 
     # seed initial infections using GAM initial cases
     snapshot.seed_initial_infections(num_seed_days=disease_params["seed_days"])

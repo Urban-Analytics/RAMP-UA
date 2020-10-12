@@ -101,11 +101,10 @@ class Snapshot:
         buffers.place_coords[:] += np.random.randn(2 * nplaces) / 100.0
 
         return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers)
-    
+
     @classmethod
     def from_arrays(cls, people_ages, people_place_ids, people_baseline_flows, area_codes, not_home_probs,
                     place_activities, place_coords, lockdown_multipliers):
-
         nplaces = place_activities.shape[0]
         npeople = people_place_ids.shape[0]
         nslots = people_baseline_flows.shape[1]
@@ -171,6 +170,11 @@ class Snapshot:
         # Set initial transition times to 1
         self.buffers.people_transition_times[initial_case_ids] = 1
 
+    def update_params(self, new_params):
+        new_params_array = new_params.asarray()
+        for i in range(len(self.buffers.params)):
+            self.buffers.params[i] = new_params_array[i]
+
     def seed_prngs(self, seed):
         """
         Recomputes the random states of the PRNGs passed to the kernels.
@@ -179,7 +183,7 @@ class Snapshot:
         """
         np.random.seed(seed)
         self.buffers.people_prngs[:] = np.random.randint(
-            np.uint32((1<<32)-1), size=self.npeople*4, dtype=np.uint32)
+            np.uint32((1 << 32) - 1), size=self.npeople * 4, dtype=np.uint32)
 
     @classmethod
     def load_full_snapshot(cls, path):
@@ -212,4 +216,3 @@ class Snapshot:
     def sanitize_coords(self):
         """Sets all zero coordinate to nan so they can be discarded by the renderer."""
         self.buffers.place_coords[:] = np.where(self.buffers.place_coords == 0.0, np.nan, self.buffers.place_coords)
-
