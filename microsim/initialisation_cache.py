@@ -10,8 +10,8 @@ class InitialisationCache:
     def __init__(self, cache_dir):
         self.cache_dir = cache_dir
         self.individuals_filepath = os.path.join(self.cache_dir, "individuals.pkl")
-        self.activity_locations_filepath = self.cache_dir + "activity_locations.pkl"
-        self.time_activity_multiplier_filepath = self.cache_dir + "time_activity_multiplier.pkl"
+        self.activity_locations_filepath = os.path.join(self.cache_dir, "activity_locations.pkl")
+        self.time_activity_multiplier_filepath = os.path.join(self.cache_dir, "time_activity_multiplier.pkl")
         self.all_cache_filepaths = [self.individuals_filepath, self.activity_locations_filepath,
                                     self.time_activity_multiplier_filepath]
 
