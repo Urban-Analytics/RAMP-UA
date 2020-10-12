@@ -54,5 +54,5 @@ float rand_weibull(global uint4* rng, float scale, float shape) {
 }
 
 float lognormal(global uint4* rng, float meanlog, float sdlog){
-  return exp(meanlog + sdlog * rand(rng));
+  return exp(meanlog + sdlog * randn(rng));
 }

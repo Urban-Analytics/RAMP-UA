@@ -10,8 +10,6 @@ nplaces = 8
 npeople = 50000
 nslots = 8
 
-visualize = True
-
 
 def test_susceptible_become_infected():
     snapshot = Snapshot.random(nplaces, npeople, nslots)
@@ -288,8 +286,8 @@ def test_all_asymptomatic_become_recovered():
     assert np.all(people_statuses_after_two_steps == DiseaseStatus.Recovered.value)
 
 
-def test_infection_transition_times_distribution():
-    npeople = 50000
+def test_infection_transition_times_distribution(visualize=False):
+    npeople = 500000
     snapshot = Snapshot.random(nplaces, npeople, nslots)
 
     test_hazard = 0.9
@@ -321,32 +319,34 @@ def test_infection_transition_times_distribution():
     simulator.download("people_transition_times", people_transition_times_after)
 
     # Check that transition times are distributed with a log-normal distribution
-    adjusted_transition_times = people_transition_times_after+1
+    adjusted_transition_times = people_transition_times_after + 1
     mean = adjusted_transition_times.mean()
     std_dev = adjusted_transition_times.std()
-    mode = scipy.stats.mode(adjusted_transition_times)
+    mode = scipy.stats.mode(adjusted_transition_times)[0][0]
     kurtosis = scipy.stats.kurtosis(adjusted_transition_times)
 
     meanlog = infection_log_scale**2 + np.log(infection_mode)
     expected_samples = np.random.lognormal(mean=meanlog, sigma=infection_log_scale, size=npeople)
+    # round samples to nearest integer
+    expected_samples = np.rint(expected_samples)
     expected_mean = expected_samples.mean()
     expected_std_dev = expected_samples.std()
-    expected_mode = scipy.stats.mode(expected_samples)
+    expected_mode = scipy.stats.mode(expected_samples)[0][0]
     expected_kurtosis = scipy.stats.kurtosis(expected_samples)
 
     # Float to integer rounding and clamping at zero makes the original random numbers hard
     # to recover so we have slightly larger tolerances here to avoid false negatives.
-    # assert np.isclose(expected_mean, mean, atol=0.7)
-    # assert np.isclose(expected_std_dev, std_dev, atol=0.2)
-    # assert np.isclose(expected_mode, mode, atol=0.2)
-    # assert np.isclose(expected_kurtosis, kurtosis, atol=0.2)
+    assert np.isclose(expected_mean, mean, atol=0.7)
+    assert np.isclose(expected_std_dev, std_dev, atol=0.2)
+    assert np.isclose(expected_mode, mode, atol=0.2)
+    assert np.isclose(expected_kurtosis, kurtosis, atol=0.2)
 
     if visualize:  # show histogram of distribution
         fig, ax = plt.subplots(1, 1)
-        ax.hist(adjusted_transition_times, bins=100)
+        ax.hist(adjusted_transition_times, bins=50, range=[0, 60])
         plt.title("Result Samples")
         plt.show()
         fig, ax = plt.subplots(1, 1)
-        ax.hist(expected_samples, bins=50)
+        ax.hist(expected_samples, bins=50, range=[0, 60])
         plt.title("Expected Samples")
         plt.show()
