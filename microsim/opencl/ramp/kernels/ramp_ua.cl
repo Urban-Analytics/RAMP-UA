@@ -66,12 +66,12 @@ typedef struct Params {
   float recovery_probs[9]; // Recovery probabilities by age group
 } Params;
 
-float get_individual_multiplier_for_status(global const struct Params* params, DiseaseStatus status) {
-  int status_idx = (int)status - 2;
 
-  float individual_multiplier = params->individual_hazard_multipliers[status_idx];
-  
-  return individual_multiplier;
+// get the individual hazard multiplier for a given disease status
+float get_individual_multiplier_for_status(global const struct Params* params, DiseaseStatus status) {
+  // only 3 of the disease states are infections, so need to calculate the correct index into the hazard multiplier array
+  int status_idx = (int)status - 2;
+  return params->individual_hazard_multipliers[status_idx];
 }
 
 /*
