@@ -18,7 +18,7 @@ pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displ
 import os
 import click  # command-line interface
 import pickle  # to save data
-from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
+from yaml import load, SafeLoader  # pyyaml library for reading the parameters.yml file
 from shutil import copyfile
 
 from microsim.quant_api import QuantRampAPI
