@@ -54,12 +54,12 @@ from microsim.initialisation_cache import InitialisationCache
               help="Optionally read lockdown mobility data from a file (default use google mobility). To have no "
                    "lockdown pass an empty string, i.e. --lockdown-file='' ")
 @click.option('--quant-dir', default=None, help='Directory to QUANT data, set to None to use Devon data')
-@click.option('-s', '--use-cache/--dont-use-cache', default=False,
+@click.option('-c', '--use-cache/--dont-use-cache', default=False,
               help="Whether to cache the population data initialisation")
-@click.option('-s', '--opencl/--no-opencl', default=False, help="Run OpenCL model (runs in headless mode by default")
-@click.option('-s', '--opencl-gui/--no-opencl-gui', default=False,
+@click.option('-ogl', '--opencl/--no-opencl', default=False, help="Run OpenCL model (runs in headless mode by default")
+@click.option('-gui', '--opencl-gui/--no-opencl-gui', default=False,
               help="Run the OpenCL model with GUI visualisation for OpenCL model")
-@click.option('-s', '--opencl-gpu/--no-opencl-gpu', default=False,
+@click.option('-gpu', '--opencl-gpu/--no-opencl-gpu', default=False,
               help="Run OpenCL model on the GPU (if false then run using CPU")
 def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, output, output_every_iteration,
                debug, repetitions, lockdown_file, quant_dir, use_cache, opencl, opencl_gui, opencl_gpu):
@@ -76,7 +76,8 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
     if no_parameters_file:
         print("Not reading a parameters file")
     else:
-        print(f"Reading parameters file: {parameters_file}. Any other command-line arguments are being ignored")
+        print(f"Reading parameters file: {parameters_file}. "
+              f"Any other model-related command-line arguments are being ignored")
         with open(parameters_file, 'r') as f:
             parameters = load(f, Loader=SafeLoader)
             sim_params = parameters["microsim"]  # Parameters for the dynamic microsim (python)
@@ -114,8 +115,13 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
           f"\tOutputting results at every iteration?: {output_every_iteration}\n"
           f"\tDebug mode?: {debug}\n"
           f"\tNumber of repetitions: {repetitions}\n"
-          f"\tLockdown file: {lockdown_file}\n"
-          f"\tCalibration parameters: {'N/A (not reading parameters file)' if no_parameters_file else str(calibration_params)}\n")
+          f"\tLockdown file: {lockdown_file}\n",
+          f"\tUse cache?: {use_cache}\n",
+          f"\tUse OpenCL version?: {opencl}\n",
+          f"\tUse OpenCL GUI?: {opencl_gui}\n",
+          f"\tUse OpenCL GPU for processing?: {opencl_gpu}\n",
+          f"\tCalibration parameters: {'N/A (not reading parameters file)' if no_parameters_file else str(calibration_params)}\n",
+          f"\tDisease parameters: {'N/A (not reading parameters file)' if no_parameters_file else str(disease_params)}\n")
 
     if iterations == 0:
         print("Iterations = 0. Not stepping model, just assigning the initial risks.")
