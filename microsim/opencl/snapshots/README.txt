@@ -1,1 +1,1 @@
-OpenCL snapshots go in here. They are not synced with githubI
+OpenCL snapshots go in here. They are not synced with github
