@@ -287,7 +287,7 @@ def test_all_asymptomatic_become_recovered():
 
 
 def test_infection_transition_times_distribution(visualize=False):
-    npeople = 500000
+    npeople = 1000000
     snapshot = Snapshot.random(nplaces, npeople, nslots)
 
     test_hazard = 0.9
@@ -323,7 +323,6 @@ def test_infection_transition_times_distribution(visualize=False):
     mean = adjusted_transition_times.mean()
     std_dev = adjusted_transition_times.std()
     mode = scipy.stats.mode(adjusted_transition_times)[0][0]
-    kurtosis = scipy.stats.kurtosis(adjusted_transition_times)
 
     meanlog = infection_log_scale**2 + np.log(infection_mode)
     expected_samples = np.random.lognormal(mean=meanlog, sigma=infection_log_scale, size=npeople)
@@ -332,14 +331,15 @@ def test_infection_transition_times_distribution(visualize=False):
     expected_mean = expected_samples.mean()
     expected_std_dev = expected_samples.std()
     expected_mode = scipy.stats.mode(expected_samples)[0][0]
-    expected_kurtosis = scipy.stats.kurtosis(expected_samples)
 
     # Float to integer rounding and clamping at zero makes the original random numbers hard
     # to recover so we have slightly larger tolerances here to avoid false negatives.
     assert np.isclose(expected_mean, mean, atol=0.7)
-    assert np.isclose(expected_std_dev, std_dev, atol=0.2)
-    assert np.isclose(expected_mode, mode, atol=0.2)
-    assert np.isclose(expected_kurtosis, kurtosis, atol=0.2)
+    assert np.isclose(expected_std_dev, std_dev, atol=0.4)
+    assert np.isclose(expected_mode, mode, atol=0.7)
+
+    # check that mode is similar to original mode parameter
+    assert np.isclose(infection_mode, mode, atol=0.7)
 
     if visualize:  # show histogram of distribution
         fig, ax = plt.subplots(1, 1)
