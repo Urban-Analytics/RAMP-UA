@@ -81,6 +81,8 @@ def test_asymptomatics_add_less_hazard():
 
     params = Params()
     params.place_hazard_multipliers = np.ones(5, dtype=np.float32)
+    asymptomatic_multiplier = 0.5
+    params.individual_hazard_multipliers = np.array([1.0, asymptomatic_multiplier, 1.0])
     snapshot.update_params(params)
 
     simulator = Simulator(snapshot, gpu=False)
@@ -103,8 +105,6 @@ def test_asymptomatics_add_less_hazard():
 
     # Change statuses so all people are asymptomatic
     people_statuses_asymptomatic = np.full(npeople, DiseaseStatus.Asymptomatic.value, dtype=np.uint32)
-    # snapshot.buffers.people_statuses[:] = people_statuses_asymptomatic
-    # simulator.upload_all(snapshot.buffers)
     simulator.upload("people_statuses", people_statuses_asymptomatic)
 
     # reset place hazards to zero
@@ -118,8 +118,8 @@ def test_asymptomatics_add_less_hazard():
     simulator.download("place_hazards", place_hazards_asymptomatic)
 
     # Assert expected results
-    asymptomatic_multiplier = 0.75
     expected_place_hazards_floats_asymptomatic = expected_place_hazards_floats * asymptomatic_multiplier
     expected_place_hazards_asymptomatic = (fixed_factor * expected_place_hazards_floats_asymptomatic).astype(np.uint32)
 
     assert np.allclose(expected_place_hazards_asymptomatic, place_hazards_asymptomatic)
+    assert place_hazards_asymptomatic.sum() < place_hazards.sum()

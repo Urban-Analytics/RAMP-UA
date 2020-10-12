@@ -1,3 +1,0 @@
-from tests.opencl.test_send_hazards_kernel import test_asymptomatics_add_less_hazard
-
-test_asymptomatics_add_less_hazard()
