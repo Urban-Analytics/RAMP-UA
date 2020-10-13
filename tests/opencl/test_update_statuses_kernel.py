@@ -484,10 +484,10 @@ def test_infection_transition_times_distribution(visualize=False):
     # to recover so we have slightly larger tolerances here to avoid false negatives.
     assert np.isclose(expected_mean, mean, atol=0.7)
     assert np.isclose(expected_std_dev, std_dev, atol=0.4)
-    assert np.isclose(expected_mode, mode, atol=0.7)
+    assert np.isclose(expected_mode, mode, atol=1.0)
 
     # check that mode is similar to original mode parameter
-    assert np.isclose(infection_mode, mode, atol=0.7)
+    assert np.isclose(infection_mode, mode, atol=1.0)
 
     if visualize:  # show histogram of distribution
         fig, ax = plt.subplots(1, 1)
