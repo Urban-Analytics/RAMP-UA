@@ -47,8 +47,8 @@ class Params:
         self.exposed_shape = 3.93
         self.presymptomatic_scale = 2.45
         self.presymptomatic_shape = 7.12
-        self.infection_scale = 3.0
-        self.infection_location = 16.0
+        self.infection_log_scale = 0.75
+        self.infection_mode = 7.0
         self.lockdown_multiplier = 1.0
         self.place_hazard_multipliers = np.array([location_hazard_multipliers.retail,
                                                   location_hazard_multipliers.primary_school,
@@ -75,8 +75,8 @@ class Params:
                     self.exposed_shape,
                     self.presymptomatic_scale,
                     self.presymptomatic_shape,
-                    self.infection_scale,
-                    self.infection_location,
+                    self.infection_log_scale,
+                    self.infection_mode,
                     self.lockdown_multiplier,
                 ],
                 dtype=np.float32,
@@ -107,8 +107,8 @@ class Params:
         p.exposed_shape = params_array[3]
         p.presymptomatic_scale = params_array[4]
         p.presymptomatic_shape = params_array[5]
-        p.infection_scale = params_array[6]
-        p.infection_location = params_array[7]
+        p.infection_log_scale = params_array[6]
+        p.infection_mode = params_array[7]
         p.lockdown_multiplier = params_array[8]
         p.recovery_probs = params_array[17:26]
         return p

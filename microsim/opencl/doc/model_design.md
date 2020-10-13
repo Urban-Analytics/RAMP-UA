@@ -92,8 +92,8 @@ typedef struct Params {
   float exposed_shape; // The shape of the distribution of exposed durations
   float presymp_scale; // The scale of the distribution of presymptomatic durations
   float presymp_shape; // The shape of the distribution of presymptomatic durations
-  float infection_scale; // The scale of the distribution of infected durations
-  float infection_loc; // The location of the distribution of infected durations
+  float infection_log_scale; // The std dev of the underlying normal distribution of the lognormal infected duration distribution
+  float infection_mode; // The mode of the lognormal distribution of infected durations
   float lockdown_multiplier; // Increase in time at home due to lockdown
   float place_hazard_multipliers[5]; // Hazard multipliers by activity
   float recovery_probs[9]; // Recovery probabilities by age group

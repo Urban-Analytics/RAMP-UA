@@ -1,5 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
+import scipy.stats
+from microsim.opencl.ramp.params import Params
 from microsim.opencl.ramp.simulator import Simulator
 from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.disease_statuses import DiseaseStatus
@@ -7,8 +9,6 @@ from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 nplaces = 8
 npeople = 50000
 nslots = 8
-
-visualize = False
 
 
 def test_susceptible_become_infected():
@@ -286,8 +286,8 @@ def test_all_asymptomatic_become_recovered():
     assert np.all(people_statuses_after_two_steps == DiseaseStatus.Recovered.value)
 
 
-def test_transition_times_distribution():
-    npeople = 50000
+def test_infection_transition_times_distribution(visualize=False):
+    npeople = 1000000
     snapshot = Snapshot.random(nplaces, npeople, nslots)
 
     test_hazard = 0.9
@@ -300,6 +300,13 @@ def test_transition_times_distribution():
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
 
+    params = Params()
+    infection_log_scale = 0.75
+    infection_mode = 7.0
+    params.infection_log_scale = infection_log_scale
+    params.infection_mode = infection_mode
+    snapshot.update_params(params)
+
     simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
 
@@ -311,20 +318,35 @@ def test_transition_times_distribution():
     people_transition_times_after = np.zeros(npeople, dtype=np.uint32)
     simulator.download("people_transition_times", people_transition_times_after)
 
-    # Check that transition times are normally distributed with mean 14 and standard dev 2
-    # NB: We increment times by 1 since 1 day will already have been subtracted
-    expected_mean = 16.0
-    expected_std_dev = 3.0
+    # Check that transition times are distributed with a log-normal distribution
+    adjusted_transition_times = people_transition_times_after + 1
+    mean = adjusted_transition_times.mean()
+    std_dev = adjusted_transition_times.std()
+    mode = scipy.stats.mode(adjusted_transition_times)[0][0]
 
-    mean = (people_transition_times_after+1).mean()
-    std_dev = (people_transition_times_after+1).std()
+    meanlog = infection_log_scale**2 + np.log(infection_mode)
+    expected_samples = np.random.lognormal(mean=meanlog, sigma=infection_log_scale, size=npeople)
+    # round samples to nearest integer
+    expected_samples = np.rint(expected_samples)
+    expected_mean = expected_samples.mean()
+    expected_std_dev = expected_samples.std()
+    expected_mode = scipy.stats.mode(expected_samples)[0][0]
 
     # Float to integer rounding and clamping at zero makes the original random numbers hard
     # to recover so we have slightly larger tolerances here to avoid false negatives.
     assert np.isclose(expected_mean, mean, atol=0.7)
-    assert np.isclose(expected_std_dev, std_dev, atol=0.2)
+    assert np.isclose(expected_std_dev, std_dev, atol=0.4)
+    assert np.isclose(expected_mode, mode, atol=0.7)
+
+    # check that mode is similar to original mode parameter
+    assert np.isclose(infection_mode, mode, atol=0.7)
 
     if visualize:  # show histogram of distribution
         fig, ax = plt.subplots(1, 1)
-        ax.hist(people_transition_times_after)
+        ax.hist(adjusted_transition_times, bins=50, range=[0, 60])
+        plt.title("Result Samples")
+        plt.show()
+        fig, ax = plt.subplots(1, 1)
+        ax.hist(expected_samples, bins=50, range=[0, 60])
+        plt.title("Expected Samples")
         plt.show()

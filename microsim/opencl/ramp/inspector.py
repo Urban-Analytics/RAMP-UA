@@ -434,10 +434,10 @@ class Inspector:
             "Presymptomatic Weibull Scale", self.params.presymptomatic_scale, 0.0, 10.0)
         _, self.params.presymptomatic_shape = imgui.slider_float(
             "Presymptomatic Weibull Shape", self.params.presymptomatic_shape, 0.0, 10.0)
-        _, self.params.infection_scale = imgui.slider_float(
-            "Infection Normal Std Dev", self.params.infection_scale, 0.0, 10.0)
-        _, self.params.infection_location = imgui.slider_float(
-            "Infection Normal Mean", self.params.infection_location, 0.0, 20.0)
+        _, self.params.infection_sd_log = imgui.slider_float(
+            "Infection Normal Std Dev", self.params.infection_sd_log, 0.0, 10.0)
+        _, self.params.infection_mode = imgui.slider_float(
+            "Infection Normal Mean", self.params.infection_mode, 0.0, 20.0)
 
         imgui.text("Activity Hazard Multipliers")
 
