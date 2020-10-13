@@ -38,9 +38,15 @@ class Params:
                         asymptomatic=0.75,
                         symptomatic=1.0
                     ),
-                 proportion_asymptomatic=0.4
+                 proportion_asymptomatic=0.4,
+                 obesity_multipliers=[1, 1, 1, 1],
+                 cvd_multiplier=1,
+                 diabetes_multiplier=1,
+                 bloodpressure_multiplier=1,
                  ):
         """Create a simulator with the default parameters."""
+        if obesity_multipliers is None:
+            obesity_multipliers = [1, 1, 1, 1]
         self.symptomatic_multiplier = 0.5
         self.proportion_asymptomatic = proportion_asymptomatic
         self.exposed_scale = 2.82
@@ -63,6 +69,10 @@ class Params:
         self.recovery_probs = np.array([0.9999839, 0.9999305, 0.999691, 0.999156,
                                         0.99839, 0.99405, 0.9807, 0.9572, 0.922],
                                        dtype=np.float32)
+        self.obesity_multipliers = obesity_multipliers
+        self.cvd_multiplier = cvd_multiplier
+        self.diabetes_multiplier = diabetes_multiplier
+        self.bloodpressure_multiplier = bloodpressure_multiplier
 
     def asarray(self):
         """Pack the parameters into a flat array for uploading."""
@@ -84,6 +94,15 @@ class Params:
             self.place_hazard_multipliers,
             self.individual_hazard_multipliers,
             self.recovery_probs,
+            self.obesity_multipliers,
+            np.array(
+                [
+                    self.cvd_multiplier,
+                    self.diabetes_multiplier,
+                    self.bloodpressure_multiplier
+                ],
+                dtype=np.float32,
+            )
         ])
 
     @classmethod
@@ -111,6 +130,10 @@ class Params:
         p.infection_mode = params_array[7]
         p.lockdown_multiplier = params_array[8]
         p.recovery_probs = params_array[17:26]
+        p.obesity_multipliers = params_array[27:30]
+        p.cvd_multiplier = params_array[31]
+        p.diabetes_multiplier = params_array[32]
+        p.bloodpressure_multiplier = params_array[33]
         return p
 
     def set_lockdown_multiplier(self, lockdown_multipliers, timestep):

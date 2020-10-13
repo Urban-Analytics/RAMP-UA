@@ -278,11 +278,17 @@ def create_params(calibration_params, disease_params):
     )
 
     proportion_asymptomatic = disease_params["asymp_rate"]
+    obesity_multipliers = [disease_params["overweight"], disease_params["obesity_30"], disease_params["obesity_35"],
+                           disease_params["obesity_40"]]
 
     return Params(
         location_hazard_multipliers=location_hazard_multipliers,
         individual_hazard_multipliers=individual_hazard_multipliers,
-        proportion_asymptomatic=proportion_asymptomatic
+        proportion_asymptomatic=proportion_asymptomatic,
+        obesity_multipliers=obesity_multipliers,
+        cvd_multiplier=disease_params["cvd"],
+        diabetes_multiplier=disease_params["diabetes"],
+        bloodpressure_multiplier=disease_params["bloodpressure"],
     )
 
 
