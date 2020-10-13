@@ -308,6 +308,10 @@ total_bytes += nplaces * 8          # place_coords
 total_bytes += nplaces * 4          # place_hazards
 total_bytes += nplaces * 4          # place_counts
 total_bytes += npeople * 2          # people_ages
+total_bytes += npeople * 2          # people_obesity
+total_bytes += npeople              # people_cvd
+total_bytes += npeople              # people_diabetes
+total_bytes += npeople              # people_blood_pressure
 total_bytes += npeople * 4          # people_statuses
 total_bytes += npeople * 4          # people_transition_times
 total_bytes += npeople * nslots * 4 # people_place_ids
@@ -316,7 +320,7 @@ total_bytes += npeople * nslots * 4 # people_probs
 total_bytes += npeople * 4          # people_hazards
 total_bytes += npeople * 16         # people_prngs
 
-assert(total_bytes == 27984000000)  # 28GB
+assert(total_bytes == 28314000000)  # 28GB
 ```
 
 It is possible to run all of Great Britain on a top end GPU, such as a GV100,
