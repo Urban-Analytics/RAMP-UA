@@ -217,6 +217,9 @@ def run_opencl_model(individuals_df, activity_locations, time_activity_multiplie
     if calibration_params is not None and disease_params is not None:
         snapshot.update_params(create_params(calibration_params, disease_params))
 
+        if disease_params["improve_health"] == "TRUE":
+            snapshot.switch_to_healthier_population()
+
     # seed initial infections using GAM initial cases
     snapshot.seed_initial_infections(num_seed_days=disease_params["seed_days"])
 

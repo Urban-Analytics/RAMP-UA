@@ -192,7 +192,6 @@ class Snapshot:
                   f"'microsim/opencl/snapshots/{self.name}.npz' and re-running the model.")
             raise e
 
-
     def seed_prngs(self, seed):
         """
         Recomputes the random states of the PRNGs passed to the kernels.
@@ -202,6 +201,15 @@ class Snapshot:
         np.random.seed(seed)
         self.buffers.people_prngs[:] = np.random.randint(
             np.uint32((1 << 32) - 1), size=self.npeople * 4, dtype=np.uint32)
+
+    def switch_to_healthier_population(self):
+        """
+        Updates to a healthier population by reducing obesity. Any individuals that are overweight or obese are moved
+        to the level of obesity below their current one, by subtracting 1.
+        """
+        people_obesity = self.buffers.people_obesity
+        people_obesity[people_obesity > 0] -= 1
+        self.buffers.people_obesity[:] = people_obesity
 
     @classmethod
     def load_full_snapshot(cls, path):
