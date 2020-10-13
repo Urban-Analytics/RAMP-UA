@@ -54,9 +54,9 @@ from microsim.initialisation_cache import InitialisationCache
               help="Optionally read lockdown mobility data from a file (default use google mobility). To have no "
                    "lockdown pass an empty string, i.e. --lockdown-file='' ")
 @click.option('--quant-dir', default=None, help='Directory to QUANT data, set to None to use Devon data')
-@click.option('-c', '--use-cache/--dont-use-cache', default=True,
+@click.option('-c', '--use-cache/--no-use-cache', default=True,
               help="Whether to cache the population data initialisation")
-@click.option('-ogl', '--opencl/--no-opencl', default=False, help="Run OpenCL model (runs in headless mode by default")
+@click.option('-ocl', '--opencl/--no-opencl', default=False, help="Run OpenCL model (runs in headless mode by default")
 @click.option('-gui', '--opencl-gui/--no-opencl-gui', default=False,
               help="Run the OpenCL model with GUI visualisation for OpenCL model")
 @click.option('-gpu', '--opencl-gpu/--no-opencl-gpu', default=False,
@@ -152,7 +152,7 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
         quant_object = QuantRampAPI(os.path.join(data_dir, quant_dir))
 
     # args for population initialisation
-    population_args = {"data_dir": data_dir, "debug": debug, "lockdown_file": lockdown_file, "use_cache": use_cache,
+    population_args = {"data_dir": data_dir, "debug": debug, "lockdown_file": lockdown_file,
                        "quant_object": quant_object}
 
     # args for Python/R Microsim. Use same arguments whether running 1 repetition or many
@@ -176,6 +176,7 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
 
     # generate new population dataframes if we aren't using the cache, or if the cache is empty
     if not use_cache or cache.is_empty():
+        print(f'Reading population data because {"caching is disabled" if not use_cache else "the cache is empty"}')
         population = PopulationInitialisation(**population_args)
         individuals = population.individuals
         activity_locations = population.activity_locations
@@ -184,6 +185,7 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
         # store in cache so we can load later
         cache.store_in_cache(individuals, activity_locations, time_activity_multiplier)
     else:  # load from cache
+        print("Loading data from previous cache")
         individuals, activity_locations, time_activity_multiplier = cache.read_from_cache()
 
     # Select which model implementation to run

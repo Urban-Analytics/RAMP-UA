@@ -40,7 +40,6 @@ class PopulationInitialisation:
                  random_seed: float = None, read_data: bool = True,
                  testing: bool = False,
                  debug=False,
-                 use_cache=True,
                  quant_object=None
                  ):
         """
@@ -55,7 +54,6 @@ class PopulationInitialisation:
             in debugging).
         :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!)
         :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
-        :param use_cache: Optionally turn off any caching (caching saves time during initialisation)
         :param quant_object: optional parameter to use QUANT data, don't specify if you want to use Devon data
         """
 
@@ -72,7 +70,6 @@ class PopulationInitialisation:
         self.do_lockdown = False if (lockdown_file == "") else True
         self.random = random.Random(random_seed)
         PopulationInitialisation.debug = debug
-        self.use_cache = use_cache
         PopulationInitialisation.testing = testing
         if self.testing:
             warnings.warn("Running in testing mode. Some exceptions will be disabled.")
@@ -212,7 +209,7 @@ class PopulationInitialisation:
         cols = self.individuals.columns
         self.individuals = PopulationInitialisation.add_work_flows(flow_type=work_name, individuals=self.individuals,
                                                             workplaces=workplaces, commuting_flows=commuting_flows,
-                                                            flow_threshold=5, use_cache=self.use_cache)
+                                                            flow_threshold=5)
         assert num_individuals == len(self.individuals), \
             "There was an error reading workplaces (caching?) and the number of individuals has changed!"
         assert (self.individuals.columns[0:-3] == cols).all(), \
@@ -761,7 +758,7 @@ class PopulationInitialisation:
 
     @classmethod
     def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame,
-                       commuting_flows: pd.DataFrame, flow_threshold, use_cache) -> (pd.DataFrame):
+                       commuting_flows: pd.DataFrame, flow_threshold) -> (pd.DataFrame):
         """
         Create a dataframe of work locations that individuals travel to. The flows are based on general commuting
         patterns and assume one work location per industry type MSOA.
@@ -770,30 +767,9 @@ class PopulationInitialisation:
         :param workplaces:  The dataframe of workplaces (i.e. occupations)
         :param commuting_flows: The general commuting flows between MSOAs (an O-D matrix)
         :param flow_threshold: Only include the top x destinations as possible flows. 'None' means no limit.
-        :param use_cache: Whether to use a cache of pre-calculated work flows (quick)
         :return: The new 'individuals' dataframe (with new columns)
         """
         # The logic of this function is basically copied from add_individual_flows()
-
-        # Read from cache or re-calculate workplace location (takes ages)
-        cache_file = None
-        if use_cache:
-            cache_file = os.path.join(cls.DATA_DIR, "caches", "work_flows_cache.pickle")
-            print(f"\tAttemting to use cache file for worklplaces: {cache_file}.")
-            if os.path.isfile(cache_file):
-                print(f"\t\tCache file exists. Loading from file.")
-                cached_individuals = pd.read_pickle(cache_file)
-                if len(individuals) != len(cached_individuals):
-                    raise Exception(
-                        f"The cache file ({cache_file}) for workplaces has a different number of individuals "
-                        f"in ({len(cached_individuals)} than the number of individuals currently in "
-                        f"the model ({len(individuals)}. It's probably an old file, if you delete it"
-                        f"the workplaces will be recalutaced.")
-                return cached_individuals
-            else:
-                print("\t\tNo cache file exists. Will cache after calculating workplcaes.")
-        else:
-            print("\tCaching disabled. Calculating workplaces:")
 
         # Names for the columns and empty lists to store the venues and flows
         venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
@@ -845,10 +821,6 @@ class PopulationInitialisation:
         # Check everyone has some flows (all list lengths are >0)
         assert False not in (individuals.loc[:, venues_col].apply(lambda cell: len(cell)) > 0).values
         assert False not in (individuals.loc[:, flows_col].apply(lambda cell: len(cell)) > 0).values
-
-        if use_cache:
-            print(f"\t\tFinished calculating workplaces. Caching to: {cache_file}")
-            individuals.to_pickle(cache_file)  # where to save it, usually as a .pkl
 
         return individuals
 

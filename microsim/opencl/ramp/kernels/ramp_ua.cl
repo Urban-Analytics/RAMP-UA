@@ -58,8 +58,8 @@ typedef struct Params {
   float exposed_shape; // The shape of the distribution of exposed durations
   float presymp_scale; // The scale of the distribution of presymptomatic durations
   float presymp_shape; // The shape of the distribution of presymptomatic durations
-  float infection_scale; // The scale of the distribution of infected durations
-  float infection_loc; // The location of the distribution of infected durations
+  float infection_log_scale; // The std dev of the underlying normal distribution of the lognormal infected duration distribution
+  float infection_mode; // The mode of the lognormal distribution of infected durations
   float lockdown_multiplier; // Increase in time at home due to lockdown
   float place_hazard_multipliers[5]; // Hazard multipliers by activity
   float individual_hazard_multipliers[3]; // Hazard multipliers by activity
@@ -92,9 +92,10 @@ uint sample_presymptomatic_duration(global uint4* rng, global const Params* para
 }
 
 uint sample_infection_duration(global uint4* rng, global const Params* params){
-  // FIXME: This is lognormal now
-  float sample = randn(rng) * params->infection_scale + params->infection_loc;
-  return sample * sign(sample); // Folded normal
+  float mode = params->infection_mode;
+  float sdlog = params->infection_log_scale;
+  float meanlog = pow(sdlog, 2) + log(mode);
+  return (uint)lognormal(rng, meanlog, sdlog);
 }
 
 float get_recovery_prob_for_age(ushort age, global const Params* params){

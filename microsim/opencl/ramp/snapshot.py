@@ -184,7 +184,14 @@ class Snapshot:
         self.buffers.people_transition_times[initial_case_ids] = 1
 
     def update_params(self, new_params):
-        self.buffers.params[:] = new_params.asarray()
+        try:
+            self.buffers.params[:] = new_params.asarray()
+        except ValueError as e:
+            print(f"Snapshot.py caused an exception '{str(e)}'. This can happen if the parameters in the model "
+                  f"have changed after a snapshot has been created. Try deleting the snapshot file "
+                  f"'microsim/opencl/snapshots/{self.name}.npz' and re-running the model.")
+            raise e
+
 
     def seed_prngs(self, seed):
         """
