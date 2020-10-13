@@ -96,7 +96,11 @@ typedef struct Params {
   float infection_mode; // The mode of the lognormal distribution of infected durations
   float lockdown_multiplier; // Increase in time at home due to lockdown
   float place_hazard_multipliers[5]; // Hazard multipliers by activity
-  float recovery_probs[9]; // Recovery probabilities by age group
+  float mortality_probs[9]; // mortality probabilities by age group
+  float obesity_multipliers[3]; // mortality multipliers for obesity levels
+  float cvd_multiplier; // mortality multipliers for cardiovascular disease
+  float diabetes_multiplier; // mortality multipliers for diabetes
+  float bloodpressure_multiplier; // mortality multipliers for high blood pressure
 } Params;
 ```
 
@@ -123,6 +127,10 @@ Buffers = namedtuple(
         "place_counts",
 
         "people_ages",
+        "people_obesity",
+        "people_cvd",
+        "people_diabetes",
+        "people_blood_pressure",
         "people_statuses",
         "people_transition_times",
         "people_place_ids",
@@ -224,6 +232,9 @@ remaining state transitions, it checks if the current transition counter has
 decreased below zero. If so it will transition this person to their next state
 (possibly randomly) and update their status and next transition time
 accordingly.
+
+This kernel contains the functionality for calculating people's mortality risk 
+based on factors such as age and obesity level. 
 
 Finally, each person's transition time counter will be decremented. 
 
