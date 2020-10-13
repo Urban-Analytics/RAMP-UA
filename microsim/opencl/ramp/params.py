@@ -39,7 +39,7 @@ class Params:
                         symptomatic=1.0
                     ),
                  proportion_asymptomatic=0.4,
-                 obesity_multipliers=np.array([1, 1, 1, 1]),
+                 obesity_multipliers=[1, 1, 1, 1],
                  cvd_multiplier=1,
                  diabetes_multiplier=1,
                  bloodpressure_multiplier=1,
@@ -69,7 +69,7 @@ class Params:
         self.recovery_probs = np.array([0.9999839, 0.9999305, 0.999691, 0.999156,
                                         0.99839, 0.99405, 0.9807, 0.9572, 0.922],
                                        dtype=np.float32)
-        self.obesity_multipliers = obesity_multipliers
+        self.obesity_multipliers = np.array(obesity_multipliers, dtype=np.float32)
         self.cvd_multiplier = cvd_multiplier
         self.diabetes_multiplier = diabetes_multiplier
         self.bloodpressure_multiplier = bloodpressure_multiplier
