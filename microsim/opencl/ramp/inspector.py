@@ -447,24 +447,24 @@ class Inspector:
 
         imgui.text("Recovery Probabilities by Age")
 
-        _, self.params.recovery_probs[0] = imgui.slider_float(
-            "0 to 10", self.params.recovery_probs[0], 0.0, 1.0, "%.7f")
-        _, self.params.recovery_probs[1] = imgui.slider_float(
-            "10 to 20", self.params.recovery_probs[1], 0.0, 1.0, "%.7f")
-        _, self.params.recovery_probs[2] = imgui.slider_float(
-            "20 to 30", self.params.recovery_probs[2], 0.0, 1.0, "%.7f")
-        _, self.params.recovery_probs[3] = imgui.slider_float(
-            "30 to 40", self.params.recovery_probs[3], 0.0, 1.0, "%.7f")
-        _, self.params.recovery_probs[4] = imgui.slider_float(
-            "40 to 50", self.params.recovery_probs[4], 0.0, 1.0, "%.7f")
-        _, self.params.recovery_probs[5] = imgui.slider_float(
-            "50 to 60", self.params.recovery_probs[5], 0.0, 1.0, "%.7f")
-        _, self.params.recovery_probs[6] = imgui.slider_float(
-            "60 to 70", self.params.recovery_probs[6], 0.0, 1.0, "%.7f")
-        _, self.params.recovery_probs[7] = imgui.slider_float(
-            "70 to 80", self.params.recovery_probs[7], 0.0, 1.0, "%.7f")
-        _, self.params.recovery_probs[8] = imgui.slider_float(
-            "80 and above", self.params.recovery_probs[8], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[0] = imgui.slider_float(
+            "0 to 10", self.params.mortality_probs[0], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[1] = imgui.slider_float(
+            "10 to 20", self.params.mortality_probs[1], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[2] = imgui.slider_float(
+            "20 to 30", self.params.mortality_probs[2], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[3] = imgui.slider_float(
+            "30 to 40", self.params.mortality_probs[3], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[4] = imgui.slider_float(
+            "40 to 50", self.params.mortality_probs[4], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[5] = imgui.slider_float(
+            "50 to 60", self.params.mortality_probs[5], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[6] = imgui.slider_float(
+            "60 to 70", self.params.mortality_probs[6], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[7] = imgui.slider_float(
+            "70 to 80", self.params.mortality_probs[7], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[8] = imgui.slider_float(
+            "80 and above", self.params.mortality_probs[8], 0.0, 1.0, "%.7f")
 
         if imgui.button("Reset to Defaults"):
             self.params = Params()

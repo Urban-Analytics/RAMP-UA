@@ -63,7 +63,7 @@ typedef struct Params {
   float lockdown_multiplier; // Increase in time at home due to lockdown
   float place_hazard_multipliers[5]; // Hazard multipliers by activity
   float individual_hazard_multipliers[3]; // Hazard multipliers by activity
-  float recovery_probs[9]; // Recovery probabilities by age group
+  float mortality_probs[9]; // mortality probabilities by age group
   float obesity_multipliers[3]; // mortality multipliers for obesity levels
   float cvd_multiplier; // mortality multipliers for cardiovascular disease
   float diabetes_multiplier; // mortality multipliers for diabetes
@@ -102,10 +102,10 @@ uint sample_infection_duration(global uint4* rng, global const Params* params){
   return (uint)lognormal(rng, meanlog, sdlog);
 }
 
-float get_recovery_prob_for_age(ushort age, global const Params* params){
+float get_mortality_prob_for_age(ushort age, global const Params* params){
   uint bin_size = 10; // Years per bin
   uint max_bin_idx = 8; // Largest bin index covers 80+
-  return params->recovery_probs[min(age/bin_size, max_bin_idx)];
+  return params->mortality_probs[min(age/bin_size, max_bin_idx)];
 }
 
 float get_obesity_multiplier(ushort obesity, global const Params* params){
@@ -316,33 +316,33 @@ kernel void people_update_statuses(uint npeople,
         {
           // Calculate recovered prob based on age
           ushort person_age = people_ages[person_id];
-          float recovery_prob = get_recovery_prob_for_age(person_age, params);
+          float mortality_prob = get_mortality_prob_for_age(person_age, params);
 
           ushort person_obesity = people_obesity[person_id]; 
           if (person_obesity > 0){ // if person is obese then adjust mortality probability
-            recovery_prob *= get_obesity_multiplier(person_obesity, params);
+            mortality_prob *= get_obesity_multiplier(person_obesity, params);
           }
           
           // if person has cardiovascular disease then adjust mortality probability
           ushort person_cvd = people_cvd[person_id];
           if (person_cvd){
-            recovery_prob *= params->cvd_multiplier;
+            mortality_prob *= params->cvd_multiplier;
           }
 
           // if person has diabetes then adjust mortality probability       
           ushort person_diabetes = people_diabetes[person_id];
           if (person_diabetes){
-            recovery_prob *= params->diabetes_multiplier;
+            mortality_prob *= params->diabetes_multiplier;
           }
 
           // if person has high bloodpressure then adjust mortality probability                    
           ushort person_bloodpressure = people_bloodpressure[person_id];
           if (person_bloodpressure){
-            recovery_prob *= params->bloodpressure_multiplier;
+            mortality_prob *= params->bloodpressure_multiplier;
           }
           
           // randomly select whether dead or recovered
-          next_status = rand(rng) < recovery_prob ? Recovered : Dead;
+          next_status = rand(rng) > mortality_prob ? Recovered : Dead;
           break;
         }
         case Asymptomatic:

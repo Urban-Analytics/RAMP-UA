@@ -66,9 +66,10 @@ class Params:
                                                        individual_hazard_multipliers.asymptomatic,
                                                        individual_hazard_multipliers.symptomatic], dtype=np.float32)
 
-        self.recovery_probs = np.array([0.9999839, 0.9999305, 0.999691, 0.999156,
-                                        0.99839, 0.99405, 0.9807, 0.9572, 0.922],
-                                       dtype=np.float32)
+        self.mortality_probs = np.array([0.0000161, 0.0000695, 0.000309, 0.000844,
+                                         0.00161, 0.00595, 0.0193, 0.0428, 0.078],
+                                        dtype=np.float32)
+
         self.obesity_multipliers = np.array(obesity_multipliers, dtype=np.float32)
         self.cvd_multiplier = cvd_multiplier
         self.diabetes_multiplier = diabetes_multiplier
@@ -93,7 +94,7 @@ class Params:
             ),
             self.place_hazard_multipliers,
             self.individual_hazard_multipliers,
-            self.recovery_probs,
+            self.mortality_probs,
             self.obesity_multipliers,
             np.array(
                 [
@@ -129,7 +130,7 @@ class Params:
         p.infection_log_scale = params_array[6]
         p.infection_mode = params_array[7]
         p.lockdown_multiplier = params_array[8]
-        p.recovery_probs = params_array[17:26]
+        p.mortality_probs = params_array[17:26]
         p.obesity_multipliers = params_array[26:30]
         p.cvd_multiplier = params_array[30]
         p.diabetes_multiplier = params_array[31]
