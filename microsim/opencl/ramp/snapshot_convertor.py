@@ -240,3 +240,6 @@ def get_obesity_value(bmi_vg6_str):
         return 1
     if bmi_vg6_str == "Normal: 18.5 to less than 25" or bmi_vg6_str == "Not applicable":
         return 0
+
+    # default
+    return 0

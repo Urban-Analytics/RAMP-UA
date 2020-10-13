@@ -39,7 +39,7 @@ class Params:
                         symptomatic=1.0
                     ),
                  proportion_asymptomatic=0.4,
-                 obesity_multipliers=[1, 1, 1, 1],
+                 obesity_multipliers=np.array([1, 1, 1, 1]),
                  cvd_multiplier=1,
                  diabetes_multiplier=1,
                  bloodpressure_multiplier=1,
@@ -130,10 +130,10 @@ class Params:
         p.infection_mode = params_array[7]
         p.lockdown_multiplier = params_array[8]
         p.recovery_probs = params_array[17:26]
-        p.obesity_multipliers = params_array[27:30]
-        p.cvd_multiplier = params_array[31]
-        p.diabetes_multiplier = params_array[32]
-        p.bloodpressure_multiplier = params_array[33]
+        p.obesity_multipliers = params_array[26:30]
+        p.cvd_multiplier = params_array[30]
+        p.diabetes_multiplier = params_array[31]
+        p.bloodpressure_multiplier = params_array[32]
         return p
 
     def set_lockdown_multiplier(self, lockdown_multipliers, timestep):

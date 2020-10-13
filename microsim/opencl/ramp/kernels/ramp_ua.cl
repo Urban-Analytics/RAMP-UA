@@ -111,7 +111,7 @@ float get_recovery_prob_for_age(ushort age, global const Params* params){
 float get_obesity_multiplier(ushort obesity, global const Params* params){
     // obesity value of 0 corresponds to normal, so there is no multiplier for that
     int multiplier_idx = (int)obesity - 1;
-    return params->obesity_multipliers[multiplier_index];
+    return params->obesity_multipliers[multiplier_idx];
 }
 
 /*

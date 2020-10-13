@@ -21,6 +21,11 @@ individuals_df = pd.DataFrame({'ID': [0, 1, 3],
                                'Retail_Flows': [[0.2, 0.5, 0.3], [0.1, 0.6, 0.3], [0.5, 0.1, 0.4]],
                                'Retail_Duration': [0.2, 0.3, 0.4],
                                'pnothome': [0.2, 0.4, 0.5],
+                               'BMIvg6': ["Normal: 18.5 to less than 25", "Normal: 18.5 to less than 25",
+                                          "Normal: 18.5 to less than 25"],
+                               'cvd': [0, 0, 0],
+                               'diabetes': [0, 0, 0],
+                               'bloodpressure': [0, 0, 0],
                                'area': np.array(["E02004143", "E02004144", "E02004145"]).astype(np.object)
                                })
 
