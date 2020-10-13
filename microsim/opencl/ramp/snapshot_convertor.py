@@ -36,14 +36,19 @@ class SnapshotConvertor:
 
     def generate_snapshot(self):
         people_ages = self.get_people_ages()
+        people_obesity = self.get_people_obesity()
+        people_cvd = self.get_people_cvd()
+        people_diabetes = self.get_people_diabetes()
+        people_blood_pressure = self.get_people_blood_pressure()
         area_codes = self.get_people_area_codes()
         not_home_probs = self.get_not_home_probs()
         people_place_ids, people_flows = self.get_people_place_data()
 
         place_activities = self.get_place_data()
         place_coordinates = self.get_place_coordinates()
-        return Snapshot.from_arrays(people_ages, people_place_ids, people_flows, area_codes, not_home_probs,
-                                    place_activities, place_coordinates, self.lockdown_multipliers)
+        return Snapshot.from_arrays(people_ages, people_obesity, people_cvd, people_diabetes, people_blood_pressure,
+                                    people_place_ids, people_flows, area_codes, not_home_probs, place_activities,
+                                    place_coordinates, self.lockdown_multipliers)
 
     def create_global_place_ids(self):
         max_id = 0
@@ -75,6 +80,19 @@ class SnapshotConvertor:
 
     def get_people_ages(self):
         return self.individuals['age'].to_numpy(dtype=np.uint16)
+
+    def get_people_obesity(self):
+        self.individuals['obesity'] = self.individuals.apply(lambda row: get_obesity_value(row["BMIvg6"]), axis=1)
+        return self.individuals['obesity'].to_numpy(dtype=np.uint16)
+
+    def get_people_cvd(self):
+        return self.individuals['cvd'].to_numpy(dtype=np.uint8)
+
+    def get_people_diabetes(self):
+        return self.individuals['diabetes'].to_numpy(dtype=np.uint8)
+
+    def get_people_blood_pressure(self):
+        return self.individuals['bloodpressure'].to_numpy(dtype=np.uint8)
 
     def get_people_area_codes(self):
         return self.individuals['area'].to_numpy(dtype=np.object)
@@ -209,3 +227,16 @@ class SnapshotConvertor:
             lons[i] = building[1]
 
         return lats, lons
+
+
+def get_obesity_value(bmi_vg6_str):
+    if bmi_vg6_str == "Obese III: 40 or more":
+        return 4
+    if bmi_vg6_str == "Obese II: 35 to less than 40":
+        return 3
+    if bmi_vg6_str == "Obese I: 30 to less than 35":
+        return 2
+    if bmi_vg6_str == "Overweight: 25 to less than 30":
+        return 1
+    if bmi_vg6_str == "Normal: 18.5 to less than 25" or bmi_vg6_str == "Not applicable":
+        return 0

@@ -48,6 +48,10 @@ class Simulator:
             place_counts=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, nplaces * 4),
 
             people_ages=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, npeople * 2),
+            people_obesity=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, npeople * 2),
+            people_cvd=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, npeople),
+            people_diabetes=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, npeople),
+            people_blood_pressure=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, npeople),
             people_statuses=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, npeople * 4),
             people_transition_times=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, npeople * 4),
             people_place_ids=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, npeople * nslots * 4),
@@ -90,7 +94,8 @@ class Simulator:
             buffers.params)
 
         kernels.people_update_statuses.set_args(
-            npeople, buffers.people_ages, buffers.people_hazards, buffers.people_statuses,
+            npeople, buffers.people_ages, buffers.people_obesity, buffers.people_cvd, buffers.people_diabetes,
+            buffers.people_blood_pressure, buffers.people_hazards, buffers.people_statuses,
             buffers.people_transition_times, buffers.people_prngs, buffers.params)
 
         self.nplaces = nplaces
