@@ -64,7 +64,7 @@ typedef struct Params {
   float place_hazard_multipliers[5]; // Hazard multipliers by activity
   float individual_hazard_multipliers[3]; // Hazard multipliers by activity
   float mortality_probs[9]; // mortality probabilities by age group
-  float obesity_multipliers[3]; // mortality multipliers for obesity levels
+  float obesity_multipliers[4]; // mortality multipliers for obesity levels
   float cvd_multiplier; // mortality multipliers for cardiovascular disease
   float diabetes_multiplier; // mortality multipliers for diabetes
   float bloodpressure_multiplier; // mortality multipliers for high blood pressure
