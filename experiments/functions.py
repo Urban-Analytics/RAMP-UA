@@ -1,5 +1,6 @@
-# Some notebook functionality (like multiprocessing) only works with functions defined in separate
-# files. Those functions can go here.
+# This is a workaround to allow multiprocessing.Pool to work in the pf_experiments_plots notebook.
+# The function called by pool.map ('count_wiggles') needs to be defined in this separate file and imported.
+# https://stackoverflow.com/questions/41385708/multiprocessing-example-giving-attributeerror/42383397
 import os
 import multiprocessing
 import itertools # TEMP
