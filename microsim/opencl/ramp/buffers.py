@@ -11,6 +11,10 @@ Buffers = namedtuple(
         "place_counts",
 
         "people_ages",
+        "people_obesity",
+        "people_cvd",
+        "people_diabetes",
+        "people_blood_pressure",
         "people_statuses",
         "people_transition_times",
         "people_place_ids",

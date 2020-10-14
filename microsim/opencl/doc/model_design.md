@@ -96,7 +96,11 @@ typedef struct Params {
   float infection_mode; // The mode of the lognormal distribution of infected durations
   float lockdown_multiplier; // Increase in time at home due to lockdown
   float place_hazard_multipliers[5]; // Hazard multipliers by activity
-  float recovery_probs[9]; // Recovery probabilities by age group
+  float mortality_probs[9]; // mortality probabilities by age group
+  float obesity_multipliers[3]; // mortality multipliers for obesity levels
+  float cvd_multiplier; // mortality multipliers for cardiovascular disease
+  float diabetes_multiplier; // mortality multipliers for diabetes
+  float bloodpressure_multiplier; // mortality multipliers for high blood pressure
 } Params;
 ```
 
@@ -123,6 +127,10 @@ Buffers = namedtuple(
         "place_counts",
 
         "people_ages",
+        "people_obesity",
+        "people_cvd",
+        "people_diabetes",
+        "people_blood_pressure",
         "people_statuses",
         "people_transition_times",
         "people_place_ids",
@@ -225,6 +233,9 @@ decreased below zero. If so it will transition this person to their next state
 (possibly randomly) and update their status and next transition time
 accordingly.
 
+This kernel contains the functionality for calculating people's mortality risk 
+based on factors such as age and obesity level. 
+
 Finally, each person's transition time counter will be decremented. 
 
 This kernel corresponds to the logic in the R disease model in the original
@@ -297,6 +308,10 @@ total_bytes += nplaces * 8          # place_coords
 total_bytes += nplaces * 4          # place_hazards
 total_bytes += nplaces * 4          # place_counts
 total_bytes += npeople * 2          # people_ages
+total_bytes += npeople * 2          # people_obesity
+total_bytes += npeople              # people_cvd
+total_bytes += npeople              # people_diabetes
+total_bytes += npeople              # people_blood_pressure
 total_bytes += npeople * 4          # people_statuses
 total_bytes += npeople * 4          # people_transition_times
 total_bytes += npeople * nslots * 4 # people_place_ids
@@ -305,7 +320,7 @@ total_bytes += npeople * nslots * 4 # people_probs
 total_bytes += npeople * 4          # people_hazards
 total_bytes += npeople * 16         # people_prngs
 
-assert(total_bytes == 27984000000)  # 28GB
+assert(total_bytes == 28314000000)  # 28GB
 ```
 
 It is possible to run all of Great Britain on a top end GPU, such as a GV100,

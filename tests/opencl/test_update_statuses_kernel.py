@@ -202,8 +202,8 @@ def test_symptomatic_become_recovered_or_dead_young_age():
     proportion_dead = num_dead / npeople
 
     # expected recovery probability for ages 20 to 29
-    expected_proportion_recovered = 0.999691
-    expected_proportion_dead = 1 - expected_proportion_recovered
+    expected_proportion_dead = 0.000309
+    expected_proportion_recovered = 1 - expected_proportion_dead
 
     assert np.isclose(expected_proportion_recovered, proportion_recovered, atol=0.0001)
     assert np.isclose(expected_proportion_dead, proportion_dead, atol=0.0001)
@@ -243,8 +243,156 @@ def test_symptomatic_become_recovered_or_dead_old_age():
     proportion_dead = num_dead / npeople
 
     # expected recovery probability for ages 80+
-    expected_proportion_recovered = 0.922
-    expected_proportion_dead = 1 - expected_proportion_recovered
+    expected_proportion_dead = 0.078
+    expected_proportion_recovered = 1 - expected_proportion_dead
+
+    assert np.isclose(expected_proportion_recovered, proportion_recovered, atol=0.01)
+    assert np.isclose(expected_proportion_dead, proportion_dead, atol=0.01)
+
+
+def test_not_obese_lower_mortality():
+    snapshot = Snapshot.random(nplaces, npeople, nslots)
+
+    people_ages_test_data = np.full(npeople, 65, dtype=np.uint16)
+    people_statuses_test_data = np.full(npeople, DiseaseStatus.Symptomatic.value, dtype=np.uint32)
+    # set all people to obesity=0, corresponding to normal BMI
+    people_obesity_test_data = np.full(npeople, 0, dtype=np.uint8)
+    people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
+
+    snapshot.buffers.people_ages[:] = people_ages_test_data
+    snapshot.buffers.people_statuses[:] = people_statuses_test_data
+    snapshot.buffers.people_obesity[:] = people_obesity_test_data
+    snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
+
+    params = Params()
+    params.obesity_multipliers = [1.0, 1.48, 1.48, 1.9]
+    snapshot.update_params(params)
+
+    simulator = Simulator(snapshot, gpu=False)
+    simulator.upload_all(snapshot.buffers)
+
+    people_statuses_before = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_before)
+
+    assert np.array_equal(people_statuses_before, people_statuses_test_data)
+
+    # run two timesteps so statuses should change
+    simulator.step_kernel("people_update_statuses")
+    simulator.step_kernel("people_update_statuses")
+
+    # assert that statuses change to either recovered or dead in the correct proportion
+    people_statuses_after_two_steps = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_after_two_steps)
+
+    num_recovered = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Recovered.value)
+    proportion_recovered = num_recovered / npeople
+
+    num_dead = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Dead.value)
+    proportion_dead = num_dead / npeople
+
+    # expected recovery probability for ages 60-70
+    expected_proportion_dead = 0.0193
+    expected_proportion_recovered = 1 - expected_proportion_dead
+
+    assert np.isclose(expected_proportion_recovered, proportion_recovered, atol=0.01)
+    assert np.isclose(expected_proportion_dead, proportion_dead, atol=0.01)
+
+
+def test_obese_higher_mortality():
+    snapshot = Snapshot.random(nplaces, npeople, nslots)
+
+    people_ages_test_data = np.full(npeople, 65, dtype=np.uint16)
+    people_statuses_test_data = np.full(npeople, DiseaseStatus.Symptomatic.value, dtype=np.uint32)
+    # set all people to obesity=4, corresponding to the highest category
+    people_obesity_test_data = np.full(npeople, 4, dtype=np.uint8)
+    people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
+
+    snapshot.buffers.people_ages[:] = people_ages_test_data
+    snapshot.buffers.people_statuses[:] = people_statuses_test_data
+    snapshot.buffers.people_obesity[:] = people_obesity_test_data
+    snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
+
+    params = Params()
+    high_bmi_mortality = 1.9
+    params.obesity_multipliers = [1.0, 1.48, 1.48, high_bmi_mortality]
+    snapshot.update_params(params)
+
+    simulator = Simulator(snapshot, gpu=False)
+    simulator.upload_all(snapshot.buffers)
+
+    people_statuses_before = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_before)
+
+    assert np.array_equal(people_statuses_before, people_statuses_test_data)
+
+    # run two timesteps so statuses should change
+    simulator.step_kernel("people_update_statuses")
+    simulator.step_kernel("people_update_statuses")
+
+    # assert that statuses change to either recovered or dead in the correct proportion
+    people_statuses_after_two_steps = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_after_two_steps)
+
+    num_recovered = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Recovered.value)
+    proportion_recovered = num_recovered / npeople
+
+    num_dead = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Dead.value)
+    proportion_dead = num_dead / npeople
+
+    # expected recovery probability for ages 60-70
+    expected_proportion_dead = 0.0193
+    expected_proportion_dead *= high_bmi_mortality
+    expected_proportion_recovered = 1 - expected_proportion_dead
+
+    assert np.isclose(expected_proportion_recovered, proportion_recovered, atol=0.01)
+    assert np.isclose(expected_proportion_dead, proportion_dead, atol=0.01)
+
+
+def test_diabetes_higher_mortality():
+    snapshot = Snapshot.random(nplaces, npeople, nslots)
+
+    people_ages_test_data = np.full(npeople, 65, dtype=np.uint16)
+    people_statuses_test_data = np.full(npeople, DiseaseStatus.Symptomatic.value, dtype=np.uint32)
+    # set all people to diabetes=1
+    people_diabetes_test_data = np.ones(npeople, dtype=np.uint8)
+    people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
+
+    snapshot.buffers.people_ages[:] = people_ages_test_data
+    snapshot.buffers.people_statuses[:] = people_statuses_test_data
+    snapshot.buffers.people_diabetes[:] = people_diabetes_test_data
+    snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
+
+    params = Params()
+    diabetes_multiplier = 1.4
+    params.diabetes_multiplier = diabetes_multiplier
+    snapshot.update_params(params)
+
+    simulator = Simulator(snapshot, gpu=False)
+    simulator.upload_all(snapshot.buffers)
+
+    people_statuses_before = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_before)
+
+    assert np.array_equal(people_statuses_before, people_statuses_test_data)
+
+    # run two timesteps so statuses should change
+    simulator.step_kernel("people_update_statuses")
+    simulator.step_kernel("people_update_statuses")
+
+    # assert that statuses change to either recovered or dead in the correct proportion
+    people_statuses_after_two_steps = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_after_two_steps)
+
+    num_recovered = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Recovered.value)
+    proportion_recovered = num_recovered / npeople
+
+    num_dead = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Dead.value)
+    proportion_dead = num_dead / npeople
+
+    # expected recovery probability for ages 60-70
+    expected_proportion_dead = 0.0193
+    expected_proportion_dead *= diabetes_multiplier
+    expected_proportion_recovered = 1 - expected_proportion_dead
 
     assert np.isclose(expected_proportion_recovered, proportion_recovered, atol=0.01)
     assert np.isclose(expected_proportion_dead, proportion_dead, atol=0.01)
@@ -336,10 +484,10 @@ def test_infection_transition_times_distribution(visualize=False):
     # to recover so we have slightly larger tolerances here to avoid false negatives.
     assert np.isclose(expected_mean, mean, atol=0.7)
     assert np.isclose(expected_std_dev, std_dev, atol=0.4)
-    assert np.isclose(expected_mode, mode, atol=0.7)
+    assert np.isclose(expected_mode, mode, atol=1.0)
 
     # check that mode is similar to original mode parameter
-    assert np.isclose(infection_mode, mode, atol=0.7)
+    assert np.isclose(infection_mode, mode, atol=1.0)
 
     if visualize:  # show histogram of distribution
         fig, ax = plt.subplots(1, 1)

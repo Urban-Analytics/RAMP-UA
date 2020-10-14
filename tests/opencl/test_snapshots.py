@@ -104,3 +104,15 @@ def test_seed_prngs():
 
     assert np.any(prngs_before != prngs_after)
     assert np.all(prngs_after == prngs_after_after)
+
+
+def test_switch_to_healthier_population():
+    snapshot = Snapshot.random(nplaces=50, npeople=8, nslots=5)
+    snapshot.buffers.people_obesity[:] = np.array([0, 0, 1, 1, 2, 2, 4, 4])
+
+    snapshot.switch_to_healthier_population()
+
+    result_obesity = snapshot.buffers.people_obesity
+    expected_obesity = np.array([0, 0, 0, 0, 1, 1, 3, 3])
+
+    assert np.array_equal(result_obesity, expected_obesity)

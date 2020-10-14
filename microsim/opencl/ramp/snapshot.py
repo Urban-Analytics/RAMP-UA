@@ -47,6 +47,10 @@ class Snapshot:
             place_counts=np.zeros(nplaces, dtype=np.uint32),
 
             people_ages=np.zeros(npeople, dtype=np.uint16),
+            people_obesity=np.zeros(npeople, dtype=np.uint16),
+            people_cvd=np.zeros(npeople, dtype=np.uint8),
+            people_diabetes=np.zeros(npeople, dtype=np.uint8),
+            people_blood_pressure=np.zeros(npeople, dtype=np.uint8),
             people_statuses=np.zeros(npeople, dtype=np.uint32),
             people_transition_times=np.zeros(npeople, dtype=np.uint32),
             people_place_ids=np.zeros(npeople * nslots, dtype=np.uint32),
@@ -79,6 +83,10 @@ class Snapshot:
             place_counts=np.zeros(nplaces, dtype=np.uint32),
 
             people_ages=np.random.randint(100, size=npeople, dtype=np.uint16),
+            people_obesity=np.zeros(npeople, dtype=np.uint16),
+            people_cvd=np.zeros(npeople, dtype=np.uint8),
+            people_diabetes=np.zeros(npeople, dtype=np.uint8),
+            people_blood_pressure=np.zeros(npeople, dtype=np.uint8),
             people_statuses=np.random.binomial(1, 0.001, npeople).astype(np.uint32),
             people_transition_times=np.ones(npeople, dtype=np.uint32),
             people_place_ids=np.random.randint(nplaces, size=npeople * nslots, dtype=np.uint32),
@@ -103,7 +111,8 @@ class Snapshot:
         return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers)
 
     @classmethod
-    def from_arrays(cls, people_ages, people_place_ids, people_baseline_flows, area_codes, not_home_probs,
+    def from_arrays(cls, people_ages, people_obesity, people_cvd, people_diabetes, people_blood_pressure,
+                    people_place_ids, people_baseline_flows, area_codes, not_home_probs,
                     place_activities, place_coords, lockdown_multipliers):
         nplaces = place_activities.shape[0]
         npeople = people_place_ids.shape[0]
@@ -126,6 +135,10 @@ class Snapshot:
             place_counts=np.zeros(nplaces, dtype=np.uint32),
 
             people_ages=people_ages,
+            people_obesity=people_obesity,
+            people_cvd=people_cvd,
+            people_diabetes=people_diabetes,
+            people_blood_pressure=people_blood_pressure,
             people_statuses=np.zeros(npeople, dtype=np.uint32),
             people_transition_times=np.zeros(npeople, dtype=np.uint32),
             people_place_ids=people_place_ids,
@@ -179,7 +192,6 @@ class Snapshot:
                   f"'microsim/opencl/snapshots/{self.name}.npz' and re-running the model.")
             raise e
 
-
     def seed_prngs(self, seed):
         """
         Recomputes the random states of the PRNGs passed to the kernels.
@@ -189,6 +201,15 @@ class Snapshot:
         np.random.seed(seed)
         self.buffers.people_prngs[:] = np.random.randint(
             np.uint32((1 << 32) - 1), size=self.npeople * 4, dtype=np.uint32)
+
+    def switch_to_healthier_population(self):
+        """
+        Updates to a healthier population by reducing obesity. Any individuals that are overweight or obese are moved
+        to the level of obesity below their current one, by subtracting 1.
+        """
+        people_obesity = self.buffers.people_obesity
+        people_obesity[people_obesity > 0] -= 1
+        self.buffers.people_obesity[:] = people_obesity
 
     @classmethod
     def load_full_snapshot(cls, path):

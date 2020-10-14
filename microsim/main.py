@@ -217,6 +217,10 @@ def run_opencl_model(individuals_df, activity_locations, time_activity_multiplie
     if calibration_params is not None and disease_params is not None:
         snapshot.update_params(create_params(calibration_params, disease_params))
 
+        if disease_params["improve_health"]:
+            print("Switching to healthier population")
+            snapshot.switch_to_healthier_population()
+
     # seed initial infections using GAM initial cases
     snapshot.seed_initial_infections(num_seed_days=disease_params["seed_days"])
 
@@ -278,11 +282,17 @@ def create_params(calibration_params, disease_params):
     )
 
     proportion_asymptomatic = disease_params["asymp_rate"]
+    obesity_multipliers = [disease_params["overweight"], disease_params["obesity_30"], disease_params["obesity_35"],
+                           disease_params["obesity_40"]]
 
     return Params(
         location_hazard_multipliers=location_hazard_multipliers,
         individual_hazard_multipliers=individual_hazard_multipliers,
-        proportion_asymptomatic=proportion_asymptomatic
+        proportion_asymptomatic=proportion_asymptomatic,
+        obesity_multipliers=obesity_multipliers,
+        cvd_multiplier=disease_params["cvd"],
+        diabetes_multiplier=disease_params["diabetes"],
+        bloodpressure_multiplier=disease_params["bloodpressure"],
     )
 
 
