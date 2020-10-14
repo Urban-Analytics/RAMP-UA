@@ -77,15 +77,104 @@ def test_transmission_times_decremented():
     assert np.array_equal(expected_people_transition_times, people_transmission_times_after)
 
 
-def test_exposed_become_presymptomatic():
+# def test_exposed_become_presymptomatic():
+#     snapshot = Snapshot.random(nplaces, npeople, nslots)
+#
+#     people_statuses_test_data = np.full(npeople, DiseaseStatus.Exposed.value, dtype=np.uint32)
+#
+#     people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
+#
+#     snapshot.buffers.people_statuses[:] = people_statuses_test_data
+#     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
+#
+#     simulator = Simulator(snapshot, gpu=False)
+#     simulator.upload_all(snapshot.buffers)
+#
+#     people_statuses_before = np.zeros(npeople, dtype=np.uint32)
+#     simulator.download("people_statuses", people_statuses_before)
+#
+#     assert np.array_equal(people_statuses_before, people_statuses_test_data)
+#
+#     simulator.step_kernel("people_update_statuses")
+#
+#     # check that statuses don't change after one step
+#     people_statuses_after_one_step = np.zeros(npeople, dtype=np.uint32)
+#     simulator.download("people_statuses", people_statuses_after_one_step)
+#
+#     assert np.array_equal(people_statuses_after_one_step, people_statuses_test_data)
+#
+#     # run another timestep, this time statuses should change
+#     simulator.step_kernel("people_update_statuses")
+#
+#     # assert that all statuses change to presymptomatic after two timesteps
+#     people_statuses_after_two_steps = np.zeros(npeople, dtype=np.uint32)
+#     simulator.download("people_statuses", people_statuses_after_two_steps)
+#
+#     assert np.all(people_statuses_after_two_steps == DiseaseStatus.Presymptomatic.value)
+
+
+# def test_presymptomatic_update_status():
+#     snapshot = Snapshot.random(nplaces, npeople, nslots)
+#
+#     people_statuses_test_data = np.full(npeople, DiseaseStatus.Presymptomatic.value, dtype=np.uint32)
+#
+#     people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
+#
+#     snapshot.buffers.people_statuses[:] = people_statuses_test_data
+#     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
+#
+#     simulator = Simulator(snapshot, gpu=False)
+#     simulator.upload_all(snapshot.buffers)
+#
+#     people_statuses_before = np.zeros(npeople, dtype=np.uint32)
+#     simulator.download("people_statuses", people_statuses_before)
+#
+#     assert np.array_equal(people_statuses_before, people_statuses_test_data)
+#
+#     simulator.step_kernel("people_update_statuses")
+#
+#     # check that statuses don't change after one step
+#     people_statuses_after_one_step = np.zeros(npeople, dtype=np.uint32)
+#     simulator.download("people_statuses", people_statuses_after_one_step)
+#
+#     assert np.array_equal(people_statuses_after_one_step, people_statuses_test_data)
+#
+#     # run another timestep, this time statuses should change
+#     simulator.step_kernel("people_update_statuses")
+#
+#     # assert that statuses change to either symptomatic or asymptomatic in the correct proportion
+#     people_statuses_after_two_steps = np.zeros(npeople, dtype=np.uint32)
+#     simulator.download("people_statuses", people_statuses_after_two_steps)
+#
+#     num_asymptomatic = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Asymptomatic.value)
+#     proportion_asymptomatic = num_asymptomatic / npeople
+#
+#     num_symptomatic = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Symptomatic.value)
+#     proportion_symptomatic = num_symptomatic / npeople
+#
+#     expected_proportion_asymptomatic = 0.4
+#     expected_proportion_symptomatic = 1 - expected_proportion_asymptomatic
+#
+#     assert np.isclose(expected_proportion_asymptomatic, proportion_asymptomatic, atol=0.01)
+#     assert np.isclose(expected_proportion_symptomatic, proportion_symptomatic, atol=0.01)
+
+def test_exposed_become_asymptomatic_or_presymptomatic():
     snapshot = Snapshot.random(nplaces, npeople, nslots)
 
     people_statuses_test_data = np.full(npeople, DiseaseStatus.Exposed.value, dtype=np.uint32)
-
+    people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
+    # set all people to obesity=0, corresponding to normal BMI
+    people_obesity_test_data = np.full(npeople, 0, dtype=np.uint8)
     people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
 
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
+    snapshot.buffers.people_obesity[:] = people_obesity_test_data
     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
+
+    params = Params()
+    expected_proportion_asymptomatic = 0.5
+    params.proportion_asymptomatic = expected_proportion_asymptomatic
+    snapshot.update_params(params)
 
     simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
@@ -106,14 +195,80 @@ def test_exposed_become_presymptomatic():
     # run another timestep, this time statuses should change
     simulator.step_kernel("people_update_statuses")
 
-    # assert that all statuses change to presymptomatic after two timesteps
+    # assert that statuses change to either symptomatic or asymptomatic in the correct proportion
     people_statuses_after_two_steps = np.zeros(npeople, dtype=np.uint32)
     simulator.download("people_statuses", people_statuses_after_two_steps)
 
-    assert np.all(people_statuses_after_two_steps == DiseaseStatus.Presymptomatic.value)
+    num_asymptomatic = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Asymptomatic.value)
+    result_proportion_asymptomatic = num_asymptomatic / npeople
+
+    num_presymptomatic = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Presymptomatic.value)
+    result_proportion_presymptomatic = num_presymptomatic / npeople
+
+    expected_proportion_presymptomatic = 1 - expected_proportion_asymptomatic
+
+    assert np.isclose(expected_proportion_asymptomatic, result_proportion_asymptomatic, atol=0.01)
+    assert np.isclose(expected_proportion_presymptomatic, result_proportion_presymptomatic, atol=0.01)
 
 
-def test_presymptomatic_update_status():
+def test_more_overweight_become_symptomatic():
+    snapshot = Snapshot.random(nplaces, npeople, nslots)
+
+    people_statuses_test_data = np.full(npeople, DiseaseStatus.Exposed.value, dtype=np.uint32)
+    people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
+    # set all people to obesity=1, corresponding to overweight
+    people_obesity_test_data = np.full(npeople, 1, dtype=np.uint8)
+    people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
+
+    snapshot.buffers.people_statuses[:] = people_statuses_test_data
+    snapshot.buffers.people_obesity[:] = people_obesity_test_data
+    snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
+
+    params = Params()
+    base_proportion_asymptomatic = 0.5
+    params.proportion_asymptomatic = base_proportion_asymptomatic
+    overweight_sympt_mplier = 1.2
+    params.overweight_sympt_mplier = overweight_sympt_mplier
+    snapshot.update_params(params)
+
+    simulator = Simulator(snapshot, gpu=False)
+    simulator.upload_all(snapshot.buffers)
+
+    people_statuses_before = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_before)
+
+    assert np.array_equal(people_statuses_before, people_statuses_test_data)
+
+    simulator.step_kernel("people_update_statuses")
+
+    # check that statuses don't change after one step
+    people_statuses_after_one_step = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_after_one_step)
+
+    assert np.array_equal(people_statuses_after_one_step, people_statuses_test_data)
+
+    # run another timestep, this time statuses should change
+    simulator.step_kernel("people_update_statuses")
+
+    # assert that statuses change to either symptomatic or asymptomatic in the correct proportion
+    people_statuses_after_two_steps = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_after_two_steps)
+
+    num_asymptomatic = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Asymptomatic.value)
+    result_proportion_asymptomatic = num_asymptomatic / npeople
+
+    num_presymptomatic = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Presymptomatic.value)
+    result_proportion_presymptomatic = num_presymptomatic / npeople
+
+    base_proportion_symptomatic = 1 - base_proportion_asymptomatic
+    expected_proportion_presymptomatic = overweight_sympt_mplier * base_proportion_symptomatic
+    expected_proportion_asymptomatic = 1 - expected_proportion_presymptomatic
+
+    assert np.isclose(expected_proportion_asymptomatic, result_proportion_asymptomatic, atol=0.01)
+    assert np.isclose(expected_proportion_presymptomatic, result_proportion_presymptomatic, atol=0.01)
+
+
+def test_presymptomatic_become_symptomatic():
     snapshot = Snapshot.random(nplaces, npeople, nslots)
 
     people_statuses_test_data = np.full(npeople, DiseaseStatus.Presymptomatic.value, dtype=np.uint32)
@@ -142,21 +297,11 @@ def test_presymptomatic_update_status():
     # run another timestep, this time statuses should change
     simulator.step_kernel("people_update_statuses")
 
-    # assert that statuses change to either symptomatic or asymptomatic in the correct proportion
+    # assert that all statuses change to symptomatic after two timesteps
     people_statuses_after_two_steps = np.zeros(npeople, dtype=np.uint32)
     simulator.download("people_statuses", people_statuses_after_two_steps)
 
-    num_asymptomatic = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Asymptomatic.value)
-    proportion_asymptomatic = num_asymptomatic / npeople
-
-    num_symptomatic = np.count_nonzero(people_statuses_after_two_steps == DiseaseStatus.Symptomatic.value)
-    proportion_symptomatic = num_symptomatic / npeople
-
-    expected_proportion_asymptomatic = 0.4
-    expected_proportion_symptomatic = 1 - expected_proportion_asymptomatic
-
-    assert np.isclose(expected_proportion_asymptomatic, proportion_asymptomatic, atol=0.01)
-    assert np.isclose(expected_proportion_symptomatic, proportion_symptomatic, atol=0.01)
+    assert np.all(people_statuses_after_two_steps == DiseaseStatus.Symptomatic.value)
 
 
 def test_symptomatic_become_recovered_or_dead_young_age():
