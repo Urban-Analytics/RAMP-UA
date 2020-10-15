@@ -4,14 +4,6 @@ microsim package
 Submodules
 ----------
 
-microsim.microsim\_model module
--------------------------------
-
-.. automodule:: microsim.microsim_model
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 microsim.QUANTRampAPI2 module
 -----------------------------
 
@@ -52,10 +44,50 @@ microsim.dashboard\_QUANT module
    :undoc-members:
    :show-inheritance:
 
+microsim.initialisation\_cache module
+-------------------------------------
+
+.. automodule:: microsim.initialisation_cache
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+microsim.load\_msoa\_locations module
+-------------------------------------
+
+.. automodule:: microsim.load_msoa_locations
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+microsim.main module
+--------------------
+
+.. automodule:: microsim.main
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 microsim.microsim\_initialisation module
 ----------------------------------------
 
 .. automodule:: microsim.microsim_initialisation
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+microsim.microsim\_model module
+-------------------------------
+
+.. automodule:: microsim.microsim_model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+microsim.population\_initialisation module
+------------------------------------------
+
+.. automodule:: microsim.population_initialisation
    :members:
    :undoc-members:
    :show-inheritance:
