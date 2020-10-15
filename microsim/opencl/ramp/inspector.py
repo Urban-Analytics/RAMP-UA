@@ -2,6 +2,7 @@ import glfw
 import imgui
 import numpy as np
 import os
+import copy
 
 from imgui.integrations.glfw import GlfwRenderer
 from OpenGL.GL import *
@@ -138,6 +139,7 @@ class Inspector:
 
         self.simulator = simulator
         self.snapshot = snapshot
+        self.initial_state_snapshot = copy.deepcopy(snapshot)
         self.params = Params.fromarray(snapshot.buffers.params)
         self.nplaces = nplaces
         self.npeople = npeople
@@ -323,7 +325,7 @@ class Inspector:
         glUniform2fv(glGetUniformLocation(self.places_program, "position"), 1, position)
         glUniform1fv(glGetUniformLocation(self.places_program, "scale"), 1, scale)
         glUniform1fv(glGetUniformLocation(self.places_program, "alpha"), 1, 0.01)
-        glDrawElements(GL_LINES, 2 * self.npeople * self.nlines, GL_UNSIGNED_INT, None);
+        glDrawElements(GL_LINES, 2 * self.npeople * self.nlines, GL_UNSIGNED_INT, None)
 
     def draw_platform_window(self, width, height):
         imgui.set_next_window_size(width / 6, height / 4)
@@ -349,7 +351,8 @@ class Inspector:
         if imgui.button("Step"):
             self.update_sim()
         if imgui.button("Rollback"):
-            self.snapshot = Snapshot.load_full_snapshot(f"{self.snapshot_dir}/{self.snapshots[self.current_snapshot]}")
+            # reset snapshot to the initial state when the inspector was created
+            self.snapshot = copy.deepcopy(self.initial_state_snapshot)
             self.simulator.upload_all(self.snapshot.buffers)
             self.simulator.time = self.snapshot.time
         _, self.do_lockdown = imgui.checkbox("Lockdown", self.do_lockdown)
@@ -434,10 +437,10 @@ class Inspector:
             "Presymptomatic Weibull Scale", self.params.presymptomatic_scale, 0.0, 10.0)
         _, self.params.presymptomatic_shape = imgui.slider_float(
             "Presymptomatic Weibull Shape", self.params.presymptomatic_shape, 0.0, 10.0)
-        _, self.params.infection_sd_log = imgui.slider_float(
-            "Infection Normal Std Dev", self.params.infection_sd_log, 0.0, 10.0)
+        _, self.params.infection_log_scale = imgui.slider_float(
+            "Infection Log-normal Scale", self.params.infection_log_scale, 0.0, 5.0)
         _, self.params.infection_mode = imgui.slider_float(
-            "Infection Normal Mean", self.params.infection_mode, 0.0, 20.0)
+            "Infection Log-normal Mode", self.params.infection_mode, 0.0, 20.0)
 
         imgui.text("Activity Hazard Multipliers")
 
