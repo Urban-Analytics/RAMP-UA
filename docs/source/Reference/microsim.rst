@@ -1,4 +1,4 @@
-microsim package
+Python microsim model
 ================
 
 Submodules

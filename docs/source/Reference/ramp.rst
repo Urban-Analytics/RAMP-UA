@@ -1,5 +1,5 @@
-ramp package
-============
+OpenCL microsim model
+=====================
 
 Submodules
 ----------

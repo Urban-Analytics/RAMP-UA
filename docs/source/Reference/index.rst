@@ -5,5 +5,5 @@ RAMP-UA API Reference
    :maxdepth: 2
    :caption: Contents:
 
-   microsim
-   ramp
+   Python model <microsim>
+   OpenCL model<ramp>
