@@ -44,4 +44,4 @@ def _run_opencl_model(i, iterations, snapshot_filepath, params, opencl_dir, num_
     
     print(f"Running simulation {i+1}.")
     summary, final_state = run_headless(simulator, snapshot, iterations, quiet=True)
-    return (summary, final_state)
+    return summary, final_state
