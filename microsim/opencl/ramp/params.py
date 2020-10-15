@@ -43,6 +43,7 @@ class Params:
                  cvd_multiplier=1,
                  diabetes_multiplier=1,
                  bloodpressure_multiplier=1,
+                 overweight_sympt_mplier=1.46
                  ):
         """Create a simulator with the default parameters."""
         if obesity_multipliers is None:
@@ -74,6 +75,7 @@ class Params:
         self.cvd_multiplier = cvd_multiplier
         self.diabetes_multiplier = diabetes_multiplier
         self.bloodpressure_multiplier = bloodpressure_multiplier
+        self.overweight_sympt_mplier = overweight_sympt_mplier
 
     def asarray(self):
         """Pack the parameters into a flat array for uploading."""
@@ -100,7 +102,8 @@ class Params:
                 [
                     self.cvd_multiplier,
                     self.diabetes_multiplier,
-                    self.bloodpressure_multiplier
+                    self.bloodpressure_multiplier,
+                    self.overweight_sympt_mplier
                 ],
                 dtype=np.float32,
             )
@@ -135,6 +138,7 @@ class Params:
         p.cvd_multiplier = params_array[30]
         p.diabetes_multiplier = params_array[31]
         p.bloodpressure_multiplier = params_array[32]
+        p.overweight_sympt_mplier = params_array[33]
         return p
 
     def set_lockdown_multiplier(self, lockdown_multipliers, timestep):

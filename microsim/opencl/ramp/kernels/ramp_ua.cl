@@ -64,10 +64,11 @@ typedef struct Params {
   float place_hazard_multipliers[5]; // Hazard multipliers by activity
   float individual_hazard_multipliers[3]; // Hazard multipliers by activity
   float mortality_probs[9]; // mortality probabilities by age group
-  float obesity_multipliers[3]; // mortality multipliers for obesity levels
+  float obesity_multipliers[4]; // mortality multipliers for obesity levels
   float cvd_multiplier; // mortality multipliers for cardiovascular disease
   float diabetes_multiplier; // mortality multipliers for diabetes
   float bloodpressure_multiplier; // mortality multipliers for high blood pressure
+  float overweight_sympt_mplier; // multiplier for probability of overweight people to become symptomatic 
 } Params;
 
 
@@ -112,6 +113,10 @@ float get_obesity_multiplier(ushort obesity, global const Params* params){
     // obesity value of 0 corresponds to normal, so there is no multiplier for that
     int multiplier_idx = (int)obesity - 1;
     return params->obesity_multipliers[multiplier_idx];
+}
+
+bool is_overweight(ushort obesity){
+  return obesity > 0;
 }
 
 /*
@@ -301,14 +306,24 @@ kernel void people_update_statuses(uint npeople,
     switch(current_status) {
         case Exposed:
         {
-          next_status = Presymptomatic;
-          next_transition_time = sample_presymptomatic_duration(rng, params);
+          float symp_rate = 1 - params->proportion_asymptomatic;
+
+          // being overweight increases chances of being symptomatic
+          if (is_overweight(people_obesity[person_id])){
+            symp_rate *= params->overweight_sympt_mplier;
+          }
+
+          // randomly select whether to become asymptomatic or presymptomatic
+          next_status = rand(rng) < symp_rate ? Presymptomatic : Asymptomatic;
+          
+          //choose transition time based on presymptomatic or asymptomatic
+          next_transition_time = next_status == Presymptomatic ? sample_presymptomatic_duration(rng, params) : sample_infection_duration(rng, params);
+          
           break;
         }
         case Presymptomatic:
         {
-          // randomly select whether asymptomatic or not
-          next_status = rand(rng) < params->proportion_asymptomatic ? Asymptomatic : Symptomatic;
+          next_status = Symptomatic;
           next_transition_time = sample_infection_duration(rng, params);
           break;
         }
