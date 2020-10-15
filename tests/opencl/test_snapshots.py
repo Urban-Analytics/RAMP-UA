@@ -1,6 +1,7 @@
 from microsim.opencl.ramp.snapshot import Snapshot
 import numpy as np
 import os
+import copy
 
 sentinel_value = (1 << 31) - 1
 
@@ -116,3 +117,15 @@ def test_switch_to_healthier_population():
     expected_obesity = np.array([0, 0, 0, 0, 1, 1, 3, 3])
 
     assert np.array_equal(result_obesity, expected_obesity)
+
+
+def test_copy_snapshot():
+    snapshot = Snapshot.random(nplaces=50, npeople=8, nslots=5)
+    snapshot_copy = copy.deepcopy(snapshot)
+
+    # check buffer contents equal after copy
+    assert np.array_equal(snapshot.buffers.people_baseline_flows, snapshot_copy.buffers.people_baseline_flows)
+
+    # mutate original snapshot and check that the copy is no longer equal
+    snapshot.buffers.people_baseline_flows[:] = snapshot.buffers.people_baseline_flows * 2.5
+    assert not np.array_equal(snapshot.buffers.people_baseline_flows, snapshot_copy.buffers.people_baseline_flows)
