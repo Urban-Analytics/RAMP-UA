@@ -325,7 +325,7 @@ class Inspector:
         glUniform2fv(glGetUniformLocation(self.places_program, "position"), 1, position)
         glUniform1fv(glGetUniformLocation(self.places_program, "scale"), 1, scale)
         glUniform1fv(glGetUniformLocation(self.places_program, "alpha"), 1, 0.01)
-        glDrawElements(GL_LINES, 2 * self.npeople * self.nlines, GL_UNSIGNED_INT, None);
+        glDrawElements(GL_LINES, 2 * self.npeople * self.nlines, GL_UNSIGNED_INT, None)
 
     def draw_platform_window(self, width, height):
         imgui.set_next_window_size(width / 6, height / 4)

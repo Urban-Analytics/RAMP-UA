@@ -71,6 +71,10 @@ class Summary:
                 DiseaseStatus.Dead.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
             }
 
+        # fill arrays up to current time with constant values
+        for i in range(snapshot.time):
+            self.update(i, snapshot.buffers.people_statuses)
+
     def get_df_columns(self):
         return [f"Day{i}" for i in range(self.max_time)]
 

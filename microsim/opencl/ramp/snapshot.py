@@ -183,6 +183,8 @@ class Snapshot:
         # Set initial transition times to 1
         self.buffers.people_transition_times[initial_case_ids] = 1
 
+        self.time = num_seed_days
+
     def update_params(self, new_params):
         try:
             self.buffers.params[:] = new_params.asarray()
