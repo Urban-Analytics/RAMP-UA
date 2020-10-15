@@ -111,3 +111,29 @@ $ git tag -a v0.1.2 -m 'tag comment about release'
 $ git push --tags
 ```
 Once pushed the action will initiate and attempt to create a release.
+
+## Documentation
+
+Documentation for this package is generated using [Sphinx](https://www.sphinx-doc.org/en/master/index.html). It uses the `sphinx.ext.autodoc` extension to populate the documentation from existing docstrings.
+
+To build the documentation locally:
+
+```bash
+
+$ cd docs/
+
+$ make html
+
+```
+
+If a new module is added you will need to create new `.rst` files using the `sphinx-apidoc` command.
+
+```bash
+
+$ cd docs/
+
+$ sphinx-apidoc -f -o source/ ../new_module/
+
+```
+
+This will generate new `.rst` files from the new modules docstrings that can then be rendered into html by running `make html`.
