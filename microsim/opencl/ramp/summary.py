@@ -29,7 +29,7 @@ class Summary:
         self.store_detailed_counts = store_detailed_counts
 
         # create empty arrays to hold total counts
-        self.total_counts = [np.zeros(max_time, np.float32) for _ in range(7)]
+        self.total_counts = [np.zeros(max_time, np.float32) for _ in range(len(DiseaseStatus))]
 
         if store_detailed_counts:
             # process age data into buckets
