@@ -18,11 +18,12 @@ test_dir = "tests/"
 
 # arguments used when calling the PopulationInitialisation constructor. Usually these are the same
 population_init_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
-                        "testing": True, "debug": True, 'lockdown_file': "google_mobility_lockdown_daily.csv"
+                        "testing": True, "debug": True
                         }
 
 population_init = PopulationInitialisation(**population_init_args)
-time_activity_multiplier = population_init.time_activity_multiplier
+time_activity_multiplier = PopulationInitialisation.read_time_activity_multiplier(
+    os.path.join(population_init.DATA_DIR, "google_mobility_lockdown_daily.csv"))
 lockdown_multipliers = time_activity_multiplier.loc[:, "timeout_multiplier"]
 
 
