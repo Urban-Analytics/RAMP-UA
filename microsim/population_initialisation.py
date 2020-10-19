@@ -37,7 +37,8 @@ class PopulationInitialisation:
     def __init__(self,
                  data_dir: str = "./data/",
                  lockdown_file: str = "google_mobility_lockdown_daily.csv",
-                 random_seed: float = None, read_data: bool = True,
+                 random_seed: float = None,
+                 read_data: bool = True,
                  testing: bool = False,
                  debug=False,
                  quant_object=None
@@ -67,7 +68,6 @@ class PopulationInitialisation:
             PopulationInitialisation.quant_object = quant_object
 
         self.lockdown_file = lockdown_file
-        self.do_lockdown = False if (lockdown_file == "") else True
         self.random = random.Random(random_seed)
         PopulationInitialisation.debug = debug
         PopulationInitialisation.testing = testing
@@ -251,7 +251,7 @@ class PopulationInitialisation:
 
         # Read a file that tells us how much more time people should spend at home than normal (this is much greater
         # after lockdown
-        if self.do_lockdown:
+        if not lockdown_file == "":
             self.time_activity_multiplier: pd.DataFrame = \
                 PopulationInitialisation.read_time_activity_multiplier(self.lockdown_file)
         else:
