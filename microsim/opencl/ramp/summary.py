@@ -29,7 +29,7 @@ class Summary:
         self.store_detailed_counts = store_detailed_counts
 
         # create empty arrays to hold total counts
-        self.total_counts = [np.zeros(max_time, np.float32) for _ in range(7)]
+        self.total_counts = [np.zeros(max_time, np.float32) for _ in range(len(DiseaseStatus))]
 
         if store_detailed_counts:
             # process age data into buckets
@@ -51,25 +51,10 @@ class Summary:
                                                 })
 
             # create empty dicts to hold age and area counts
-            self.age_counts = {
-                DiseaseStatus.Susceptible.name.lower(): np.zeros((len(age_thresholds), max_time), dtype=np.float32),
-                DiseaseStatus.Exposed.name.lower(): np.zeros((len(age_thresholds), max_time)),
-                DiseaseStatus.Presymptomatic.name.lower(): np.zeros((len(age_thresholds), max_time)),
-                DiseaseStatus.Asymptomatic.name.lower(): np.zeros((len(age_thresholds), max_time)),
-                DiseaseStatus.Symptomatic.name.lower(): np.zeros((len(age_thresholds), max_time)),
-                DiseaseStatus.Recovered.name.lower(): np.zeros((len(age_thresholds), max_time)),
-                DiseaseStatus.Dead.name.lower(): np.zeros((len(age_thresholds), max_time)),
-            }
+            # (use the string representation of the disease, e.g. DiseaseStatus.Exposed = 'exposed')
 
-            self.area_counts = {
-                DiseaseStatus.Susceptible.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-                DiseaseStatus.Exposed.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-                DiseaseStatus.Presymptomatic.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-                DiseaseStatus.Asymptomatic.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-                DiseaseStatus.Symptomatic.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-                DiseaseStatus.Recovered.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-                DiseaseStatus.Dead.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-            }
+            self.age_counts = {str(d): np.zeros((len(age_thresholds), max_time)) for d in DiseaseStatus}
+            self.area_counts = {str(d): np.zeros((len(self.unique_area_codes), max_time)) for d in DiseaseStatus}
 
         # fill arrays up to current time with constant values
         for i in range(snapshot.time):
