@@ -152,7 +152,7 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
         quant_object = QuantRampAPI(os.path.join(data_dir, quant_dir))
 
     # args for population initialisation
-    population_args = {"data_dir": data_dir, "debug": debug, "lockdown_file": lockdown_file,
+    population_args = {"data_dir": data_dir, "debug": debug,
                        "quant_object": quant_object}
 
     # args for Python/R Microsim. Use same arguments whether running 1 repetition or many
@@ -180,13 +180,19 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
         population = PopulationInitialisation(**population_args)
         individuals = population.individuals
         activity_locations = population.activity_locations
-        time_activity_multiplier = population.time_activity_multiplier
 
         # store in cache so we can load later
-        cache.store_in_cache(individuals, activity_locations, time_activity_multiplier)
+        cache.store_in_cache(individuals, activity_locations)
     else:  # load from cache
         print("Loading data from previous cache")
-        individuals, activity_locations, time_activity_multiplier = cache.read_from_cache()
+        individuals, activity_locations = cache.read_from_cache()
+
+    # Calculate the time-activity multiplier (this is for implementing lockdown)
+    time_activity_multiplier = None
+    if lockdown_file != "":
+        print(f"Implementing a lockdown with time activities from {lockdown_file}")
+        time_activity_multiplier: pd.DataFrame = \
+            PopulationInitialisation.read_time_activity_multiplier(os.path.join(data_dir, lockdown_file))
 
     # Select which model implementation to run
     if opencl:
