@@ -14,7 +14,7 @@ test_dir = os.path.dirname(os.path.abspath(__file__))
 
 # arguments used when calling the PopulationInitialisation constructor. Usually these are the same
 population_init_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
-                        "testing": True, "debug": True, 'lockdown_file': ""
+                        "testing": True, "debug": True
                         }
 
 
