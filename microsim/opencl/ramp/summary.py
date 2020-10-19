@@ -51,25 +51,10 @@ class Summary:
                                                 })
 
             # create empty dicts to hold age and area counts
-            self.age_counts = {
-                DiseaseStatus.Susceptible.name.lower(): np.zeros((len(age_thresholds), max_time), dtype=np.float32),
-                DiseaseStatus.Exposed.name.lower(): np.zeros((len(age_thresholds), max_time)),
-                DiseaseStatus.Presymptomatic.name.lower(): np.zeros((len(age_thresholds), max_time)),
-                DiseaseStatus.Asymptomatic.name.lower(): np.zeros((len(age_thresholds), max_time)),
-                DiseaseStatus.Symptomatic.name.lower(): np.zeros((len(age_thresholds), max_time)),
-                DiseaseStatus.Recovered.name.lower(): np.zeros((len(age_thresholds), max_time)),
-                DiseaseStatus.Dead.name.lower(): np.zeros((len(age_thresholds), max_time)),
-            }
+            # (use the string representation of the disease, e.g. DiseaseStatus.Exposed = 'exposed')
 
-            self.area_counts = {
-                DiseaseStatus.Susceptible.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-                DiseaseStatus.Exposed.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-                DiseaseStatus.Presymptomatic.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-                DiseaseStatus.Asymptomatic.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-                DiseaseStatus.Symptomatic.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-                DiseaseStatus.Recovered.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-                DiseaseStatus.Dead.name.lower(): np.zeros((len(self.unique_area_codes), max_time)),
-            }
+            self.age_counts = {str(d): np.zeros((len(age_thresholds), max_time)) for d in DiseaseStatus}
+            self.area_counts = {str(d): np.zeros((len(self.unique_area_codes), max_time)) for d in DiseaseStatus}
 
     def get_df_columns(self):
         return [f"Day{i}" for i in range(self.max_time)]
