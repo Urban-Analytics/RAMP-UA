@@ -22,7 +22,8 @@ def run_opencl_model_multiprocess(*args):
         pool.close()
 
 
-def _run_opencl_model(i, iterations, snapshot_filepath, params, opencl_dir, num_seed_days, use_gpu):
+def _run_opencl_model(i, iterations, snapshot_filepath, params, opencl_dir, num_seed_days, use_gpu,
+                      store_detailed_counts=True):
 
     # load snapshot
     snapshot = Snapshot.load_full_snapshot(path=snapshot_filepath)
@@ -43,5 +44,6 @@ def _run_opencl_model(i, iterations, snapshot_filepath, params, opencl_dir, num_
     simulator.upload_all(snapshot.buffers)
     
     print(f"Running simulation {i+1}.")
-    summary, final_state = run_headless(simulator, snapshot, iterations, quiet=True)
+    summary, final_state = run_headless(simulator, snapshot, iterations, quiet=True,
+                                        store_detailed_counts=store_detailed_counts)
     return summary, final_state
