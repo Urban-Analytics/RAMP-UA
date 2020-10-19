@@ -9,3 +9,6 @@ class DiseaseStatus(enum.Enum):
     Symptomatic = 4
     Recovered = 5
     Dead = 6
+
+    def __str__(self):
+        return str(self.name.lower())
