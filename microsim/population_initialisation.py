@@ -36,8 +36,8 @@ class PopulationInitialisation:
 
     def __init__(self,
                  data_dir: str = "./data/",
-                 lockdown_file: str = "google_mobility_lockdown_daily.csv",
-                 random_seed: float = None, read_data: bool = True,
+                 random_seed: float = None,
+                 read_data: bool = True,
                  testing: bool = False,
                  debug=False,
                  quant_object=None
@@ -46,8 +46,6 @@ class PopulationInitialisation:
         PopulationInitialisation constructor. This reads all of the necessary data to run the microsimulation.
         ----------
         :param data_dir: A data directory from which to read the source data
-        :param lockdown_file: The file to use for estimating mobility under lockdown, or don't do any lockdown
-            if this is an empty string.
         :param random_seed: A optional random seed to use when creating the class instance. If None then
             the current time is used.
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
@@ -66,8 +64,6 @@ class PopulationInitialisation:
         else:
             PopulationInitialisation.quant_object = quant_object
 
-        self.lockdown_file = lockdown_file
-        self.do_lockdown = False if (lockdown_file == "") else True
         self.random = random.Random(random_seed)
         PopulationInitialisation.debug = debug
         PopulationInitialisation.testing = testing
@@ -248,14 +244,6 @@ class PopulationInitialisation:
 
         # Add some necessary columns for the disease
         self.individuals = PopulationInitialisation.add_disease_columns(self.individuals)
-
-        # Read a file that tells us how much more time people should spend at home than normal (this is much greater
-        # after lockdown
-        if self.do_lockdown:
-            self.time_activity_multiplier: pd.DataFrame = \
-                PopulationInitialisation.read_time_activity_multiplier(self.lockdown_file)
-        else:
-            self.time_activity_multiplier = None
 
         print(" ... finished initialisation.")
 
@@ -1124,8 +1112,8 @@ class PopulationInitialisation:
 
         return individuals
 
-    @classmethod
-    def read_time_activity_multiplier(cls, lockdown_file) -> pd.DataFrame:
+    @staticmethod
+    def read_time_activity_multiplier(lockdown_file) -> pd.DataFrame:
         """
         Some times people should spend more time at home than normal. E.g. after lockdown. This function
         reads a file that tells us how much more time should be spent at home on each day.
@@ -1134,9 +1122,8 @@ class PopulationInitialisation:
         """
         assert lockdown_file != "", \
             "read_time_activity_multiplier should not have been called if lockdown_file is empty"
-        path = os.path.join(cls.DATA_DIR, lockdown_file)
-        print(f"Reading time activity multiplier data from {path}...", )
-        time_activity = pd.read_csv(path)
+        print(f"Reading time activity multiplier data from {lockdown_file}...", )
+        time_activity = pd.read_csv(lockdown_file)
         # Cap at 1.0 (it's a curve so some times peaks above 1.0)=
         time_activity["timeout_multiplier"] = time_activity.loc[:, "timeout_multiplier"]. \
             apply(lambda x: 1.0 if x > 1.0 else x)

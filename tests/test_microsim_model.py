@@ -13,7 +13,7 @@ test_dir = os.path.dirname(os.path.abspath(__file__))
 
 # arguments used when calling the PopulationInitialisation constructor. Usually these are the same
 population_init_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
-                        "testing": True, "debug": True, 'lockdown_file': ""}
+                        "testing": True, "debug": True}
 
 # arguments used when calling the Microsim constructor. Usually these are the same
 microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
@@ -28,11 +28,11 @@ microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
 def test_microsim():
     population_init = PopulationInitialisation(**population_init_args)
 
-    microsim = Microsim(population_init.individuals, population_init.activity_locations,
-                        population_init.time_activity_multiplier, **microsim_args)
-
-    # do_lockdown should be false since time_activitiy_multiplier is None
-    assert not microsim.do_lockdown
+    microsim = Microsim(
+        individuals=population_init.individuals,
+        activity_locations=population_init.activity_locations,
+        time_activity_multiplier=None,
+        **microsim_args)
 
     yield microsim
 

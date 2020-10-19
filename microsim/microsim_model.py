@@ -84,7 +84,6 @@ class Microsim:
 
         self.iteration = 0
         self.time_activity_multiplier = time_activity_multiplier
-        self.do_lockdown = time_activity_multiplier is not None
 
         self.risk_multiplier = risk_multiplier
 
@@ -199,7 +198,7 @@ class Microsim:
         Note: ignores people who are currently showing symptoms (`ColumnNames.DiseaseStatus.SYMPTOMATIC`)
         """
         # Are we doing any lockdown at all? in this iteration?
-        if self.do_lockdown:
+        if self.time_activity_multiplier is not None:
             # Only change the behaviour of people who aren't showing symptoms. If you are showing symptoms then you
             # will be mostly at home anyway, so don't want your behaviour overridden by lockdown.
             uninfected = self.individuals.index[
