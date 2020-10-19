@@ -32,8 +32,8 @@ initialize_r <- function() {
 
 run_status <- function(pop,
                        timestep = 1,
-                       current_risk_beta = 0.0165,
-                       risk_cap = 5,
+                       current_risk_beta = 0.008,
+                       risk_cap = NA,
                        seed_days = 10,
                        exposed_dist = "weibull",
                        exposed_mean = 2.56,
