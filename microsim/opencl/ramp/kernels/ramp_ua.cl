@@ -291,8 +291,8 @@ kernel void people_update_statuses(uint npeople,
   // assign new infections to susceptible people 
   if (current_status == Susceptible){
     float hazard = people_hazards[person_id];
-    // map hazard to probability between 0 and 1
-    float infection_prob = hazard / (hazard + exp(-hazard));
+    // Integrate hazard into probability
+    float infection_prob = 1.0 - exp(-hazard);
 
     // randomly sample if they should be infected or not based on infection probability
     if (rand(rng) < infection_prob) {

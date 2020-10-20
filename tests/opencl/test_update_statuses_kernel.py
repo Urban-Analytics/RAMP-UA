@@ -42,7 +42,7 @@ def test_susceptible_become_infected():
     num_exposed = np.count_nonzero(people_statuses_after == DiseaseStatus.Exposed.value)
     proportion_exposed = num_exposed / npeople
 
-    expected_proportion_infected = test_hazard / (test_hazard + np.exp(-test_hazard))
+    expected_proportion_infected = 1.0 - np.exp(-test_hazard)
 
     assert np.isclose(expected_proportion_infected, proportion_exposed, atol=0.01)
 
