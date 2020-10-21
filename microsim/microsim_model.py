@@ -13,6 +13,7 @@ import time
 from typing import List, Dict
 import pickle
 import copy
+import random
 
 
 class Microsim:
@@ -24,6 +25,7 @@ class Microsim:
                  individuals,
                  activity_locations,
                  time_activity_multiplier=None,
+                 random_seed: float = None,
                  disable_disease_status=False,
                  r_script_dir: str = "./R/py_int/",
                  data_dir: str = "./data/",
@@ -41,6 +43,8 @@ class Microsim:
         :param individuals: dataframe of population data
         :param activity_locations: dataframe of location data
         :param time_activity_multiplier: activity multipliers based on lockdown data
+        :param random_seed: A optional random seed to use when creating the class instance. This is passed
+          directly to `random.Random()` (including if None).
         :param disable_disease_status: Optionally turn off the R interface. This will mean we cannot calculate new
             disease status. Only good for testing.
         :param r_script_dir: A directory with the required R scripts in (these are used to estimate disease status)
@@ -62,6 +66,7 @@ class Microsim:
         """
         self.individuals = individuals
         self.activity_locations = activity_locations
+        self.random = random.Random(random_seed)
         self.disable_disease_status = disable_disease_status
         self.r_script_dir = r_script_dir
         self.output = output
