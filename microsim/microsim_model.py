@@ -93,14 +93,21 @@ class Microsim:
 
         self.disease_params = disease_params
 
+        self.repnr = -1  # This is a unique ID for the model used if this model is run as part of an ensemble
+
     def run(self, iterations: int, repnr: int) -> None:
         """
         Run the model (call the step() function) for the given number of iterations.
-        Repnr is used to create new unique directory for this repeat
-        :param iterations:
+        :param iterations: The number of iterations to run
+        :param repnr: The repition number of this model. Like an ID. Used to create new unique directory for this
+         model instance.
         """
+        # Now that this model is being run we know it's ID (repetition number)
+        assert self.repnr == -1  # The ID should not have been set yet
+        self.repnr = repnr
+
         # Create directories for the results
-        self._init_output(repnr)
+        self._init_output()
 
         # Initialise the R interface. Do this here, rather than in init, because when in multiprocessing mode
         # at this point the Microsim object will be in its own process
@@ -404,7 +411,8 @@ class Microsim:
         old_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
 
         # Calculate the new status (will return a new dataframe)
-        self.individuals = self.r_int.calculate_disease_status(self.individuals, self.iteration, self.disease_params)
+        self.individuals = self.r_int.calculate_disease_status(
+            self.individuals, self.iteration, self.repnr, self.disease_params)
 
         # Remember whose status has changed
         new_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
@@ -497,18 +505,19 @@ class Microsim:
             raise Exception(f"Unrecognised disease state for individual {row['ID']}: {row[ColumnNames.DISEASE_STATUS]}")
         return row
 
-    def _init_output(self, repnr):
+    def _init_output(self):
         """
         Might need to write out some data if saving output for analysis later. If so, creates a new directory for the
         results as a subdirectory of the data directory.
         Also store some information for use in the visualisations and analysis.
         """
+        assert self.repnr >= 0  # If -1 then the repetition number has not been initialised correctly
         if self.output:
             print("Saving initial models for analysis ... ", )
             # Find a directory to use, within the 'output' directory
             #            if repnr == 0:
             #                self.SCEN_DIR = PopulationInitialisation._find_new_directory(os.path.join(self.DATA_DIR, "output"), self.SCEN_DIR)
-            self.output_dir = os.path.join(self.SCEN_DIR, str(repnr))
+            self.output_dir = os.path.join(self.SCEN_DIR, str(self.repnr))
             os.mkdir(self.output_dir)
 
             # save initial model

@@ -38,11 +38,14 @@ class RInterface():
         # Remember the session
         self.R = R
 
-    def calculate_disease_status(self, individuals: pd.DataFrame, iteration: int, disease_params: dict ):
+    def calculate_disease_status(self, individuals: pd.DataFrame, iteration: int, repnr: int, disease_params: dict ):
         """
         Call the R 'run_status' function to calculate the new disease status. It will return a new dataframe with
         a few columns, including the new status.
         :param individuals:  The individuals dataframe from which new statuses need to be calculated
+        :param iteration: The iteration number (i.e. number of model steps so far)
+        :param repnr: The repetition number of the model. Like a unique ID for the model.
+        :param disease_params: A dictionary of disease parameters used in the R model.
         :return: a new dataframe that includes new disease statuses
         """
         print("\tCalculating new disease status...", end='')
@@ -58,7 +61,7 @@ class RInterface():
         del individuals_reduced["House_ID"]
 
         # Call the R function. The returned object will be converted to a pandas dataframe implicitly
-        r_df = self.R.run_status(individuals_reduced, iteration, **disease_params)
+        r_df = self.R.run_status(individuals_reduced, iteration, repnr, **disease_params)
 
         assert len(r_df) == len(individuals)
         assert False not in list(r_df.ID.values == individuals.ID.values)  # Check that person IDs are the same

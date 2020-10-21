@@ -33,6 +33,7 @@ initialize_r <- function() {
 
 run_status <- function(pop,
                        timestep = 1,
+                       rep = NULL,
                        current_risk_beta = 0.008,
                        risk_cap = NA,
                        seed_days = 10,
@@ -72,6 +73,14 @@ run_status <- function(pop,
   } else {
       seed <- NULL
     }
+  
+  # if(set_seed == TRUE){
+  #   seed <- pop$repnr[1]
+  # } else {
+  #   seed == NULL
+  # }
+  
+ # print(seed) 
   
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
   
