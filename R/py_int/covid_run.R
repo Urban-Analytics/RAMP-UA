@@ -195,9 +195,7 @@ run_status <- function(pop,
                                       presymp_sd = presymp_sd,
                                       infection_dist = infection_dist,
                                       infection_mean =  infection_mean,
-                                      infection_sd = infection_sd,
-                                      asymp_rate = asymp_rate,
-                                      overweight_sympt_mplier = overweight_sympt_mplier)
+                                      infection_sd = infection_sd)
   
   print("infection and recovery lengths assigned")
   
