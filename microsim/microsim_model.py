@@ -411,7 +411,8 @@ class Microsim:
         old_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
 
         # Calculate the new status (will return a new dataframe)
-        self.individuals = self.r_int.calculate_disease_status(self.individuals, self.iteration, self.disease_params)
+        self.individuals = self.r_int.calculate_disease_status(
+            self.individuals, self.iteration, self.repnr, self.disease_params)
 
         # Remember whose status has changed
         new_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()
