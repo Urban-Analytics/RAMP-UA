@@ -63,25 +63,19 @@ run_status <- function(pop,
                        diabetes = 1,
                        bloodpressure = 1,
                        improve_health = FALSE,
-                       set_seed = FALSE) {
+                       set_seed = TRUE) {
   
   
   
   if(set_seed == TRUE) {
-    seed <- pop$model_run[1]
+    seed <- rep
     set.seed(seed)
   } else {
-      seed <- NULL
-    }
+    seed <- NULL
+  }
   
-  # if(set_seed == TRUE){
-  #   seed <- pop$repnr[1]
-  # } else {
-  #   seed == NULL
-  # }
-  
- # print(seed) 
-  
+  print(paste0("the seed number is ",seed))
+
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
   
   print(paste("R timestep:", timestep))
