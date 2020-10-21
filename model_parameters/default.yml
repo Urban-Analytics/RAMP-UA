@@ -7,7 +7,7 @@ microsim:
   output: true # Whether to generate output or not
   output-every-iteration: false # Can optionally write output at every iteration, not just at the end
   debug: false # Whether to run some more expensive checks
-  repetitions: 1 # How many times to run the model
+  repetitions: 4 # How many times to run the model
   lockdown-file: "google_mobility_lockdown_daily.csv" # Read lockdown mobility data from a file? (Empty string means no lockdown)
   #quant-dir: QUANT_RAMP #Directory to QUANT data, leave empty to use Devon data
   quant-dir:
@@ -32,7 +32,7 @@ microsim_calibration:
 
 
 disease: # This is where the parameter for the disease model (the R part) can go (same format the 'microsim_calibration' above)
-  current_risk_beta: 0.0165
+  current_risk_beta: 0.006
   risk_cap: 5
   seed_days: 10
   exposed_dist: "weibull"
@@ -61,3 +61,4 @@ disease: # This is where the parameter for the disease model (the R part) can go
   diabetes: 1
   bloodpressure: 1
   improve_health: FALSE
+  set_seed: FALSE
