@@ -15,6 +15,7 @@ load_rpackages <- function() {
   library(mixdist)
   library(dplyr)
   library(rampuaR)
+  library(withr)
 }
 
 load_init_data <- function() {
@@ -60,7 +61,17 @@ run_status <- function(pop,
                        cvd = 1,
                        diabetes = 1,
                        bloodpressure = 1,
-                       improve_health = FALSE) {
+                       improve_health = FALSE,
+                       set_seed = FALSE) {
+  
+  
+  
+  if(set_seed == TRUE) {
+    seed <- pop$model_run[1]
+    set.seed(seed)
+  } else {
+      seed <- NULL
+    }
   
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
   
