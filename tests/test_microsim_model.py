@@ -4,6 +4,7 @@ import copy
 from microsim.microsim_model import Microsim
 from microsim.column_names import ColumnNames
 from microsim.population_initialisation import PopulationInitialisation
+import multiprocessing
 
 # ********************************************************
 # These tests run through a whole dummy model process
@@ -364,3 +365,52 @@ def test_step(test_microsim):
                     # Note: can't check if risk is equal to 0 because it might come from another activity
 
     print("End of test step")
+
+
+def _get_rand(microsim_model, N=100):
+    """Get a random number using the PopulationInitialisation object's random number generator"""
+    for _ in range(N):
+        microsim_model.random.random()
+    return microsim_model.random.random()
+
+
+def test_random():
+    """
+    Checks that random classes are produce different (or the same!) numbers when they should do
+    :return:
+    """
+    population_init = PopulationInitialisation(**population_init_args)
+
+    p1 = Microsim(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
+                  **microsim_args)
+    p2 = Microsim(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
+                  random_seed=2.0, **microsim_args)
+    p3 = Microsim(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
+                  random_seed=2.0, **microsim_args)
+
+    # Genrate a random number from each model. The second two numbers should be the same
+    r1, r2, r3 = [_get_rand(x) for x in [p1, p2, p3]]
+
+    assert r1 != r2
+    assert r2 == r3
+
+    # Check that this still happens even if they are executed in pools.
+    # Create a large number of microsims and check that all random numbers are unique
+    pool = multiprocessing.Pool()
+    num_reps = 1000
+    m = [Microsim(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
+                  **microsim_args) for _ in range(num_reps)]
+    r = pool.map(_get_rand, m)
+    assert len(r) == len(set(r))
+    pool.close()
+
+    # Repeat, this time explicitly passing a None seed
+    pool = multiprocessing.Pool()
+    num_reps = 50  # (don't do quite as many this time, it takes ages)
+    m = [Microsim(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
+                  random_seed=None, **microsim_args) for _ in range(num_reps)]
+    r = pool.map(_get_rand, m)
+    assert len(r) == len(set(r))
+    pool.close()
+
+

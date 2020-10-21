@@ -220,36 +220,6 @@ def test_read_msm_data(test_population_init):
 # ********************************************************
 
 
-def _get_rand(test_population_initialisation, N=100):
-    """Get a random number using the PopulationInitialisation object's random number generator"""
-    for _ in range(N):
-        test_population_initialisation.random.random()
-    return test_population_initialisation.random.random()
-
-
-def test_random():
-    """
-    Checks that random classes are produce different (or the same!) numbers when they should do
-    :return:
-    """
-    p1 = PopulationInitialisation(**population_init_args, read_data=False)
-    p2 = PopulationInitialisation(**population_init_args, random_seed=2.0, read_data=False)
-    p3 = PopulationInitialisation(**population_init_args, random_seed=2.0, read_data=False)
-
-    # Genrate a random number from each model. The second two numbers should be the same
-    r1, r2, r3 = [_get_rand(x) for x in [p1, p2, p3]]
-
-    assert r1 != r2
-    assert r2 == r3
-
-    # Check that this still happens even if they are executed in pools.
-    # Create a large number of microsims and check that all random numbers are unique
-    pool = multiprocessing.Pool()
-    num_reps = 1000
-    m = [PopulationInitialisation(**population_init_args, read_data=False) for _ in range(num_reps)]
-    r = pool.map(_get_rand, m)
-    assert len(r) == len(set(r))
-
 
 def test_extract_msoas_from_individuals():
     """Check that a list of areas can be successfully extracted from a DataFrame of indviduals"""
