@@ -109,8 +109,14 @@ run_status <- function(pop,
                                      cvd = cvd,
                                      diabetes = diabetes,
                                      bloodpressure = bloodpressure)
-  print("NAs in mort risk")
-  print(sum(is.na(df_msoa$mortality_risk)))
+
+  df_msoa <- rampuaR::sympt_risk(df = df_msoa,
+                                 overweight_sympt_mplier = 1.46,
+                                 cvd = NULL,
+                                 diabetes = NULL,
+                                 bloodpressure = NULL)
+
+  
   
   #### seeding the first day in high risk MSOAs
   if(timestep==1){
@@ -186,9 +192,7 @@ run_status <- function(pop,
                                       presymp_sd = presymp_sd,
                                       infection_dist = infection_dist,
                                       infection_mean =  infection_mean,
-                                      infection_sd = infection_sd,
-                                      asymp_rate = asymp_rate,
-                                      overweight_sympt_mplier = overweight_sympt_mplier)
+                                      infection_sd = infection_sd)
   
   print("infection and recovery lengths assigned")
   
