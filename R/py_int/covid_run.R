@@ -30,9 +30,6 @@ initialize_r <- function() {
   load_init_data()
 }
 
-
-devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "set_seed", force = TRUE)
-
 run_status <- function(pop,
                        timestep = 1,
                        rep = NULL,
@@ -80,7 +77,6 @@ run_status <- function(pop,
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
   
   print(paste("R timestep:", timestep))
-  print(improve_health)
   
   if(timestep==1) {
     # windows does not allow colons in folder names so substitute sys.time() to hyphen
@@ -90,17 +86,11 @@ run_status <- function(pop,
       dir.create(tmp.dir, recursive = TRUE)
     }
   }
-  
-  print("health status")
-  print(table(pop$BMIvg6))
-  
+ 
   if(improve_health == TRUE){
     pop$BMIvg6  <- pop$BMI_healthier
   }
-  
-  print("health after format")
-  print(table(pop$BMIvg6))
-  
+ 
   if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
   
   
