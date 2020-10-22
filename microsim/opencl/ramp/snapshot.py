@@ -210,7 +210,8 @@ class Snapshot:
         to the level of obesity below their current one, by subtracting 1.
         """
         people_obesity = self.buffers.people_obesity
-        people_obesity[people_obesity > 0] -= 1
+        # only change people with obesity 2 and above, 2 corresponds to "Obese I"
+        people_obesity[people_obesity >= 2] -= 1
         self.buffers.people_obesity[:] = people_obesity
 
     @classmethod
