@@ -15,6 +15,7 @@ load_rpackages <- function() {
   library(mixdist)
   library(dplyr)
   library(rampuaR)
+  library(withr)
 }
 
 load_init_data <- function() {
@@ -28,7 +29,6 @@ initialize_r <- function() {
   load_rpackages()
   load_init_data()
 }
-
 
 run_status <- function(pop,
                        timestep = 1,
@@ -61,20 +61,22 @@ run_status <- function(pop,
                        cvd = 1,
                        diabetes = 1,
                        bloodpressure = 1,
-                       improve_health = FALSE) {
+                       improve_health = FALSE,
+                       set_seed = TRUE) {
+
   
-  # if(set_seed == TRUE){
-  #   seed <- pop$repnr[1]
-  # } else {
-  #   seed == NULL
-  # }
+  if(set_seed == TRUE) {
+    seed <- rep
+    set.seed(seed)
+  } else {
+    seed <- NULL
+  }
   
- # print(seed) 
-  
+  print(paste0("the seed number is ",seed))
+
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
   
   print(paste("R timestep:", timestep))
-  print(improve_health)
   
   if(timestep==1) {
     # windows does not allow colons in folder names so substitute sys.time() to hyphen
@@ -84,17 +86,11 @@ run_status <- function(pop,
       dir.create(tmp.dir, recursive = TRUE)
     }
   }
-  
-  print("health status")
-  print(table(pop$BMIvg6))
-  
+ 
   if(improve_health == TRUE){
     pop$BMIvg6  <- pop$BMI_healthier
   }
-  
-  print("health after format")
-  print(table(pop$BMIvg6))
-  
+ 
   if(output_switch){write.csv(pop, paste0( tmp.dir,"/daily_", timestep, ".csv"))}
   
   
@@ -132,7 +128,7 @@ run_status <- function(pop,
     #  msoas <- read.csv(paste0(getwd(),"/msoa_danger_fn.csv"))
     msoas <- msoas[msoas$risk == "High",]
     pop_hr <- pop %>% filter(area %in% msoas$area & pnothome > 0.3)
-    seeds <- sample(1:nrow(pop_hr), size = gam_cases[timestep])
+    seeds <- withr::with_seed(seed, sample(1:nrow(pop_hr), size = gam_cases[timestep]))
     seeds_id <- pop_hr$id[seeds]
     df_msoa$new_status[df_msoa$id %in% seeds_id] <- 1
     print("First day seeded")
@@ -160,7 +156,8 @@ run_status <- function(pop,
   if(timestep > 1){
     df_ass <- rampuaR::case_assign(df = df_prob,
                                    tmp.dir=tmp.dir,
-                                   save_output = output_switch)
+                                   save_output = output_switch,
+                                   seed = seed)
   } else {
     df_ass <- df_prob
   }
@@ -180,14 +177,14 @@ run_status <- function(pop,
   }
   
   if(timestep > 1 & timestep <= seed_days & seed_cases == TRUE){
-    df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep])
+    df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep], seed = seed)
     print(paste0((sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))," cases reassigned"))
   }
   
   
   if((rank_assign == TRUE & seed_cases == FALSE) | (rank_assign == TRUE & seed_cases == TRUE & timestep > seed_days)){
     if(timestep > 1 & (w[timestep] <= 0.9 | w[timestep] >= 1.1)){
-      df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep])
+      df_ass <- rank_assign(df = df_prob, daily_case = gam_cases[timestep],seed = seed)
       print(paste0((sum(df_prob$new_status == 0) - sum(df_ass$new_status == 0))," cases reassigned"))
     }
   }
@@ -201,11 +198,12 @@ run_status <- function(pop,
                                       presymp_sd = presymp_sd,
                                       infection_dist = infection_dist,
                                       infection_mean =  infection_mean,
-                                      infection_sd = infection_sd)
+                                      infection_sd = infection_sd,
+                                      seed = seed)
   
   print("infection and recovery lengths assigned")
   
-  df_rem <- rampuaR::removed_age(df_inf)
+  df_rem <- rampuaR::removed_age(df_inf, seed = seed)
   print("individuals removed")
   
   df_rec <- rampuaR::recalc_sympdays(df_rem)

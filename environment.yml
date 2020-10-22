@@ -20,6 +20,7 @@ dependencies:
   - r-stringr
   - r-readr
   - r-curl
+  - r-withr
   - bokeh=2.1.0
   - geopandas=0.7.0
   - descartes
