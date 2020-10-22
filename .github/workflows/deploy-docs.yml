@@ -1,0 +1,33 @@
+name: "build documentation and deploy to gh-pages"
+on: 
+  push:
+    paths:
+      - docs/
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: conda-incubator/setup-miniconda@v1
+      with:
+        activate-environment: ramp-ua
+        environment-file: environment.yml
+        auto-activate-base: false
+
+    - name: make docs
+      shell: bash -l {0}
+      run: |
+        conda activate ramp-ua
+        cd docs
+        make clean
+        make html
+        touch build/html/.nojekyll
+
+    - name: deploy
+      uses: JamesIves/github-pages-deploy-action@3.7.1
+      with:
+        BRANCH: gh-pages
+        FOLDER: docs/build/html
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        CLEAN: true

@@ -44,3 +44,5 @@ __pycache__
 # imgui
 imgui.ini
 
+# sphinx local build items
+docs/build/*
