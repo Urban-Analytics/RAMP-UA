@@ -11,9 +11,11 @@ install_ramp () {
     chmod +x Miniconda3-4.5.4-Linux-x86_64.sh
     bash ./Miniconda3-4.5.4-Linux-x86_64.sh -b -f -p /usr/local
 
-    conda env create -p /usr/local -f RAMP-UA/examples/colab/ramp-colab.yml
+    conda env update -p /usr/local -f RAMP-UA/examples/colab/ramp-colab.yml
 
-    python RAMP-UA/setup.py install
+    cd RAMP-UA
+
+    python setup.py install
 
     echo "RAMP-UA conda environment created!"
 
