@@ -20,13 +20,9 @@ dependencies:
   - r-stringr
   - r-readr
   - r-curl
-  - bokeh=2.1.0
-  - geopandas=0.7.0
-  - descartes
   - imageio=2.8.0
   - r-janitor=2.0.1
   - r-stringi=1.4.6
-  - coverage
   - pyyaml
   - r-devtools=2.3.1
   - r-data.table
@@ -36,11 +32,9 @@ dependencies:
   - r-tidyselect
   - r-rvcheck
   - r-stringdist
-  - git-lfs
   - pocl
   - pip=20
   - sphinx
   - pip:
      - convertbng==0.6.25
-     - sphinx_rtd_theme
-     - sphinx-autodoc-typehints
+    - -r file:microsim/opencl/requirements.txt
