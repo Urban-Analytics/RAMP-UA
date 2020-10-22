@@ -114,7 +114,7 @@ def test_switch_to_healthier_population():
     snapshot.switch_to_healthier_population()
 
     result_obesity = snapshot.buffers.people_obesity
-    expected_obesity = np.array([0, 0, 0, 0, 1, 1, 3, 3])
+    expected_obesity = np.array([0, 0, 1, 1, 1, 1, 3, 3])
 
     assert np.array_equal(result_obesity, expected_obesity)
 
