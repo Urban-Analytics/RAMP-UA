@@ -1,2 +1,2 @@
-Using OpenCL model
-====================
+Setting up the OpenCL model
+=============================

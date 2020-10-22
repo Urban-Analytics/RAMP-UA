@@ -17,7 +17,6 @@ Site contents
    :maxdepth: 2
 
    Home <self>
-   setup/index
    usage/index 
    Reference/index
 

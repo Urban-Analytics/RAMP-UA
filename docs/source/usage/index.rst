@@ -1,7 +1,7 @@
 Usage
 ===================================
 
-Read about how to use both the python and OpenCL implementations of the model.
+Read about how to setup and run both the python and OpenCL implementations of the model.
 
 .. toctree:: 
    :maxdepth: 2
