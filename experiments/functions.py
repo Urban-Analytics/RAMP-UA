@@ -23,7 +23,7 @@ def run_opencl_model_multiprocess(*args):
 
 
 def _run_opencl_model(i, iterations, snapshot_filepath, params, opencl_dir, num_seed_days, use_gpu, use_healthier_pop,
-                      store_detailed_counts=True, healthier_pop=False):
+                      store_detailed_counts=True):
     # load snapshot
     snapshot = Snapshot.load_full_snapshot(path=snapshot_filepath)
     if use_healthier_pop:
