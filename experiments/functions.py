@@ -22,15 +22,14 @@ def run_opencl_model_multiprocess(*args):
         pool.close()
 
 
-def _run_opencl_model(i, iterations, snapshot_filepath, params, opencl_dir, num_seed_days, use_gpu, use_healthier_pop,
-                      store_detailed_counts=True):
+def _run_opencl_model(i, iterations, snapshot_filepath, params, opencl_dir, num_seed_days, use_gpu, use_healthier_pop, store_detailed_counts=True
+                      ):
     # load snapshot
     snapshot = Snapshot.load_full_snapshot(path=snapshot_filepath)
     if use_healthier_pop:
         snapshot.switch_to_healthier_population()
     # set params
     snapshot.update_params(params)
-    
     
     # set the random seed of the model for each repetition, otherwise it is completely deterministic
     snapshot.seed_prngs(i)
