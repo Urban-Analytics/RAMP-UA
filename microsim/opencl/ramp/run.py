@@ -51,7 +51,7 @@ def run_headless(simulator, snapshot, iterations, quiet, store_detailed_counts=T
     NB: running in this mode is required in order to view output data in the dashboard. Also store_detailed_counts must
     be set to True to output the required data for the dashboard, however the model runs faster with this set to False.
     """
-    params = Params()
+    params = Params.fromarray(snapshot.buffers.params)
     summary = Summary(snapshot, store_detailed_counts=store_detailed_counts, max_time=iterations)
     for time in tqdm(range(iterations), desc="Running simulation"):
         # Update parameters based on lockdown
