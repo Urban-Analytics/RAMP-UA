@@ -23,7 +23,7 @@ microsim_calibration:
   # Different locations can also have their own multipliers (e.g. to make it easier to pass the disease on to shops than schools)
   hazard_location_multipliers:
     Retail: 1.0
-    PrimarySchool: 100.0
+    PrimarySchool: 1.0
     SecondarySchool: 1.0
     Home: 1.0
     Work: 1.0
@@ -32,7 +32,7 @@ microsim_calibration:
 
 
 disease: # This is where the parameter for the disease model (the R part) can go (same format the 'microsim_calibration' above)
-  current_risk_beta: 100
+  current_risk_beta: 0.006
   risk_cap: 5
   seed_days: 10
   exposed_dist: "weibull"
@@ -61,4 +61,4 @@ disease: # This is where the parameter for the disease model (the R part) can go
   diabetes: 1
   bloodpressure: 1
   improve_health: FALSE
-  set_seed: TRUE
+  set_seed: FALSE
