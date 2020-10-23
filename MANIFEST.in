@@ -1,0 +1,4 @@
+recursive-include R/py_int *
+recursive-include R/py_int/data *
+recursive-include model_parameters *
+recursive-include microsim/opencl/ramp/kernels *
