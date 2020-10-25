@@ -238,7 +238,7 @@ def get_obesity_value(bmi_vg6_str):
         return 2
     if bmi_vg6_str == "Overweight: 25 to less than 30":
         return 1
-    if bmi_vg6_str == "Normal: 18.5 to less than 25" or bmi_vg6_str == "Not applicable":
+    if bmi_vg6_str == "Normal: 18.5 to less than 25" or bmi_vg6_str == "Not applicable" or bmi_vg6_str == "Underweight: less than 18.5":
         return 0
 
     # default
