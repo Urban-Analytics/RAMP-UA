@@ -116,7 +116,7 @@ float get_obesity_multiplier(ushort obesity, global const Params* params){
 }
 
 bool is_overweight(ushort obesity){
-  return obesity > 0;
+  return obesity >= 2;
 }
 
 /*
@@ -334,7 +334,7 @@ kernel void people_update_statuses(uint npeople,
           float mortality_prob = get_mortality_prob_for_age(person_age, params);
 
           ushort person_obesity = people_obesity[person_id]; 
-          if (person_obesity > 0){ // if person is obese then adjust mortality probability
+          if (person_obesity >= 2){ // if person is obese then adjust mortality probability
             mortality_prob *= get_obesity_multiplier(person_obesity, params);
           }
           
