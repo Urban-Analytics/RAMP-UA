@@ -53,7 +53,11 @@ def run_headless(simulator, snapshot, iterations, quiet, store_detailed_counts=T
     """
     params = Params.fromarray(snapshot.buffers.params)
     summary = Summary(snapshot, store_detailed_counts=store_detailed_counts, max_time=iterations)
-    for time in tqdm(range(iterations), desc="Running simulation"):
+
+    # only show progress bar in quiet mode
+    timestep_iterator = range(iterations) if quiet else tqdm(range(iterations), desc="Running simulation")
+    
+    for time in timestep_iterator:
         # Update parameters based on lockdown
         params.set_lockdown_multiplier(snapshot.lockdown_multipliers, time)
         simulator.upload("params", params.asarray())
