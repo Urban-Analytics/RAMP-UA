@@ -135,8 +135,8 @@ def test_more_overweight_become_symptomatic():
 
     people_statuses_test_data = np.full(npeople, DiseaseStatus.Exposed.value, dtype=np.uint32)
     people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
-    # set all people to obesity=1, corresponding to overweight
-    people_obesity_test_data = np.full(npeople, 1, dtype=np.uint8)
+    # set all people to obesity=2, corresponding to overweight
+    people_obesity_test_data = np.full(npeople, 2, dtype=np.uint8)
     people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
 
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
