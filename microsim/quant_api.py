@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import os
+from tqdm import tqdm
 
 class QuantRampAPI:
     """
@@ -21,10 +22,9 @@ class QuantRampAPI:
     
         """
         self.QUANT_DIR = quant_dir
-        #QuantRampAPI.QUANT_DIR = quant_dir
 
         # read in and store data 
-        self.read_data(self.QUANT_DIR)
+        QuantRampAPI.read_data(self.QUANT_DIR)
      
 
     @classmethod
@@ -167,8 +167,7 @@ class QuantRampAPI:
         """
         # get all probabilities so they sum to at least threshold value
         dic = {} # appending to dictionary is faster than dataframe
-        for m in msoa_list:
-            print(m)
+        for m in tqdm(msoa_list, desc="MSOAs"):
             # get all probabilities for this MSOA (threshold set to 0)
             if venue == "PrimarySchool":
                 result_tmp = QuantRampAPI.getProbablePrimarySchoolsByMSOAIZ(cls.dfPrimaryPopulation, cls.dfPrimaryZones, cls.primary_probPij,m,0)
@@ -177,7 +176,7 @@ class QuantRampAPI:
             elif venue == "Retail":
                 result_tmp = QuantRampAPI.getProbableRetailByMSOAIZ(cls.dfRetailPointsPopulation, cls.dfRetailPointsZones, cls.retailpoints_probSij ,m,0)
             else:
-                sys.exit("unknown venue type") 
+                raise Exception("unknown venue type")
             # keep only values that sum to at least the specified threshold
             sort_index = np.argsort(result_tmp) # index from lowest to highest value
             result = [0.0] * len(result_tmp) # initialise
@@ -194,7 +193,7 @@ class QuantRampAPI:
                     result[sort_index[i]] = result_tmp[sort_index[i]]
                     i = i - 1
             else:
-                 sys.exit("unknown threshold type")
+                 raise Exception("unknown threshold type")
             dic[m] = result
         
         # now turn this into a dataframe with the right columns etc compatible with _flows variable
