@@ -167,7 +167,7 @@ class QuantRampAPI:
         """
         # get all probabilities so they sum to at least threshold value
         dic = {} # appending to dictionary is faster than dataframe
-        for m in tqdm(msoa_list, desc="Reading MSOA flows"):
+        for m in tqdm(msoa_list, desc=f"Reading {venue} MSOA flows"):
             # get all probabilities for this MSOA (threshold set to 0)
             if venue == "PrimarySchool":
                 result_tmp = QuantRampAPI.getProbablePrimarySchoolsByMSOAIZ(cls.dfPrimaryPopulation, cls.dfPrimaryZones, cls.primary_probPij,m,0)
