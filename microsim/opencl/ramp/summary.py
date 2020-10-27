@@ -34,7 +34,7 @@ class Summary:
         if store_detailed_counts:
             # process age data into buckets
             ages = snapshot.buffers.people_ages
-            age_thresholds = np.array([4, 12, 18, 25, 30, 45, 60, 75, 200])
+            age_thresholds = np.array([4, 12, 18, 24, 30, 65, 80, 200])
             age_bins = np.digitize(ages, age_thresholds)
             self.age_thresholds = age_thresholds
 
