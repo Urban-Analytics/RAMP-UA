@@ -115,6 +115,7 @@ def main(parameters_file, no_parameters_file, initialise, iterations, scenario, 
           f"\tInitialise (and then exit?): {initialise}\n"
           f"\tNumber of iterations: {iterations}\n"
           f"\tData dir: {data_dir}\n"
+          f"\tUsing quant data? {'no' if quant_dir is None else ('yes: '+quant_dir)}\n"
           f"\tOutputting results?: {output}\n"
           f"\tOutputting results at every iteration?: {output_every_iteration}\n"
           f"\tDebug mode?: {debug}\n"
