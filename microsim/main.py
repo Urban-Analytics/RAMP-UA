@@ -157,7 +157,7 @@ def main(parameters_file, no_parameters_file, initialise, iterations, scenario, 
                        "quant_object": quant_object}
 
     # args for Python/R Microsim. Use same arguments whether running 1 repetition or many
-    msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir, "output": output,
+    msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir, "scen_dir": scenario, "output": output,
                  "output_every_iteration": output_every_iteration}
 
     if not no_parameters_file:  # When using a parameters file, include the calibration parameters
