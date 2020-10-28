@@ -1,16 +1,13 @@
-# This is a workaround to allow multiprocessing.Pool to work in the pf_experiments_plots notebook.
-# The function called by pool.map ('count_wiggles') needs to be defined in this separate file and imported.
-# https://stackoverflow.com/questions/41385708/multiprocessing-example-giving-attributeerror/42383397
-import os
-import multiprocessing
+# Generic functions that are used in the experiments notebooks
+# Useful to put them in here so that they can be shared across notebooks
+# and can be tested (see tests/experiements/experiments_functions_tests.py)
 import numpy as np
-
 
 class Functions():
     """Includes useful functions for the notebooks"""
 
     @staticmethod
-    def fit(obs, sim):
+    def fit_l2(obs, sim):
         """Calculate the fitness of a model.
         
          Parameters
@@ -35,7 +32,12 @@ class Functions():
 #
 # Functions to run the model in multiprocess mode.
 # Don't wory currently on OS X, something to do with calling multiprocessing from a notebook
+# This is a workaround to allow multiprocessing.Pool to work in the pf_experiments_plots notebook.
+# The function called by pool.map ('count_wiggles') needs to be defined in this separate file and imported.
+# https://stackoverflow.com/questions/41385708/multiprocessing-example-giving-attributeerror/42383397
 #
+import os
+import multiprocessing
 
 from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.simulator import Simulator

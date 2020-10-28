@@ -16,8 +16,13 @@ def setup():
     pass
 
 
-def test_fit(setup):
+def test_fit_l2(setup):
     """Test the fitness function"""
-    fit = Functions.fit
-    assert fit([1,2,3],[1,2,3]) == 0
-    # MORE
+    f = Functions.fit_l2
+
+    assert f([1,2,3],[1,2,3]) == 0
+    assert f([1,2,3],[1,2,4]) == 1
+    assert f([1,2,3],[1,2,5]) == 2
+
+    with pytest.raises(Exception):
+        f([1,2,3], [1,2])
