@@ -9,8 +9,7 @@ microsim:
   debug: false # Whether to run some more expensive checks
   repetitions: 4 # How many times to run the model
   lockdown-file: "google_mobility_lockdown_daily.csv" # Read lockdown mobility data from a file? (Empty string means no lockdown)
-  #quant-dir: QUANT_RAMP #Directory to QUANT data, leave empty to use Devon data
-  quant-dir:
+  quant-dir: QUANT_RAMP # Directory to QUANT data, leave empty to use Devon data
 
 # Parameters that are used to calibrate the model.
 # These can only be passed using the parameters file

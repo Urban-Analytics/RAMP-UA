@@ -671,7 +671,7 @@ class PopulationInitialisation:
 
         # QUANT data
         else:
-            print("Reading school flow data...", )
+            #print("Reading school flow data...", )
             dir = cls.quant_object.QUANT_DIR
 
             # Read the primary schools
@@ -933,7 +933,7 @@ class PopulationInitialisation:
 
         # QUANT data
         else:
-            print("Reading retail flow data...", )
+            #print("Reading retail flow data...", )
             dir = cls.quant_object.QUANT_DIR
             # Read the stores
             stores = pd.read_csv(os.path.join(dir, "retailpointsZones.csv"))
