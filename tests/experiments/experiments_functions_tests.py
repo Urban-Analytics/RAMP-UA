@@ -20,9 +20,11 @@ def test_fit_l2(setup):
     """Test the fitness function"""
     f = Functions.fit_l2
 
-    assert f([1,2,3],[1,2,3]) == 0
-    assert f([1,2,3],[1,2,4]) == 1
-    assert f([1,2,3],[1,2,5]) == 2
+    assert f([1, 2, 3],[1, 2, 3]) == 0
+    assert f([1, 2, 3],[1, 2, 4]) == 1
+    assert f([1, 2, 3],[1, 2, 5]) == 2
 
     with pytest.raises(Exception):
-        f([1,2,3], [1,2])
+        f([1, 2, 3], [1, 2])
+        f(1, [1, 2])
+        f("b", "a")
