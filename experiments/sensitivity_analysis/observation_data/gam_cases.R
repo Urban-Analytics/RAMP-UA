@@ -12,5 +12,3 @@ points(round(fitted.values(gam_Devon)*20), col = "red")
 abline(v = 38, lty = "dashed")
 gam_cases <- round(fitted.values(gam_Devon)*20)
 write.csv(gam_cases, "gam_cases.csv")
-
-          

@@ -3,7 +3,39 @@
 # https://stackoverflow.com/questions/41385708/multiprocessing-example-giving-attributeerror/42383397
 import os
 import multiprocessing
-import itertools # TEMP
+import numpy as np
+
+
+class Functions():
+    """Includes useful functions for the notebooks"""
+
+    @staticmethod
+    def fit(obs, sim):
+        """Calculate the fitness of a model.
+        
+         Parameters
+        ----------
+        obs : array_like
+              The observations data..
+        sim : array_like
+              The simulated data."""
+        
+        if len(obs) != len(sim):
+            raise Exception(f"Lengths should be the same, not {len(obs)}) and {len(sim)}")
+        if np.array(obs).shape != np.array(sim).shape:
+            raise Exception("fShapes should be the same")
+        
+        return np.linalg.norm(np.array(obs) - np.array(sim))
+
+
+
+
+
+
+#
+# Functions to run the model in multiprocess mode.
+# Don't wory currently on OS X, something to do with calling multiprocessing from a notebook
+#
 
 from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.simulator import Simulator
@@ -15,7 +47,6 @@ def run_opencl_model_multiprocess(*args):
     try:
         with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
             results = pool.starmap(_run_opencl_model, zip(*args))
-            #results = itertools.starmap(_run_opencl_model, zip(*args))
             return results
 
     finally:  # Make sure they get closed (shouldn't be necessary)
