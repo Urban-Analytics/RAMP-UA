@@ -72,7 +72,7 @@ def test_load_existing_snapshot():
 
     assert np.array_equal(expected_people_place_ids, loaded_snapshot.buffers.people_place_ids)
     assert np.all(np.isclose(expected_people_flows, loaded_snapshot.buffers.people_baseline_flows))
-    
+
 
 def test_seed_prngs():
     snapshot = Snapshot.random(nplaces=50, npeople=100, nslots=5)

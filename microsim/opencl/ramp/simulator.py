@@ -1,13 +1,12 @@
 import numpy as np
 import pyopencl as cl
-import pandas as pd
 import os
 
 from microsim.opencl.ramp.buffers import Buffers
 from microsim.opencl.ramp.kernels import Kernels
 from microsim.opencl.ramp.params import Params
 from microsim.opencl.ramp.snapshot import Snapshot
-from microsim.opencl.ramp.disease_statuses import DiseaseStatus
+from microsim.opencl.ramp.initial_cases import InitialCases
 
 
 class Simulator:
@@ -16,7 +15,7 @@ class Simulator:
     and a step() method to execute the kernels to calculate one timestep of the model.
     """
 
-    def __init__(self, snapshot, gpu=True, kernel_dir="microsim/opencl/ramp/kernels/"):
+    def __init__(self, snapshot, gpu=True, opencl_dir="microsim/opencl/", num_seed_days=5):
         """Initialise OpenCL context, kernels, and buffers for the simulator.
 
         Args:
@@ -64,6 +63,8 @@ class Simulator:
 
             params=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, Params().num_bytes()),
         )
+
+        kernel_dir = os.path.join(opencl_dir, "ramp/kernels/")
 
         # Load the OpenCL kernel programs
         with open(os.path.join(kernel_dir, "ramp_ua.cl")) as f:
@@ -113,6 +114,11 @@ class Simulator:
         self.buffers = buffers
         self.kernels = kernels
 
+        data_dir = os.path.join(opencl_dir, "data/")
+        self.initial_cases = InitialCases(snapshot.area_codes, snapshot.not_home_probs, data_dir)
+
+        self.num_seed_days = num_seed_days
+
     def platform_name(self):
         """The name of the OpenCL platform being used for simulation."""
         return self.platform.get_info(cl.platform_info.NAME)
@@ -155,6 +161,12 @@ class Simulator:
             self.download(name, getattr(host_buffers, name))
 
     def step(self):
+        if self.time < self.num_seed_days:
+            self.step_with_seeding()
+        else:
+            self.step_all_kernels()
+
+    def step_all_kernels(self):
         """Runs each kernel in order and updates the time. Blocks until complete."""
         reset_event = cl.enqueue_nd_range_kernel(
             self.queue, self.kernels.places_reset, (self.nplaces,), None)
@@ -178,45 +190,21 @@ class Simulator:
             event.wait()
         else:
             raise ValueError("No kernel with name {}".format(name))
-    
-    def seed_initial_infections(self, num_seed_days=5, data_dir="microsim/opencl/data/"):
-        """
-        Seeds initial infections by assigning initial cases based on the GAM assigned cases data.
-        The cases for the first num_seed_days days are all seeded at once, eg. they are in the snapshot before the
-        simulation is run.
-        Initial cases are assigned to people from higher risk area codes who spend more time outside of their home.
-        """
 
-        # load initial case data
-        initial_cases = pd.read_csv(os.path.join(data_dir, "devon_initial_cases.csv"))
-
-        msoa_risks_df = pd.read_csv(os.path.join(data_dir, "msoas.csv"), usecols=[1, 2])
-
-        # combine into a single dataframe to allow easy filtering based on high risk area codes and
-        # not home probabilities
-        people_df = pd.DataFrame({"area_code": self.start_snapshot.area_codes,
-                                  "not_home_prob": self.start_snapshot.not_home_probs})
-        people_df = people_df.merge(msoa_risks_df, on="area_code")
-
-        # get people_ids for people in high risk MSOAs and high not home probability
-        high_risk_ids = np.where((people_df["risk"] == "High") & (people_df["not_home_prob"] > 0.3))[0]
-        
+    def step_with_seeding(self):
         max_hazard_val = np.finfo(np.float32).max
-        
-        for day in range(num_seed_days):
-            # randomly choose a given number of cases from the high risk people ids.
-            num_cases = initial_cases.loc[day, "num_cases"]
-            initial_case_ids = np.random.choice(high_risk_ids, num_cases)
 
-            people_hazards = np.zeros(self.npeople, dtype=np.float32)
+        people_hazards = np.zeros(self.npeople, dtype=np.float32)
 
-            # set hazard to maximum float val, so these people will have infection_prob=1
-            # and will transition to exposed state
-            people_hazards[initial_case_ids] = max_hazard_val
+        initial_case_ids = self.initial_cases.get_seed_people_ids_for_day(self.time)
 
-            self.upload("people_hazards", people_hazards)
+        # set hazard to maximum float val, so these people will have infection_prob=1
+        # and will transition to exposed state
+        people_hazards[initial_case_ids] = max_hazard_val
 
-            # run only the update statuses kernel so that people transition through disease states
-            self.step_kernel("people_update_statuses")
+        self.upload("people_hazards", people_hazards)
 
-        self.time = num_seed_days
+        # run only the update statuses kernel so that people transition through disease states
+        self.step_kernel("people_update_statuses")
+        self.time += np.uint32(1)
+

@@ -35,13 +35,8 @@ def _run_opencl_model(i, iterations, snapshot_filepath, params, opencl_dir, num_
     snapshot.seed_prngs(i)
 
     # Create a simulator and upload the snapshot data to the OpenCL device
-    kernel_dir = os.path.join(opencl_dir, "ramp", "kernels")
-    simulator = Simulator(snapshot, kernel_dir=kernel_dir, gpu=use_gpu)
+    simulator = Simulator(snapshot, opencl_dir=opencl_dir, gpu=use_gpu, num_seed_days=num_seed_days)
     simulator.upload_all(snapshot.buffers)
-
-    # seed initial infections using GAM initial cases
-    data_dir = os.path.join(opencl_dir, "data")
-    simulator.seed_initial_infections(num_seed_days=num_seed_days, data_dir=data_dir)
     
     print(f"Running simulation {i+1}.")
     summary, final_state = run_headless(simulator, snapshot, iterations, quiet=True,

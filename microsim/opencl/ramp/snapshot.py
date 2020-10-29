@@ -1,10 +1,7 @@
 import numpy as np
-import pandas as pd
-import os
 
 from microsim.opencl.ramp.buffers import Buffers
 from microsim.opencl.ramp.params import Params
-from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 
 
 class Snapshot:
