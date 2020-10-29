@@ -57,7 +57,7 @@ install_ramp () {
 
     pip install .
 
-    python -c "sys.path.append('/usr/local/lib/python3.6/site-packages')"
+    python -c "sys.path.append('import sys;/usr/local/lib/python3.6/site-packages')"
 
     echo "RAMP-UA conda environment created!"
 
