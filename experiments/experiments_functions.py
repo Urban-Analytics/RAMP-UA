@@ -28,14 +28,13 @@ class Functions():
               The observations data..
         sim : array_like
               The simulated data."""
-        
+
         if len(obs) != len(sim):
             raise Exception(f"Lengths should be the same, not {len(obs)}) and {len(sim)}")
         if np.array(obs).shape != np.array(sim).shape:
             raise Exception("fShapes should be the same")
-        
-        return np.linalg.norm(np.array(obs) - np.array(sim))
 
+        return np.linalg.norm(np.array(obs) - np.array(sim))
 
     @staticmethod
     def get_mean_total_counts(summaries, disease_status: int):
@@ -54,7 +53,7 @@ class Functions():
         return mean
 
     @staticmethod
-    def create_parameters(parameters_file: str=None, current_risk_beta=None):
+    def create_parameters(parameters_file: str = None, current_risk_beta=None):
         """Create a params object with the given arguments"""
 
         # If no parameters are provided then read the default parameters from a yml file
@@ -100,7 +99,7 @@ class Functions():
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
                          opencl_dir: str, num_seed_days: int, use_gpu: bool,
-                         store_detailed_counts: bool = True, quiet = False) -> (np.ndarray, np.ndarray):
+                         store_detailed_counts: bool = True, quiet=False) -> (np.ndarray, np.ndarray):
         """
         Run the OpenCL model.
 
@@ -142,7 +141,6 @@ class Functions():
                                             store_detailed_counts=store_detailed_counts)
         return summary, final_state
 
-
     #
     # Functions to run the model in multiprocess mode.
     # Don't wory currently on OS X, something to do with calling multiprocessing from a notebook
@@ -164,7 +162,7 @@ class Functions():
         """
         # Prepare the function arguments. We need one set of arguments per repetition
         l_i = [i for i in range(repetitions)]
-        l_iterations = [iterations] *repetitions
+        l_iterations = [iterations] * repetitions
         l_snapshot_filepath = [snapshot_filepath] * repetitions
         l_params = [params] * repetitions
         l_opencl_dir = [opencl_dir] * repetitions
@@ -188,10 +186,104 @@ class Functions():
             # Return as a list to force the models to execute (otherwise this is delayed because starmap returns
             # a generator. Also means we can use tqdm to get a progress bar, which is nice.
             results = itertools.starmap(Functions.run_opencl_model, args)
-            to_return = [x for x in tqdm.tqdm(results, desc="Running models")]
+            to_return = [x for x in tqdm.tqdm(results, desc="Running models", total=repetitions)]
 
         print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)
         return to_return
 
 
+# FOR TESTING
 
+
+def __run_model_current_risk_beta(x, return_full_details=False, multiprocess=False):
+    """Run a model REPETITIONS times using the provided value for the current_risk_beta.
+
+    :param return_details: If True then rather than just returning the fitness,
+        return a tuple of (fitness, summaries_list, final_results_list).
+    :return: The mean fitness across all model runs
+
+    """
+    # Sometimes x might be passed as a number in a list
+    if isinstance(x, np.ndarray) or isinstance(x, list):
+        if len(x) > 1:
+            raise Exception(
+                f"The curent risk beta value (x) should either be a 1-element array or a single number, not {x}")
+        x = x[0]
+    params = Functions.create_parameters(parameters_file=os.path.join("../..", "model_parameters", "default.yml"),
+                                         current_risk_beta=x)
+
+    results = Functions.run_opencl_model_multi(
+        repetitions=REPETITIONS, iterations=ITERATIONS, params=params,
+        opencl_dir=os.path.join("../..", "microsim", "opencl"),
+        snapshot_filepath=os.path.join("../..", "microsim", "opencl", "snapshots", "cache.npz"),
+        multiprocess=multiprocess
+    )
+
+    summaries = [x[0] for x in results]
+    final_results = [x[1] for x in results]  # These aren't used, just left here for reference
+
+    # Get mean cases per day from the summary object
+    sim = Functions.get_mean_total_counts(summaries, DiseaseStatus.Exposed.value)
+    # Compare these to the observations
+    obs = observations.loc[:ITERATIONS - 1, "Cases"].values
+    assert len(sim) == len(obs)
+    fitness = fit(sim, obs)
+    if return_full_details:
+        return (fitness, sim, obs)
+    else:
+        return fitness
+
+
+if __name__ == "__main__":
+    import multiprocessing as mp
+    import numpy as np
+    import yaml  # pyyaml library for reading the parameters.yml file
+    import os
+    import pandas as pd
+    import unittest
+    import pickle
+    import copy
+
+    import matplotlib.pyplot as plt
+
+    from microsim.opencl.ramp.run import run_headless
+    from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
+    from microsim.opencl.ramp.snapshot import Snapshot
+    from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
+    from microsim.opencl.ramp.simulator import Simulator
+    from microsim.opencl.ramp.disease_statuses import DiseaseStatus
+
+    PARAMETERS_FILENAME = "default.yml"  # Creates default parameters using the default.yml file
+    PARAMS = Functions.create_parameters(
+        parameters_file=os.path.join("../../", "model_parameters", PARAMETERS_FILENAME))
+
+    OPENCL_DIR = "../../microsim/opencl"
+    SNAPSHOT_FILEPATH = os.path.join(OPENCL_DIR, "snapshots", "cache.npz")
+    assert os.path.isfile(SNAPSHOT_FILEPATH), f"Snapshot doesn't exist: {SNAPSHOT_FILEPATH}"
+
+    observations = pd.read_csv("observation_data/gam_cases.csv", header=0, names=["Day", "Cases"], )
+    # The fitness function is defined in experiments_functions.py (so that it can be tested)
+    fit = Functions.fit_l2
+
+    ITERATIONS = 100  # Number of iterations to run for
+    NUM_SEED_DAYS = 10  # Number of days to seed the population
+    USE_GPU = False
+    STORE_DETAILED_COUNTS = False
+    REPETITIONS = 5
+
+    assert ITERATIONS < len(observations), \
+        f"Have more iterations ({ITERATIONS}) than observations ({len(observations)})."
+
+    (fitness, sim, obs) = __run_model_current_risk_beta(0.001, return_full_details=True, multiprocess=False)
+    # fitness = run_model_current_risk_beta(0.001)
+
+    print(f"fitness: {fitness}")
+    # list(zip(obs,sim))
+
+    from scipy.optimize import minimize
+
+    # x0 = np.array([1.3, 0.7, 0.8, 1.9, 1.2])
+    x0 = np.array([0.005])  # initial guess for each variable
+
+    res = minimize(__run_model_current_risk_beta, x0, method='nelder-mead',
+                   options={'xatol': 1e-8, 'disp': True})

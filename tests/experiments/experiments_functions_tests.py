@@ -10,7 +10,6 @@ from experiments.experiments_functions import Functions
 # like `test_step()`.
 from opencl.ramp.disease_statuses import DiseaseStatus
 
-
 @pytest.fixture()
 def setup_results():
     # Create some model summary data
