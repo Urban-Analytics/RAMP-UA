@@ -115,6 +115,12 @@ float get_obesity_multiplier(ushort obesity, global const Params* params){
     return params->obesity_multipliers[multiplier_idx];
 }
 
+float get_symptomatic_prob_for_age(ushort age, global const Params* params){
+  uint bin_size = 10; // Years per bin
+  uint max_bin_idx = 8; // Largest bin index covers 80+
+  return params->symptomatic_probs[min(age/bin_size, max_bin_idx)];
+}
+
 bool is_obese(ushort obesity){
   return obesity >= 2;
 }
@@ -306,11 +312,17 @@ kernel void people_update_statuses(uint npeople,
     switch(current_status) {
         case Exposed:
         {
-          float symp_rate = 1 - params->proportion_asymptomatic;
+          ushort person_age = people_ages[person_id];
+          float symptomatic_prob = get_symptomatic_prob_for_age(person_age, params);
+
+          ushort person_obesity = people_obesity[person_id];
 
           // being overweight increases chances of being symptomatic
           if (is_obese(people_obesity[person_id])){
             symp_rate *= params->overweight_sympt_mplier;
+              if(symp_rate > 1){
+                  symp_rate = 1
+              }
           }
 
           // randomly select whether to become asymptomatic or presymptomatic
