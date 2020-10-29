@@ -1,11 +1,13 @@
 import numpy as np
 import pyopencl as cl
+import pandas as pd
 import os
 
 from microsim.opencl.ramp.buffers import Buffers
 from microsim.opencl.ramp.kernels import Kernels
 from microsim.opencl.ramp.params import Params
 from microsim.opencl.ramp.snapshot import Snapshot
+from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 
 
 class Simulator:
@@ -106,7 +108,8 @@ class Simulator:
         self.platform = platform
         self.ctx = ctx
         self.queue = queue
-
+    
+        self.start_snapshot = snapshot
         self.buffers = buffers
         self.kernels = kernels
 
@@ -175,3 +178,46 @@ class Simulator:
             event.wait()
         else:
             raise ValueError("No kernel with name {}".format(name))
+    
+    def seed_initial_infections(self, num_seed_days=5, data_dir="microsim/opencl/data/"):
+        """
+        Seeds initial infections by assigning initial cases based on the GAM assigned cases data.
+        The cases for the first num_seed_days days are all seeded at once, eg. they are in the snapshot before the
+        simulation is run.
+        Initial cases are assigned to people from higher risk area codes who spend more time outside of their home.
+        """
+
+        # load initial case data
+        initial_cases = pd.read_csv(os.path.join(data_dir, "devon_initial_cases.csv"))
+
+        msoa_risks_df = pd.read_csv(os.path.join(data_dir, "msoas.csv"), usecols=[1, 2])
+
+        # combine into a single dataframe to allow easy filtering based on high risk area codes and
+        # not home probabilities
+        people_df = pd.DataFrame({"area_code": self.start_snapshot.area_codes,
+                                  "not_home_prob": self.start_snapshot.not_home_probs})
+        people_df = people_df.merge(msoa_risks_df, on="area_code")
+
+        # get people_ids for people in high risk MSOAs and high not home probability
+        high_risk_ids = np.where((people_df["risk"] == "High") & (people_df["not_home_prob"] > 0.3))[0]
+        
+        max_hazard_val = np.finfo(np.float32).max
+        
+        for day in range(num_seed_days):
+            # randomly choose a given number of cases from the high risk people ids.
+            num_cases = initial_cases.loc[day, "num_cases"]
+            initial_case_ids = np.random.choice(high_risk_ids, num_cases)
+
+            # reset all people hazards
+            self.buffers.people_hazards[:] = 0.0
+
+            # set hazard to maximum float val, so these people will have infection_prob=1
+            # and will transition to exposed state
+            self.buffers.people_hazards[initial_case_ids] = max_hazard_val
+
+            self.upload("people_hazards", self.buffers.people_hazards)
+
+            # run the kernel to update people statuses
+            self.step_kernel("people_update_statuses")
+
+        self.time = num_seed_days
