@@ -208,16 +208,15 @@ class Simulator:
             num_cases = initial_cases.loc[day, "num_cases"]
             initial_case_ids = np.random.choice(high_risk_ids, num_cases)
 
-            # reset all people hazards
-            self.buffers.people_hazards[:] = 0.0
+            people_hazards = np.zeros(self.npeople, dtype=np.float32)
 
             # set hazard to maximum float val, so these people will have infection_prob=1
             # and will transition to exposed state
-            self.buffers.people_hazards[initial_case_ids] = max_hazard_val
+            people_hazards[initial_case_ids] = max_hazard_val
 
-            self.upload("people_hazards", self.buffers.people_hazards)
+            self.upload("people_hazards", people_hazards)
 
-            # run the kernel to update people statuses
+            # run only the update statuses kernel so that people transition through disease states
             self.step_kernel("people_update_statuses")
 
         self.time = num_seed_days
