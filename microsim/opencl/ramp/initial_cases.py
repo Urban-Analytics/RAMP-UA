@@ -29,6 +29,9 @@ class InitialCases:
     def get_seed_people_ids_for_day(self, day):
         # randomly choose a given number of cases from the high risk people ids.
         num_cases = self.initial_cases.loc[day, "num_cases"]
+        if num_cases > self.high_risk_ids.shape[0]:  # if there aren't enough high risk individuals then return all of them
+            return self.high_risk_ids
+
         selected_ids = np.random.choice(self.high_risk_ids, num_cases, replace=False)
 
         # remove people from high_risk_ids so they are not chosen again

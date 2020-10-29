@@ -604,3 +604,35 @@ def test_seed_initial_infections_all_high_risk():
     num_people_infected = np.count_nonzero(people_statuses_after)
 
     assert num_people_infected == expected_num_infections
+
+
+def test_seed_initial_infections_some_low_risk():
+    npeople = 50
+    snapshot = Snapshot.random(nplaces, npeople, nslots)
+
+    # set all people as high risk
+    snapshot.area_codes = np.full(npeople, "E02004187")  # low risk area code
+    snapshot.area_codes[1:4] = "E02004143"  # high risk area code
+    snapshot.not_home_probs = np.full(npeople, 0.0)
+    snapshot.not_home_probs[1:4] = 0.8
+
+    num_seed_days = 5
+    simulator = Simulator(snapshot, gpu=False, num_seed_days=num_seed_days)
+    simulator.upload_all(snapshot.buffers)
+
+    people_statuses_before = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_before)
+    # assert that no people are infected before seeding
+    assert not people_statuses_before.any()
+
+    # run one step with seeding and check number of infections
+    simulator.step_with_seeding()
+
+    people_statuses_after = np.zeros(snapshot.npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_after)
+
+    expected_num_infections = 3  # taken from devon_initial_cases.csv file
+
+    num_people_infected = np.count_nonzero(people_statuses_after)
+
+    assert num_people_infected == expected_num_infections
