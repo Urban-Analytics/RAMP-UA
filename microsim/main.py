@@ -239,7 +239,7 @@ def run_opencl_model(individuals_df, activity_locations, time_activity_multiplie
 
     run_mode = "GUI" if use_gui else "headless"
     print(f"\nRunning OpenCL model in {run_mode} mode")
-    run_opencl(snapshot, iterations, data_dir, use_gui, use_gpu, disease_params["seed_days"], quiet=False)
+    run_opencl(snapshot, iterations, data_dir, use_gui, use_gpu, num_seed_days=disease_params["seed_days"], quiet=False)
 
 
 def run_python_model(individuals_df, activity_locations_df, time_activity_multiplier, msim_args, iterations,

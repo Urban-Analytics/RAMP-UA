@@ -20,19 +20,19 @@ def run_opencl(snapshot, iterations=100, data_dir="./data", use_gui=True, use_gp
         print(f"\nSnapshot Size:\t{int(snapshot.num_bytes() / 1000000)} MB\n")
 
     # Create a simulator and upload the snapshot data to the OpenCL device
-    simulator = Simulator(snapshot, use_gpu)
+    simulator = Simulator(snapshot, use_gpu, num_seed_days=num_seed_days)
     simulator.upload_all(snapshot.buffers)
     if not quiet:
         print(f"Platform:\t{simulator.platform_name()}\nDevice:\t\t{simulator.device_name()}\n")
 
     if use_gui:
-        run_with_gui(simulator, snapshot, num_seed_days=num_seed_days)
+        run_with_gui(simulator, snapshot)
     else:
         summary, final_state = run_headless(simulator, snapshot, iterations, quiet)
         store_summary_data(summary, store_detailed_counts=True, data_dir=data_dir)
 
 
-def run_with_gui(simulator, snapshot, num_seed_days=5):
+def run_with_gui(simulator, snapshot):
     width = 2560  # Initial window width in pixels
     height = 1440  # Initial window height in pixels
     nlines = 4  # Number of visualised connections per person
