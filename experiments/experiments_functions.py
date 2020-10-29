@@ -6,6 +6,8 @@ import numpy as np
 import multiprocessing
 import itertools
 import yaml
+import time
+import tqdm
 
 from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.simulator import Simulator
@@ -98,7 +100,7 @@ class Functions():
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
                          opencl_dir: str, num_seed_days: int, use_gpu: bool,
-                         store_detailed_counts: bool = True) -> (np.ndarray, np.ndarray):
+                         store_detailed_counts: bool = True, quiet = False) -> (np.ndarray, np.ndarray):
         """
         Run the OpenCL model.
 
@@ -111,6 +113,7 @@ class Functions():
         :param use_gpu: Whether to use the GPU to process it or not
         :param store_detailed_counts: Whether to store the age distributions for diseases (default True, if
           false then the model runs much more quickly).
+        :param quiet: Whether to print a message when the model starts
         :return: A summary python array that contains the results for each iteration and a final state
 
         """
@@ -133,7 +136,8 @@ class Functions():
         simulator = Simulator(snapshot, kernel_dir=kernel_dir, gpu=use_gpu)
         simulator.upload_all(snapshot.buffers)
 
-        print(f"Running simulation {i + 1}.")
+        if not quiet:
+            print(f"Running simulation {i + 1}.")
         summary, final_state = run_headless(simulator, snapshot, iterations, quiet=True,
                                             store_detailed_counts=store_detailed_counts)
         return summary, final_state
@@ -167,23 +171,27 @@ class Functions():
         l_num_seed_days = [num_seed_days] * repetitions
         l_use_gpu = [use_gpu] * repetitions
         l_store_detailed_counts = [store_detailed_counts] * repetitions
+        l_quiet = [True] * repetitions  # Don't print info
 
+        args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_num_seed_days, l_use_gpu,
+                   l_store_detailed_counts, l_quiet)
+        to_return = None
+        start_time = time.time()
         if multiprocess:
             try:
+                print("Running multiple models in multiprocess mode ... ", end="", flush=True)
                 with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
-                    return pool.starmap(Functions.run_opencl_model, zip(
-                        l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_num_seed_days, l_use_gpu,
-                        l_store_detailed_counts
-                    ))
+                    to_return = pool.starmap(Functions.run_opencl_model, args)
             finally:  # Make sure they get closed (shouldn't be necessary)
                 pool.close()
         else:
-            # Note: wrapping as a list forces the execution of the model, otherwise starmap returns a generator
-            # so execution is delayed
-            return list(itertools.starmap(Functions.run_opencl_model, zip(
-                        l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_num_seed_days, l_use_gpu,
-                        l_store_detailed_counts
-                    )))
+            # Return as a list to force the models to execute (otherwise this is delayed because starmap returns
+            # a generator. Also means we can use tqdm to get a progress bar, which is nice.
+            results = itertools.starmap(Functions.run_opencl_model, args)
+            to_return = [x for x in tqdm.tqdm(results, desc="Running models")]
+
+        print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)
+        return to_return
 
 
 
