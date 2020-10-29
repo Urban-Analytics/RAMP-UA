@@ -32,7 +32,7 @@ class Snapshot:
         npeople = np.uint32(npeople)
         nslots = np.uint32(nslots)
         time = np.uint32(0)
-        area_codes = np.full("", npeople)
+        area_codes = np.full(npeople, "E02004129")
         not_home_probs = np.zeros(npeople).astype(np.float32)
 
         lockdown_multipliers = np.ones(100)
@@ -68,7 +68,7 @@ class Snapshot:
         npeople = np.uint32(npeople)
         nslots = np.uint32(nslots)
         time = np.uint32(0)
-        area_codes = np.full("", npeople)
+        area_codes = np.full(npeople, "E02004129")
         not_home_probs = np.random.rand(npeople).astype(np.float32)
 
         lockdown_multipliers = np.ones(100)

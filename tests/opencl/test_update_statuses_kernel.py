@@ -564,22 +564,42 @@ def test_infection_transition_times_distribution(visualize=False):
         plt.show()
 
 
-def test_seed_initial_infections():
-    # Load initial snapshot generated from the SnapshotConverter test
-    snapshot = Snapshot.load_full_snapshot("tests/opencl/test_snapshot.npz")
+def test_seed_initial_infections_all_high_risk():
+    npeople = 50
+    snapshot = Snapshot.random(nplaces, npeople, nslots)
 
-    simulator = Simulator(snapshot, gpu=False)
+    # set all people as high risk
+    snapshot.area_codes = np.full(npeople, "E02004143")  # high risk area code
+    snapshot.not_home_probs = np.full(npeople, 0.8)
+
+    num_seed_days = 5
+    simulator = Simulator(snapshot, gpu=False, num_seed_days=num_seed_days)
     simulator.upload_all(snapshot.buffers)
 
+    people_statuses_before = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_before)
     # assert that no people are infected before seeding
-    assert not snapshot.buffers.people_statuses.any()
+    assert not people_statuses_before.any()
 
-    simulator.seed_initial_infections(num_seed_days=1)
+    # run one step with seeding and check number of infections
+    simulator.step_with_seeding()
 
     people_statuses_after = np.zeros(snapshot.npeople, dtype=np.uint32)
     simulator.download("people_statuses", people_statuses_after)
 
-    expected_num_infections = 1  # since there is 1 person in a high risk area with not_home_prob > 0.3
+    expected_num_infections = 10  # taken from devon_initial_cases.csv file
+
+    num_people_infected = np.count_nonzero(people_statuses_after)
+
+    assert num_people_infected == expected_num_infections
+
+    # run another step with seeding and check number of infections
+    simulator.step_with_seeding()
+
+    people_statuses_after = np.zeros(snapshot.npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_after)
+
+    expected_num_infections += 11  # taken from devon_initial_cases.csv file
 
     num_people_infected = np.count_nonzero(people_statuses_after)
 
