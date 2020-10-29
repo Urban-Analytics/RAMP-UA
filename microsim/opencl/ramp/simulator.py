@@ -161,6 +161,7 @@ class Simulator:
             self.download(name, getattr(host_buffers, name))
 
     def step(self):
+        """Choose whether to run the normal step function or the one for initial case seeding"""
         if self.time < self.num_seed_days:
             self.step_with_seeding()
         else:
@@ -192,6 +193,8 @@ class Simulator:
             raise ValueError("No kernel with name {}".format(name))
 
     def step_with_seeding(self):
+        """For initial case seeding: sets a number of people infected based on the initial cases data, then runs only
+        the kernel which updates people statuses."""
         max_hazard_val = np.finfo(np.float32).max
 
         people_hazards = np.zeros(self.npeople, dtype=np.float32)
