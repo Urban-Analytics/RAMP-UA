@@ -14,7 +14,12 @@ install_ramp () {
     git lfs install
 
     # clone in repository from a branch named as argument
-    git clone --single-branch --branch $1 https://github.com/Urban-Analytics/RAMP-UA.git
+    git clone --single-branch --branch $RESPONSE https://github.com/Urban-Analytics/RAMP-UA.git
+
+    if [ ! -d RAMP-UA ]; then
+        echo "Git clone appears to have failed."
+        exit 1
+
     # download the specific notebook functions file
     curl -O https://raw.githubusercontent.com/Urban-Analytics/RAMP-UA/master/experiments/functions.py
 
@@ -59,7 +64,8 @@ install_ramp () {
 }
 
 if [ -n "$1" ] ; then
+    RESPONSE=$1
     install_ramp
 else
-  echo "Please pass the branch of RAMP-UA you wish to install in this notebook as an argument to this function."
+    echo "Please pass the branch of RAMP-UA you wish to install in this notebook as an argument to this function."
 fi
