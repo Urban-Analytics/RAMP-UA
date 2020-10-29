@@ -319,14 +319,14 @@ kernel void people_update_statuses(uint npeople,
 
           // being overweight increases chances of being symptomatic
           if (is_obese(people_obesity[person_id])){
-            symp_rate *= params->overweight_sympt_mplier;
-              if(symp_rate > 1){
-                  symp_rate = 1
+              symptomatic_prob *= params->overweight_sympt_mplier;
+              if(symptomatic_prob > 1){
+                  symptomatic_prob = 1;
               }
           }
 
           // randomly select whether to become asymptomatic or presymptomatic
-          next_status = rand(rng) < symp_rate ? Presymptomatic : Asymptomatic;
+          next_status = rand(rng) < symptomatic_prob ? Presymptomatic : Asymptomatic;
           
           //choose transition time based on presymptomatic or asymptomatic
           next_transition_time = next_status == Presymptomatic ? sample_presymptomatic_duration(rng, params) : sample_infection_duration(rng, params);
