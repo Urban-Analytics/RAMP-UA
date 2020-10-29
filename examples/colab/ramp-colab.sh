@@ -19,6 +19,7 @@ install_ramp () {
     if [ ! -d RAMP-UA ]; then
         echo "Git clone appears to have failed."
         exit 1
+    fi
 
     # download the specific notebook functions file
     curl -O https://raw.githubusercontent.com/Urban-Analytics/RAMP-UA/master/experiments/functions.py
