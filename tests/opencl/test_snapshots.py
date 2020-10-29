@@ -74,20 +74,20 @@ def test_load_existing_snapshot():
     assert np.all(np.isclose(expected_people_flows, loaded_snapshot.buffers.people_baseline_flows))
 
 
-def test_seed_initial_infections():
-    # Load initial snapshot generated from the SnapshotConverter test
-    snapshot = Snapshot.load_full_snapshot("tests/opencl/test_snapshot.npz")
-
-    # assert that no people are infected before seeding
-    assert not snapshot.buffers.people_statuses.any()
-
-    snapshot.seed_initial_infections(num_seed_days=1)
-
-    expected_num_infections = 1  # since there is 1 person in a high risk area with not_home_prob > 0.3
-
-    num_people_infected = np.count_nonzero(snapshot.buffers.people_statuses)
-
-    assert num_people_infected == expected_num_infections
+# def test_seed_initial_infections():
+#     # Load initial snapshot generated from the SnapshotConverter test
+#     snapshot = Snapshot.load_full_snapshot("tests/opencl/test_snapshot.npz")
+#
+#     # assert that no people are infected before seeding
+#     assert not snapshot.buffers.people_statuses.any()
+#
+#     snapshot.seed_initial_infections(num_seed_days=1)
+#
+#     expected_num_infections = 1  # since there is 1 person in a high risk area with not_home_prob > 0.3
+#
+#     num_people_infected = np.count_nonzero(snapshot.buffers.people_statuses)
+#
+#     assert num_people_infected == expected_num_infections
 
 
 def test_seed_prngs():

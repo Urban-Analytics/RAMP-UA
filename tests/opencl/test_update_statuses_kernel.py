@@ -562,3 +562,25 @@ def test_infection_transition_times_distribution(visualize=False):
         ax.hist(expected_samples, bins=50, range=[0, 60])
         plt.title("Expected Samples")
         plt.show()
+
+
+def test_seed_initial_infections():
+    # Load initial snapshot generated from the SnapshotConverter test
+    snapshot = Snapshot.load_full_snapshot("tests/opencl/test_snapshot.npz")
+
+    simulator = Simulator(snapshot, gpu=False)
+    simulator.upload_all(snapshot.buffers)
+
+    # assert that no people are infected before seeding
+    assert not snapshot.buffers.people_statuses.any()
+
+    simulator.seed_initial_infections(num_seed_days=1)
+
+    people_statuses_after = np.zeros(snapshot.npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_after)
+
+    expected_num_infections = 1  # since there is 1 person in a high risk area with not_home_prob > 0.3
+
+    num_people_infected = np.count_nonzero(people_statuses_after)
+
+    assert num_people_infected == expected_num_infections
