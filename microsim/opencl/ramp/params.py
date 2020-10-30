@@ -70,10 +70,10 @@ class Params:
         self.mortality_probs = np.array([0.0000161, 0.0000695, 0.000309, 0.000844,
                                          0.00161, 0.00595, 0.0193, 0.0428, 0.078],
                                         dtype=np.float32)
+        self.obesity_multipliers = np.array(obesity_multipliers, dtype=np.float32)
         self.symptomatic_probs = np.array([0.21, 0.21, 0.45, 0.45,
                                            0.45, 0.45, 0.45, 0.69, 0.69],
                                            dtype = np.float32)
-        self.obesity_multipliers = np.array(obesity_multipliers, dtype=np.float32)
         self.cvd_multiplier = cvd_multiplier
         self.diabetes_multiplier = diabetes_multiplier
         self.bloodpressure_multiplier = bloodpressure_multiplier
@@ -99,8 +99,8 @@ class Params:
             self.place_hazard_multipliers,
             self.individual_hazard_multipliers,
             self.mortality_probs,
-            self.obesity_multipliers,
             self.symptomatic_probs,
+            self.obesity_multipliers,
             np.array(
                 [
                     self.cvd_multiplier,
