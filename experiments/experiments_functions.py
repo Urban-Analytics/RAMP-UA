@@ -53,8 +53,10 @@ class Functions():
         return mean
 
     @staticmethod
-    def create_parameters(parameters_file: str = None, current_risk_beta=None):
-        """Create a params object with the given arguments"""
+    def create_parameters(parameters_file: str = None,
+                          current_risk_beta: float = None,
+                          proportion_asymptomatic: float = None):
+        """Create a params object with the given arguments."""
 
         # If no parameters are provided then read the default parameters from a yml file
         if parameters_file is None:
@@ -69,7 +71,7 @@ class Functions():
         calibration_params = parameters["microsim_calibration"]
         disease_params = parameters["disease"]  # Parameters for the disease model (r)
 
-        if current_risk_beta == None:
+        if current_risk_beta is None:
             current_risk_beta = disease_params['current_risk_beta']
 
         # The OpenCL model incorporates the current risk beta by pre-multiplying the hazard multipliers with it
@@ -88,7 +90,8 @@ class Functions():
             symptomatic=calibration_params["hazard_individual_multipliers"]["symptomatic"]
         )
 
-        proportion_asymptomatic = disease_params["asymp_rate"]
+        if proportion_asymptomatic is None:
+            proportion_asymptomatic = disease_params["asymp_rate"]
 
         return Params(
             location_hazard_multipliers=location_hazard_multipliers,
