@@ -99,8 +99,9 @@ class Params:
             self.place_hazard_multipliers,
             self.individual_hazard_multipliers,
             self.mortality_probs,
-            self.symptomatic_probs,
             self.obesity_multipliers,
+            self.symptomatic_probs,
+    
             np.array(
                 [
                     self.cvd_multiplier,
