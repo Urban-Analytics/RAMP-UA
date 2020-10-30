@@ -85,7 +85,7 @@ def test_exposed_become_asymptomatic_or_presymptomatic():
     # set all people to obesity=0, corresponding to normal BMI
     people_obesity_test_data = np.full(npeople, 0, dtype=np.uint8)
     people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
-    people_ages_test_data = np.full(npeople, 25, dtype=np.uint16)
+    people_ages_test_data = np.full(npeople, 18, dtype=np.uint16)
     
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.people_obesity[:] = people_obesity_test_data
@@ -93,7 +93,7 @@ def test_exposed_become_asymptomatic_or_presymptomatic():
     snapshot.buffers.people_ages[:] = people_ages_test_data
 
     params = Params()
-    expected_proportion_asymptomatic = 0.45
+    expected_proportion_asymptomatic = 0.79
     params.proportion_asymptomatic = expected_proportion_asymptomatic
     snapshot.update_params(params)
 
