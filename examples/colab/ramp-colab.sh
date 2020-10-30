@@ -37,11 +37,11 @@ install_ramp () {
     echo "python 3.6.*" > /usr/local/conda-meta/pinned
 
     #Installing another conda package first something first seems to fix https://github.com/rapidsai/rapidsai-csp-utils/issues/4
-    conda install --channel defaults conda python=3.6 --yes
-    conda update -y -c conda-forge -c defaults --all
-    conda install -y --prefix /usr/local -c conda-forge -c defaults openssl six
+    conda install -q -c defaults conda python=3.6 --yes
+    conda update -q -y -c conda-forge -c defaults --all
+    conda install -q -y --prefix /usr/local -c conda-forge -c defaults openssl six
 
-    conda install -y --prefix /usr/local \
+    conda install -q -y --prefix /usr/local \
             -c conda-forge -c defaults \
             python=3.6 pandas=1.0.3 matplotlib=3.1.3 pyopencl=2020.2.2 \
             click pyyaml rpy2=3.3.2 numpy=1.18.5 tqdm scipy=1.5.2 \
@@ -50,8 +50,8 @@ install_ramp () {
             r-data.table r-mixdist r-mgcv r-RecordLinkage r-tidyselect r-rvcheck r-stringdist pocl \
             geopandas=0.7.0 descartes ocl-icd-system
 
-    pip install -r RAMP-UA/microsim/opencl/requirements.txt
-    pip install convertbng
+    pip install -q -r RAMP-UA/microsim/opencl/requirements.txt
+    pip install -q convertbng
 
     cd RAMP-UA/
 
