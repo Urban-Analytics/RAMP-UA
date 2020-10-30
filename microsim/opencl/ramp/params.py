@@ -99,8 +99,9 @@ class Params:
             self.place_hazard_multipliers,
             self.individual_hazard_multipliers,
             self.mortality_probs,
-            self.symptomatic_probs,
             self.obesity_multipliers,
+            self.symptomatic_probs,
+    
             np.array(
                 [
                     self.cvd_multiplier,
@@ -136,9 +137,9 @@ class Params:
         p.infection_log_scale = params_array[6]
         p.infection_mode = params_array[7]
         p.lockdown_multiplier = params_array[8]
-        p.mortality_probs = params_array[17:25]
-        p.obesity_multipliers = params_array[26:29]
-        p.symptomatic_probs = params_array[30:38]
+        p.mortality_probs = params_array[17:26]
+        p.obesity_multipliers = params_array[26:30]
+        p.symptomatic_probs = params_array[30:39]
         p.cvd_multiplier = params_array[39]
         p.diabetes_multiplier = params_array[40]
         p.bloodpressure_multiplier = params_array[41]
