@@ -569,7 +569,7 @@ def test_infection_transition_times_distribution(visualize=False):
 
 
 def test_seed_initial_infections_all_high_risk():
-    npeople = 50
+    npeople = 200
     snapshot = Snapshot.random(nplaces, npeople, nslots)
 
     # set all people as high risk
@@ -591,7 +591,7 @@ def test_seed_initial_infections_all_high_risk():
     people_statuses_after = np.zeros(snapshot.npeople, dtype=np.uint32)
     simulator.download("people_statuses", people_statuses_after)
 
-    expected_num_infections = 10  # taken from devon_initial_cases.csv file
+    expected_num_infections = 37  # taken from devon_initial_cases.csv file
 
     num_people_infected = np.count_nonzero(people_statuses_after)
 
@@ -603,7 +603,7 @@ def test_seed_initial_infections_all_high_risk():
     people_statuses_after = np.zeros(snapshot.npeople, dtype=np.uint32)
     simulator.download("people_statuses", people_statuses_after)
 
-    expected_num_infections += 11  # taken from devon_initial_cases.csv file
+    expected_num_infections += 38  # taken from devon_initial_cases.csv file
 
     num_people_infected = np.count_nonzero(people_statuses_after)
 
@@ -611,7 +611,7 @@ def test_seed_initial_infections_all_high_risk():
 
 
 def test_seed_initial_infections_some_low_risk():
-    npeople = 50
+    npeople = 200
     snapshot = Snapshot.random(nplaces, npeople, nslots)
 
     # set all people as high risk
