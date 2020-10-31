@@ -14,7 +14,8 @@ from typing import List
 from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.simulator import Simulator
 from microsim.opencl.ramp.run import run_headless
-from microsim.opencl.ramp.params import Params
+from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
+
 
 
 class OpenCLRunner:
@@ -214,13 +215,13 @@ class OpenCLRunner:
             try:
                 print("Running multiple models in multiprocess mode ... ", end="", flush=True)
                 with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
-                    to_return = pool.starmap(Functions.run_opencl_model, args)
+                    to_return = pool.starmap(OpenCLRunner.run_opencl_model, args)
             finally:  # Make sure they get closed (shouldn't be necessary)
                 pool.close()
         else:
             # Return as a list to force the models to execute (otherwise this is delayed because starmap returns
             # a generator. Also means we can use tqdm to get a progress bar, which is nice.
-            results = itertools.starmap(Functions.run_opencl_model, args)
+            results = itertools.starmap(OpenCLRunner.run_opencl_model, args)
             to_return = [x for x in tqdm.tqdm(results, desc="Running models", total=repetitions)]
 
         print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)

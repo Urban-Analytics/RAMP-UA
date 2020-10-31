@@ -1,5 +1,5 @@
 import pytest
-from opencl_runner import OpenCLRunner # Some additional notebook-specific functions required (functions.py)
+from experiments.opencl_runner import OpenCLRunner # Some additional notebook-specific functions required (functions.py)
 from opencl.ramp.disease_statuses import DiseaseStatus
 
 # ********************************************************
