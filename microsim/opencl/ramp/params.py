@@ -70,8 +70,10 @@ class Params:
         self.mortality_probs = np.array([0.0000161, 0.0000695, 0.000309, 0.000844,
                                          0.00161, 0.00595, 0.0193, 0.0428, 0.078],
                                         dtype=np.float32)
-
         self.obesity_multipliers = np.array(obesity_multipliers, dtype=np.float32)
+        self.symptomatic_probs = np.array([0.21, 0.21, 0.45, 0.45,
+                                           0.45, 0.45, 0.45, 0.69, 0.69],
+                                           dtype = np.float32)
         self.cvd_multiplier = cvd_multiplier
         self.diabetes_multiplier = diabetes_multiplier
         self.bloodpressure_multiplier = bloodpressure_multiplier
@@ -98,6 +100,8 @@ class Params:
             self.individual_hazard_multipliers,
             self.mortality_probs,
             self.obesity_multipliers,
+            self.symptomatic_probs,
+    
             np.array(
                 [
                     self.cvd_multiplier,
@@ -135,10 +139,11 @@ class Params:
         p.lockdown_multiplier = params_array[8]
         p.mortality_probs = params_array[17:26]
         p.obesity_multipliers = params_array[26:30]
-        p.cvd_multiplier = params_array[30]
-        p.diabetes_multiplier = params_array[31]
-        p.bloodpressure_multiplier = params_array[32]
-        p.overweight_sympt_mplier = params_array[33]
+        p.symptomatic_probs = params_array[30:39]
+        p.cvd_multiplier = params_array[39]
+        p.diabetes_multiplier = params_array[40]
+        p.bloodpressure_multiplier = params_array[41]
+        p.overweight_sympt_mplier = params_array[42]
         return p
 
     def set_lockdown_multiplier(self, lockdown_multipliers, timestep):

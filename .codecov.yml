@@ -1,0 +1,11 @@
+coverage:
+  ignore:
+    # ignore auxiliary opencl sim files
+    - microsim/opencl/ramp/inspector.py
+    - microsim/opencl/ramp/opencl_dashboard.py
+    - microsim/opencl/ramp/projections.py
+    - microsim/opencl/ramp/run.py
+    - microsim/opencl/ramp/shader.py
+    - microsim/opencl/ramp/style.py
+    # auxiliary files in python sim 
+    - microsim/main.py

@@ -65,6 +65,7 @@ typedef struct Params {
   float individual_hazard_multipliers[3]; // Hazard multipliers by activity
   float mortality_probs[9]; // mortality probabilities by age group
   float obesity_multipliers[4]; // mortality multipliers for obesity levels
+  float symptomatic_probs[9]; // symptomatic probs by age group
   float cvd_multiplier; // mortality multipliers for cardiovascular disease
   float diabetes_multiplier; // mortality multipliers for diabetes
   float bloodpressure_multiplier; // mortality multipliers for high blood pressure
@@ -113,6 +114,12 @@ float get_obesity_multiplier(ushort obesity, global const Params* params){
     // obesity value of 0 corresponds to normal, so there is no multiplier for that
     int multiplier_idx = (int)obesity - 1;
     return params->obesity_multipliers[multiplier_idx];
+}
+
+float get_symptomatic_prob_for_age(ushort age, global const Params* params){
+  uint bin_size = 10; // Years per bin
+  uint max_bin_idx = 8; // Largest bin index covers 80+
+  return params->symptomatic_probs[min(age/bin_size, max_bin_idx)];
 }
 
 bool is_obese(ushort obesity){
@@ -306,15 +313,21 @@ kernel void people_update_statuses(uint npeople,
     switch(current_status) {
         case Exposed:
         {
-          float symp_rate = 1 - params->proportion_asymptomatic;
+          ushort person_age = people_ages[person_id];
+          float symptomatic_prob = get_symptomatic_prob_for_age(person_age, params);
+
+          ushort person_obesity = people_obesity[person_id];
 
           // being overweight increases chances of being symptomatic
           if (is_obese(people_obesity[person_id])){
-            symp_rate *= params->overweight_sympt_mplier;
+              symptomatic_prob *= params->overweight_sympt_mplier;
+              if(symptomatic_prob > 1){
+                  symptomatic_prob = 1;
+              }
           }
 
           // randomly select whether to become asymptomatic or presymptomatic
-          next_status = rand(rng) < symp_rate ? Presymptomatic : Asymptomatic;
+          next_status = rand(rng) < symptomatic_prob ? Presymptomatic : Asymptomatic;
           
           //choose transition time based on presymptomatic or asymptomatic
           next_transition_time = next_status == Presymptomatic ? sample_presymptomatic_duration(rng, params) : sample_infection_duration(rng, params);
