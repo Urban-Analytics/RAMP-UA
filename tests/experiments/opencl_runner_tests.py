@@ -1,4 +1,7 @@
 import pytest
+import os
+import numpy as np
+import pandas as pd
 from experiments.opencl_runner import OpenCLRunner # Some additional notebook-specific functions required (functions.py)
 from opencl.ramp.disease_statuses import DiseaseStatus
 
@@ -46,5 +49,31 @@ def test_get_mean_total_counts(setup_results):
 
 def test_run_model_with_params():
     with pytest.raises(Exception):
-        # Running a model sould fail if the class hasn't been initialised first
+        # Running a model should fail if the class hasn't been initialised first
         OpenCLRunner.run_model_with_params([1,2])
+    # Run the model to check it works as expected.
+    OpenCLRunner.init(
+        iterations=100,
+        repetitions=5,
+        observations=pd.DataFrame({"Day":range(1,120), "Cases":range(1,120)}),
+        num_seed_days=10,
+        use_gpu=False,
+        store_detailed_counts=False,
+        parameters_file=os.path.join("model_parameters", "default.yml"),
+        opencl_dir=os.path.join("microsim", "opencl"),
+        snapshot_filepath=os.path.join("microsim", "opencl", "snapshots", "cache.npz")
+    )
+
+    (fitness, sim, obs, out_params) = OpenCLRunner.run_model_with_params(np.array([
+        0.005,  # current_risk_beta
+        0.123  # proportion_asymptomatic
+    ]), return_full_details=True)
+
+    # Check things look broadly ok
+    assert len(sim) == 100  # One disease count per iteration
+    assert len(sim) == len(obs)  # Returned observations should be same length as the simulated number of iterations
+
+    # Check the returned parameters are correct (should be different to the default)
+    assert OpenCLRunner.create_parameters().proportion_asymptomatic != out_params.proportion_asymptomatic
+    assert out_params.proportion_asymptomatic == 0.123
+
