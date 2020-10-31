@@ -42,3 +42,9 @@ def test_get_mean_total_counts(setup_results):
         f"The mean length ({len(mean)}) should be the same as the number of iterations"
     # TODO Create some artificial data and check the mean is being calculated correctly
     # TODO Test for each iteation the mean should be within the min and max
+
+
+def test_run_model_with_params():
+    with pytest.raises(Exception):
+        # Running a model sould fail if the class hasn't been initialised first
+        OpenCLRunner.run_model_with_params([1,2])
