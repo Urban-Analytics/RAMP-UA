@@ -8,15 +8,47 @@ import itertools
 import yaml
 import time
 import tqdm
+import pandas as pd
 
+from typing import List
 from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.simulator import Simulator
 from microsim.opencl.ramp.run import run_headless
-from microsim.opencl.ramp.params import Params, LocationHazardMultipliers, IndividualHazardMultipliers
+from microsim.opencl.ramp.params import Params
 
 
-class Functions():
-    """Includes useful functions for the notebooks"""
+class OpenCLRunner:
+    """Includes useful functions for running the OpenCL model in notebooks"""
+
+    @classmethod
+    def init(cls, iterations: int, repetitions: int, observations: pd.DataFrame, num_seed_days: int, use_gpu: bool,
+             store_detailed_counts: bool, parameters_file: str, opencl_dir: str, snapshot_filepath: str):
+        """
+        The class variables determine how the model should run. They need to be class variables
+        because the 'run_model_with_params' function, which is called by calibration libraries, can only take
+        one parameter argument -- the parameters to calibrate -- not any others. The init() function sets these values.
+
+        :param iterations: Number of iterations to run for
+        :param repetitions: Number of repetitions
+        :param observations: A dataframe with the observation used to calculate fitness
+        :param num_seed_days: Number of days to seed the population
+        :param use_gpu: Whether to use the GPU
+        :param store_detailed_counts: Whether to store age-related exposure information
+        :param parameters_file:
+        :param opencl_dir:
+        :param snapshot_filepath:
+        :return:
+        """
+        cls.ITERATIONS = iterations
+        cls.REPETITIONS = repetitions
+        cls.OBSERVATIONS = observations
+        cls.NUM_SEED_DAYS = num_seed_days
+        cls.USE_GPU = use_gpu
+        cls.STORE_DETAILED_COUNTS = store_detailed_counts
+        cls.PARAMETERS_FILE = parameters_file
+        cls.OPENCL_DIR = opencl_dir
+        cls.SNAPSHOT_FILEPATH = snapshot_filepath
+        cls.initialised = True
 
     @staticmethod
     def fit_l2(obs: np.ndarray, sim: np.ndarray):
@@ -194,99 +226,43 @@ class Functions():
         print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)
         return to_return
 
+    @classmethod
+    def run_model_with_params(cls, input_params: List, return_full_details=False):
+        """Run a model REPETITIONS times using the provided parameter values.
 
-# FOR TESTING
+        :param input_params: The parameter values to pass, as a list. These need to correspond to specific parameters. Currently they are:
+           input_params[0] -> current_risk_beta
+        :param return_details: If True then rather than just returning the fitness,
+            return a tuple of (fitness, summaries_list, final_results_list).
+        :return: The mean fitness across all model runs
 
+        """
 
-def __run_model_current_risk_beta(x, return_full_details=False, multiprocess=False):
-    """Run a model REPETITIONS times using the provided value for the current_risk_beta.
+        current_risk_beta = input_params[0]
+        proportion_asymptomatic = input_params[1]
 
-    :param return_details: If True then rather than just returning the fitness,
-        return a tuple of (fitness, summaries_list, final_results_list).
-    :return: The mean fitness across all model runs
+        params = OpenCLRunner.create_parameters(
+            parameters_file=cls.PARAMETERS_FILE,
+            current_risk_beta=current_risk_beta,
+            proportion_asymptomatic=proportion_asymptomatic)
 
-    """
-    # Sometimes x might be passed as a number in a list
-    if isinstance(x, np.ndarray) or isinstance(x, list):
-        if len(x) > 1:
-            raise Exception(
-                f"The curent risk beta value (x) should either be a 1-element array or a single number, not {x}")
-        x = x[0]
-    params = Functions.create_parameters(parameters_file=os.path.join("../..", "model_parameters", "default.yml"),
-                                         current_risk_beta=x)
+        results = OpenCLRunner.run_opencl_model_multi(
+            repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,
+            opencl_dir=cls.OPENCL_DIR,
+            snapshot_filepath=cls.SNAPSHOP_FILEPATH,
+            multiprocess=False
+        )
 
-    results = Functions.run_opencl_model_multi(
-        repetitions=REPETITIONS, iterations=ITERATIONS, params=params,
-        opencl_dir=os.path.join("../..", "microsim", "opencl"),
-        snapshot_filepath=os.path.join("../..", "microsim", "opencl", "snapshots", "cache.npz"),
-        multiprocess=multiprocess
-    )
+        summaries = [x[0] for x in results]
+        final_results = [x[1] for x in results]
 
-    summaries = [x[0] for x in results]
-    final_results = [x[1] for x in results]  # These aren't used, just left here for reference
-
-    # Get mean cases per day from the summary object
-    sim = Functions.get_mean_total_counts(summaries, DiseaseStatus.Exposed.value)
-    # Compare these to the observations
-    obs = observations.loc[:ITERATIONS - 1, "Cases"].values
-    assert len(sim) == len(obs)
-    fitness = fit(sim, obs)
-    if return_full_details:
-        return (fitness, sim, obs)
-    else:
-        return fitness
-
-
-if __name__ == "__main__":
-    import multiprocessing as mp
-    import numpy as np
-    import yaml  # pyyaml library for reading the parameters.yml file
-    import os
-    import pandas as pd
-    import unittest
-    import pickle
-    import copy
-
-    import matplotlib.pyplot as plt
-
-    from microsim.opencl.ramp.run import run_headless
-    from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
-    from microsim.opencl.ramp.snapshot import Snapshot
-    from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
-    from microsim.opencl.ramp.simulator import Simulator
-    from microsim.opencl.ramp.disease_statuses import DiseaseStatus
-
-    PARAMETERS_FILENAME = "default.yml"  # Creates default parameters using the default.yml file
-    PARAMS = Functions.create_parameters(
-        parameters_file=os.path.join("../../", "model_parameters", PARAMETERS_FILENAME))
-
-    OPENCL_DIR = "../../microsim/opencl"
-    SNAPSHOT_FILEPATH = os.path.join(OPENCL_DIR, "snapshots", "cache.npz")
-    assert os.path.isfile(SNAPSHOT_FILEPATH), f"Snapshot doesn't exist: {SNAPSHOT_FILEPATH}"
-
-    observations = pd.read_csv("observation_data/gam_cases.csv", header=0, names=["Day", "Cases"], )
-    # The fitness function is defined in experiments_functions.py (so that it can be tested)
-    fit = Functions.fit_l2
-
-    ITERATIONS = 100  # Number of iterations to run for
-    NUM_SEED_DAYS = 10  # Number of days to seed the population
-    USE_GPU = False
-    STORE_DETAILED_COUNTS = False
-    REPETITIONS = 5
-
-    assert ITERATIONS < len(observations), \
-        f"Have more iterations ({ITERATIONS}) than observations ({len(observations)})."
-
-    (fitness, sim, obs) = __run_model_current_risk_beta(0.001, return_full_details=True, multiprocess=False)
-    # fitness = run_model_current_risk_beta(0.001)
-
-    print(f"fitness: {fitness}")
-    # list(zip(obs,sim))
-
-    from scipy.optimize import minimize
-
-    # x0 = np.array([1.3, 0.7, 0.8, 1.9, 1.2])
-    x0 = np.array([0.005])  # initial guess for each variable
-
-    res = minimize(__run_model_current_risk_beta, x0, method='nelder-mead',
-                   options={'xatol': 1e-8, 'disp': True})
+        # Get mean cases per day from the summary object
+        sim = OpenCLRunner.get_mean_total_counts(summaries, DiseaseStatus.Exposed.value)
+        # Compare these to the observations
+        obs = cls.OBSERVATIONS.loc[:cls.ITERATIONS - 1, "Cases"].values
+        assert len(sim) == len(obs)
+        fitness = OpenCLRunner.fit_l2(sim, obs)
+        if return_full_details:
+            return (fitness, sim, obs, params)
+        else:
+            return fitness
