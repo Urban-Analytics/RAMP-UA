@@ -1,6 +1,6 @@
 # Generic functions that are used in the experiments notebooks
 # Useful to put them in here so that they can be shared across notebooks
-# and can be tested (see tests/experiements/experiments_functions_tests.py)
+# and can be tested (see tests/experiements/opencl_runner_tests.py)
 import os
 import numpy as np
 import multiprocessing
@@ -15,7 +15,7 @@ from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.simulator import Simulator
 from microsim.opencl.ramp.run import run_headless
 from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
-
+from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 
 
 class OpenCLRunner:
@@ -238,6 +238,9 @@ class OpenCLRunner:
         :return: The mean fitness across all model runs
 
         """
+        if not cls.initialised:
+            raise Exception("The OpenCLRunner class needs to be initialised first. "
+                            "Call the OpenCLRunner.init() function")
 
         current_risk_beta = input_params[0]
         proportion_asymptomatic = input_params[1]
@@ -250,7 +253,7 @@ class OpenCLRunner:
         results = OpenCLRunner.run_opencl_model_multi(
             repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,
             opencl_dir=cls.OPENCL_DIR,
-            snapshot_filepath=cls.SNAPSHOP_FILEPATH,
+            snapshot_filepath=cls.SNAPSHOT_FILEPATH,
             multiprocess=False
         )
 
