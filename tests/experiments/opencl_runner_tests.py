@@ -65,7 +65,9 @@ def test_run_model_with_params():
 
     (fitness, sim, obs, out_params) = OpenCLRunner.run_model_with_params(np.array([
         0.005,  # current_risk_beta
-        0.123  # proportion_asymptomatic
+        0.123,  # proportion_asymptomatic
+        0.75,  # infection_log_scale
+        7.123  # infection_mode
     ]), return_full_details=True)
 
     # Check things look broadly ok
@@ -75,4 +77,6 @@ def test_run_model_with_params():
     # Check the returned parameters are correct (should be different to the default)
     assert OpenCLRunner.create_parameters().proportion_asymptomatic != out_params.proportion_asymptomatic
     assert out_params.proportion_asymptomatic == 0.123
+    assert out_params.infection_mode == 7.123
+
 

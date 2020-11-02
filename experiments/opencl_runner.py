@@ -86,7 +86,10 @@ class OpenCLRunner:
     @staticmethod
     def create_parameters(parameters_file: str = None,
                           current_risk_beta: float = None,
-                          proportion_asymptomatic: float = None):
+                          proportion_asymptomatic: float = None,
+                          infection_log_scale: float = None,
+                          infection_mode: float = None
+                          ):
         """Create a params object with the given arguments."""
 
         # If no parameters are provided then read the default parameters from a yml file
@@ -102,10 +105,10 @@ class OpenCLRunner:
         calibration_params = parameters["microsim_calibration"]
         disease_params = parameters["disease"]  # Parameters for the disease model (r)
 
+        # current_risk_beta needs to be set first  as the OpenCL model pre-multiplies the hazard multipliers by it
         if current_risk_beta is None:
             current_risk_beta = disease_params['current_risk_beta']
 
-        # The OpenCL model incorporates the current risk beta by pre-multiplying the hazard multipliers with it
         location_hazard_multipliers = LocationHazardMultipliers(
             retail=calibration_params["hazard_location_multipliers"]["Retail"] * current_risk_beta,
             primary_school=calibration_params["hazard_location_multipliers"]["PrimarySchool"] * current_risk_beta,
@@ -121,14 +124,23 @@ class OpenCLRunner:
             symptomatic=calibration_params["hazard_individual_multipliers"]["symptomatic"]
         )
 
+        # Some parameters are set in the default.yml file and can be overridden
         if proportion_asymptomatic is None:
             proportion_asymptomatic = disease_params["asymp_rate"]
 
-        return Params(
+        p = Params(
             location_hazard_multipliers=location_hazard_multipliers,
             individual_hazard_multipliers=individual_hazard_multipliers,
             proportion_asymptomatic=proportion_asymptomatic
         )
+
+        # Remaining parameters are defined within the Params class and have to be manually overridden
+        if infection_log_scale is not None:
+            p.infection_log_scale = infection_log_scale
+        if infection_mode is not None:
+            p.infection_mode = infection_mode
+
+        return p
 
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
@@ -235,11 +247,15 @@ class OpenCLRunner:
 
         current_risk_beta = input_params[0]
         proportion_asymptomatic = input_params[1]
+        infection_log_scale = input_params[2]
+        infection_mode = input_params[3]
 
         params = OpenCLRunner.create_parameters(
             parameters_file=cls.PARAMETERS_FILE,
             current_risk_beta=current_risk_beta,
-            proportion_asymptomatic=proportion_asymptomatic)
+            proportion_asymptomatic=proportion_asymptomatic,
+            infection_log_scale=infection_log_scale,
+            infection_mode=infection_mode)
 
         results = OpenCLRunner.run_opencl_model_multi(
             repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,
