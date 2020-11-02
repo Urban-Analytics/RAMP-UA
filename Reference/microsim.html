@@ -1,0 +1,286 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Python microsim model &mdash; RAMP-UA 0.2.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="OpenCL microsim model" href="ramp.html" />
+    <link rel="prev" title="RAMP-UA API Reference" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> RAMP-UA
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage/index.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">RAMP-UA API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Python model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-quantrampapi2-module">microsim.QUANTRampAPI2 module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-activity-location-module">microsim.activity_location module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-column-names-module">microsim.column_names module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-dashboard-module">microsim.dashboard module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-dashboard-quant-module">microsim.dashboard_QUANT module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-initialisation-cache-module">microsim.initialisation_cache module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-load-msoa-locations-module">microsim.load_msoa_locations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-main-module">microsim.main module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-microsim-initialisation-module">microsim.microsim_initialisation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-microsim-model-module">microsim.microsim_model module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-population-initialisation-module">microsim.population_initialisation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-quant-api-module">microsim.quant_api module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-r-interface-module">microsim.r_interface module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-utilities-module">microsim.utilities module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-contents">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ramp.html">OpenCL model</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">RAMP-UA</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="index.html">RAMP-UA API Reference</a> &raquo;</li>
+        
+      <li>Python microsim model</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/Reference/microsim.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="python-microsim-model">
+<h1>Python microsim model<a class="headerlink" href="#python-microsim-model" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-quantrampapi2-module">
+<h2>microsim.QUANTRampAPI2 module<a class="headerlink" href="#microsim-quantrampapi2-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-activity-location-module">
+<h2>microsim.activity_location module<a class="headerlink" href="#microsim-activity-location-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-column-names-module">
+<h2>microsim.column_names module<a class="headerlink" href="#microsim-column-names-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-dashboard-module">
+<h2>microsim.dashboard module<a class="headerlink" href="#microsim-dashboard-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-dashboard-quant-module">
+<h2>microsim.dashboard_QUANT module<a class="headerlink" href="#microsim-dashboard-quant-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-initialisation-cache-module">
+<h2>microsim.initialisation_cache module<a class="headerlink" href="#microsim-initialisation-cache-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-load-msoa-locations-module">
+<h2>microsim.load_msoa_locations module<a class="headerlink" href="#microsim-load-msoa-locations-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-main-module">
+<h2>microsim.main module<a class="headerlink" href="#microsim-main-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-microsim-initialisation-module">
+<h2>microsim.microsim_initialisation module<a class="headerlink" href="#microsim-microsim-initialisation-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-microsim-model-module">
+<h2>microsim.microsim_model module<a class="headerlink" href="#microsim-microsim-model-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-population-initialisation-module">
+<h2>microsim.population_initialisation module<a class="headerlink" href="#microsim-population-initialisation-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-quant-api-module">
+<h2>microsim.quant_api module<a class="headerlink" href="#microsim-quant-api-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-r-interface-module">
+<h2>microsim.r_interface module<a class="headerlink" href="#microsim-r-interface-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="microsim-utilities-module">
+<h2>microsim.utilities module<a class="headerlink" href="#microsim-utilities-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-contents">
+<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="ramp.html" class="btn btn-neutral float-right" title="OpenCL microsim model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="RAMP-UA API Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, RAMP UA Team
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
