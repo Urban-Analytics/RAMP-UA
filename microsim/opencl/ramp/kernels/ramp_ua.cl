@@ -105,8 +105,8 @@ uint sample_infection_duration(global uint4* rng, global const Params* params){
 }
 
 float get_mortality_prob_for_age(ushort age, global const Params* params){
-  uint bin_size = 10; // Years per bin
-  uint max_bin_idx = 8; // Largest bin index covers 80+
+  uint bin_size = 5; // Years per bin
+  uint max_bin_idx = 18; // Largest bin index covers 80+
   return params->mortality_probs[min(age/bin_size, max_bin_idx)];
 }
 
