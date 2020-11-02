@@ -63,7 +63,7 @@ typedef struct Params {
   float lockdown_multiplier; // Increase in time at home due to lockdown
   float place_hazard_multipliers[5]; // Hazard multipliers by activity
   float individual_hazard_multipliers[3]; // Hazard multipliers by activity
-  float mortality_probs[9]; // mortality probabilities by age group
+  float mortality_probs[19]; // mortality probabilities by age group
   float obesity_multipliers[4]; // mortality multipliers for obesity levels
   float symptomatic_probs[9]; // symptomatic probs by age group
   float cvd_multiplier; // mortality multipliers for cardiovascular disease
