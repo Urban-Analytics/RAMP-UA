@@ -56,7 +56,6 @@ def test_run_model_with_params():
         iterations=100,
         repetitions=5,
         observations=pd.DataFrame({"Day":range(1,120), "Cases":range(1,120)}),
-        num_seed_days=10,
         use_gpu=False,
         store_detailed_counts=False,
         parameters_file=os.path.join("model_parameters", "default.yml"),

@@ -22,7 +22,7 @@ class OpenCLRunner:
     """Includes useful functions for running the OpenCL model in notebooks"""
 
     @classmethod
-    def init(cls, iterations: int, repetitions: int, observations: pd.DataFrame, num_seed_days: int, use_gpu: bool,
+    def init(cls, iterations: int, repetitions: int, observations: pd.DataFrame, use_gpu: bool,
              store_detailed_counts: bool, parameters_file: str, opencl_dir: str, snapshot_filepath: str):
         """
         The class variables determine how the model should run. They need to be class variables
@@ -32,7 +32,6 @@ class OpenCLRunner:
         :param iterations: Number of iterations to run for
         :param repetitions: Number of repetitions
         :param observations: A dataframe with the observation used to calculate fitness
-        :param num_seed_days: Number of days to seed the population
         :param use_gpu: Whether to use the GPU
         :param store_detailed_counts: Whether to store age-related exposure information
         :param parameters_file:
@@ -43,7 +42,6 @@ class OpenCLRunner:
         cls.ITERATIONS = iterations
         cls.REPETITIONS = repetitions
         cls.OBSERVATIONS = observations
-        cls.NUM_SEED_DAYS = num_seed_days
         cls.USE_GPU = use_gpu
         cls.STORE_DETAILED_COUNTS = store_detailed_counts
         cls.PARAMETERS_FILE = parameters_file
@@ -134,7 +132,7 @@ class OpenCLRunner:
 
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
-                         opencl_dir: str, num_seed_days: int, use_gpu: bool,
+                         opencl_dir: str, use_gpu: bool,
                          store_detailed_counts: bool = True, quiet=False) -> (np.ndarray, np.ndarray):
         """
         Run the OpenCL model.
@@ -144,7 +142,6 @@ class OpenCLRunner:
         :param snapshot_filepath: Location of the snapshot (the model must have already been initialised)
         :param params: a Params object containing the parameters used to define how the model behaves
         :param opencl_dir: Location of the OpenCL code
-        :param num_seed_days: number of days to seed the model
         :param use_gpu: Whether to use the GPU to process it or not
         :param store_detailed_counts: Whether to store the age distributions for diseases (default True, if
           false then the model runs much more quickly).
@@ -162,13 +159,8 @@ class OpenCLRunner:
         # set the random seed of the model for each repetition, otherwise it is completely deterministic
         snapshot.seed_prngs(i)
 
-        # seed initial infections using GAM initial cases
-        data_dir = os.path.join(opencl_dir, "data")
-        snapshot.seed_initial_infections(num_seed_days=num_seed_days, data_dir=data_dir)
-
         # Create a simulator and upload the snapshot data to the OpenCL device
-        kernel_dir = os.path.join(opencl_dir, "ramp", "kernels")
-        simulator = Simulator(snapshot, kernel_dir=kernel_dir, gpu=use_gpu)
+        simulator = Simulator(snapshot, opencl_dir=opencl_dir, gpu=use_gpu)
         simulator.upload_all(snapshot.buffers)
 
         if not quiet:
@@ -202,12 +194,11 @@ class OpenCLRunner:
         l_snapshot_filepath = [snapshot_filepath] * repetitions
         l_params = [params] * repetitions
         l_opencl_dir = [opencl_dir] * repetitions
-        l_num_seed_days = [num_seed_days] * repetitions
         l_use_gpu = [use_gpu] * repetitions
         l_store_detailed_counts = [store_detailed_counts] * repetitions
         l_quiet = [True] * repetitions  # Don't print info
 
-        args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_num_seed_days, l_use_gpu,
+        args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_use_gpu,
                    l_store_detailed_counts, l_quiet)
         to_return = None
         start_time = time.time()
