@@ -274,6 +274,6 @@ class OpenCLRunner:
         assert len(sim) == len(obs)
         fitness = OpenCLRunner.fit_l2(sim, obs)
         if return_full_details:
-            return (fitness, sim, obs, params)
+            return fitness, sim, obs, params, summaries
         else:
             return fitness
