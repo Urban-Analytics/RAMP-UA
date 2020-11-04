@@ -63,7 +63,7 @@ typedef struct Params {
   float lockdown_multiplier; // Increase in time at home due to lockdown
   float place_hazard_multipliers[5]; // Hazard multipliers by activity
   float individual_hazard_multipliers[3]; // Hazard multipliers by activity
-  float mortality_probs[9]; // mortality probabilities by age group
+  float mortality_probs[19]; // mortality probabilities by age group
   float obesity_multipliers[4]; // mortality multipliers for obesity levels
   float symptomatic_probs[9]; // symptomatic probs by age group
   float cvd_multiplier; // mortality multipliers for cardiovascular disease
@@ -105,8 +105,8 @@ uint sample_infection_duration(global uint4* rng, global const Params* params){
 }
 
 float get_mortality_prob_for_age(ushort age, global const Params* params){
-  uint bin_size = 10; // Years per bin
-  uint max_bin_idx = 8; // Largest bin index covers 80+
+  uint bin_size = 5; // Years per bin
+  uint max_bin_idx = 18; // Largest bin index covers 80+
   return params->mortality_probs[min(age/bin_size, max_bin_idx)];
 }
 

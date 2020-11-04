@@ -270,7 +270,7 @@ def test_symptomatic_become_recovered_or_dead_young_age():
     proportion_dead = num_dead / npeople
 
     # expected recovery probability for ages 20 to 29
-    expected_proportion_dead = 0.000309
+    expected_proportion_dead = 0.0004
     expected_proportion_recovered = 1 - expected_proportion_dead
 
     assert np.isclose(expected_proportion_recovered, proportion_recovered, atol=0.0001)
@@ -311,7 +311,7 @@ def test_symptomatic_become_recovered_or_dead_old_age():
     proportion_dead = num_dead / npeople
 
     # expected recovery probability for ages 80+
-    expected_proportion_dead = 0.078
+    expected_proportion_dead = 0.1737
     expected_proportion_recovered = 1 - expected_proportion_dead
 
     assert np.isclose(expected_proportion_recovered, proportion_recovered, atol=0.01)

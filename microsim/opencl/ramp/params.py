@@ -54,7 +54,7 @@ class Params:
         self.exposed_shape = 3.93
         self.presymptomatic_scale = 2.45
         self.presymptomatic_shape = 7.12
-        self.infection_log_scale = 0.75
+        self.infection_log_scale = 0.35
         self.infection_mode = 7.0
         self.lockdown_multiplier = 1.0
         self.place_hazard_multipliers = np.array([location_hazard_multipliers.retail,
@@ -67,8 +67,8 @@ class Params:
                                                        individual_hazard_multipliers.asymptomatic,
                                                        individual_hazard_multipliers.symptomatic], dtype=np.float32)
 
-        self.mortality_probs = np.array([0.0000161, 0.0000695, 0.000309, 0.000844,
-                                         0.00161, 0.00595, 0.0193, 0.0428, 0.078],
+        self.mortality_probs = np.array([0.00, 0.0001, 0.0001, 0.0002, 0.0003, 0.0004, 0.0006, 0.0010, 0.0016, 0.0024, 0.0038, 0.0060, 0.0094, 0.0147,
+        0.0231, 0.0361, 0.0566, 0.0886, 0.1737],
                                         dtype=np.float32)
         self.obesity_multipliers = np.array(obesity_multipliers, dtype=np.float32)
         self.symptomatic_probs = np.array([0.21, 0.21, 0.45, 0.45,
@@ -137,13 +137,13 @@ class Params:
         p.infection_log_scale = params_array[6]
         p.infection_mode = params_array[7]
         p.lockdown_multiplier = params_array[8]
-        p.mortality_probs = params_array[17:26]
-        p.obesity_multipliers = params_array[26:30]
-        p.symptomatic_probs = params_array[30:39]
-        p.cvd_multiplier = params_array[39]
-        p.diabetes_multiplier = params_array[40]
-        p.bloodpressure_multiplier = params_array[41]
-        p.overweight_sympt_mplier = params_array[42]
+        p.mortality_probs = params_array[17:36]
+        p.obesity_multipliers = params_array[36:40]
+        p.symptomatic_probs = params_array[40:49]
+        p.cvd_multiplier = params_array[49]
+        p.diabetes_multiplier = params_array[50]
+        p.bloodpressure_multiplier = params_array[51]
+        p.overweight_sympt_mplier = params_array[52]
         return p
 
     def set_lockdown_multiplier(self, lockdown_multipliers, timestep):
