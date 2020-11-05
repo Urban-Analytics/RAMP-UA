@@ -1,8 +1,8 @@
 name: "build documentation and deploy to gh-pages"
-on: 
+on:
   push:
-    paths:
-      - docs/
+    branches:
+    - master
 
 jobs:
   docs:
