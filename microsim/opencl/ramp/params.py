@@ -38,7 +38,6 @@ class Params:
                         asymptomatic=0.75,
                         symptomatic=1.0
                     ),
-                 proportion_asymptomatic=0.4,
                  obesity_multipliers=[1, 1, 1, 1],
                  cvd_multiplier=1,
                  diabetes_multiplier=1,
@@ -49,12 +48,11 @@ class Params:
         if obesity_multipliers is None:
             obesity_multipliers = [1, 1, 1, 1]
         self.symptomatic_multiplier = 0.5
-        self.proportion_asymptomatic = proportion_asymptomatic
         self.exposed_scale = 2.82
-        self.exposed_shape = 3.93
+        self.exposed_shape = 3.99
         self.presymptomatic_scale = 2.45
-        self.presymptomatic_shape = 7.12
-        self.infection_log_scale = 0.75
+        self.presymptomatic_shape = 7.79
+        self.infection_log_scale = 0.35
         self.infection_mode = 7.0
         self.lockdown_multiplier = 1.0
         self.place_hazard_multipliers = np.array([location_hazard_multipliers.retail,
@@ -85,7 +83,6 @@ class Params:
             np.array(
                 [
                     self.symptomatic_multiplier,
-                    self.proportion_asymptomatic,
                     self.exposed_scale,
                     self.exposed_shape,
                     self.presymptomatic_scale,
@@ -116,11 +113,11 @@ class Params:
     @classmethod
     def fromarray(cls, params_array):
         location_hazard_multipliers = LocationHazardMultipliers(
-            retail=params_array[9],
-            primary_school=params_array[10],
-            secondary_school=params_array[11],
-            home=params_array[12],
-            work=params_array[13]
+            retail=params_array[8],
+            primary_school=params_array[9],
+            secondary_school=params_array[10],
+            home=params_array[11],
+            work=params_array[12]
         )
         individual_hazard_multipliers = IndividualHazardMultipliers(
             presymptomatic=params_array[14],
@@ -129,21 +126,20 @@ class Params:
         )
         p = cls(location_hazard_multipliers, individual_hazard_multipliers)
         p.symptomatic_multiplier = params_array[0]
-        p.proportion_asymptomatic = params_array[1]
-        p.exposed_scale = params_array[2]
-        p.exposed_shape = params_array[3]
-        p.presymptomatic_scale = params_array[4]
-        p.presymptomatic_shape = params_array[5]
-        p.infection_log_scale = params_array[6]
-        p.infection_mode = params_array[7]
-        p.lockdown_multiplier = params_array[8]
-        p.mortality_probs = params_array[17:26]
-        p.obesity_multipliers = params_array[26:30]
-        p.symptomatic_probs = params_array[30:39]
-        p.cvd_multiplier = params_array[39]
-        p.diabetes_multiplier = params_array[40]
-        p.bloodpressure_multiplier = params_array[41]
-        p.overweight_sympt_mplier = params_array[42]
+        p.exposed_scale = params_array[1]
+        p.exposed_shape = params_array[2]
+        p.presymptomatic_scale = params_array[3]
+        p.presymptomatic_shape = params_array[4]
+        p.infection_log_scale = params_array[5]
+        p.infection_mode = params_array[6]
+        p.lockdown_multiplier = params_array[7]
+        p.mortality_probs = params_array[16:25]
+        p.obesity_multipliers = params_array[25:29]
+        p.symptomatic_probs = params_array[29:38]
+        p.cvd_multiplier = params_array[38]
+        p.diabetes_multiplier = params_array[39]
+        p.bloodpressure_multiplier = params_array[40]
+        p.overweight_sympt_mplier = params_array[41]
         return p
 
     def set_lockdown_multiplier(self, lockdown_multipliers, timestep):

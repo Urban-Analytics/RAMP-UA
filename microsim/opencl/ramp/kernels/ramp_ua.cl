@@ -53,7 +53,6 @@ typedef enum Activity {
 */
 typedef struct Params {
   float symptomatic_multiplier; // Increase in time at home if symptomatic
-  float proportion_asymptomatic; // Proportion of cases that are asymptomatic
   float exposed_scale; // The scale of the distribution of exposed durations
   float exposed_shape; // The shape of the distribution of exposed durations
   float presymp_scale; // The scale of the distribution of presymptomatic durations
