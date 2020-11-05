@@ -88,7 +88,10 @@ class OpenCLRunner:
                           current_risk_beta: float = None,
                           proportion_asymptomatic: float = None,
                           infection_log_scale: float = None,
-                          infection_mode: float = None
+                          infection_mode: float = None,
+                          presymptomatic: float = None,
+                          asymptomatic: float = None,
+                          symptomatic: float = None
                           ):
         """Create a params object with the given arguments."""
 
@@ -119,9 +122,12 @@ class OpenCLRunner:
 
         # Individual hazard multipliers can be passed straight through
         individual_hazard_multipliers = IndividualHazardMultipliers(
-            presymptomatic=calibration_params["hazard_individual_multipliers"]["presymptomatic"],
-            asymptomatic=calibration_params["hazard_individual_multipliers"]["asymptomatic"],
-            symptomatic=calibration_params["hazard_individual_multipliers"]["symptomatic"]
+            presymptomatic=calibration_params["hazard_individual_multipliers"]["presymptomatic"] \
+                if presymptomatic is None else presymptomatic,
+            asymptomatic=calibration_params["hazard_individual_multipliers"]["asymptomatic"] \
+                if asymptomatic is None else asymptomatic,
+            symptomatic=calibration_params["hazard_individual_multipliers"]["symptomatic"] \
+                if symptomatic is None else symptomatic
         )
 
         # Some parameters are set in the default.yml file and can be overridden
@@ -236,7 +242,7 @@ class OpenCLRunner:
 
         :param input_params: The parameter values to pass, as a list. These need to correspond to specific parameters. Currently they are:
            input_params[0] -> current_risk_beta
-        :param return_details: If True then rather than just returning the fitness,
+        :param return_full_details: If True then rather than just returning the fitness,
             return a tuple of (fitness, summaries_list, final_results_list).
         :return: The mean fitness across all model runs
 
@@ -249,13 +255,19 @@ class OpenCLRunner:
         proportion_asymptomatic = input_params[1]
         infection_log_scale = input_params[2]
         infection_mode = input_params[3]
+        presymptomatic = input_params[4]
+        asymptomatic = input_params[5]
+        symptomatic = input_params[6]
 
         params = OpenCLRunner.create_parameters(
             parameters_file=cls.PARAMETERS_FILE,
             current_risk_beta=current_risk_beta,
             proportion_asymptomatic=proportion_asymptomatic,
             infection_log_scale=infection_log_scale,
-            infection_mode=infection_mode)
+            infection_mode=infection_mode,
+            presymptomatic=presymptomatic,
+            asymptomatic=asymptomatic,
+            symptomatic=symptomatic)
 
         results = OpenCLRunner.run_opencl_model_multi(
             repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,

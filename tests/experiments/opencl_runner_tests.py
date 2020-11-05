@@ -63,11 +63,14 @@ def test_run_model_with_params():
         snapshot_filepath=os.path.join("microsim", "opencl", "snapshots", "cache.npz")
     )
 
-    (fitness, sim, obs, out_params) = OpenCLRunner.run_model_with_params(np.array([
+    (fitness, sim, obs, out_params, summaries) = OpenCLRunner.run_model_with_params(np.array([
         0.005,  # current_risk_beta
         0.123,  # proportion_asymptomatic
         0.75,  # infection_log_scale
-        7.123  # infection_mode
+        7.123,  # infection_mode
+        1.0,  # presymptomatic
+        0.75, # asymptomatic
+        0.5  #symptomatic
     ]), return_full_details=True)
 
     # Check things look broadly ok
@@ -78,5 +81,13 @@ def test_run_model_with_params():
     assert OpenCLRunner.create_parameters().proportion_asymptomatic != out_params.proportion_asymptomatic
     assert out_params.proportion_asymptomatic == 0.123
     assert out_params.infection_mode == 7.123
+
+    # Individual hazard multipliers should be correct (I'm not sure why I can't access them with their
+    # names, e.g. 'out_params.individual_hazard_multipliers.asymptomatic')
+    assert out_params.individual_hazard_multipliers[0] == 1.0
+    assert out_params.individual_hazard_multipliers[1] == 0.75
+    assert out_params.individual_hazard_multipliers[2] == 0.5
+
+    # TODO: change parameters, run again, and check that the results make some sort of sense
 
 
