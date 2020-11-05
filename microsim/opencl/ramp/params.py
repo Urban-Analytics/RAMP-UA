@@ -52,6 +52,7 @@ class Params:
         self.exposed_shape = 3.99
         self.presymptomatic_scale = 2.45
         self.presymptomatic_shape = 7.79
+        self.presymptomatic_shape = 7.12
         self.infection_log_scale = 0.35
         self.infection_mode = 7.0
         self.lockdown_multiplier = 1.0
@@ -65,8 +66,8 @@ class Params:
                                                        individual_hazard_multipliers.asymptomatic,
                                                        individual_hazard_multipliers.symptomatic], dtype=np.float32)
 
-        self.mortality_probs = np.array([0.0000161, 0.0000695, 0.000309, 0.000844,
-                                         0.00161, 0.00595, 0.0193, 0.0428, 0.078],
+        self.mortality_probs = np.array([0.00, 0.0001, 0.0001, 0.0002, 0.0003, 0.0004, 0.0006, 0.0010, 0.0016, 0.0024, 0.0038, 0.0060, 0.0094, 0.0147,
+        0.0231, 0.0361, 0.0566, 0.0886, 0.1737],
                                         dtype=np.float32)
         self.obesity_multipliers = np.array(obesity_multipliers, dtype=np.float32)
         self.symptomatic_probs = np.array([0.21, 0.21, 0.45, 0.45,

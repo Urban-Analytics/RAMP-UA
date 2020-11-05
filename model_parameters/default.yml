@@ -50,8 +50,8 @@ disease: # This is where the parameter for the disease model (the R part) can go
   msoa_infect: "E02004161"
   number_people_local: 100
   local_prob_increase: 1.0
-  overweight_sympt_mplier: 1.46
-  obesity_40: 1.9
+  overweight_sympt_mplier: 1
+  obesity_40: 1.48
   obesity_35: 1.48
   obesity_30: 1.48
   overweight: 1
