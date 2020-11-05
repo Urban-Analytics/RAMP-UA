@@ -3,7 +3,7 @@ from tqdm import tqdm
 import pandas as pd
 import os
 
-#from microsim.opencl.ramp.inspector import Inspector
+from microsim.opencl.ramp.inspector import Inspector
 from microsim.opencl.ramp.params import Params
 from microsim.opencl.ramp.simulator import Simulator
 from microsim.opencl.ramp.summary import Summary
