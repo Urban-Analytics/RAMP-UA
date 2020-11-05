@@ -197,7 +197,6 @@ class OpenCLRunner:
     @staticmethod
     def run_opencl_model_multi(
             repetitions: int, iterations: int, params: Params,
-            num_seed_days: int = 10,
             use_gpu: bool = False, store_detailed_counts: bool = False,
             opencl_dir=os.path.join(".", "microsim", "opencl"),
             snapshot_filepath=os.path.join(".", "microsim", "opencl", "snapshots", "cache.npz"),
@@ -271,9 +270,8 @@ class OpenCLRunner:
 
         results = OpenCLRunner.run_opencl_model_multi(
             repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,
-            opencl_dir=cls.OPENCL_DIR,
-            snapshot_filepath=cls.SNAPSHOT_FILEPATH,
-            multiprocess=False
+            opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
+            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False
         )
 
         summaries = [x[0] for x in results]
