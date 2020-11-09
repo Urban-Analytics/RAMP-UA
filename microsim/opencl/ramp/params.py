@@ -52,7 +52,6 @@ class Params:
         self.exposed_shape = 3.99
         self.presymptomatic_scale = 2.45
         self.presymptomatic_shape = 7.79
-        self.presymptomatic_shape = 7.12
         self.infection_log_scale = 0.35
         self.infection_mode = 7.0
         self.lockdown_multiplier = 1.0
@@ -134,13 +133,13 @@ class Params:
         p.infection_log_scale = params_array[5]
         p.infection_mode = params_array[6]
         p.lockdown_multiplier = params_array[7]
-        p.mortality_probs = params_array[16:25]
-        p.obesity_multipliers = params_array[25:29]
-        p.symptomatic_probs = params_array[29:38]
-        p.cvd_multiplier = params_array[38]
-        p.diabetes_multiplier = params_array[39]
-        p.bloodpressure_multiplier = params_array[40]
-        p.overweight_sympt_mplier = params_array[41]
+        p.mortality_probs = params_array[16:35]
+        p.obesity_multipliers = params_array[35:39]
+        p.symptomatic_probs = params_array[39:48]
+        p.cvd_multiplier = params_array[48]
+        p.diabetes_multiplier = params_array[49]
+        p.bloodpressure_multiplier = params_array[50]
+        p.overweight_sympt_mplier = params_array[51]
         return p
 
     def set_lockdown_multiplier(self, lockdown_multipliers, timestep):
