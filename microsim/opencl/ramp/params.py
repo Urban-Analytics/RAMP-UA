@@ -120,9 +120,9 @@ class Params:
             work=params_array[12]
         )
         individual_hazard_multipliers = IndividualHazardMultipliers(
-            presymptomatic=params_array[14],
-            asymptomatic=params_array[15],
-            symptomatic=params_array[16]
+            presymptomatic=params_array[13],
+            asymptomatic=params_array[14],
+            symptomatic=params_array[15]
         )
         p = cls(location_hazard_multipliers, individual_hazard_multipliers)
         p.symptomatic_multiplier = params_array[0]
