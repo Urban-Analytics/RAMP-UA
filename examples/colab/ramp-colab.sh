@@ -22,7 +22,7 @@ install_ramp () {
     fi
 
     # download the specific notebook functions file
-    curl -O https://raw.githubusercontent.com/Urban-Analytics/RAMP-UA/master/experiments/functions.py
+    curl -O https://raw.githubusercontent.com/Urban-Analytics/RAMP-UA/master/experiments/opencl_runner.py
 
     # download cache file
     curl -o default.npz https://zenodo.org/record/4153512/files/default.npz?download=1
