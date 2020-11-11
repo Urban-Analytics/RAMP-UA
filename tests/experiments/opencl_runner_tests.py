@@ -65,11 +65,10 @@ def test_run_model_with_params():
 
     (fitness, sim, obs, out_params, summaries) = OpenCLRunner.run_model_with_params(np.array([
         0.005,  # current_risk_beta
-        0.123,  # proportion_asymptomatic
         0.75,  # infection_log_scale
         7.123,  # infection_mode
         1.0,  # presymptomatic
-        0.75, # asymptomatic
+        0.75,  # asymptomatic
         0.5  #symptomatic
     ]), return_full_details=True)
 
@@ -78,8 +77,6 @@ def test_run_model_with_params():
     assert len(sim) == len(obs)  # Returned observations should be same length as the simulated number of iterations
 
     # Check the returned parameters are correct (should be different to the default)
-    assert OpenCLRunner.create_parameters().proportion_asymptomatic != out_params.proportion_asymptomatic
-    assert out_params.proportion_asymptomatic == 0.123
     assert out_params.infection_mode == 7.123
 
     # Individual hazard multipliers should be correct (I'm not sure why I can't access them with their

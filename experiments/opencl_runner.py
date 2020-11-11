@@ -86,7 +86,6 @@ class OpenCLRunner:
     @staticmethod
     def create_parameters(parameters_file: str = None,
                           current_risk_beta: float = None,
-                          proportion_asymptomatic: float = None,
                           infection_log_scale: float = None,
                           infection_mode: float = None,
                           presymptomatic: float = None,
@@ -131,13 +130,11 @@ class OpenCLRunner:
         )
 
         # Some parameters are set in the default.yml file and can be overridden
-        if proportion_asymptomatic is None:
-            proportion_asymptomatic = disease_params["asymp_rate"]
+        pass  # None here yet
 
         p = Params(
             location_hazard_multipliers=location_hazard_multipliers,
             individual_hazard_multipliers=individual_hazard_multipliers,
-            proportion_asymptomatic=proportion_asymptomatic
         )
 
         # Remaining parameters are defined within the Params class and have to be manually overridden
@@ -251,17 +248,15 @@ class OpenCLRunner:
                             "Call the OpenCLRunner.init() function")
 
         current_risk_beta = input_params[0]
-        proportion_asymptomatic = input_params[1]
-        infection_log_scale = input_params[2]
-        infection_mode = input_params[3]
-        presymptomatic = input_params[4]
-        asymptomatic = input_params[5]
-        symptomatic = input_params[6]
+        infection_log_scale = input_params[1]
+        infection_mode = input_params[2]
+        presymptomatic = input_params[3]
+        asymptomatic = input_params[4]
+        symptomatic = input_params[5]
 
         params = OpenCLRunner.create_parameters(
             parameters_file=cls.PARAMETERS_FILE,
             current_risk_beta=current_risk_beta,
-            proportion_asymptomatic=proportion_asymptomatic,
             infection_log_scale=infection_log_scale,
             infection_mode=infection_mode,
             presymptomatic=presymptomatic,
