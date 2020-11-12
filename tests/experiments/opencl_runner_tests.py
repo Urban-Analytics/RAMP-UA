@@ -88,28 +88,35 @@ def test_run_model_with_params():
     # TODO: change parameters, run again, and check that the results make some sort of sense
 
 
+
+#**********************#**********************
+#
+# Temporary code used to easily run and debufg some of the notebook functions.
+#
+#**********************##**********************
+
 def distance(sim, obs):
     fit = OpenCLRunner.fit_l2(sim["data"], obs["data"])
     print(fit)
     return fit
 
-def run_temp(input_params_dict):
-    """Temporary while debugging ABC"""
-    presymptomatic = input_params_dict["presymp"]
-    pseudo_obs = np.array([38, 69, 83, 85, 86, 90, 103, 133, 182,
-           257, 366, 512, 741, 1064, 1461, 2001, 2522, 3093,
-           3597, 4089, 4708, 5462, 6425, 7504, 8605, 9718, 10563,
-           11022, 11231, 11133, 10724, 10127, 9447, 8743, 7983, 7296,
-           6716, 6137, 5651, 5117, 4697, 4282, 3885, 3545, 3245,
-           2986, 2766, 2567, 2384, 2208, 2078, 1967, 1884, 1817,
-           1768, 1709, 1655, 1615, 1564, 1517, 1493, 1460, 1409,
-           1386, 1370, 1348, 1293, 1249, 1231, 1192, 1157, 1131,
-           1088, 1050, 1010, 988, 963, 927, 907, 894, 882,
-           872, 863, 840, 832, 812, 802, 795, 795, 800,
-           801, 802, 791, 800, 801, 793, 792, 792, 794,
-           786])
-    print(f"Ran Model. Presymp value: {presymptomatic} ")
-    return {"data": np.array([round(x + random.random()) for x in pseudo_obs]) }
+# def run_temp(input_params_dict):
+#     """Temporary while debugging ABC"""
+#     presymptomatic = input_params_dict["presymp"]
+#     pseudo_obs = np.array([38, 69, 83, 85, 86, 90, 103, 133, 182,
+#            257, 366, 512, 741, 1064, 1461, 2001, 2522, 3093,
+#            3597, 4089, 4708, 5462, 6425, 7504, 8605, 9718, 10563,
+#            11022, 11231, 11133, 10724, 10127, 9447, 8743, 7983, 7296,
+#            6716, 6137, 5651, 5117, 4697, 4282, 3885, 3545, 3245,
+#            2986, 2766, 2567, 2384, 2208, 2078, 1967, 1884, 1817,
+#            1768, 1709, 1655, 1615, 1564, 1517, 1493, 1460, 1409,
+#            1386, 1370, 1348, 1293, 1249, 1231, 1192, 1157, 1131,
+#            1088, 1050, 1010, 988, 963, 927, 907, 894, 882,
+#            872, 863, 840, 832, 812, 802, 795, 795, 800,
+#            801, 802, 791, 800, 801, 793, 792, 792, 794,
+#            786])
+#     print(f"Ran Model. Presymp value: {presymptomatic} ")
+#     return {"data": np.array([round(x + random.random()) for x in pseudo_obs]) }
 
 if __name__=="__main__":
     import multiprocessing as mp
