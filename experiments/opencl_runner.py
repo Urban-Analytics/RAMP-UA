@@ -49,6 +49,32 @@ class OpenCLRunner:
         cls.SNAPSHOT_FILEPATH = snapshot_filepath
         cls.initialised = True
 
+    @classmethod
+    def update(cls, iterations: int = None, repetitions: int = None, observations: pd.DataFrame = None,
+               use_gpu: bool = None, store_detailed_counts: bool = None, parameters_file: str = None,
+               opencl_dir: str = None, snapshot_filepath: str = None):
+        """
+        Update any of the variables that have already been initialised
+        """
+        if not cls.initialised:
+            raise Exception("The OpenCLRunner class needs to be initialised first; call OpenCLRunner.init()")
+        if iterations is not None:
+            cls.ITERATIONS = iterations
+        if repetitions is not None:
+            cls.REPETITIONS = repetitions
+        if observations is not None:
+            cls.OBSERVATIONS = observations
+        if use_gpu is not None:
+            cls.USE_GPU = use_gpu
+        if store_detailed_counts is not None:
+            cls.STORE_DETAILED_COUNTS = store_detailed_counts
+        if parameters_file is not None:
+            cls.PARAMETERS_FILE = parameters_file
+        if opencl_dir is not None:
+            cls.OPENCL_DIR = opencl_dir
+        if snapshot_filepath is not None:
+            cls.SNAPSHOT_FILEPATH = snapshot_filepath
+
     @staticmethod
     def fit_l2(obs: np.ndarray, sim: np.ndarray):
         """Calculate the fitness of a model.
@@ -282,3 +308,31 @@ class OpenCLRunner:
             return fitness, sim, obs, params, summaries
         else:
             return fitness
+
+    @classmethod
+    def run_model_with_params0(cls, input_params_dict: dict):
+        """TEMP to work with ABC. Parameters are passed in as a dictionary"""
+        if not cls.initialised:
+            raise Exception("The OpenCLRunner class needs to be initialised first. "
+                            "Call the OpenCLRunner.init() function")
+
+        presymptomatic = input_params_dict["presymp"]
+
+        params = OpenCLRunner.create_parameters(
+            parameters_file=cls.PARAMETERS_FILE,
+            presymptomatic=presymptomatic,
+        )
+
+        results = OpenCLRunner.run_opencl_model_multi(
+            repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,
+            opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
+            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False
+        )
+
+        summaries = [x[0] for x in results]
+        # Return the expexted counts in a dictionary
+        results = OpenCLRunner.get_mean_total_counts(summaries, DiseaseStatus.Exposed.value)
+        print(f"Ran Model. Presymp: {presymptomatic} ("
+              f"{[round(params.individual_hazard_multipliers[i],3) for i in [0,1,2] ]}) "
+              f"Sum result: {sum(results)}")
+        return {"data": results}
