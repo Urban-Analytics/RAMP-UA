@@ -9,6 +9,7 @@ import yaml
 import time
 import tqdm
 import pandas as pd
+import random
 
 from typing import List
 from microsim.opencl.ramp.snapshot import Snapshot
@@ -223,13 +224,15 @@ class OpenCLRunner:
             use_gpu: bool = False, store_detailed_counts: bool = False,
             opencl_dir=os.path.join(".", "microsim", "opencl"),
             snapshot_filepath=os.path.join(".", "microsim", "opencl", "snapshots", "cache.npz"),
-            multiprocess=False):
+            multiprocess=False,
+            random_ids=False):
         """Run a number of models and return a list of summaries.
 
         :param multiprocess: Whether to run in mutliprocess mode (default False)
         """
         # Prepare the function arguments. We need one set of arguments per repetition
-        l_i = [i for i in range(repetitions)]
+        l_i = [i for i in range(repetitions)] if not random_ids else \
+            [random.randint(1, 100000) for _ in range(repetitions)]
         l_iterations = [iterations] * repetitions
         l_snapshot_filepath = [snapshot_filepath] * repetitions
         l_params = [params] * repetitions
@@ -326,7 +329,7 @@ class OpenCLRunner:
         results = OpenCLRunner.run_opencl_model_multi(
             repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,
             opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
-            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False
+            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False, random_ids=True
         )
 
         summaries = [x[0] for x in results]
