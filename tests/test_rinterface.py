@@ -4,8 +4,6 @@ import pandas as pd
 import numpy as np
 from microsim.microsim_model import Microsim
 from microsim.r_interface import RInterface
-from microsim.column_names import ColumnNames
-from microsim.activity_location import ActivityLocation
 
 # ********************************************************
 # These tests run through a whole dummy model process
