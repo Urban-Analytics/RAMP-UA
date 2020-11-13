@@ -11,7 +11,7 @@ from microsim.r_interface import RInterface
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
 
-R_script_dir = os.path.abspath(os.path.join(test_dir, '..','R','py_int'))
+R_script_dir = os.path.join('R','py_int')
 
 # arguments used when calling the Microsim constructor. Usually these are the same
 microsim_args = {"data_dir": os.path.join(test_dir,"dummy_data"), "disable_disease_status": True}
