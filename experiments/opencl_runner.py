@@ -9,6 +9,7 @@ import yaml
 import time
 import tqdm
 import pandas as pd
+import random
 
 from typing import List
 from microsim.opencl.ramp.snapshot import Snapshot
@@ -49,6 +50,32 @@ class OpenCLRunner:
         cls.SNAPSHOT_FILEPATH = snapshot_filepath
         cls.initialised = True
 
+    @classmethod
+    def update(cls, iterations: int = None, repetitions: int = None, observations: pd.DataFrame = None,
+               use_gpu: bool = None, store_detailed_counts: bool = None, parameters_file: str = None,
+               opencl_dir: str = None, snapshot_filepath: str = None):
+        """
+        Update any of the variables that have already been initialised
+        """
+        if not cls.initialised:
+            raise Exception("The OpenCLRunner class needs to be initialised first; call OpenCLRunner.init()")
+        if iterations is not None:
+            cls.ITERATIONS = iterations
+        if repetitions is not None:
+            cls.REPETITIONS = repetitions
+        if observations is not None:
+            cls.OBSERVATIONS = observations
+        if use_gpu is not None:
+            cls.USE_GPU = use_gpu
+        if store_detailed_counts is not None:
+            cls.STORE_DETAILED_COUNTS = store_detailed_counts
+        if parameters_file is not None:
+            cls.PARAMETERS_FILE = parameters_file
+        if opencl_dir is not None:
+            cls.OPENCL_DIR = opencl_dir
+        if snapshot_filepath is not None:
+            cls.SNAPSHOT_FILEPATH = snapshot_filepath
+
     @staticmethod
     def fit_l2(obs: np.ndarray, sim: np.ndarray):
         """Calculate the fitness of a model.
@@ -86,7 +113,6 @@ class OpenCLRunner:
     @staticmethod
     def create_parameters(parameters_file: str = None,
                           current_risk_beta: float = None,
-                          proportion_asymptomatic: float = None,
                           infection_log_scale: float = None,
                           infection_mode: float = None,
                           presymptomatic: float = None,
@@ -131,13 +157,11 @@ class OpenCLRunner:
         )
 
         # Some parameters are set in the default.yml file and can be overridden
-        if proportion_asymptomatic is None:
-            proportion_asymptomatic = disease_params["asymp_rate"]
+        pass  # None here yet
 
         p = Params(
             location_hazard_multipliers=location_hazard_multipliers,
             individual_hazard_multipliers=individual_hazard_multipliers,
-            proportion_asymptomatic=proportion_asymptomatic
         )
 
         # Remaining parameters are defined within the Params class and have to be manually overridden
@@ -200,13 +224,15 @@ class OpenCLRunner:
             use_gpu: bool = False, store_detailed_counts: bool = False,
             opencl_dir=os.path.join(".", "microsim", "opencl"),
             snapshot_filepath=os.path.join(".", "microsim", "opencl", "snapshots", "cache.npz"),
-            multiprocess=False):
+            multiprocess=False,
+            random_ids=False):
         """Run a number of models and return a list of summaries.
 
         :param multiprocess: Whether to run in mutliprocess mode (default False)
         """
         # Prepare the function arguments. We need one set of arguments per repetition
-        l_i = [i for i in range(repetitions)]
+        l_i = [i for i in range(repetitions)] if not random_ids else \
+            [random.randint(1, 100000) for _ in range(repetitions)]
         l_iterations = [iterations] * repetitions
         l_snapshot_filepath = [snapshot_filepath] * repetitions
         l_params = [params] * repetitions
@@ -251,17 +277,15 @@ class OpenCLRunner:
                             "Call the OpenCLRunner.init() function")
 
         current_risk_beta = input_params[0]
-        proportion_asymptomatic = input_params[1]
-        infection_log_scale = input_params[2]
-        infection_mode = input_params[3]
-        presymptomatic = input_params[4]
-        asymptomatic = input_params[5]
-        symptomatic = input_params[6]
+        infection_log_scale = input_params[1]
+        infection_mode = input_params[2]
+        presymptomatic = input_params[3]
+        asymptomatic = input_params[4]
+        symptomatic = input_params[5]
 
         params = OpenCLRunner.create_parameters(
             parameters_file=cls.PARAMETERS_FILE,
             current_risk_beta=current_risk_beta,
-            proportion_asymptomatic=proportion_asymptomatic,
             infection_log_scale=infection_log_scale,
             infection_mode=infection_mode,
             presymptomatic=presymptomatic,
@@ -287,3 +311,31 @@ class OpenCLRunner:
             return fitness, sim, obs, params, summaries
         else:
             return fitness
+
+    @classmethod
+    def run_model_with_params0(cls, input_params_dict: dict):
+        """TEMP to work with ABC. Parameters are passed in as a dictionary"""
+        if not cls.initialised:
+            raise Exception("The OpenCLRunner class needs to be initialised first. "
+                            "Call the OpenCLRunner.init() function")
+
+        presymptomatic = input_params_dict["presymp"]
+
+        params = OpenCLRunner.create_parameters(
+            parameters_file=cls.PARAMETERS_FILE,
+            presymptomatic=presymptomatic,
+        )
+
+        results = OpenCLRunner.run_opencl_model_multi(
+            repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,
+            opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
+            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False, random_ids=True
+        )
+
+        summaries = [x[0] for x in results]
+        # Return the expexted counts in a dictionary
+        results = OpenCLRunner.get_mean_total_counts(summaries, DiseaseStatus.Exposed.value)
+        print(f"Ran Model. Presymp: {presymptomatic} ("
+              f"{[round(params.individual_hazard_multipliers[i],3) for i in [0,1,2] ]}) "
+              f"Sum result: {sum(results)}")
+        return {"data": results}
