@@ -79,7 +79,7 @@ run_status <- function(pop,
   
   if(timestep==1) {
     # windows does not allow colons in folder names so substitute sys.time() to hyphen
-    tmp.dir <<- paste0(getwd(), "/output/", gsub(":","-", gsub(" ","-",Sys.time())))
+    tmp.dir <<- paste0('R/py_int', "/output/", gsub(":","-", gsub(" ","-",Sys.time())))
     
     if(!dir.exists(tmp.dir)){
       dir.create(tmp.dir, recursive = TRUE)
