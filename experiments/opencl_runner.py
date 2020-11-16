@@ -253,9 +253,9 @@ class OpenCLRunner:
             finally:  # Make sure they get closed (shouldn't be necessary)
                 pool.close()
         else:
+            results = itertools.starmap(OpenCLRunner.run_opencl_model, args)
             # Return as a list to force the models to execute (otherwise this is delayed because starmap returns
             # a generator. Also means we can use tqdm to get a progress bar, which is nice.
-            results = itertools.starmap(OpenCLRunner.run_opencl_model, args)
             to_return = [x for x in tqdm.tqdm(results, desc="Running models", total=repetitions)]
 
         print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)
