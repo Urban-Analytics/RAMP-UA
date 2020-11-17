@@ -20,7 +20,7 @@ def setup_results():
     results = OpenCLRunner.run_opencl_model_multi(
         repetitions=5, iterations=100, params=params)
     yield results
-    # Colud put close-down code here
+    # Could put close-down code here
 
 
 def test_fit_l2():
@@ -87,4 +87,13 @@ def test_run_model_with_params():
 
     # TODO: change parameters, run again, and check that the results make some sort of sense
 
+def test_get_cumulative_new_infections(setup_results):
+    summaries = [x[0] for x in setup_results ]
+    cumulative_infections = OpenCLRunner.get_cumulative_new_infections(summaries)
+    # Check that the number is correct at the last iteration
+    num_infected_at_end = 0
+    for d, disease_status in enumerate(DiseaseStatus):
+        if disease_status != DiseaseStatus.Susceptible:
+            num_infected_at_end += OpenCLRunner.get_mean_total_counts(summaries, d)[-1]
+    assert num_infected_at_end == cumulative_infections[-1]
 

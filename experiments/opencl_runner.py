@@ -95,12 +95,17 @@ class OpenCLRunner:
         return np.linalg.norm(np.array(obs) - np.array(sim))
 
     @staticmethod
-    def get_mean_total_counts(summaries, disease_status: int):
+    def get_mean_total_counts(summaries, disease_status: int, get_sd=False):
         """
         Get the mean total counts for a given disease status at every iteration over a number of model repetitions
 
         :param summaries: A list of Summary objects created by running the OpenCL model
         :param disease_status: The disease status number, e.g.  `DiseaseStatus.Exposed.value`
+        :param get_sd: Optionally get the standard deviation as well
+
+        :return: The mean total counts of the disease status per iteration, or (if get_sd=True)
+            or a tuple of (mean,sd)
+
         """
         reps = len(summaries)  # Number of repetitions
         iters = len(summaries[0].total_counts[disease_status])  # Number of iterations for each repetition
@@ -108,7 +113,27 @@ class OpenCLRunner:
         for rep in range(reps):
             matrix[rep] = summaries[rep].total_counts[disease_status]
         mean = np.mean(matrix, axis=0)
-        return mean
+        sd = np.std(matrix, axis=0)
+        if get_sd:
+            return mean, sd
+        else:
+            return mean
+
+    @staticmethod
+    def get_cumulative_new_infections(summaries):
+        """
+        Get cumulative infections per day by summing all the non-susceptible people
+
+        :param summaries: A list of Summary objects created by running the OpenCL model
+        """
+        iters = len(summaries[0].total_counts[DiseaseStatus.Exposed.value])  # Number of iterations for each repetition
+        total_not_susceptible = np.zeros(iters)  # Total people not susceptible per iteration
+        for d, disease_status in enumerate(DiseaseStatus):
+            if disease_status != DiseaseStatus.Susceptible:
+                mean = OpenCLRunner.get_mean_total_counts(summaries, d)  # Mean number of people with that disease
+                total_not_susceptible = total_not_susceptible + mean
+        return total_not_susceptible
+
 
     @staticmethod
     def create_parameters(parameters_file: str = None,
