@@ -36,6 +36,12 @@ def test_fit_l2():
         f(1, [1, 2])
         f("b", "a")
 
+    fit1 = f([1,2,3], [2,3,4])
+    fit2 = f([1,2,3], [5,6,7])
+    assert fit1 < fit2
+    fit3 = f([5,6,7], [1,2,3])
+    assert fit2 == fit3
+
 def test_get_mean_total_counts(setup_results):
     """Test that we get the correct mean total count from a numberof model repetitions"""
     # Run it on normal data to check basic stuff

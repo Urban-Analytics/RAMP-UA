@@ -326,8 +326,8 @@ class OpenCLRunner:
         summaries = [x[0] for x in results]
         final_results = [x[1] for x in results]
 
-        # Get mean cases per day from the summary object
-        sim = OpenCLRunner.get_mean_total_counts(summaries, DiseaseStatus.Exposed.value)
+        # Get the cumulative number of new infections per day
+        sim = OpenCLRunner.get_cumulative_new_infections(summaries)
         # Compare these to the observations
         obs = cls.OBSERVATIONS.loc[:cls.ITERATIONS - 1, "Cases"].values
         assert len(sim) == len(obs)
@@ -359,7 +359,7 @@ class OpenCLRunner:
 
         summaries = [x[0] for x in results]
         # Return the expexted counts in a dictionary
-        results = OpenCLRunner.get_mean_total_counts(summaries, DiseaseStatus.Exposed.value)
+        results = OpenCLRunner.get_cumulative_new_infections(summaries)
         print(f"Ran Model. Presymp: {presymptomatic} ("
               f"{[round(params.individual_hazard_multipliers[i],3) for i in [0,1,2] ]}) "
               f"Sum result: {sum(results)}")
