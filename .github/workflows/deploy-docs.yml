@@ -1,15 +1,15 @@
 name: "build documentation and deploy to gh-pages"
-on: 
+on:
   push:
-    paths:
-      - docs/
+    branches:
+    - master
 
 jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - uses: conda-incubator/setup-miniconda@v1
+    - uses: conda-incubator/setup-miniconda@v2
       with:
         activate-environment: ramp-ua
         environment-file: environment.yml

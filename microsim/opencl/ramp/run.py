@@ -10,7 +10,7 @@ from microsim.opencl.ramp.summary import Summary
 from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 
 
-def run_opencl(snapshot, iterations=100, data_dir="./data", use_gui=True, use_gpu=False, quiet=False):
+def run_opencl(snapshot, iterations=100, data_dir="./data", use_gui=True, use_gpu=False, num_seed_days=5, quiet=False):
     """
     Entry point for running the OpenCL simulation either with the UI or in headless mode.
     NB: in order to write output data for the OpenCL dashboard you must run in headless mode.
@@ -20,7 +20,7 @@ def run_opencl(snapshot, iterations=100, data_dir="./data", use_gui=True, use_gp
         print(f"\nSnapshot Size:\t{int(snapshot.num_bytes() / 1000000)} MB\n")
 
     # Create a simulator and upload the snapshot data to the OpenCL device
-    simulator = Simulator(snapshot, use_gpu)
+    simulator = Simulator(snapshot, use_gpu, num_seed_days=num_seed_days)
     simulator.upload_all(snapshot.buffers)
     if not quiet:
         print(f"Platform:\t{simulator.platform_name()}\nDevice:\t\t{simulator.device_name()}\n")

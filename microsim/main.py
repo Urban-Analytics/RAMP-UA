@@ -40,6 +40,8 @@ from microsim.initialisation_cache import InitialisationCache
               help="Parameters file to use to configure the model. Default: ./model_parameters/default.yml")
 @click.option('-npf', '--no-parameters-file', is_flag=True,
               help="Don't read a parameters file, use command line arguments instead")
+@click.option('-init', '--initialise', is_flag=True,
+              help="Just initialise the model and create caches and snapshots. Dont' run it.")
 @click.option('-i', '--iterations', default=10, help='Number of model iterations. 0 means just run the initialisation')
 @click.option('-s', '--scenario', default="default", help="Name this scenario; output results will be put into a "
                                                           "directory with this name.")
@@ -61,7 +63,7 @@ from microsim.initialisation_cache import InitialisationCache
               help="Run the OpenCL model with GUI visualisation for OpenCL model")
 @click.option('-gpu', '--opencl-gpu/--no-opencl-gpu', default=False,
               help="Run OpenCL model on the GPU (if false then run using CPU")
-def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, output, output_every_iteration,
+def main(parameters_file, no_parameters_file, initialise, iterations, scenario, data_dir, output, output_every_iteration,
                debug, repetitions, lockdown_file, quant_dir, use_cache, opencl, opencl_gui, opencl_gpu):
     """
     Main function which runs the population initialisation, then chooses which model to run, either the Python/R
@@ -98,8 +100,9 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
             quant_dir = sim_params["quant-dir"]
 
     # Check the parameters are sensible
-    if iterations < 0:
-        raise ValueError("Iterations must be > 0")
+    if iterations < 1:
+        raise ValueError("Iterations must be > 1. If you want to just initialise the model and then exit, use"
+                         "the --initialise flag")
     if repetitions < 1:
         raise ValueError("Repetitions must be greater than 0")
     if (not output) and output_every_iteration:
@@ -109,8 +112,10 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
     print(f"Running model with the following parameters:\n"
           f"\tParameters file: {parameters_file}\n"
           f"\tScenario directory: {scenario}\n"
+          f"\tInitialise (and then exit?): {initialise}\n"
           f"\tNumber of iterations: {iterations}\n"
           f"\tData dir: {data_dir}\n"
+          f"\tUsing quant data? {'no' if quant_dir is None else ('yes: '+quant_dir)}\n"
           f"\tOutputting results?: {output}\n"
           f"\tOutputting results at every iteration?: {output_every_iteration}\n"
           f"\tDebug mode?: {debug}\n"
@@ -122,9 +127,6 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
           f"\tUse OpenCL GPU for processing?: {opencl_gpu}\n",
           f"\tCalibration parameters: {'N/A (not reading parameters file)' if no_parameters_file else str(calibration_params)}\n",
           f"\tDisease parameters: {'N/A (not reading parameters file)' if no_parameters_file else str(disease_params)}\n")
-
-    if iterations == 0:
-        print("Iterations = 0. Not stepping model, just assigning the initial risks.")
 
     # To fix file path issues, use absolute/full path at all times
     # Pick either: get working directory (if user starts this script in place, or set working directory
@@ -156,7 +158,7 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
                        "quant_object": quant_object}
 
     # args for Python/R Microsim. Use same arguments whether running 1 repetition or many
-    msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir, "output": output,
+    msim_args = {"data_dir": data_dir, "r_script_dir": r_script_dir, "scen_dir": scenario, "output": output,
                  "output_every_iteration": output_every_iteration}
 
     if not no_parameters_file:  # When using a parameters file, include the calibration parameters
@@ -197,14 +199,19 @@ def main(parameters_file, no_parameters_file, iterations, scenario, data_dir, ou
     # Select which model implementation to run
     if opencl:
         run_opencl_model(individuals, activity_locations, time_activity_multiplier, iterations, data_dir, base_dir,
-                         opencl_gui, opencl_gpu, use_cache, calibration_params, disease_params)
+                         opencl_gui, opencl_gpu, use_cache, initialise, calibration_params, disease_params)
     else:
+        # If -init flag set the don't run the model. Note for the opencl model this check needs to happen
+        # after the snapshots have been created in run_opencl_model
+        if initialise:
+            print("Have finished initialising model. -init flag is set so not running it. Exitting")
+            return
         run_python_model(individuals, activity_locations, time_activity_multiplier, msim_args, iterations,
                          repetitions, parameters_file)
 
 
 def run_opencl_model(individuals_df, activity_locations, time_activity_multiplier, iterations, data_dir, base_dir,
-                     use_gui, use_gpu, use_cache, calibration_params, disease_params):
+                     use_gui, use_gpu, use_cache, initialise, calibration_params, disease_params):
     snapshot_cache_filepath = base_dir + "/microsim/opencl/snapshots/cache.npz"
 
     # Choose whether to load snapshot file from cache, or create a snapshot from population data
@@ -226,13 +233,13 @@ def run_opencl_model(individuals_df, activity_locations, time_activity_multiplie
         if disease_params["improve_health"]:
             print("Switching to healthier population")
             snapshot.switch_to_healthier_population()
-
-    # seed initial infections using GAM initial cases
-    snapshot.seed_initial_infections(num_seed_days=disease_params["seed_days"])
+    if initialise:
+        print("Have finished initialising model. -init flag is set so not running it. Exitting")
+        return
 
     run_mode = "GUI" if use_gui else "headless"
     print(f"\nRunning OpenCL model in {run_mode} mode")
-    run_opencl(snapshot, iterations, data_dir, use_gui, use_gpu, quiet=False)
+    run_opencl(snapshot, iterations, data_dir, use_gui, use_gpu, num_seed_days=disease_params["seed_days"], quiet=False)
 
 
 def run_python_model(individuals_df, activity_locations_df, time_activity_multiplier, msim_args, iterations,
@@ -287,14 +294,12 @@ def create_params(calibration_params, disease_params):
         symptomatic=calibration_params["hazard_individual_multipliers"]["symptomatic"]
     )
 
-    proportion_asymptomatic = disease_params["asymp_rate"]
     obesity_multipliers = [disease_params["overweight"], disease_params["obesity_30"], disease_params["obesity_35"],
                            disease_params["obesity_40"]]
 
     return Params(
         location_hazard_multipliers=location_hazard_multipliers,
         individual_hazard_multipliers=individual_hazard_multipliers,
-        proportion_asymptomatic=proportion_asymptomatic,
         obesity_multipliers=obesity_multipliers,
         cvd_multiplier=disease_params["cvd"],
         diabetes_multiplier=disease_params["diabetes"],

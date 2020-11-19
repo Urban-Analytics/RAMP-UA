@@ -85,13 +85,15 @@ def test_exposed_become_asymptomatic_or_presymptomatic():
     # set all people to obesity=0, corresponding to normal BMI
     people_obesity_test_data = np.full(npeople, 0, dtype=np.uint8)
     people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
-
+    people_ages_test_data = np.full(npeople, 18, dtype=np.uint16)
+    
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.people_obesity[:] = people_obesity_test_data
     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
+    snapshot.buffers.people_ages[:] = people_ages_test_data
 
     params = Params()
-    expected_proportion_asymptomatic = 0.45
+    expected_proportion_asymptomatic = 0.79
     params.proportion_asymptomatic = expected_proportion_asymptomatic
     snapshot.update_params(params)
 
@@ -138,15 +140,17 @@ def test_more_overweight_become_symptomatic():
     # set all people to obesity=2, corresponding to overweight
     people_obesity_test_data = np.full(npeople, 2, dtype=np.uint8)
     people_transition_times_test_data = np.full(npeople, 1, dtype=np.uint32)
+    people_ages_test_data = np.full(npeople, 18, dtype=np.uint16)
 
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.people_obesity[:] = people_obesity_test_data
     snapshot.buffers.people_transition_times[:] = people_transition_times_test_data
+    snapshot.buffers.people_ages[:] = people_ages_test_data
 
     params = Params()
-    base_proportion_asymptomatic = 0.45
+    base_proportion_asymptomatic = 0.79
     params.proportion_asymptomatic = base_proportion_asymptomatic
-    overweight_sympt_mplier = 1.2
+    overweight_sympt_mplier = 1.46
     params.overweight_sympt_mplier = overweight_sympt_mplier
     snapshot.update_params(params)
 
@@ -266,7 +270,7 @@ def test_symptomatic_become_recovered_or_dead_young_age():
     proportion_dead = num_dead / npeople
 
     # expected recovery probability for ages 20 to 29
-    expected_proportion_dead = 0.000309
+    expected_proportion_dead = 0.0004
     expected_proportion_recovered = 1 - expected_proportion_dead
 
     assert np.isclose(expected_proportion_recovered, proportion_recovered, atol=0.0001)
@@ -307,7 +311,7 @@ def test_symptomatic_become_recovered_or_dead_old_age():
     proportion_dead = num_dead / npeople
 
     # expected recovery probability for ages 80+
-    expected_proportion_dead = 0.078
+    expected_proportion_dead = 0.1737
     expected_proportion_recovered = 1 - expected_proportion_dead
 
     assert np.isclose(expected_proportion_recovered, proportion_recovered, atol=0.01)
@@ -562,3 +566,77 @@ def test_infection_transition_times_distribution(visualize=False):
         ax.hist(expected_samples, bins=50, range=[0, 60])
         plt.title("Expected Samples")
         plt.show()
+
+
+def test_seed_initial_infections_all_high_risk():
+    npeople = 200
+    snapshot = Snapshot.random(nplaces, npeople, nslots)
+
+    # set all people as high risk
+    snapshot.area_codes = np.full(npeople, "E02004143")  # high risk area code
+    snapshot.not_home_probs = np.full(npeople, 0.8)
+
+    num_seed_days = 5
+    simulator = Simulator(snapshot, gpu=False, num_seed_days=num_seed_days)
+    simulator.upload_all(snapshot.buffers)
+
+    people_statuses_before = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_before)
+    # assert that no people are infected before seeding
+    assert not people_statuses_before.any()
+
+    # run one step with seeding and check number of infections
+    simulator.step_with_seeding()
+
+    people_statuses_after = np.zeros(snapshot.npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_after)
+
+    expected_num_infections = 37  # taken from devon_initial_cases.csv file
+
+    num_people_infected = np.count_nonzero(people_statuses_after)
+
+    assert num_people_infected == expected_num_infections
+
+    # run another step with seeding and check number of infections
+    simulator.step_with_seeding()
+
+    people_statuses_after = np.zeros(snapshot.npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_after)
+
+    expected_num_infections += 38  # taken from devon_initial_cases.csv file
+
+    num_people_infected = np.count_nonzero(people_statuses_after)
+
+    assert num_people_infected == expected_num_infections
+
+
+def test_seed_initial_infections_some_low_risk():
+    npeople = 200
+    snapshot = Snapshot.random(nplaces, npeople, nslots)
+
+    # set all people as high risk
+    snapshot.area_codes = np.full(npeople, "E02004187")  # low risk area code
+    snapshot.area_codes[1:4] = "E02004143"  # high risk area code
+    snapshot.not_home_probs = np.full(npeople, 0.0)
+    snapshot.not_home_probs[1:4] = 0.8
+
+    num_seed_days = 5
+    simulator = Simulator(snapshot, gpu=False, num_seed_days=num_seed_days)
+    simulator.upload_all(snapshot.buffers)
+
+    people_statuses_before = np.zeros(npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_before)
+    # assert that no people are infected before seeding
+    assert not people_statuses_before.any()
+
+    # run one step with seeding and check number of infections
+    simulator.step_with_seeding()
+
+    people_statuses_after = np.zeros(snapshot.npeople, dtype=np.uint32)
+    simulator.download("people_statuses", people_statuses_after)
+
+    expected_num_infections = 3  # taken from devon_initial_cases.csv file
+
+    num_people_infected = np.count_nonzero(people_statuses_after)
+
+    assert num_people_infected == expected_num_infections

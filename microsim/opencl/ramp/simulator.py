@@ -6,6 +6,7 @@ from microsim.opencl.ramp.buffers import Buffers
 from microsim.opencl.ramp.kernels import Kernels
 from microsim.opencl.ramp.params import Params
 from microsim.opencl.ramp.snapshot import Snapshot
+from microsim.opencl.ramp.initial_cases import InitialCases
 
 
 class Simulator:
@@ -14,7 +15,7 @@ class Simulator:
     and a step() method to execute the kernels to calculate one timestep of the model.
     """
 
-    def __init__(self, snapshot, gpu=True, kernel_dir="microsim/opencl/ramp/kernels/"):
+    def __init__(self, snapshot, gpu=True, opencl_dir="microsim/opencl/", num_seed_days=5):
         """Initialise OpenCL context, kernels, and buffers for the simulator.
 
         Args:
@@ -63,6 +64,8 @@ class Simulator:
             params=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, Params().num_bytes()),
         )
 
+        kernel_dir = os.path.join(opencl_dir, "ramp/kernels/")
+
         # Load the OpenCL kernel programs
         with open(os.path.join(kernel_dir, "ramp_ua.cl")) as f:
             program = cl.Program(ctx, f.read())
@@ -106,9 +109,15 @@ class Simulator:
         self.platform = platform
         self.ctx = ctx
         self.queue = queue
-
+    
+        self.start_snapshot = snapshot
         self.buffers = buffers
         self.kernels = kernels
+
+        data_dir = os.path.join(opencl_dir, "data/")
+        self.initial_cases = InitialCases(snapshot.area_codes, snapshot.not_home_probs, data_dir)
+
+        self.num_seed_days = num_seed_days
 
     def platform_name(self):
         """The name of the OpenCL platform being used for simulation."""
@@ -152,6 +161,13 @@ class Simulator:
             self.download(name, getattr(host_buffers, name))
 
     def step(self):
+        """Choose whether to run the normal step function or the one for initial case seeding"""
+        if self.time < self.num_seed_days:
+            self.step_with_seeding()
+        else:
+            self.step_all_kernels()
+
+    def step_all_kernels(self):
         """Runs each kernel in order and updates the time. Blocks until complete."""
         reset_event = cl.enqueue_nd_range_kernel(
             self.queue, self.kernels.places_reset, (self.nplaces,), None)
@@ -175,3 +191,23 @@ class Simulator:
             event.wait()
         else:
             raise ValueError("No kernel with name {}".format(name))
+
+    def step_with_seeding(self):
+        """For initial case seeding: sets a number of people infected based on the initial cases data, then runs only
+        the kernel which updates people statuses."""
+        max_hazard_val = np.finfo(np.float32).max
+
+        people_hazards = np.zeros(self.npeople, dtype=np.float32)
+
+        initial_case_ids = self.initial_cases.get_seed_people_ids_for_day(self.time)
+
+        # set hazard to maximum float val, so these people will have infection_prob=1
+        # and will transition to exposed state
+        people_hazards[initial_case_ids] = max_hazard_val
+
+        self.upload("people_hazards", people_hazards)
+
+        # run only the update statuses kernel so that people transition through disease states
+        self.step_kernel("people_update_statuses")
+        self.time += np.uint32(1)
+
