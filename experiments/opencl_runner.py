@@ -345,7 +345,7 @@ class OpenCLRunner:
                             "Call the OpenCLRunner.init() function")
 
         # Check that all input parametrers are not negative
-        for k, v in input_params_dict:
+        for k, v in input_params_dict.items():
             if v < 0:
                 raise Exception(f"The parameter {k}={v} < 0. "
                                 f"All parameters: {input_params_dict}")
