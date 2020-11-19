@@ -46,7 +46,7 @@ jobs:
     - name: install rampuaR
       shell: bash -l {0}
       run: |
-        R -e "devtools::install_github("Urban-Analytics/rampuaR", dependencies = F);"
+        R -e "devtools::install_github('Urban-Analytics/rampuaR', dependencies = F);"
 
     # run pytest within conda environment
     - name: Run pytest and generate coverage report
