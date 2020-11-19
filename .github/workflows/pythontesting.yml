@@ -43,6 +43,11 @@ jobs:
         conda activate ramp-ua
         pip install pytest-cov
 
+    - name: install rampuaR
+      shell: bash -l {0}
+      run: |
+        R -e "devtools::install_github("Urban-Analytics/rampuaR", dependencies = F);"
+
     # run pytest within conda environment
     - name: Run pytest and generate coverage report
       shell: bash -l {0}
