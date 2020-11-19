@@ -338,17 +338,22 @@ class OpenCLRunner:
             return fitness
 
     @classmethod
-    def run_model_with_params0(cls, input_params_dict: dict):
+    def run_model_with_params_abc(cls, input_params_dict: dict):
         """TEMP to work with ABC. Parameters are passed in as a dictionary"""
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
 
-        presymptomatic = input_params_dict["presymp"]
+        # Check that all input parametrers are not negative
+        for k, v in input_params_dict:
+            if v < 0:
+                raise Exception(f"The parameter {k}={v} < 0. "
+                                f"All parameters: {input_params_dict}")
 
+        # Splat the input_params_dict to automatically set any parameters that have been inlcluded
         params = OpenCLRunner.create_parameters(
             parameters_file=cls.PARAMETERS_FILE,
-            presymptomatic=presymptomatic,
+            **input_params_dict
         )
 
         results = OpenCLRunner.run_opencl_model_multi(
@@ -360,7 +365,7 @@ class OpenCLRunner:
         summaries = [x[0] for x in results]
         # Return the expexted counts in a dictionary
         results = OpenCLRunner.get_cumulative_new_infections(summaries)
-        print(f"Ran Model. Presymp: {presymptomatic} ("
+        print(f"Ran Model. {str(input_params_dict)} ("
               f"{[round(params.individual_hazard_multipliers[i],3) for i in [0,1,2] ]}) "
               f"Sum result: {sum(results)}")
         return {"data": results}
