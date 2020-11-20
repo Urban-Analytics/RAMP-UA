@@ -95,12 +95,17 @@ class OpenCLRunner:
         return np.linalg.norm(np.array(obs) - np.array(sim))
 
     @staticmethod
-    def get_mean_total_counts(summaries, disease_status: int):
+    def get_mean_total_counts(summaries, disease_status: int, get_sd=False):
         """
         Get the mean total counts for a given disease status at every iteration over a number of model repetitions
 
         :param summaries: A list of Summary objects created by running the OpenCL model
         :param disease_status: The disease status number, e.g.  `DiseaseStatus.Exposed.value`
+        :param get_sd: Optionally get the standard deviation as well
+
+        :return: The mean total counts of the disease status per iteration, or (if get_sd=True)
+            or a tuple of (mean,sd)
+
         """
         reps = len(summaries)  # Number of repetitions
         iters = len(summaries[0].total_counts[disease_status])  # Number of iterations for each repetition
@@ -108,7 +113,27 @@ class OpenCLRunner:
         for rep in range(reps):
             matrix[rep] = summaries[rep].total_counts[disease_status]
         mean = np.mean(matrix, axis=0)
-        return mean
+        sd = np.std(matrix, axis=0)
+        if get_sd:
+            return mean, sd
+        else:
+            return mean
+
+    @staticmethod
+    def get_cumulative_new_infections(summaries):
+        """
+        Get cumulative infections per day by summing all the non-susceptible people
+
+        :param summaries: A list of Summary objects created by running the OpenCL model
+        """
+        iters = len(summaries[0].total_counts[DiseaseStatus.Exposed.value])  # Number of iterations for each repetition
+        total_not_susceptible = np.zeros(iters)  # Total people not susceptible per iteration
+        for d, disease_status in enumerate(DiseaseStatus):
+            if disease_status != DiseaseStatus.Susceptible:
+                mean = OpenCLRunner.get_mean_total_counts(summaries, d)  # Mean number of people with that disease
+                total_not_susceptible = total_not_susceptible + mean
+        return total_not_susceptible
+
 
     @staticmethod
     def create_parameters(parameters_file: str = None,
@@ -301,8 +326,8 @@ class OpenCLRunner:
         summaries = [x[0] for x in results]
         final_results = [x[1] for x in results]
 
-        # Get mean cases per day from the summary object
-        sim = OpenCLRunner.get_mean_total_counts(summaries, DiseaseStatus.Exposed.value)
+        # Get the cumulative number of new infections per day
+        sim = OpenCLRunner.get_cumulative_new_infections(summaries)
         # Compare these to the observations
         obs = cls.OBSERVATIONS.loc[:cls.ITERATIONS - 1, "Cases"].values
         assert len(sim) == len(obs)
@@ -313,17 +338,22 @@ class OpenCLRunner:
             return fitness
 
     @classmethod
-    def run_model_with_params0(cls, input_params_dict: dict):
+    def run_model_with_params_abc(cls, input_params_dict: dict):
         """TEMP to work with ABC. Parameters are passed in as a dictionary"""
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
 
-        presymptomatic = input_params_dict["presymp"]
+        # Check that all input parametrers are not negative
+        for k, v in input_params_dict.items():
+            if v < 0:
+                raise Exception(f"The parameter {k}={v} < 0. "
+                                f"All parameters: {input_params_dict}")
 
+        # Splat the input_params_dict to automatically set any parameters that have been inlcluded
         params = OpenCLRunner.create_parameters(
             parameters_file=cls.PARAMETERS_FILE,
-            presymptomatic=presymptomatic,
+            **input_params_dict
         )
 
         results = OpenCLRunner.run_opencl_model_multi(
@@ -334,8 +364,8 @@ class OpenCLRunner:
 
         summaries = [x[0] for x in results]
         # Return the expexted counts in a dictionary
-        results = OpenCLRunner.get_mean_total_counts(summaries, DiseaseStatus.Exposed.value)
-        print(f"Ran Model. Presymp: {presymptomatic} ("
+        results = OpenCLRunner.get_cumulative_new_infections(summaries)
+        print(f"Ran Model. {str(input_params_dict)} ("
               f"{[round(params.individual_hazard_multipliers[i],3) for i in [0,1,2] ]}) "
               f"Sum result: {sum(results)}")
         return {"data": results}
