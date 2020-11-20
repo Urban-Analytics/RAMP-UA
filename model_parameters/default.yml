@@ -31,7 +31,7 @@ microsim_calibration:
 
 
 disease: # This is where the parameter for the disease model (the R part) can go (same format the 'microsim_calibration' above)
-  current_risk_beta: 0.00235
+  current_risk_beta: 0.003
   risk_cap: 5
   seed_days: 10
   exposed_dist: "weibull"
