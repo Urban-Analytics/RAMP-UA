@@ -209,12 +209,11 @@ run_status <- function(pop,
   df_rec <- rampuaR::recalc_sympdays(df_rem)
   print("updating infection lengths")
   
-  if(!is.null(vaccine_day) & vaccine_day == timestep){
-    
+  if(!is.null(vaccine_day)){ 
+     if(vaccine_day == timestep){
     df_rec <- rampuaR::vaccinate(df_rec)
-    
+    }
   }
-  
   
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
   
