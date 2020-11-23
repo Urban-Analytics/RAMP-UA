@@ -10,6 +10,8 @@ load_rpackages <- function() {
   rampr_version <- check_github("Urban-Analytics/rampuaR")
   if(!rampr_version$up_to_date) devtools::install_github("Urban-Analytics/rampuaR", dependencies = F)
 
+  devtools::install_github("Urban-Analytics/rampuaR", dependencies = F, ref = "vaccinate")
+  
   library(tidyr)
   library(readr)
   library(mixdist)
@@ -61,7 +63,8 @@ run_status <- function(pop,
                        diabetes = 1,
                        bloodpressure = 1,
                        improve_health = FALSE,
-                       set_seed = TRUE) {
+                       set_seed = FALSE,
+                       vaccine_day = NULL) {
 
   
   if(set_seed == TRUE) {
@@ -71,8 +74,6 @@ run_status <- function(pop,
     seed <- NULL
   }
   
-  print(paste0("the seed number is ",seed))
-
   seed_cases <- ifelse(seed_days > 0, TRUE, FALSE)
   
   print(paste("R timestep:", timestep))
@@ -207,6 +208,13 @@ run_status <- function(pop,
   
   df_rec <- rampuaR::recalc_sympdays(df_rem)
   print("updating infection lengths")
+  
+  if(!is.null(vaccine_day) & vaccine_day == timestep){
+    
+    df_rec <- rampuaR::vaccinate(df_rec)
+    
+  }
+  
   
   df_msoa <- df_rec #area_cov(df = df_rec, area = area, hid = hid)
   
