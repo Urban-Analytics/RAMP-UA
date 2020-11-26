@@ -52,6 +52,11 @@ def test_correct_flow_calculation_no_lockdown():
     snapshot.buffers.people_place_ids[:] = people_place_ids_test_data.flatten()
     snapshot.buffers.people_statuses[:] = people_statuses_test_data
     snapshot.buffers.place_activities[:] = place_activities_test_data
+    
+    params = Params()
+    symptomatic_multiplier = 0.5
+    params.symptomatic_multiplier = symptomatic_multiplier
+    snapshot.update_params(params)
 
     simulator = Simulator(snapshot, gpu=False)
     simulator.upload_all(snapshot.buffers)
@@ -67,6 +72,7 @@ def test_correct_flow_calculation_no_lockdown():
     people_flows_after = np.zeros(npeople*nslots, dtype=np.float32)
     simulator.download("people_flows", people_flows_after)
 
+    # adjust symptomatic persons flows according to symptomatic multiplier
     expected_people_flows_after = people_flows_test_data
     expected_people_flows_after[symptomatic_person_id][0:4] = [0.85, 0.09, 0.045, 0.015]
     expected_people_flows_after = expected_people_flows_after.flatten()
@@ -103,6 +109,7 @@ def test_correct_flow_calculation_with_lockdown():
 
     params = Params()
     params.set_lockdown_multiplier(lockdown_multipliers, 0)
+    params.symptomatic_multiplier = 0.5
     snapshot.buffers.params[:] = params.asarray()
 
     simulator = Simulator(snapshot, gpu=False)
