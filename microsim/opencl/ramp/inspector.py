@@ -424,8 +424,6 @@ class Inspector:
 
         _, self.params.symptomatic_multiplier = imgui.slider_float(
             "Symptomatic Multiplier", self.params.symptomatic_multiplier, 0.0, 1.0)
-        _, self.params.proportion_asymptomatic = imgui.slider_float(
-            "Proportion Asymptomatic", self.params.proportion_asymptomatic, 0.0, 1.0)
 
         imgui.text("Duration Distributions")
 
