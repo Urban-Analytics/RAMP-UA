@@ -40,7 +40,7 @@ jobs:
     - name: test running R code natively
       shell: bash -l {0}
       run: |
-        R -e "R/py_int/covid_run.R"
+        Rscript R/py_int/covid_run.R
 
     - name: install pytest-cov
       shell: bash -l {0}
