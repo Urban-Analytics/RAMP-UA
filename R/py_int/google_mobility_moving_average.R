@@ -27,7 +27,7 @@ ma <- function(x, n = 14){stats::filter(x, rep(1 / n, n), sides = 2)}
 
 n <- 14
 ma_rv <- ma(rv, n = n)
-ma_rv[1:(n/2)]<- rv[1:(n/2)]
+#ma_rv[1:(n/2)]<- rv[1:(n/2)]
 
 plot(dates, rv, type = "l")
 lines(dates, ma_rv, col = "blue")
@@ -38,9 +38,34 @@ new_out_ma <- 1 -  (mean(population$phome) * ma_rv)
 lock_down_reducer_rv <-  new_out/mean(population$pnothome) # percentage of time spent outside of compared to pre-lockdown
 lock_down_reducer_ma <- new_out_ma/mean(population$pnothome) 
 
-plot(dates, lock_down_reducer_rv, ylab = "Proportion of Time Outside Compared to Baseline", type = "l", xlab = "Day")
+plot(dates, lock_down_reducer_rv, ylab = "Proportion of Time Outside Compared to Baseline", type = "l", xlab = "Day", ylim = c(0, 1.3))
 lines(dates,lock_down_reducer_ma, col = "blue")
+lines(dates, ma_rv, col = "red")
 
 daily_lock_down_multiplier_ma <-  data.frame(day = 1:length(lock_down_reducer_ma), timeout_multiplier = lock_down_reducer_ma)
 
+
 #write.csv(daily_lock_down_multiplier_ma, "devon_data/google_mobility_lockdown_daily_14_day_moving_average.csv", row.names = FALSE)
+
+daily_home <-  data.frame(day = 1:length(ma_rv), timeout_multiplier = ma_rv, location = "Home")
+daily_lock_down_multiplier_ma$location <- "Outside" 
+
+daily_home$timeout_multiplier <- as.numeric(daily_home$timeout_multiplier)
+daily_lock_down_multiplier_ma$timeout_multiplier <- as.numeric(daily_lock_down_multiplier_ma$timeout_multiplier )
+
+
+df <- rbind(daily_home, daily_lock_down_multiplier_ma)
+
+hrs_home = 0.7573431*24
+hrs_outside = 0.2426569*24
+
+ggplot()+
+  geom_line(data = df %>% filter(day <= 100 & location == "Home"), aes(x = day, y = timeout_multiplier*hrs_home, group = location, col = location), size = 1)+
+  geom_line(data = df %>% filter(day <= 100 & location == "Outside"), aes(x = day, y = timeout_multiplier*hrs_outside, group = location, col = location), size = 1)+
+  theme_bw()+
+  labs(y = "Hours per day")
+
+
+
+
+
