@@ -8,7 +8,7 @@ microsim:
   output-every-iteration: false # Can optionally write output at every iteration, not just at the end
   debug: false # Whether to run some more expensive checks
   repetitions: 1 # How many times to run the model
-  lockdown-file: "google_mobility_lockdown_daily.csv" # Read lockdown mobility data from a file? (Empty string means no lockdown)
+  lockdown-file: "google_mobility_lockdown_daily_14_day_moving_average.csv" # Read lockdown mobility data from a file? (Empty string means no lockdown)
   quant-dir: QUANT_RAMP # Directory to QUANT data, leave empty to use Devon data
 
 # Parameters that are used to calibrate the model.
