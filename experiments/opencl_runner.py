@@ -338,8 +338,17 @@ class OpenCLRunner:
             return fitness
 
     @classmethod
-    def run_model_with_params_abc(cls, input_params_dict: dict):
-        """TEMP to work with ABC. Parameters are passed in as a dictionary"""
+    def run_model_with_params_abc(cls, input_params_dict: dict, return_full_details=False):
+        """
+        TEMP to work with ABC. Parameters are passed in as a dictionary.
+
+        :param return_full_details: If True then rather than just returning the normal results,
+            it returns a tuple of the following:
+             (fitness value, simulated results, observations, the Params object, summaries list)
+        :return: The number of cumulative new infections per day (as a list value in a
+            dictionary as required by the pyabc package) unless return_full_details is True.
+        """
+
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
@@ -363,9 +372,16 @@ class OpenCLRunner:
         )
 
         summaries = [x[0] for x in results]
-        # Return the expexted counts in a dictionary
-        results = OpenCLRunner.get_cumulative_new_infections(summaries)
+        # Get the cumulative number of new infections per day (i.e. simulated results)
+        sim = OpenCLRunner.get_cumulative_new_infections(summaries)
         print(f"Ran Model. {str(input_params_dict)} ("
-              f"{[round(params.individual_hazard_multipliers[i],3) for i in [0,1,2] ]}) "
-              f"Sum result: {sum(results)}")
-        return {"data": results}
+              f"Sum result: {sum(sim)})")
+
+        if return_full_details:
+            # Can compare these to the observations to get a fitness
+            obs = cls.OBSERVATIONS.loc[:cls.ITERATIONS - 1, "Cases"].values
+            assert len(sim) == len(obs)
+            fitness = OpenCLRunner.fit_l2(sim, obs)
+            return fitness, sim, obs, params, summaries
+        else:  # Return the expected counts in a dictionary
+            return {"data": sim}
