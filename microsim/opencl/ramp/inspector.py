@@ -420,7 +420,7 @@ class Inspector:
         """UI window with sliders for changing parameter values."""
         imgui.begin("Parameter Editor")
 
-        imgui.text("Infectivity and Symptoms")
+        imgui.text("Behaviour Change")
 
         _, self.params.symptomatic_multiplier = imgui.slider_float(
             "Symptomatic Multiplier", self.params.symptomatic_multiplier, 0.0, 1.0)
@@ -446,27 +446,47 @@ class Inspector:
             _, self.params.place_hazard_multipliers[i] = imgui.slider_float(
                 activity.name, self.params.place_hazard_multipliers[i], 0.0, 1.0, "%.4f")
 
-        imgui.text("Recovery Probabilities by Age")
+        imgui.text("Mortality Probabilities by Age")
 
         _, self.params.mortality_probs[0] = imgui.slider_float(
-            "0 to 10", self.params.mortality_probs[0], 0.0, 1.0, "%.7f")
+            "0 to 4", self.params.mortality_probs[0], 0.0, 1.0, "%.7f")
         _, self.params.mortality_probs[1] = imgui.slider_float(
-            "10 to 20", self.params.mortality_probs[1], 0.0, 1.0, "%.7f")
+            "5 to 9", self.params.mortality_probs[1], 0.0, 1.0, "%.7f")
         _, self.params.mortality_probs[2] = imgui.slider_float(
-            "20 to 30", self.params.mortality_probs[2], 0.0, 1.0, "%.7f")
+            "10 to 14", self.params.mortality_probs[2], 0.0, 1.0, "%.7f")
         _, self.params.mortality_probs[3] = imgui.slider_float(
-            "30 to 40", self.params.mortality_probs[3], 0.0, 1.0, "%.7f")
+            "15 to 19", self.params.mortality_probs[3], 0.0, 1.0, "%.7f")
         _, self.params.mortality_probs[4] = imgui.slider_float(
-            "40 to 50", self.params.mortality_probs[4], 0.0, 1.0, "%.7f")
+            "20 to 24", self.params.mortality_probs[4], 0.0, 1.0, "%.7f")
         _, self.params.mortality_probs[5] = imgui.slider_float(
-            "50 to 60", self.params.mortality_probs[5], 0.0, 1.0, "%.7f")
+            "25 to 29", self.params.mortality_probs[5], 0.0, 1.0, "%.7f")
         _, self.params.mortality_probs[6] = imgui.slider_float(
-            "60 to 70", self.params.mortality_probs[6], 0.0, 1.0, "%.7f")
+            "30 to 34", self.params.mortality_probs[6], 0.0, 1.0, "%.7f")
         _, self.params.mortality_probs[7] = imgui.slider_float(
-            "70 to 80", self.params.mortality_probs[7], 0.0, 1.0, "%.7f")
+            "35 to 39", self.params.mortality_probs[7], 0.0, 1.0, "%.7f")
         _, self.params.mortality_probs[8] = imgui.slider_float(
-            "80 and above", self.params.mortality_probs[8], 0.0, 1.0, "%.7f")
-
+            "40 to 44", self.params.mortality_probs[8], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[9] = imgui.slider_float(
+            "45 to 49", self.params.mortality_probs[9], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[10] = imgui.slider_float(
+            "50 to 54", self.params.mortality_probs[10], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[11] = imgui.slider_float(
+            "55 to 59", self.params.mortality_probs[11], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[12] = imgui.slider_float(
+            "60 to 64", self.params.mortality_probs[12], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[13] = imgui.slider_float(
+            "65 to 69", self.params.mortality_probs[13], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[14] = imgui.slider_float(
+            "70 to 74", self.params.mortality_probs[14], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[15] = imgui.slider_float(
+            "75 to 79", self.params.mortality_probs[15], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[16] = imgui.slider_float(
+            "80 to 84", self.params.mortality_probs[16], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[17] = imgui.slider_float(
+            "85 to 89", self.params.mortality_probs[17], 0.0, 1.0, "%.7f")
+        _, self.params.mortality_probs[18] = imgui.slider_float(
+            "90 and above", self.params.mortality_probs[18], 0.0, 1.0, "%.7f")
+    
         if imgui.button("Reset to Defaults"):
             self.params = Params()
 
