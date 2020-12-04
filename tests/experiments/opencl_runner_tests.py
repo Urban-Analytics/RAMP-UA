@@ -1,5 +1,7 @@
 import pytest
+import yaml
 import os
+import warnings
 import numpy as np
 import pandas as pd
 from experiments.opencl_runner import OpenCLRunner # Some additional notebook-specific functions required (functions.py)
@@ -12,6 +14,8 @@ from opencl.ramp.disease_statuses import DiseaseStatus
 # This 'fixture' means that other test functions can use the object created here.
 # Note: Don't try to run this test, it will be called when running the others that need it,
 # like `test_step()`.
+from opencl.ramp.params import Params
+
 
 @pytest.fixture()
 def setup_results():
@@ -92,6 +96,57 @@ def test_run_model_with_params():
     assert out_params.individual_hazard_multipliers[2] == 0.5
 
     # TODO: change parameters, run again, and check that the results make some sort of sense
+
+def test_create_parameters():
+    """Check that the create_parameters files correctly returns a Parameters object"""
+    # Firstly, using the defaults is not recommended usually as the values should be read from the parameters file
+    with pytest.warns(UserWarning):
+        Params()
+
+    # Read the default parameters file, for checking
+    parameters_file = os.path.join("./", "model_parameters/", "default.yml")
+    with open(parameters_file) as f:
+        parameters_in_file = yaml.load(f, Loader=yaml.SafeLoader)
+    default_params = OpenCLRunner.create_parameters()
+
+    # Default params should match those in default.yml.
+
+    # Check the individual multipliers
+    assert parameters_in_file['microsim_calibration']['hazard_individual_multipliers']['presymptomatic'] == \
+           default_params.individual_hazard_multipliers[0]  # presymp is second item in the array
+    assert parameters_in_file['microsim_calibration']['hazard_individual_multipliers']['asymptomatic'] == \
+           default_params.individual_hazard_multipliers[1]  # asymp is second item in the array
+    assert parameters_in_file['microsim_calibration']['hazard_individual_multipliers']['symptomatic'] == \
+            default_params.individual_hazard_multipliers[2]  # symp is third item in the array
+
+    # And the place multipliers (note that the values in the parameter file are multiplied by the
+    # current risk beta
+    current_risk_beta = parameters_in_file["disease"]["current_risk_beta"]
+    assert np.isclose(default_params.place_hazard_multipliers[0],  # Retail is first in the array
+        parameters_in_file['microsim_calibration']['hazard_location_multipliers']['Retail'] * current_risk_beta)
+    assert np.isclose( default_params.place_hazard_multipliers[1],
+        parameters_in_file['microsim_calibration']['hazard_location_multipliers']['PrimarySchool'] * current_risk_beta)
+    assert np.isclose(default_params.place_hazard_multipliers[2],
+        parameters_in_file['microsim_calibration']['hazard_location_multipliers']['SecondarySchool'] * current_risk_beta)
+    assert np.isclose(default_params.place_hazard_multipliers[3] ,
+        parameters_in_file['microsim_calibration']['hazard_location_multipliers']['Home'] * current_risk_beta)
+    assert np.isclose(default_params.place_hazard_multipliers[4],
+        parameters_in_file['microsim_calibration']['hazard_location_multipliers']['Work'] * current_risk_beta)
+
+
+    # TODO Now see that if we override the defaults it still works
+
+    #current_risk_beta: float = None,
+    #infection_log_scale: float = None,
+    #infection_mode: float = None,
+    #presymptomatic: float = None,
+    #asymptomatic: float = None,
+    #symptomatic: float = None,
+    #retail: float = None,
+    #primary_school: float = None,
+    #secondary_school: float = None,
+    #home: float = None,
+    #work: float = None,
 
 def test_get_cumulative_new_infections(setup_results):
     summaries = [x[0] for x in setup_results ]

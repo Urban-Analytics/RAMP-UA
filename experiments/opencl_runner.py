@@ -134,7 +134,6 @@ class OpenCLRunner:
                 total_not_susceptible = total_not_susceptible + mean
         return total_not_susceptible
 
-
     @staticmethod
     def create_parameters(parameters_file: str = None,
                           current_risk_beta: float = None,
@@ -142,7 +141,12 @@ class OpenCLRunner:
                           infection_mode: float = None,
                           presymptomatic: float = None,
                           asymptomatic: float = None,
-                          symptomatic: float = None
+                          symptomatic: float = None,
+                          retail: float = None,
+                          primary_school: float = None,
+                          secondary_school: float = None,
+                          home: float = None,
+                          work: float = None,
                           ):
         """Create a params object with the given arguments."""
 
@@ -160,25 +164,30 @@ class OpenCLRunner:
         disease_params = parameters["disease"]  # Parameters for the disease model (r)
 
         # current_risk_beta needs to be set first  as the OpenCL model pre-multiplies the hazard multipliers by it
-        if current_risk_beta is None:
-            current_risk_beta = disease_params['current_risk_beta']
+        current_risk_beta = OpenCLRunner._check_if_none(current_risk_beta, disease_params['current_risk_beta'])
 
+        # Location hazard multipliers can be passed straight through
         location_hazard_multipliers = LocationHazardMultipliers(
-            retail=calibration_params["hazard_location_multipliers"]["Retail"] * current_risk_beta,
-            primary_school=calibration_params["hazard_location_multipliers"]["PrimarySchool"] * current_risk_beta,
-            secondary_school=calibration_params["hazard_location_multipliers"]["SecondarySchool"] * current_risk_beta,
-            home=calibration_params["hazard_location_multipliers"]["Home"] * current_risk_beta,
-            work=calibration_params["hazard_location_multipliers"]["Work"] * current_risk_beta,
+            retail=OpenCLRunner._check_if_none(
+                retail, calibration_params["hazard_location_multipliers"]["Retail"] * current_risk_beta),
+            primary_school=OpenCLRunner._check_if_none(
+                primary_school, calibration_params["hazard_location_multipliers"]["PrimarySchool"] * current_risk_beta),
+            secondary_school=OpenCLRunner._check_if_none(
+                primary_school, calibration_params["hazard_location_multipliers"]["SecondarySchool"] * current_risk_beta),
+            home=OpenCLRunner._check_if_none(
+                home, calibration_params["hazard_location_multipliers"]["Home"] * current_risk_beta),
+            work=OpenCLRunner._check_if_none(
+                work, calibration_params["hazard_location_multipliers"]["Work"] * current_risk_beta),
         )
 
         # Individual hazard multipliers can be passed straight through
         individual_hazard_multipliers = IndividualHazardMultipliers(
-            presymptomatic=calibration_params["hazard_individual_multipliers"]["presymptomatic"] \
-                if presymptomatic is None else presymptomatic,
-            asymptomatic=calibration_params["hazard_individual_multipliers"]["asymptomatic"] \
-                if asymptomatic is None else asymptomatic,
-            symptomatic=calibration_params["hazard_individual_multipliers"]["symptomatic"] \
-                if symptomatic is None else symptomatic
+            presymptomatic=OpenCLRunner._check_if_none(
+                presymptomatic, calibration_params["hazard_individual_multipliers"]["presymptomatic"]),
+            asymptomatic=OpenCLRunner._check_if_none(
+                asymptomatic, calibration_params["hazard_individual_multipliers"]["asymptomatic"]),
+            symptomatic=OpenCLRunner._check_if_none(
+                symptomatic, calibration_params["hazard_individual_multipliers"]["symptomatic"])
         )
 
         # Some parameters are set in the default.yml file and can be overridden
@@ -196,6 +205,14 @@ class OpenCLRunner:
             p.infection_mode = infection_mode
 
         return p
+
+    @staticmethod
+    def _check_if_none(value, default):
+        """Checks whether the given value is None, returning the default if it is"""
+        if value is None:
+            return default
+        else:
+            return value
 
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
