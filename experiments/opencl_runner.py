@@ -148,7 +148,9 @@ class OpenCLRunner:
                           home: float = None,
                           work: float = None,
                           ):
-        """Create a params object with the given arguments."""
+        """Create a params object with the given arguments. This replicates the functionality in
+        microsim.main.create_params() but rather than just reading parameters from the parameters
+        json file, it allows some of the parameters to be set manually. """
 
         # If no parameters are provided then read the default parameters from a yml file
         if parameters_file is None:
@@ -166,18 +168,20 @@ class OpenCLRunner:
         # current_risk_beta needs to be set first  as the OpenCL model pre-multiplies the hazard multipliers by it
         current_risk_beta = OpenCLRunner._check_if_none(current_risk_beta, disease_params['current_risk_beta'])
 
-        # Location hazard multipliers can be passed straight through
+        # Location hazard multipliers can be passed straight through to the LocationHazardMultipliers object.
+        # If no argument was passed then the default in the parameters file is used. Note that they need to
+        # be multiplied by the current_risk_beta
         location_hazard_multipliers = LocationHazardMultipliers(
-            retail=OpenCLRunner._check_if_none(
-                retail, calibration_params["hazard_location_multipliers"]["Retail"] * current_risk_beta),
-            primary_school=OpenCLRunner._check_if_none(
-                primary_school, calibration_params["hazard_location_multipliers"]["PrimarySchool"] * current_risk_beta),
-            secondary_school=OpenCLRunner._check_if_none(
-                primary_school, calibration_params["hazard_location_multipliers"]["SecondarySchool"] * current_risk_beta),
-            home=OpenCLRunner._check_if_none(
-                home, calibration_params["hazard_location_multipliers"]["Home"] * current_risk_beta),
-            work=OpenCLRunner._check_if_none(
-                work, calibration_params["hazard_location_multipliers"]["Work"] * current_risk_beta),
+            retail=current_risk_beta * OpenCLRunner._check_if_none(
+                retail, calibration_params["hazard_location_multipliers"]["Retail"]),
+            primary_school=current_risk_beta * OpenCLRunner._check_if_none(
+                primary_school, calibration_params["hazard_location_multipliers"]["PrimarySchool"]),
+            secondary_school=current_risk_beta * OpenCLRunner._check_if_none(
+                secondary_school, calibration_params["hazard_location_multipliers"]["SecondarySchool"]),
+            home=current_risk_beta * OpenCLRunner._check_if_none(
+                home, calibration_params["hazard_location_multipliers"]["Home"]),
+            work=current_risk_beta * OpenCLRunner._check_if_none(
+                work, calibration_params["hazard_location_multipliers"]["Work"]),
         )
 
         # Individual hazard multipliers can be passed straight through
