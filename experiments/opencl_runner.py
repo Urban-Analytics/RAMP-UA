@@ -22,6 +22,10 @@ from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 class OpenCLRunner:
     """Includes useful functions for running the OpenCL model in notebooks"""
 
+    # Need a list to optionally store additional constant parameter values that cannot
+    # be passed through one of the run model functions.
+    constants = {}
+
     @classmethod
     def init(cls, iterations: int, repetitions: int, observations: pd.DataFrame, use_gpu: bool,
              store_detailed_counts: bool, parameters_file: str, opencl_dir: str, snapshot_filepath: str):
@@ -50,6 +54,7 @@ class OpenCLRunner:
         cls.SNAPSHOT_FILEPATH = snapshot_filepath
         cls.initialised = True
 
+
     @classmethod
     def update(cls, iterations: int = None, repetitions: int = None, observations: pd.DataFrame = None,
                use_gpu: bool = None, store_detailed_counts: bool = None, parameters_file: str = None,
@@ -75,6 +80,17 @@ class OpenCLRunner:
             cls.OPENCL_DIR = opencl_dir
         if snapshot_filepath is not None:
             cls.SNAPSHOT_FILEPATH = snapshot_filepath
+
+    @classmethod
+    def set_constants(cls, constants):
+        """Set any constant variables (parameters) that override the defaults.
+        :param constants: This should be a dist of parameter_nam -> value
+        """
+        cls.constants = constants
+
+    @classmethod
+    def clear_constants(cls):
+        cls.constants = {}
 
     @staticmethod
     def fit_l2(obs: np.ndarray, sim: np.ndarray):
@@ -150,9 +166,13 @@ class OpenCLRunner:
                           ):
         """Create a params object with the given arguments. This replicates the functionality in
         microsim.main.create_params() but rather than just reading parameters from the parameters
-        json file, it allows some of the parameters to be set manually. """
+        json file, it allows some of the parameters to be set manually.
 
-        # If no parameters are provided then read the default parameters from a yml file
+        Also note that some (constant) parameters can be set by calling the `set_constants` method.
+        This is useful for cases where parameters should override the defaults specified in the
+        parameters file but cannot be called directly by the function that is running the model"""
+
+        # Read the default parameters from a yml file, then override with any provided
         if parameters_file is None:
             parameters_file = os.path.join(".", "model_parameters", "default.yml")
         elif not os.path.isfile(parameters_file):
@@ -166,31 +186,31 @@ class OpenCLRunner:
         disease_params = parameters["disease"]  # Parameters for the disease model (r)
 
         # current_risk_beta needs to be set first  as the OpenCL model pre-multiplies the hazard multipliers by it
-        current_risk_beta = OpenCLRunner._check_if_none(current_risk_beta, disease_params['current_risk_beta'])
+        current_risk_beta = OpenCLRunner._check_if_none("current_risk_beta", current_risk_beta, disease_params['current_risk_beta'])
 
         # Location hazard multipliers can be passed straight through to the LocationHazardMultipliers object.
         # If no argument was passed then the default in the parameters file is used. Note that they need to
         # be multiplied by the current_risk_beta
         location_hazard_multipliers = LocationHazardMultipliers(
-            retail=current_risk_beta * OpenCLRunner._check_if_none(
+            retail=current_risk_beta * OpenCLRunner._check_if_none("retail",
                 retail, calibration_params["hazard_location_multipliers"]["Retail"]),
-            primary_school=current_risk_beta * OpenCLRunner._check_if_none(
+            primary_school=current_risk_beta * OpenCLRunner._check_if_none("primary_school",
                 primary_school, calibration_params["hazard_location_multipliers"]["PrimarySchool"]),
-            secondary_school=current_risk_beta * OpenCLRunner._check_if_none(
+            secondary_school=current_risk_beta * OpenCLRunner._check_if_none("secondary_school",
                 secondary_school, calibration_params["hazard_location_multipliers"]["SecondarySchool"]),
-            home=current_risk_beta * OpenCLRunner._check_if_none(
+            home=current_risk_beta * OpenCLRunner._check_if_none("home",
                 home, calibration_params["hazard_location_multipliers"]["Home"]),
-            work=current_risk_beta * OpenCLRunner._check_if_none(
+            work=current_risk_beta * OpenCLRunner._check_if_none("work",
                 work, calibration_params["hazard_location_multipliers"]["Work"]),
         )
 
         # Individual hazard multipliers can be passed straight through
         individual_hazard_multipliers = IndividualHazardMultipliers(
-            presymptomatic=OpenCLRunner._check_if_none(
+            presymptomatic=OpenCLRunner._check_if_none("presymptomatic",
                 presymptomatic, calibration_params["hazard_individual_multipliers"]["presymptomatic"]),
-            asymptomatic=OpenCLRunner._check_if_none(
+            asymptomatic=OpenCLRunner._check_if_none("asymptomatic",
                 asymptomatic, calibration_params["hazard_individual_multipliers"]["asymptomatic"]),
-            symptomatic=OpenCLRunner._check_if_none(
+            symptomatic=OpenCLRunner._check_if_none("symptomatic",
                 symptomatic, calibration_params["hazard_individual_multipliers"]["symptomatic"])
         )
 
@@ -210,13 +230,21 @@ class OpenCLRunner:
 
         return p
 
-    @staticmethod
-    def _check_if_none(value, default):
-        """Checks whether the given value is None, returning the default if it is"""
-        if value is None:
-            return default
-        else:
-            return value
+    @classmethod
+    def _check_if_none(cls, param_name, param_value, default_value):
+        """Checks whether the given param is None. If so, it will return a constant value, if it has
+         one, or failing that the provided default if it is"""
+        if param_value is not None:
+            # The value has been provided. Return it, but check a constant hasn't been set as well
+            # (it's unlikely that someone would set a constant and then also provide a value for the same parameter)
+            if param_name in cls.constants.keys():
+                raise Exception(f"A parameter {param_name} has been provided, but it has also been set as a constant")
+            return param_value
+        else:  # No value provided, return a constant, if there is one, or the default otherwise
+            if param_name in cls.constants.keys():
+                return cls.constants[param_name]
+            else:
+                return default_value
 
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
@@ -361,7 +389,9 @@ class OpenCLRunner:
     @classmethod
     def run_model_with_params_abc(cls, input_params_dict: dict, return_full_details=False):
         """
-        TEMP to work with ABC. Parameters are passed in as a dictionary.
+        Run the model, compatible with pyABC. Random variables (parameters) are passed in as a dictionary.
+        For constant parameters that override the defaults (in the default.yml file) set them first
+        with the `set_constants` method.
 
         :param return_full_details: If True then rather than just returning the normal results,
             it returns a tuple of the following:
@@ -380,6 +410,9 @@ class OpenCLRunner:
                 raise Exception(f"The parameter {k}={v} < 0. "
                                 f"All parameters: {input_params_dict}")
 
+        # Check if there are any constants that should
+
+
         # Splat the input_params_dict to automatically set any parameters that have been inlcluded
         params = OpenCLRunner.create_parameters(
             parameters_file=cls.PARAMETERS_FILE,
@@ -395,8 +428,7 @@ class OpenCLRunner:
         summaries = [x[0] for x in results]
         # Get the cumulative number of new infections per day (i.e. simulated results)
         sim = OpenCLRunner.get_cumulative_new_infections(summaries)
-        print(f"Ran Model. {str(input_params_dict)} ("
-              f"Sum result: {sum(sim)})")
+        print(f"Ran Model with {str(input_params_dict)}")
 
         if return_full_details:
             # Can compare these to the observations to get a fitness

@@ -176,6 +176,25 @@ def test_create_parameters():
     for index, param_name in zip([0, 1, 2, 3, 4], ["retail", "primary_school", "secondary_school", "home", "work"]):
         assert np.isclose(new_params.place_hazard_multipliers[index], params_dict[param_name]*current_risk_beta)
 
+    # Check that if parameters are set as constants that it works as expected
+    OpenCLRunner.set_constants({"presymptomatic": 0.456})
+    new_params = OpenCLRunner.create_parameters()
+    # Presymptomatic should be differne,t but this other two should be same as default
+    assert np.isclose(new_params.individual_hazard_multipliers[0], 0.456)
+    assert np.all([np.isclose(default_params.individual_hazard_multipliers[i], new_params.individual_hazard_multipliers[i]) for i in [1,2] ])
+    OpenCLRunner.clear_constants()
+    # Now should all be same as the defaults again
+    new_params = OpenCLRunner.create_parameters()
+    assert np.all([ np.isclose(default_params.individual_hazard_multipliers[i], new_params.individual_hazard_multipliers[i]) for i in [0, 1,2]])
+
+    # Shouldn't be able to set a parameter *and* a constant
+    OpenCLRunner.set_constants({"current_risk_beta": 0.789})
+    with pytest.raises(Exception):
+        new_params = OpenCLRunner.create_parameters(current_risk_beta=0.123)
+    OpenCLRunner.clear_constants()
+    OpenCLRunner.create_parameters(current_risk_beta=0.123)  # This should be fine now
+
+
     # Could check these parameters as well
     #infection_log_scale: float = None,
     #infection_mode: float = None,
