@@ -35,25 +35,25 @@ class Params:
                     ),
                  individual_hazard_multipliers=IndividualHazardMultipliers(
                         presymptomatic=1.0,
-                        asymptomatic=0.75,
+                        asymptomatic=0.3,
                         symptomatic=1.0
                     ),
                  obesity_multipliers=[1, 1, 1, 1],
                  cvd_multiplier=1,
                  diabetes_multiplier=1,
                  bloodpressure_multiplier=1,
-                 overweight_sympt_mplier=1.46
+                 overweight_sympt_mplier=1
                  ):
         """Create a simulator with the default parameters."""
         if obesity_multipliers is None:
             obesity_multipliers = [1, 1, 1, 1]
-        self.symptomatic_multiplier = 0.5
+        self.symptomatic_multiplier = 0.1
         self.exposed_scale = 2.82
         self.exposed_shape = 3.99
         self.presymptomatic_scale = 2.45
         self.presymptomatic_shape = 7.79
-        self.infection_log_scale = 0.35
-        self.infection_mode = 7.0
+        self.infection_log_scale = 0.17
+        self.infection_mode = 8
         self.lockdown_multiplier = 1.0
         self.place_hazard_multipliers = np.array([location_hazard_multipliers.retail,
                                                   location_hazard_multipliers.primary_school,
