@@ -24,7 +24,7 @@ class OpenCLRunner:
 
     @classmethod
     def init(cls, iterations: int, repetitions: int, observations: pd.DataFrame, use_gpu: bool,
-             store_detailed_counts: bool, parameters_file: str, opencl_dir: str, snapshot_filepath: str):
+            use_healthier_pop: bool, store_detailed_counts: bool, parameters_file: str, opencl_dir: str, snapshot_filepath: str):
         """
         The class variables determine how the model should run. They need to be class variables
         because the 'run_model_with_params' function, which is called by calibration libraries, can only take
@@ -44,6 +44,7 @@ class OpenCLRunner:
         cls.REPETITIONS = repetitions
         cls.OBSERVATIONS = observations
         cls.USE_GPU = use_gpu
+        cls.USE_HEALTHIER_POP = use_healthier_pop
         cls.STORE_DETAILED_COUNTS = store_detailed_counts
         cls.PARAMETERS_FILE = parameters_file
         cls.OPENCL_DIR = opencl_dir
@@ -52,7 +53,7 @@ class OpenCLRunner:
 
     @classmethod
     def update(cls, iterations: int = None, repetitions: int = None, observations: pd.DataFrame = None,
-               use_gpu: bool = None, store_detailed_counts: bool = None, parameters_file: str = None,
+               use_gpu: bool = None, use_healthier_pop = None, store_detailed_counts: bool = None, parameters_file: str = None,
                opencl_dir: str = None, snapshot_filepath: str = None):
         """
         Update any of the variables that have already been initialised
@@ -67,6 +68,8 @@ class OpenCLRunner:
             cls.OBSERVATIONS = observations
         if use_gpu is not None:
             cls.USE_GPU = use_gpu
+        if use_healthier_pop is not None:
+            cls.USE_HEALTHIER_POP = use_healthier_pop
         if store_detailed_counts is not None:
             cls.STORE_DETAILED_COUNTS = store_detailed_counts
         if parameters_file is not None:
@@ -200,6 +203,7 @@ class OpenCLRunner:
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
                          opencl_dir: str, use_gpu: bool,
+                         use_healthier_pop: bool,
                          store_detailed_counts: bool = True, quiet=False) -> (np.ndarray, np.ndarray):
         """
         Run the OpenCL model.
@@ -218,11 +222,13 @@ class OpenCLRunner:
         """
 
         # load snapshot
-        snapshot = Snapshot.load_full_snapshot(path=snapshot_filepath)
-
+        snapshot =
+            Snapshot.load_full_snapshot(path=snapshot_filepath)
+        if use_healthier_pop:
+            snapshot.switch_to_healthier_population()
         # set params
         snapshot.update_params(params)
-
+       #print(params.use_healthier_pop)
         # set the random seed of the model for each repetition, otherwise it is completely deterministic
         snapshot.seed_prngs(i)
 
@@ -246,7 +252,7 @@ class OpenCLRunner:
     @staticmethod
     def run_opencl_model_multi(
             repetitions: int, iterations: int, params: Params,
-            use_gpu: bool = False, store_detailed_counts: bool = False,
+            use_gpu: bool = False, use_healthier_pop: bool = True, store_detailed_counts: bool = False,
             opencl_dir=os.path.join(".", "microsim", "opencl"),
             snapshot_filepath=os.path.join(".", "microsim", "opencl", "snapshots", "cache.npz"),
             multiprocess=False,
@@ -263,11 +269,12 @@ class OpenCLRunner:
         l_params = [params] * repetitions
         l_opencl_dir = [opencl_dir] * repetitions
         l_use_gpu = [use_gpu] * repetitions
+        l_use_healthier_pop = [use_healthier_pop] * repetitions
         l_store_detailed_counts = [store_detailed_counts] * repetitions
-        l_quiet = [True] * repetitions  # Don't print info
-
-        args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_use_gpu,
-                   l_store_detailed_counts, l_quiet)
+        l_quiet = [False] * repetitions  # Don't print info
+        
+        print(use_healthier_pop)
+        args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_use_gpu, l_use_healthier_pop, l_store_detailed_counts, l_quiet)
         to_return = None
         start_time = time.time()
         if multiprocess:
@@ -282,8 +289,9 @@ class OpenCLRunner:
             # Return as a list to force the models to execute (otherwise this is delayed because starmap returns
             # a generator. Also means we can use tqdm to get a progress bar, which is nice.
             to_return = [x for x in tqdm.tqdm(results, desc="Running models", total=repetitions)]
-
+      
         print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)
+        #print(params)
         return to_return
 
     @classmethod
