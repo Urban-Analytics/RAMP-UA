@@ -187,7 +187,18 @@ class OpenCLRunner:
         # Some parameters are set in the default.yml file and can be overridden
         pass  # None here yet
 
+        obesity_multipliers = np.array([disease_params["overweight"], disease_params["obesity_30"],disease_params["obesity_35"], disease_params["obesity_40"]])
+        
+        cvd = disease_params["cvd"]
+        diabetes = disease_params["diabetes"]
+        bloodpressure = disease_params["bloodpressure"]
+        
         p = Params(
+            current_risk_beta = current_risk_beta,
+            obesity_multipliers = obesity_multipliers,
+            cvd = cvd,
+            diabetes = diabetes,
+            bloodpressure = bloodpressure,
             location_hazard_multipliers=location_hazard_multipliers,
             individual_hazard_multipliers=individual_hazard_multipliers,
         )
