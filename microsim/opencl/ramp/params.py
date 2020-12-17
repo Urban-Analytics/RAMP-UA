@@ -38,7 +38,7 @@ class Params:
                         asymptomatic=0.3,
                         symptomatic=1.0
                     ),
-                 obesity_multipliers=[1, 1, 1, 1],
+                 obesity_multipliers=[1, 1.48, 1.48, 1.48],
                  cvd_multiplier=1,
                  diabetes_multiplier=1,
                  bloodpressure_multiplier=1,
@@ -46,7 +46,7 @@ class Params:
                  ):
         """Create a simulator with the default parameters."""
         if obesity_multipliers is None:
-            obesity_multipliers = [1, 1, 1, 1]
+            obesity_multipliers = [1, 1.48, 1.48, 1.48]
         self.symptomatic_multiplier = 0.1
         self.exposed_scale = 2.82
         self.exposed_shape = 3.99
