@@ -139,7 +139,7 @@ class OpenCLRunner:
 
 
     @staticmethod
-    def create_parameters(parameters_file: str = None,
+        def create_parameters(parameters_file: str = None,
                           current_risk_beta: float = None,
                           infection_log_scale: float = None,
                           infection_mode: float = None,
@@ -211,6 +211,7 @@ class OpenCLRunner:
         p.bloodpressure_multiplier = bloodpressure
         p.overweight_sympt_mplier = overweight_sympt_mplier
         return p
+
 
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
