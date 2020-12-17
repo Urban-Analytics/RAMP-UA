@@ -57,7 +57,7 @@ class Params:
 
         if obesity_multipliers is None:
             obesity_multipliers = [1, 1, 1, 1]
-        self.symptomatic_multiplier = 0.1
+        self.symptomatic_multiplier = 0.5
         self.exposed_scale = 2.82
         self.exposed_shape = 3.99
         self.presymptomatic_scale = 2.45
