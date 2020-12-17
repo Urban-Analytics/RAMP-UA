@@ -224,9 +224,14 @@ class OpenCLRunner:
         # load snapshot
             # load snapshot
         snapshot = Snapshot.load_full_snapshot(path=snapshot_filepath)
+        prev_obesity = np.copy(snapshot.buffers.people_obesity)
         if use_healthier_pop:
             snapshot.switch_to_healthier_population()
-            print("TESTING SWITCH")
+        print("testing obesity arrays not equal")
+        print(np.mean(prev_obesity))
+        print(np.mean(snapshot.buffers.people_obesity))
+       # assert not np.array_equal(prev_obesity, snapshot.buffers.people_obesity)
+       # print("arrays not equal")
         # set params
         snapshot.update_params(params)
         
