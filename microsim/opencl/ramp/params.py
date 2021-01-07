@@ -69,8 +69,8 @@ class Params:
         0.0231, 0.0361, 0.0566, 0.0886, 0.1737],
                                         dtype=np.float32)
         self.obesity_multipliers = np.array(obesity_multipliers, dtype=np.float32)
-        self.symptomatic_probs = np.array([0.21, 0.21, 0.45, 0.45,
-                                           0.45, 0.45, 0.45, 0.69, 0.69],
+        self.symptomatic_probs = np.array([0.8, 0.8, 0.8, 0.8,
+                                           0.8, 0.8, 0.8, 0.8, 0.8],
                                            dtype = np.float32)
         self.cvd_multiplier = cvd_multiplier
         self.diabetes_multiplier = diabetes_multiplier
