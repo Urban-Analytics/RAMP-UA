@@ -139,7 +139,7 @@ class OpenCLRunner:
 
 
     @staticmethod
-        def create_parameters(parameters_file: str = None,
+    def create_parameters(parameters_file: str = None,
                           current_risk_beta: float = None,
                           infection_log_scale: float = None,
                           infection_mode: float = None,
