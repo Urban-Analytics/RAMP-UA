@@ -35,7 +35,7 @@ class Params:
                     ),
                  individual_hazard_multipliers=IndividualHazardMultipliers(
                         presymptomatic=1.0,
-                        asymptomatic=0.3,
+                        asymptomatic=0.25,
                         symptomatic=1.0
                     ),
                  obesity_multipliers=[1, 1.48, 1.48, 1.48],
@@ -69,8 +69,8 @@ class Params:
         0.0231, 0.0361, 0.0566, 0.0886, 0.1737],
                                         dtype=np.float32)
         self.obesity_multipliers = np.array(obesity_multipliers, dtype=np.float32)
-        self.symptomatic_probs = np.array([0.8, 0.8, 0.8, 0.8,
-                                           0.8, 0.8, 0.8, 0.8, 0.8],
+        self.symptomatic_probs = np.array([0.21, 0.21, 0.45, 0.45,    
+                                           0.45, 0.45, 0.45, 0.69, 0.69],
                                            dtype = np.float32)
         self.cvd_multiplier = cvd_multiplier
         self.diabetes_multiplier = diabetes_multiplier
