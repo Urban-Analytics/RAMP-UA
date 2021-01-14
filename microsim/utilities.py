@@ -1,4 +1,6 @@
 # Contains some useful utility functionality
+import os
+import requests
 import pandas as pd
 from typing import List
 
@@ -52,3 +54,14 @@ def check_durations_sum_to_1(individuals, activities):
         raise Exception("Some activity durations don't sum to 1")
 
 
+# data fetching functions
+
+def download_data(url="https://example0blob0store.blob.core.windows.net/test1/devon_data.tar.gz"):
+
+    response = requests.get(url, stream=True)
+
+    target_path = os.path.join("devon_data.tar.gz")
+    
+    if response.status_code == 200:
+        with open(target_path, 'wb') as f:
+            f.write(response.raw.read())
