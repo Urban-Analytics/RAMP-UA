@@ -1,7 +1,7 @@
 import os
 import unittest
 from unittest.mock import patch, mock_open
-from microsim.utilities import download_data
+from microsim.utilities import download_data, unpack_data
 
 class TestDownloadData(unittest.TestCase):
 
@@ -23,6 +23,19 @@ class TestDownloadData(unittest.TestCase):
 
         with self.assertRaises(Exception):
             download_data(url="not_a_url")
+
+    @patch("microsim.utilities.tarfile")
+    def test_unpack_data(self, mock_tar):
+        """
+        A test of the unpack_data function using mocks to check tarfile functions are called
+        """
+
+        unpack_data("example_tar")
+
+        mock_tar.open.assert_called_with("example_tar")
+        mock_tar.open().extractall.assert_called_with(".")
+
+
 
 if __name__ == '__main__':
     unittest.main()

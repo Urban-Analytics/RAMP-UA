@@ -1,6 +1,7 @@
 # Contains some useful utility functionality
 import os
 import requests
+import tarfile
 import pandas as pd
 from typing import List
 
@@ -69,3 +70,14 @@ def download_data(url="https://example0blob0store.blob.core.windows.net/test1/de
     if response.status_code == 200:
         with open(target_path, 'wb') as f:
             f.write(response.raw.read())
+
+def unpack_data(archive : str):
+    """unpack tar data archive
+
+    Args:
+        archive (str): A string directory path to archive file using
+    """
+
+    tar_file = tarfile.open(archive)
+
+    tar_file.extractall(".")
