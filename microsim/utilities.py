@@ -86,13 +86,13 @@ def unpack_data(archive : str):
 
     tar_file.extractall(".")
 
-def data_setup(archive : str, url : str  = "https://ramp0storage.blob.core.windows.net/rampdata/devon_data.tar.gz"):
+def data_setup(url : str  = "https://ramp0storage.blob.core.windows.net/rampdata/devon_data.tar.gz"):
     """A wrapper function for downloading and unpacking Azure stored devon_data
 
     Args:
         archive (str): A string directory path to archive file using
         url (str, optional): A url to an archive file. Defaults to "https://ramp0storage.blob.core.windows.net/rampdata/devon_data.tar.gz".
     """
-    download_data(url = url)
+    archive_file = download_data(url = url)
 
-    unpack_data(archive = archive)
+    unpack_data(archive = archive_file)

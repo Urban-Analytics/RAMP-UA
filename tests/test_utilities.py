@@ -39,10 +39,11 @@ class TestDownloadData(unittest.TestCase):
     @patch("microsim.utilities.unpack_data")
     def test_data_setup(self, mock_ud, mock_dd):
 
-        data_setup(archive = 'devon_data')
+        data_setup()
 
         mock_dd.assert_called_with(url="https://ramp0storage.blob.core.windows.net/rampdata/devon_data.tar.gz")
-        mock_ud.assert_called_with(archive = "devon_data")
+        mock_dd.return_value("devon_data.tar.gz")
+        mock_ud.assert_called_with(archive = mock_dd.return_value)
 
 
 if __name__ == '__main__':
