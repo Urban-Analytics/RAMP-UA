@@ -5,16 +5,16 @@ from microsim.utilities import download_data, unpack_data, data_setup
 
 class TestDownloadData(unittest.TestCase):
 
-    def test_download_success(self):
+    @patch("microsim.utilities.open")
+    def test_download_success(self, open_mock):
         """
         A test to fetch a dummy data tar file using the download data function in utils
         """
-        open_mock = mock_open()
 
-        with patch("microsim.utilities.open", open_mock):
-            download_data(url="https://ramp0storage.blob.core.windows.net/rampdata/dummy_data.tar.gz")
+        tarName = download_data(url="https://ramp0storage.blob.core.windows.net/rampdata/dummy_data.tar.gz")
         
-        open_mock.assert_called_with("devon_data.tar.gz","wb")
+        open_mock.assert_called_with("dummy_data.tar.gz","wb")
+        self.assertTrue(tarName == 'dummy_data.tar.gz')
 
     def test_download_fail(self):
         """

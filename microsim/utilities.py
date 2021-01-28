@@ -65,11 +65,15 @@ def download_data(url : str):
     """
     response = requests.get(url, stream=True)
 
-    target_path = os.path.join("devon_data.tar.gz")
+    # specify target_path as name of tarfile downloaded by splitting url 
+    # and retrieving last item
+    target_path = os.path.join(url.split('/')[-1])
     
     if response.status_code == 200:
         with open(target_path, 'wb') as f:
             f.write(response.raw.read())
+
+    return target_path
 
 def unpack_data(archive : str):
     """unpack tar data archive
