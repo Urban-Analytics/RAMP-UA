@@ -1,4 +1,5 @@
 import os
+from _pytest.python import _show_fixtures_per_test
 import pytest
 import pandas as pd
 import numpy as np
@@ -27,7 +28,7 @@ def rInterface():
 
     return r_int
 
-@pytest.fixture()
+@pytest.mark.skip()
 def microsim_inst():
     """
     Set up function for microsim object
@@ -48,6 +49,7 @@ def test_calculate_disease_status_onestep(rInterface):
 
     assert raw_indiv.shape[0] == r_updated_frame.shape[0]
 
+@pytest.mark.skip()
 def test_calculate_disease_status_multistep(rInterface):
     """
     A series of tests for the calculate_disease_status function
