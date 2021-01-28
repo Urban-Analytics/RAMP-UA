@@ -12,7 +12,7 @@ class TestDownloadData(unittest.TestCase):
         open_mock = mock_open()
 
         with patch("microsim.utilities.open", open_mock):
-            download_data(url="https://example0blob0store.blob.core.windows.net/test1/dummy_data.tar.gz")
+            download_data(url="https://ramp0storage.blob.core.windows.net/rampdata/dummy_data.tar.gz")
         
         open_mock.assert_called_with("devon_data.tar.gz","wb")
 

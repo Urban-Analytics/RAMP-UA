@@ -57,7 +57,7 @@ def check_durations_sum_to_1(individuals, activities):
 
 # data fetching functions
 
-def download_data(url="https://example0blob0store.blob.core.windows.net/test1/devon_data.tar.gz"):
+def download_data(url="https://ramp0storage.blob.core.windows.net/rampdata/devon_data.tar.gz"):
     """Download data utility function
 
     Args:
