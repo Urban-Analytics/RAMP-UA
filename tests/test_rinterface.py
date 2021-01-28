@@ -1,5 +1,4 @@
 import os
-from _pytest.python import _show_fixtures_per_test
 import pytest
 import pandas as pd
 import numpy as np
@@ -37,6 +36,7 @@ def microsim_inst():
 
     return test_sim 
 
+@pytest.mark.skip()
 def test_calculate_disease_status_onestep(rInterface):
     """
     A series of tests for the calculate_disease_status function
