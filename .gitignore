@@ -46,3 +46,7 @@ imgui.ini
 
 # sphinx local build items
 docs/build/*
+
+# data directories
+devon_data
+devon_data.tar.gz
