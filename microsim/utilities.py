@@ -57,11 +57,11 @@ def check_durations_sum_to_1(individuals, activities):
 
 # data fetching functions
 
-def download_data(url="https://ramp0storage.blob.core.windows.net/rampdata/devon_data.tar.gz"):
+def download_data(url : str):
     """Download data utility function
 
     Args:
-        url (str, optional): A url to an archive file. Defaults to "du ".
+        url (str, optional): A url to an archive file. Defaults to "https://ramp0storage.blob.core.windows.net/rampdata/devon_data.tar.gz".
     """
     response = requests.get(url, stream=True)
 
@@ -81,3 +81,14 @@ def unpack_data(archive : str):
     tar_file = tarfile.open(archive)
 
     tar_file.extractall(".")
+
+def data_setup(archive : str, url : str  = "https://ramp0storage.blob.core.windows.net/rampdata/devon_data.tar.gz"):
+    """A wrapper function for downloading and unpacking Azure stored devon_data
+
+    Args:
+        archive (str): A string directory path to archive file using
+        url (str, optional): A url to an archive file. Defaults to "https://ramp0storage.blob.core.windows.net/rampdata/devon_data.tar.gz".
+    """
+    download_data(url = url)
+
+    unpack_data(archive = archive)
