@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        os: ["ubuntu-latest", "macos-latest","ubuntu-18.04","ubuntu-16.04","ubuntu-20.04"] # dropping windows-latest from test matrix due to issues with rpy2 issue #73
+        os: [ "macos-latest","ubuntu-16.04","ubuntu-20.04"] # dropping windows-latest from test matrix due to issues with rpy2 issue #73
 
     steps:
     - uses: actions/checkout@v2
