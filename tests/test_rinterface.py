@@ -48,7 +48,6 @@ def test_calculate_disease_status_onestep(rInterface):
 
     assert raw_indiv.shape[0] == r_updated_frame.shape[0]
 
-@pytest.mark.skip()
 def test_calculate_disease_status_multistep(rInterface):
     """
     A series of tests for the calculate_disease_status function
