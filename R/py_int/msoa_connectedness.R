@@ -92,7 +92,7 @@ ua_airp_lng$annual_passengers <- as.numeric(ua_airp_lng$annual_passengers)
 
 connect <- ua_airp_lng %>% 
   mutate(connectedness_ann = (1/distance_km)*annual_passengers) %>% # calculating the connectedness metric for each transport hub*msoa 
-  group_by( msoa11cd,  msoa11nm, transport_type) %>% 
+  group_by( msoa11cd,  msoa11nm, transport_type) %>%  # grouping to calculate connectedness by MSOA
   top_n(n= -3, wt = distance_km) %>%    #closest three airports and train stations - realistically the transport stations people would use.
   ungroup() %>% 
   group_by(msoa11cd,  msoa11nm) %>% 
