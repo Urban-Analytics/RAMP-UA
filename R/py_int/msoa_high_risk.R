@@ -60,4 +60,4 @@ haz_msoas <- population_in %>%
   dplyr::select(area, risk)
 
 
-write.csv(haz_msoas, "msoa_danger_fn.csv", row.names = FALSE)
+write.csv(haz_msoas, "init_data/msoa_danger_fn.csv", row.names = FALSE)
