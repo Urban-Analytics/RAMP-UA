@@ -104,5 +104,5 @@ connect %>%
   arrange(msoa_sum_connected_ann)
 
 
-write.csv(connect, "devon_data/msoa_connectedness_closest_three.csv", row.names = FALSE)
+write.csv(connect, "devon_data/msoa_connectedness.csv", row.names = FALSE)
 
