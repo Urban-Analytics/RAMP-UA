@@ -6,7 +6,7 @@ source("Code/covid_infection_functions.R")
 
 ############## MSOA ranking data
 
-population <- clean_names(read_delim("data/devon-tu_health/Devon_simulated_TU_keyworker_health.csv", ","))
+population <- clean_names(read_delim("data/devon-tu_health/Devon_simulated_TU_keyworker_health.csv", ","))  #This is the only bit that is devon specific, adding in a different population should select the high risk MSOAs for that population
 pop_dens <- read_csv("devon_data/population_density_msoas.csv") #msoa_pop_density.R
 
 connectivity <- janitor::clean_names(read_csv("devon_data/msoa_connectedness.csv")) %>% 
