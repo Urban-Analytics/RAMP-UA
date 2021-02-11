@@ -1,4 +1,4 @@
-##Selecting which MSOAs should initially be seeded with COVID: ##
+## Selecting which MSOAs should initially be seeded with COVID: ##
 
 
 In order to initialise the model we needed to seed COVID cases in the population. We seeded these infections in areas and individuals we thought would most likely to have been the first individuals in an area to be exposed to the disease. 
@@ -17,6 +17,7 @@ Code for calculating the risk levels of MSOAs is found in R/py_int/msoa_high_ris
 ### Population density: ###
 	
 Code in R/py_int/msoa_pop_density.R
+
 Resulting data in devon_data/population_density_msoas.csv
 
 In order to calculate population density we downloaded MSOA shapefile from [here](https://opendata.arcgis.com/datasets/826dc85fb600440889480f4d9dbb1a24_0.zip?outSR=%7B%22latestWkid%22%3A27700%2C%22wkid%22%3A27700%7D) and LSOA population data from [here](https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/lowersuperoutputareamidyearpopulationestimates/mid2018sape21dt1a/sape21dt1amid2018on2019lalsoasyoaestimatesformatted.zip).
@@ -27,6 +28,7 @@ We aggregated the population data to MSOA level using and then calculated the ar
 	
 
 Code in R/py_int/msoa_connectedness.R
+
 Resulting data in devon_data/msoa_connectedness.csv
 
 To calculate the 'connectedness' of each MSOA we use the following data:
@@ -41,6 +43,7 @@ For each MSOA we summed the connectedness score of the three closest transport h
 ### Index of Multiple Deprivation: ###
 
 Code in R/py_int/msoa_high_risk.R
+
 Resulting data in init_data/msoa_danger_fn.csv
 
 We downloaded the Index of Multiple Deprivation Rank data from [here](https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/833970/File_1_-_IMD2019_Index_of_Multiple_Deprivation.xlsx)
