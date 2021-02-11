@@ -1,4 +1,5 @@
-Seeding in Riskier MSOAs
+Selecting which MSOAs should initially be seeded with COVID:
+
 
 In order to initialise the model we needed to seed COVID cases in the population. We seeded these infections in areas and individuals we thought would most likely to have been the first individuals in an area to be exposed to the disease. 
 
