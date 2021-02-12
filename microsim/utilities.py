@@ -1,4 +1,7 @@
 # Contains some useful utility functionality
+import os
+import requests
+import tarfile
 import pandas as pd
 from typing import List
 
@@ -52,3 +55,44 @@ def check_durations_sum_to_1(individuals, activities):
         raise Exception("Some activity durations don't sum to 1")
 
 
+# data fetching functions
+
+def download_data(url : str):
+    """Download data utility function
+
+    Args:
+        url (str, optional): A url to an archive file. Defaults to "https://ramp0storage.blob.core.windows.net/rampdata/devon_data.tar.gz".
+    """
+    response = requests.get(url, stream=True)
+
+    # specify target_path as name of tarfile downloaded by splitting url 
+    # and retrieving last item
+    target_path = os.path.join(url.split('/')[-1])
+    
+    if response.status_code == 200:
+        with open(target_path, 'wb') as f:
+            f.write(response.raw.read())
+
+    return target_path
+
+def unpack_data(archive : str):
+    """unpack tar data archive
+
+    Args:
+        archive (str): A string directory path to archive file using
+    """
+
+    tar_file = tarfile.open(archive)
+
+    tar_file.extractall(".")
+
+def data_setup(url : str  = "https://ramp0storage.blob.core.windows.net/rampdata/devon_data.tar.gz"):
+    """A wrapper function for downloading and unpacking Azure stored devon_data
+
+    Args:
+        archive (str): A string directory path to archive file using
+        url (str, optional): A url to an archive file. Defaults to "https://ramp0storage.blob.core.windows.net/rampdata/devon_data.tar.gz".
+    """
+    archive_file = download_data(url = url)
+
+    unpack_data(archive = archive_file)

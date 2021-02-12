@@ -29,6 +29,7 @@ from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
 from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
 from microsim.initialisation_cache import InitialisationCache
+from microsim.utilities import data_setup, unpack_data
 
 
 # ********
@@ -134,6 +135,20 @@ def main(parameters_file, no_parameters_file, initialise, iterations, scenario, 
     base_dir = os.getcwd()  # get current directory
     data_dir = os.path.join(base_dir, data_dir)
     r_script_dir = os.path.join(base_dir, "R", "py_int")
+
+    ### section for fetching data
+    if not os.path.isdir(data_dir):
+
+        print(f"No data directory detected.")
+
+        if os.path.isfile(data_dir + ".tar.gz"):
+            print(f"An archive file matching the name of the data directory has been detected!")
+            print(f"Unpacking this archive file now.")
+            unpack_data(data_dir + ".tar.gz")
+            
+        else:
+            print(f"{data_dir} does not exist. Downloading devon_data.")
+            data_setup()
 
     # Temporarily only want to use Devon MSOAs
     # devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None,
