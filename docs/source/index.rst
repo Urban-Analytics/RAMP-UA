@@ -8,9 +8,6 @@ RAMP-UA Project
 
 Welcome to the documentation site for the RAMP Urban Analytics project. This includes two implementations of a microsimulation model.
 
-.. contents:: What's on this page:
-
-
 Site contents
 ==============
 .. toctree:: 
@@ -19,7 +16,8 @@ Site contents
    Home <self>
    Usage Guide <usage/index>
    Overview for programmers <overview/index>
-
+   usage/index 
+   contributing/index
    Reference/index
 
 
