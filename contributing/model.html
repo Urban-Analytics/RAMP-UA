@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>Setting up the python model &mdash; RAMP-UA 0.2.1 documentation</title>
+  <title>Contributing to the model code &mdash; RAMP-UA 0.2.1 documentation</title>
   
 
   
@@ -38,8 +38,8 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Setting up the OpenCL model" href="opencl.html" />
-    <link rel="prev" title="Usage" href="index.html" /> 
+    <link rel="next" title="Contributing to the documentation" href="docs.html" />
+    <link rel="prev" title="Getting ready to contribute" href="getting_started.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -86,16 +86,17 @@
             
               <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Usage</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Python model</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#setup">Setup</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#running-the-model">Running the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage/index.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Contributing</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html">Getting ready to contribute</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Contributing to model code</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#about-model-code">About model code</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#repository-code-checks">Repository code checks</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="opencl.html">OpenCL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="docs.html">Contributing to documentation</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../contributing/index.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Reference/index.html">RAMP-UA API Reference</a></li>
 </ul>
 
@@ -145,15 +146,15 @@
     
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
-          <li><a href="index.html">Usage</a> &raquo;</li>
+          <li><a href="index.html">Contributing</a> &raquo;</li>
         
-      <li>Setting up the python model</li>
+      <li>Contributing to the model code</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/usage/basics.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/contributing/model.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -166,44 +167,29 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="setting-up-the-python-model">
-<h1>Setting up the python model<a class="headerlink" href="#setting-up-the-python-model" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="setup">
-<h2>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h2>
-<p>This project currently supports running on Linux and macOS.</p>
-<p>To start working with this repository you need to clone it onto your local machine:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ git clone https://github.com/Urban-Analytics/RAMP-UA.git
-$ <span class="nb">cd</span> RAMP-UA
+  <div class="section" id="contributing-to-the-model-code">
+<h1>Contributing to the model code<a class="headerlink" href="#contributing-to-the-model-code" title="Permalink to this headline">¶</a></h1>
+<p>We welcome contributions towards the model code.
+They will be considered by the core development team before being merged however we have a number of internal projects in active development
+so please understand we may not include all community suggestions!</p>
+<div class="section" id="about-model-code">
+<h2>About model code<a class="headerlink" href="#about-model-code" title="Permalink to this headline">¶</a></h2>
+<p>This model code is still in an active state of development so it is liable to change without significant notice.
+Please be mindful of this if you choose to contribute and please ensure that any changes you suggest pass existing continuous integration steps.</p>
+</div>
+<div class="section" id="repository-code-checks">
+<h2>Repository code checks<a class="headerlink" href="#repository-code-checks" title="Permalink to this headline">¶</a></h2>
+<p>The RAMP-UA repository includes a number of GitHub actions that run automatically when changes are merged to the master branch or if pull requests
+are suggested to master.
+These are included to ensure that changes do not break the existing model and all contributions will need to pass the test suite before they are accepted.</p>
+<p>You can run the test suite locally using <a class="reference external" href="https://docs.pytest.org/en/stable/">pytest</a> which is included within the <code class="docutils literal notranslate"><span class="pre">ramp-ua</span></code> conda environment.
+This should behave approximately the same within the GitHub actions test runners but occasionally differences can lead to errors so be sure to check
+the available GitHub actions logs carefully if you get unexpected test failures that can’t be replicated locally.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd RAMP-UA-fork
+$ pytest tests/
 </pre></div>
 </div>
-<p>This project requires a specific conda environment in order to run so you will need the
-<a class="reference external" href="https://docs.anaconda.com/anaconda/install/">conda package manager system</a> installed.
-Once conda has been installed you can create an environment for this project using the provided environment file.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ conda env create -f environment.yml
-</pre></div>
-</div>
-<p>To retrieve data to run the mode you will need to use Git Large File Storage to download the input data.
-Git-lfs is installed within the conda environment (you may need to run git lfs install on your first use of git lfs).</p>
-<p>To retrieve the data you run the following commands within the root of the project repository:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ git lfs fetch
-$ git lfs checkout
-</pre></div>
-</div>
-<p>Next we install the RAMP-UA package into the environment using setup.py:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># if developing the code base use:</span>
-$ python setup.py develop
-<span class="c1"># for using the code base use</span>
-$ python setup.py install
-</pre></div>
-</div>
-</div>
-<div class="section" id="running-the-model">
-<h2>Running the model<a class="headerlink" href="#running-the-model" title="Permalink to this headline">¶</a></h2>
-<p>Both models can be run from the microsim/main.py script, which can be configured with various arguments to choose which model implementation to run.</p>
-<p>The Python / R model runs by default, so simply run the main script with no arguments.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python microsim/main.py
-</pre></div>
-</div>
+<p>This will run through the test suite and output details of information about whether tests have passed, failed and if warnings have been issued.</p>
 </div>
 </div>
 
@@ -213,8 +199,8 @@ $ python setup.py install
           </div>
           <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="opencl.html" class="btn btn-neutral float-right" title="Setting up the OpenCL model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-        <a href="index.html" class="btn btn-neutral float-left" title="Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="docs.html" class="btn btn-neutral float-right" title="Contributing to the documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="getting_started.html" class="btn btn-neutral float-left" title="Getting ready to contribute" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

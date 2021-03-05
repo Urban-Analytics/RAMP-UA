@@ -1,0 +1,259 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Contributing to the documentation &mdash; RAMP-UA 0.2.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="RAMP-UA API Reference" href="../Reference/index.html" />
+    <link rel="prev" title="Contributing to the model code" href="model.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> RAMP-UA
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage/index.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Contributing</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html">Getting ready to contribute</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model.html">Contributing to model code</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Contributing to documentation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#about-ramp-ua-documentation">About RAMP-UA Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#building-documentation-locally">Building documentation locally</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../Reference/index.html">RAMP-UA API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">RAMP-UA</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="index.html">Contributing</a> &raquo;</li>
+        
+      <li>Contributing to the documentation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/contributing/docs.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="contributing-to-the-documentation">
+<h1>Contributing to the documentation<a class="headerlink" href="#contributing-to-the-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Documentation is <strong>super</strong> important and making sure we have straightforward, up to date
+documentation is a crucial part of making sure this project is as reproducible as possible.</p>
+<p>This project has been put together by a number of different collaborators so there may be bits of
+the code you find documented well and sections in need of improvement.
+We’re aware of this and are trying our best to improve the documentation. But you can help!</p>
+<p><em>Before starting on this page make sure you’ve read our</em> <a class="reference internal" href="getting_started.html"><span class="doc">get ready to contribute guide</span></a>.</p>
+<div class="section" id="about-ramp-ua-documentation">
+<h2>About RAMP-UA Documentation<a class="headerlink" href="#about-ramp-ua-documentation" title="Permalink to this headline">¶</a></h2>
+<p>Documentation for this package is generated using <a class="reference external" href="https://www.sphinx-doc.org/en/master/index.html">Sphinx</a> and
+is written in <a class="reference external" href="https://docutils.sourceforge.io/rst.html">reStructured text</a>.</p>
+<p>Documentation is found in two primary places: documentation pages like this written by hand in <code class="docutils literal notranslate"><span class="pre">docs/source</span></code> and docstrings that are found
+within code functions and classes. <a class="reference external" href="https://www.python.org/dev/peps/pep-0257/">Docstrings</a> aim to provide a specific overview of the behaviour of the code component it is within whilst documentation pages
+are more general guides for the project as a whole.</p>
+</div>
+<div class="section" id="building-documentation-locally">
+<h2>Building documentation locally<a class="headerlink" href="#building-documentation-locally" title="Permalink to this headline">¶</a></h2>
+<p>You can build and test documentation as you contribute to it using the following instructions when you are within the <code class="docutils literal notranslate"><span class="pre">ramp-ua</span></code> conda environment.
+To generate the specific API reference documentation from docstrings we use the <code class="docutils literal notranslate"><span class="pre">sphinx.ext.autodoc</span></code> extension which automatically extracts
+docstrings and renders them in the documentation pages. Using this extension is specified within the <code class="docutils literal notranslate"><span class="pre">docs/source/conf.py</span></code> file so that sphinx knows to use it.</p>
+<p>To build the documentation locally:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd docs/
+
+# remove any previous rendered documentation
+$ make clean
+
+# create new html documentation
+$ make html
+</pre></div>
+</div>
+<p>If a new module is added you will need to create new <cite>.rst</cite> files using the <code class="docutils literal notranslate"><span class="pre">sphinx-apidoc</span></code> command.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd docs/
+
+$ sphinx-apidoc -f -o source/ ../new_module/
+</pre></div>
+</div>
+<p>This will generate new <code class="docutils literal notranslate"><span class="pre">.rst</span></code> files from the new modules docstrings that can then be rendered into html by running <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">html</span></code>.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="../Reference/index.html" class="btn btn-neutral float-right" title="RAMP-UA API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="model.html" class="btn btn-neutral float-left" title="Contributing to the model code" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, RAMP UA Team.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
