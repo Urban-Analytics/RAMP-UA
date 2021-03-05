@@ -14,6 +14,8 @@ Site contents
    :maxdepth: 2
 
    Home <self>
+   Usage Guide <usage/index>
+   Overview for programmers <overview/index>
    usage/index 
    contributing/index
    Reference/index
