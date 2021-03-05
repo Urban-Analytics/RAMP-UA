@@ -9,7 +9,7 @@ This page provides a broad overview of how the model works. It is intended for p
 Source Code and Packages
 ---------------------------------
 
-The main package for the source code is ``microsim`` and the entry-point for the program is the ``main.py`` file (i.e. ``microsim/main.py``). To run the model and see what arguments are available, execute the following from the root project directory:
+The main package for the source code is ``microsim`` and the entry-point for the program is the ``main.py`` file (i.e. ``microsim/main.py``). To run the model and see what arguments are available, execute the following from the root project directory::
 
     $ python microsim/main.py --help
 
@@ -47,7 +47,7 @@ The most important thing that the ``PopulationInitialisation`` class does is to 
 Microsim class (``microsim/microsim_model.py``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``Microsim`` class is the main entry point for the python file. It contains the main code to control the spread of the disease. See the ``step()`` function for details about what, specifically, happens in each iteration of the model. The OpenCL model follows the same procedures, although they are implemented differently.
+The ``Microsim`` class is the main entry point for the python model. It contains the main code to control the spread of the disease. See the ``step()`` function for details about what, specifically, happens in each iteration of the model. The OpenCL model follows the same procedures, although they are implemented differently.
 
 The other thing to note is the ``Microsim.calculate_new_disease_status`` function. That function calls the file ``microsim/r_interface.py`` file which in turn delegates the estimation of an individual's specific disease status.
 
