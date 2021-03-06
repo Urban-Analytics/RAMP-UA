@@ -15,7 +15,7 @@ Site contents
 
    Home <self>
    Usage Guide <usage/index>
-   Overview for programmers <overview/index>
+   Developers Guide <dev_guide/index>
    usage/index 
    contributing/index
    Reference/index

@@ -1,4 +1,4 @@
-Overview (for Programmers)
+Developers Guide
 ===================================
 
 This page provides a broad overview of how the model works. It is intended for programmers who want to read and/or edit the code.
@@ -9,7 +9,7 @@ This page provides a broad overview of how the model works. It is intended for p
 Source Code and Packages
 ---------------------------------
 
-The main package for the source code is ``microsim`` and the entry-point for the program is the ``main.py`` file (i.e. ``microsim/main.py``). To run the model and see what arguments are available, execute the following from the root project directory::
+The main package for the source code is :py:class:`microsim` and the entry-point for the program is the function :py:func:`microsim.main` in ``microsim/main.py``. To run the model and see what arguments are available, execute the following from the root project directory::
 
     $ python microsim/main.py --help
 
@@ -37,9 +37,9 @@ The Python and OpenCL models are introduced in more detail below, but broadly on
 Population Initialisation (``microsim/population_initialisation.py``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The task of the ``PopulationInitialisation`` class is to read the data that represents the synthetic population at the core of the model. This includes csv files with information about each individual, as well as files used to estimate workplace locations, etc. That file is commented quite extensively, so see the documentation there for further details.
+The task of the :py:class:`microsim.population_initialisation.PopulationInitialisation` class is to read the data that represents the synthetic population at the core of the model. This includes csv files with information about each individual, as well as files used to estimate workplace locations, etc. That file is commented quite extensively, so see the documentation there for further details.
 
-The most important thing that the ``PopulationInitialisation`` class does is to return the ``individuals`` dataframe and the ``activity_locations`` dictionary (that points to dataframes for the locations where indvidiauals will spend their time).
+The most important thing that the :py:class:`microsim.population_initialisation.PopulationInitialisation` class does is to return the ``individuals`` dataframe and the ``activity_locations`` dictionary (that points to dataframes for the locations where indvidiauals will spend their time).
 
 
 .. _microsim-label:
@@ -47,7 +47,7 @@ The most important thing that the ``PopulationInitialisation`` class does is to 
 Microsim class (``microsim/microsim_model.py``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``Microsim`` class is the main entry point for the python model. It contains the main code to control the spread of the disease. See the ``step()`` function for details about what, specifically, happens in each iteration of the model. The OpenCL model follows the same procedures, although they are implemented differently.
+The :py:class:`microsim.microsim_model.Microsim` class is the main entry point for the python model. It contains the main code to control the spread of the disease. See the :py:func:`microsim.microsim_model.Microsim.step` function for details about what, specifically, happens in each iteration of the model. The OpenCL model follows the same procedures, although they are implemented differently.
 
-The other thing to note is the ``Microsim.calculate_new_disease_status`` function. That function calls the file ``microsim/r_interface.py`` file which in turn delegates the estimation of an individual's specific disease status.
+The other thing to note is the :py:func:`microsim.microsim_model.Microsim.calculate_new_disease_status` function. That function calls the file ``microsim/r_interface.py`` file which in turn delegates the estimation of an individual's specific disease status.
 
