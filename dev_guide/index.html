@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>Overview (for Programmers) &mdash; RAMP-UA 0.2.1 documentation</title>
+  <title>Developers Guide &mdash; RAMP-UA 0.2.1 documentation</title>
   
 
   
@@ -87,7 +87,7 @@
               <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage/index.html">Usage Guide</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Overview for programmers</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Developers Guide</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#source-code-and-packages">Source Code and Packages</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#population-initialisation-microsim-population-initialisation-py">Population Initialisation (<code class="docutils literal notranslate"><span class="pre">microsim/population_initialisation.py</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#microsim-class-microsim-microsim-model-py">Microsim class (<code class="docutils literal notranslate"><span class="pre">microsim/microsim_model.py</span></code>)</a></li>
@@ -146,13 +146,13 @@
     
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>Overview (for Programmers)</li>
+      <li>Developers Guide</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/overview/index.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/dev_guide/index.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -165,12 +165,12 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="overview-for-programmers">
-<h1>Overview (for Programmers)<a class="headerlink" href="#overview-for-programmers" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="developers-guide">
+<h1>Developers Guide<a class="headerlink" href="#developers-guide" title="Permalink to this headline">¶</a></h1>
 <p>This page provides a broad overview of how the model works. It is intended for programmers who want to read and/or edit the code.</p>
 <div class="section" id="source-code-and-packages">
 <h2>Source Code and Packages<a class="headerlink" href="#source-code-and-packages" title="Permalink to this headline">¶</a></h2>
-<p>The main package for the source code is <code class="docutils literal notranslate"><span class="pre">microsim</span></code> and the entry-point for the program is the <code class="docutils literal notranslate"><span class="pre">main.py</span></code> file (i.e. <code class="docutils literal notranslate"><span class="pre">microsim/main.py</span></code>). To run the model and see what arguments are available, execute the following from the root project directory:</p>
+<p>The main package for the source code is <a class="reference internal" href="../Reference/microsim.html#module-microsim" title="microsim"><code class="xref py py-class docutils literal notranslate"><span class="pre">microsim</span></code></a> and the entry-point for the program is the function <a class="reference internal" href="../Reference/microsim.html#module-microsim.main" title="microsim.main"><code class="xref py py-func docutils literal notranslate"><span class="pre">microsim.main()</span></code></a> in <code class="docutils literal notranslate"><span class="pre">microsim/main.py</span></code>. To run the model and see what arguments are available, execute the following from the root project directory:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python microsim/main.py --help
 </pre></div>
 </div>
@@ -189,13 +189,13 @@
 </ul>
 <div class="section" id="population-initialisation-microsim-population-initialisation-py">
 <span id="population-initialisation-label"></span><h3>Population Initialisation (<code class="docutils literal notranslate"><span class="pre">microsim/population_initialisation.py</span></code>)<a class="headerlink" href="#population-initialisation-microsim-population-initialisation-py" title="Permalink to this headline">¶</a></h3>
-<p>The task of the <code class="docutils literal notranslate"><span class="pre">PopulationInitialisation</span></code> class is to read the data that represents the synthetic population at the core of the model. This includes csv files with information about each individual, as well as files used to estimate workplace locations, etc. That file is commented quite extensively, so see the documentation there for further details.</p>
-<p>The most important thing that the <code class="docutils literal notranslate"><span class="pre">PopulationInitialisation</span></code> class does is to return the <code class="docutils literal notranslate"><span class="pre">individuals</span></code> dataframe and the <code class="docutils literal notranslate"><span class="pre">activity_locations</span></code> dictionary (that points to dataframes for the locations where indvidiauals will spend their time).</p>
+<p>The task of the <a class="reference internal" href="../Reference/microsim.html#microsim.population_initialisation.PopulationInitialisation" title="microsim.population_initialisation.PopulationInitialisation"><code class="xref py py-class docutils literal notranslate"><span class="pre">microsim.population_initialisation.PopulationInitialisation</span></code></a> class is to read the data that represents the synthetic population at the core of the model. This includes csv files with information about each individual, as well as files used to estimate workplace locations, etc. That file is commented quite extensively, so see the documentation there for further details.</p>
+<p>The most important thing that the <a class="reference internal" href="../Reference/microsim.html#microsim.population_initialisation.PopulationInitialisation" title="microsim.population_initialisation.PopulationInitialisation"><code class="xref py py-class docutils literal notranslate"><span class="pre">microsim.population_initialisation.PopulationInitialisation</span></code></a> class does is to return the <code class="docutils literal notranslate"><span class="pre">individuals</span></code> dataframe and the <code class="docutils literal notranslate"><span class="pre">activity_locations</span></code> dictionary (that points to dataframes for the locations where indvidiauals will spend their time).</p>
 </div>
 <div class="section" id="microsim-class-microsim-microsim-model-py">
 <span id="microsim-label"></span><h3>Microsim class (<code class="docutils literal notranslate"><span class="pre">microsim/microsim_model.py</span></code>)<a class="headerlink" href="#microsim-class-microsim-microsim-model-py" title="Permalink to this headline">¶</a></h3>
-<p>The <code class="docutils literal notranslate"><span class="pre">Microsim</span></code> class is the main entry point for the python model. It contains the main code to control the spread of the disease. See the <code class="docutils literal notranslate"><span class="pre">step()</span></code> function for details about what, specifically, happens in each iteration of the model. The OpenCL model follows the same procedures, although they are implemented differently.</p>
-<p>The other thing to note is the <code class="docutils literal notranslate"><span class="pre">Microsim.calculate_new_disease_status</span></code> function. That function calls the file <code class="docutils literal notranslate"><span class="pre">microsim/r_interface.py</span></code> file which in turn delegates the estimation of an individual’s specific disease status.</p>
+<p>The <a class="reference internal" href="../Reference/microsim.html#microsim.microsim_model.Microsim" title="microsim.microsim_model.Microsim"><code class="xref py py-class docutils literal notranslate"><span class="pre">microsim.microsim_model.Microsim</span></code></a> class is the main entry point for the python model. It contains the main code to control the spread of the disease. See the <a class="reference internal" href="../Reference/microsim.html#microsim.microsim_model.Microsim.step" title="microsim.microsim_model.Microsim.step"><code class="xref py py-func docutils literal notranslate"><span class="pre">microsim.microsim_model.Microsim.step()</span></code></a> function for details about what, specifically, happens in each iteration of the model. The OpenCL model follows the same procedures, although they are implemented differently.</p>
+<p>The other thing to note is the <a class="reference internal" href="../Reference/microsim.html#microsim.microsim_model.Microsim.calculate_new_disease_status" title="microsim.microsim_model.Microsim.calculate_new_disease_status"><code class="xref py py-func docutils literal notranslate"><span class="pre">microsim.microsim_model.Microsim.calculate_new_disease_status()</span></code></a> function. That function calls the file <code class="docutils literal notranslate"><span class="pre">microsim/r_interface.py</span></code> file which in turn delegates the estimation of an individual’s specific disease status.</p>
 </div>
 </div>
 </div>
