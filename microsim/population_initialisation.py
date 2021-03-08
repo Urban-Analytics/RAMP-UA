@@ -624,7 +624,7 @@ class PopulationInitialisation:
         assert len(pd.unique(commuting_flows["Orig"])) == len(study_msoas)
         assert len(pd.unique(commuting_flows["Dest"])) == len(study_msoas)
 
-        # There should be a flow between every possible combionation of areas:
+        # There should be a flow between every possible combination of areas:
         assert len(study_msoas) ** 2 == len(commuting_flows)
 
         return commuting_flows
