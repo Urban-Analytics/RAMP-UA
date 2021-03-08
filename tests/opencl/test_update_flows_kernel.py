@@ -7,6 +7,7 @@ from microsim.opencl.ramp.simulator import Simulator
 from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 from microsim.population_initialisation import PopulationInitialisation
+from quant_api import QuantRampAPI
 
 sentinel_value = (1 << 31) - 1
 
@@ -18,7 +19,8 @@ test_dir = "tests/"
 
 # arguments used when calling the PopulationInitialisation constructor. Usually these are the same
 population_init_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
-                        "testing": True, "debug": True
+                        "testing": True, "debug": True,
+                        "quant_object": QuantRampAPI(os.path.join("devon_data", "QUANT_RAMP"))
                         }
 
 population_init = PopulationInitialisation(**population_init_args)

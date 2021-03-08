@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from microsim.column_names import ColumnNames
 from microsim.population_initialisation import PopulationInitialisation
+from quant_api import QuantRampAPI
 
 # ********************************************************
 # These tests run through a whole dummy model process
@@ -14,7 +15,8 @@ test_dir = os.path.dirname(os.path.abspath(__file__))
 
 # arguments used when calling the PopulationInitialisation constructor. Usually these are the same
 population_init_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
-                        "testing": True, "debug": True
+                        "testing": True, "debug": True,
+                        "quant_object": QuantRampAPI(os.path.join("devon_data", "QUANT_RAMP"))
                         }
 
 
