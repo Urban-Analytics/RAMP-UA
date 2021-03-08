@@ -14,14 +14,11 @@ from microsim.activity_location import ActivityLocation
 from microsim.column_names import ColumnNames
 from microsim.utilities import Optimise, check_durations_sum_to_1
 import multiprocessing
-
 import pandas as pd
-
-pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
-# pd.set_option('display.width', 0)  # Automatically find the best width
 import numpy as np
 import os
 import warnings
+from microsim.quant_api import QuantRampAPI
 from collections.abc import Iterable  # drop `.abc` with Python 2.7 or lower
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
@@ -56,9 +53,7 @@ class PopulationInitialisation:
 
         # Administrative variables that need to be defined
         if quant_object is None:
-            PopulationInitialisation.quant_object = False
-        else:
-            PopulationInitialisation.quant_object = quant_object
+            warnings.warn("Quant object is none, we wont be able to estimate school and retail destinations")
 
         PopulationInitialisation.debug = debug
         PopulationInitialisation.testing = testing
@@ -140,7 +135,7 @@ class PopulationInitialisation:
 
         # Read Retail flows data
         retail_name = ColumnNames.Activities.RETAIL  # How to refer to this in data frame columns etc.
-        stores, stores_flows = PopulationInitialisation.read_retail_flows_data(self.all_msoas)  # (list of shops and a flow matrix)
+        stores, stores_flows = PopulationInitialisation.read_retail_flows_data(self.all_msoas, quant_object)  # (list of shops and a flow matrix)
         PopulationInitialisation.check_sim_flows(stores, stores_flows)
         # Assign Retail flows data to the individuals
         self.individuals = PopulationInitialisation.add_individual_flows(retail_name, self.individuals, stores_flows)
@@ -151,7 +146,7 @@ class PopulationInitialisation:
         primary_name = ColumnNames.Activities.PRIMARY
         secondary_name = ColumnNames.Activities.SECONDARY
         primary_schools, secondary_schools, primary_flows, secondary_flows = \
-            PopulationInitialisation.read_school_flows_data(self.all_msoas)  # (list of schools and a flow matrix)
+            PopulationInitialisation.read_school_flows_data(self.all_msoas, quant_object)  # (list of schools and a flow matrix)
         PopulationInitialisation.check_sim_flows(primary_schools, primary_flows)
         PopulationInitialisation.check_sim_flows(secondary_schools, secondary_flows)
         # Assign Schools
@@ -554,152 +549,47 @@ class PopulationInitialisation:
         return individuals
 
     @classmethod
-    def read_school_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
+    def read_school_flows_data(cls, study_msoas: List[str], quant_object: QuantRampAPI) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
         """
         Read the flows between each MSOA and the most likely schools attended by pupils in this area.
         All schools are initially read together, but flows are separated into primary and secondary
 
         :param study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
+        :param quant_object: A pointer to the QuantRampAPI object that implements the spatial interaction model
         :return: A tuple of three dataframes. All schools, then the flows to primary and secondary
         (Schools, PrimaryFlows, SeconaryFlows). Although all the schools are one dataframe, no primary flows will flow
         to secondary schools and vice versa).
         """
 
-        # devon data
-        if cls.quant_object is False:
-            # TODO Need to read full school flows, not just those of Devon
-            print("Reading school flow data for Devon...", )
-            dir = os.path.join(cls.DATA_DIR, "devon-schools")
+        #print("Reading school flow data...", )
+        dir = quant_object.QUANT_DIR
 
-            # Read the schools (all of them)
-            schools = pd.read_csv(os.path.join(dir, "exeter schools.csv"))
-            # Add some standard columns that all locations need
-            schools_ids = list(schools.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
-            schools_names = schools.EstablishmentName  # Standard name for the location
-            PopulationInitialisation._add_location_columns(schools, location_names=schools_names, location_ids=schools_ids)
+        # Read the primary schools
+        primary_schools = pd.read_csv(os.path.join(dir, "primaryZones.csv"))
+        # Add some standard columns that all locations need
+        primary_school_ids = list(primary_schools.index)
+        primary_school_names = primary_schools.URN  # unique ID for venue
+        PopulationInitialisation._add_location_columns(primary_schools, location_names=primary_school_names,
+                                       location_ids=primary_school_ids)
 
-            # Read the flows
-            primary_rows = []  # Build up all the rows in the matrix gradually then add all at once
-            secondary_rows = []
-            with open(os.path.join(dir, "DJS002.TXT")) as f:
-                # Mark's file comes in batches of 3 lines, each giving different data. However, some lines overrun and are
-                # read as several lines rather than 1 (hence use of dests_tmp and flows_tmp)
-                count = 1
-                oa = None
-                oa_name = ""
-                num_dests = None
-                dests = None
-                flows = None
-                dests_tmp = None
-                flows_tmp = None
+        # Read the secondary schools
+        secondary_schools = pd.read_csv(os.path.join(dir, "secondaryZones.csv"))
+        # Add some standard columns that all locations need
+        secondary_school_ids = list(secondary_schools.index)
+        secondary_school_names = secondary_schools.URN  # unique ID for venue
+        PopulationInitialisation._add_location_columns(secondary_schools, location_names=secondary_school_names,
+                                       location_ids=secondary_school_ids)
 
-                for lineno, raw_line in enumerate(f):
-                    # print(f"{lineno}: '{raw_line}'")
-                    line_list = raw_line.strip().split()
-                    if count == 1:  # primary/secondary school, OA and number of schools
-                        sch_type = int(line_list[0])
-                        assert sch_type == 1 or sch_type == 2  # Primary schools are 1, secondary 2
-                        oa = int(line_list[1])
-                        oa_name = study_msoas[oa - 1]  # The OA names are stored in a separate file temporarily
-                        num_dests = int(line_list[2])
-                    elif count == 2:  # school ids
-                        dests_tmp = [int(x) for x in line_list[0:]]  # Make the destinations numbers
-                        # check if dests exists from previous iteration and add dests_tmp
-                        if dests == None:
-                            dests = dests_tmp
-                        else:
-                            dests.extend(dests_tmp)
-                        if len(dests) < num_dests:  # need to read next line
-                            count = 1  # counteracts count being increased by 1 later
-                        else:
-                            assert len(dests) == num_dests
-                    elif count == 3:  # Flows per 1,000 pupils
-                        flows_tmp = [float(x) for x in line_list[0:]]  # Make the destinations numbers
-                        # check if dests exists from previous iteration and add dests_tmp
-                        if flows == None:
-                            flows = flows_tmp
-                        else:
-                            flows.extend(flows_tmp)
-                        if len(flows) < num_dests:  # need to read next line
-                            count = 2  # counteracts count being increased by 1 later
-                        else:
-                            assert len(flows) == num_dests
+        # Read the primary school flows
+        threshold = 5  # top 5
+        thresholdtype = "nr"  # threshold based on nr venues
+        primary_flow_matrix = quant_object.get_flows(ColumnNames.Activities.PRIMARY, study_msoas, threshold,
+                                                         thresholdtype)
 
-                            # Have read all information for this area. Store the info in the flows matrix
-
-                            # We should have one line in the matrix for each OA, and OA codes are incremental
-                            # assert len(flow_matrix) == oa - 1
-                            row = [0.0 for _ in range(len(schools))]  # Initially assume all flows are 0
-                            for i in range(num_dests):  # Now add the flows
-                                dest = dests[i]
-                                flow = flows[i]
-                                row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
-                            assert len([x for x in row if x > 0]) == num_dests  # There should only be N >0 flows
-                            row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
-
-                            # Luckily Mark's file does all primary schools first, then all secondary schools, so we
-                            # know that all schools in this area are one or the other
-                            if sch_type == 1:
-                                primary_rows.append(row)
-                            else:
-                                secondary_rows.append(row)
-                            # rows.append(row)
-
-                            # Add the row to the matrix. As the OA numbers are incremental they should equal the number
-                            # of rows
-                            # flow_matrix.loc[oa-1] = row
-                            # assert len(flow_matrix) == oa
-                            count = 0
-                            # reset dests and flows
-                            dests = None
-                            flows = None
-
-                    count += 1
-
-            # Have finished reading the file, now create the matrices. MSOAs as rows, school locations as columns
-            columns = ["Area_ID", "Area_Code"]  # A number (ID) and full code for each MSOA
-            columns += [f"Loc_{i}" for i in schools.index]  # Columns for each school
-
-            primary_flow_matrix = pd.DataFrame(data=primary_rows, columns=columns)
-            secondary_flow_matrix = pd.DataFrame(data=secondary_rows, columns=columns)
-            # schools_flows = schools_flows.iloc[0:len(self.study_msoas), :]
-            print(f"... finished reading school flows.")
-
-            # same df for primary and secondary schools
-            primary_schools = schools.copy()
-            secondary_schools = schools.copy()
-
-        # QUANT data
-        else:
-            #print("Reading school flow data...", )
-            dir = cls.quant_object.QUANT_DIR
-
-            # Read the primary schools
-            primary_schools = pd.read_csv(os.path.join(dir, "primaryZones.csv"))
-            # Add some standard columns that all locations need
-            primary_school_ids = list(primary_schools.index)
-            primary_school_names = primary_schools.URN  # unique ID for venue
-            PopulationInitialisation._add_location_columns(primary_schools, location_names=primary_school_names,
-                                           location_ids=primary_school_ids)
-
-            # Read the secondary schools
-            secondary_schools = pd.read_csv(os.path.join(dir, "secondaryZones.csv"))
-            # Add some standard columns that all locations need
-            secondary_school_ids = list(secondary_schools.index)
-            secondary_school_names = secondary_schools.URN  # unique ID for venue
-            PopulationInitialisation._add_location_columns(secondary_schools, location_names=secondary_school_names,
-                                           location_ids=secondary_school_ids)
-
-            # Read the primary school flows
-            threshold = 5  # top 5
-            thresholdtype = "nr"  # threshold based on nr venues
-            primary_flow_matrix = cls.quant_object.get_flows(ColumnNames.Activities.PRIMARY, study_msoas, threshold,
-                                                             thresholdtype)
-
-            # Read the secondary school flows
-            # same thresholds as before
-            secondary_flow_matrix = cls.quant_object.get_flows(ColumnNames.Activities.SECONDARY, study_msoas, threshold,
-                                                               thresholdtype)
+        # Read the secondary school flows
+        # same thresholds as before
+        secondary_flow_matrix = quant_object.get_flows(ColumnNames.Activities.SECONDARY, study_msoas, threshold,
+                                                           thresholdtype)
 
         return primary_schools, secondary_schools, primary_flow_matrix, secondary_flow_matrix
 
@@ -831,121 +721,29 @@ class PopulationInitialisation:
         return workplaces.index[workplaces[ColumnNames.LOCATION_NAME] == job].values[0]
 
     @classmethod
-    def read_retail_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
+    def read_retail_flows_data(cls, study_msoas: List[str], quant_object: QuantRampAPI) -> (pd.DataFrame, pd.DataFrame):
         """
         Read the flows between each MSOA and the most commonly visited shops
 
         :param study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
+        :param quant_object: The QuantRampAPI object used to estimate destination school and retail locations
         :return: A tuple of two dataframes. One containing all of the flows and another
         containing information about the stores themselves.
         """
 
-        # Devon data
-        if cls.quant_object is False:
-            # TODO Need to read full retail flows, not just those of Devon (temporarily created by Mark).
-            # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
-            # working with Devon subset of flows
-            print("Reading retail flow data for Devon...", )
-            dir = os.path.join(cls.DATA_DIR, "devon-retail")
+        #print("Reading retail flow data...", )
+        dir = quant_object.QUANT_DIR
+        # Read the stores
+        stores = pd.read_csv(os.path.join(dir, "retailpointsZones.csv"))
+        # Add some standard columns that all locations need
+        stores_ids = list(stores.index)
+        store_names = stores.id  # unique ID for venue
+        PopulationInitialisation._add_location_columns(stores, location_names=store_names, location_ids=stores_ids)
 
-            # Read the stores
-            stores = pd.read_csv(os.path.join(dir, "devon smkt.csv"))
-            # Add some standard columns that all locations need
-            stores_ids = list(stores.index + 1)  # Mark counts from 1, not zero, so indices need to start from 1 not 0
-            store_names = stores.store_name  # Standard name for the location
-            PopulationInitialisation._add_location_columns(stores, location_names=store_names, location_ids=stores_ids)
-
-            # Read the flows
-            rows = []  # Build up all the rows in the matrix gradually then add all at once
-            total_flows = 0  # For info & checking
-            with open(os.path.join(dir, "DJR002.TXT")) as f:
-                count = 1  # Mark's file comes in batches of 3 lines, each giving different data
-
-                # See the README for info about these variables. This is only tempoarary so I can't be bothered
-                # to explain properly
-                oa = None
-                oa_name = ""
-                num_dests = None
-                dests = None
-                flows = None
-
-                for lineno, raw_line in enumerate(f):
-                    # print(f"{lineno}: '{raw_line}'")
-                    line_list = raw_line.strip().split()
-                    if count == 1:  # OA and number of destinations
-                        oa = int(line_list[0])
-                        if oa > len(study_msoas):
-                            msg = f"Attempting to read more output areas ({oa}) than are present in the study area {study_msoas}."
-                            if cls.testing:
-                                warnings.warn(msg)
-                            else:
-                                raise Exception(msg)
-                        oa_name = study_msoas[oa - 1]  # The OA names are stored in a separate file temporarily
-                        num_dests = int(line_list[1])
-                    elif count == 2:  # Top N (=10) destinations in the OA
-                        # First number is the OA (don't need this), rest are the destinations
-                        assert int(line_list[0]) == oa
-                        dests = [int(x) for x in line_list[1:]]  # Make the destinations numbers
-                        assert len(dests) == num_dests
-                    elif count == 3:  # Distance to each store (not currently used)
-                        pass
-                    elif count == 4:  # Flows per 1,000 trips
-                        # First number is the OA (don't need this), rest are the destinations
-                        assert int(line_list[0]) == oa
-                        flows = [float(x) for x in line_list[1:]]  # Make the destinations numbers
-                        assert len(flows) == num_dests
-                        total_flows += sum(flows)
-
-                        # Have read all information for this area. Store the info in the flows matrix
-
-                        # We should have one line in the matrix for each OA, and OA codes are incremental
-                        # assert len(flow_matrix) == oa - 1
-                        row = [0.0 for _ in range(len(stores))]  # Initially assume all flows are 0
-                        for i in range(num_dests):  # Now add the flows
-                            dest = dests[i]
-                            flow = flows[i]
-                            row[dest - 1] = flow  # (-1 because destinations are numbered from 1, not 0)
-                        assert len(
-                            [x for x in row if x > 0]) == num_dests  # There should only be positive flows (no 0s)
-                        row = [oa, oa_name] + row  # Insert the OA number and code (don't know this yet now)
-
-                        rows.append(row)
-
-                        # Add the row to the matrix. As the OA numbers are incremental they should equal the number
-                        # of rows
-                        # flow_matrix.loc[oa-1] = row
-                        # assert len(flow_matrix) == oa
-                        count = 0
-
-                    count += 1
-
-            # Have finished reading the file, now create the matrix. MSOAs as rows, retail locations as columns
-            columns = ["Area_ID", "Area_Code"]  # A number (ID) and full code for each MSOA
-            columns += [f"Loc_{i}" for i in stores.index]  # Columns for each store
-            flow_matrix = pd.DataFrame(data=rows, columns=columns)
-
-            # Check that we haven't lost any flows (need two sums, once to get the flows for each row, then
-            # to add up all rows
-            total_flows2 = flow_matrix.iloc[:, 2:].apply(lambda row: sum(row)).sum()
-            assert total_flows == total_flows2
-
-            print(f"... read {total_flows} flows from {len(flow_matrix)} areas.")
-
-        # QUANT data
-        else:
-            #print("Reading retail flow data...", )
-            dir = cls.quant_object.QUANT_DIR
-            # Read the stores
-            stores = pd.read_csv(os.path.join(dir, "retailpointsZones.csv"))
-            # Add some standard columns that all locations need
-            stores_ids = list(stores.index)
-            store_names = stores.id  # unique ID for venue
-            PopulationInitialisation._add_location_columns(stores, location_names=store_names, location_ids=stores_ids)
-
-            # Read the flows
-            threshold = 10  # top 10
-            thresholdtype = "nr"  # threshold based on nr venues
-            flow_matrix = cls.quant_object.get_flows("Retail", study_msoas, threshold, thresholdtype)
+        # Read the flows
+        threshold = 10  # top 10
+        thresholdtype = "nr"  # threshold based on nr venues
+        flow_matrix = quant_object.get_flows("Retail", study_msoas, threshold, thresholdtype)
 
         return stores, flow_matrix
 
