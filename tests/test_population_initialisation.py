@@ -79,7 +79,7 @@ def test_population_init():
             assert venue['SOC'] == population_init.individuals.at[p, "soc2010"]
         # The destination areas of the workplace should be as follows:
         assert set(workplaces.loc[population_init.individuals.at[p, "Work_Venues"], "MSOA"]) ==\
-            set(['E00101308', 'E02004132', 'E02004147', 'E02004151'])
+            set(['E02004297', 'E02004300', 'E02004298', 'E02004292'])
     # These should have 5 workplaces (assuming the total number of workplaces threshold is 5)
     for p in range(2, 5):
         assert len(population_init.individuals.at[p, work_venues]) == 5
@@ -88,8 +88,14 @@ def test_population_init():
             venue = workplaces.iloc[venue_number]
             assert venue['SOC'] == population_init.individuals.at[p, "soc2010"]
         assert set(workplaces.loc[population_init.individuals.at[p, "Work_Venues"], "MSOA"]) == \
-            set(['E02004158', 'E02004147', 'E02004132', 'E02004138', 'E02004159'])
+            set(['E02004290', 'E02004301', 'E02004292', 'E02004300', 'E02004299'])
 
+    # TODO Test shops and school allocations.
+    # Previously we checked that the shops and schools had been read correctly from the bespoke Devon data (see below).
+    # But now that we use the QUANT Api we need a different way to test that the allocation of people to shops/schools
+    # is correct
+
+    """
     # Test Shops
     shop_locs = population_init.activity_locations[ColumnNames.Activities.RETAIL]._locations
     assert len(shop_locs) == 248
@@ -142,6 +148,7 @@ def test_population_init():
         assert secondary_locs.loc[idx, "PhaseOfEducation_name"] == "Secondary"
     # Check the indexes point correctly
     assert secondary_locs.loc[335:335, ColumnNames.LOCATION_NAME].values[0] == "South Dartmoor Community College"
+    """
 
     # Finished initialising the model. Pass it to other tests who need it.
     yield population_init  # (this could be 'return' but 'yield' means that any cleaning can be done here
@@ -169,39 +176,6 @@ def test_add_home_flows(test_population_init):
     assert len(ind.loc[ind.House_ID == 1, :]) == 3
     # And 1 in house ID 7
     assert len(ind.loc[ind.House_ID == 7, :]) == 1
-
-
-def test_read_school_flows_data(test_population_init):
-    """Check that flows to primary and secondary schools were read correctly """
-    # Check primary and secondary have the same data (they're read together)
-    primary_schools = test_population_init.activity_locations[f"{ColumnNames.Activities.PRIMARY}"]._locations
-    secondary_schools = test_population_init.activity_locations[f"{ColumnNames.Activities.SECONDARY}"]._locations
-    assert primary_schools.equals(secondary_schools)
-    # But they don't point to the same dataframe
-    primary_schools["TestCol"] = 0
-    assert "TestCol" not in list(secondary_schools.columns)
-
-    schools = primary_schools  # Just refer to them with one name
-
-    # Check correct number of primary and secondary schools
-    # (these don't need to sum to total schools because there are a couple of nurseries in there
-    assert len(schools) == 350
-    primary_schools = schools.loc[schools.PhaseOfEducation_name == "Primary"]
-    secondary_schools = schools.loc[schools.PhaseOfEducation_name == "Secondary"]
-    assert len(primary_schools) == 309
-    assert len(secondary_schools) == 39
-
-    # Check all primary flows go to primary schools and secondary flows go to secondary schools
-    primary_flows = test_population_init.activity_locations[f"{ColumnNames.Activities.PRIMARY}"]._flows
-    secondary_flows = test_population_init.activity_locations[f"{ColumnNames.Activities.SECONDARY}"]._flows
-    # Following slice slice gives the total flow to each of the 350 schools (sum across rows for each colum and then
-    # drop the first two columns which are area ID and Code)
-    for school_no, flow in enumerate(primary_flows.sum(0)[2:]):
-        if flow > 0:
-            assert schools.iloc[school_no].PhaseOfEducation_name == "Primary"
-    for school_no, flow in enumerate(secondary_flows.sum(0)[2:]):
-        if flow > 0:
-            assert schools.iloc[school_no].PhaseOfEducation_name == "Secondary"
 
 
 def test_read_msm_data(test_population_init):
