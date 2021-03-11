@@ -17,8 +17,9 @@ class QuantRampAPI:
                  ):
         """
         Initialiser for QuantRampAPI This reads all of the necessary data.
-        ----------
+        
         :param quant_dir: Full path to QUANT files
+        :type quant_dir: str
     
         """
         self.QUANT_DIR = quant_dir
@@ -28,10 +29,14 @@ class QuantRampAPI:
      
 
     @classmethod
-    def read_data(cls,QUANT_DIR):
-        """
+    def read_data(cls, QUANT_DIR):
+        """read_data
         reads in all data in provided data directory and creates series of class object attributes
-        """
+
+        :param QUANT_DIR: a string of the full path to QUANT files
+        :type QUANT_DIR: str
+        """                
+
         cls.dfPrimaryPopulation = pd.read_csv(os.path.join(QUANT_DIR,'primaryPopulation.csv'))
         cls.dfPrimaryZones = pd.read_csv(os.path.join(QUANT_DIR,'primaryZones.csv'))
         cls.primary_probPij =  pickle.load( open(os.path.join(QUANT_DIR,'primaryProbPij.bin'), 'rb'))
@@ -53,81 +58,134 @@ class QuantRampAPI:
 
     @staticmethod
     def getProbablePrimarySchoolsByMSOAIZ(dfPrimaryPopulation,dfPrimaryZones,primary_probPij,msoa_iz,threshold):
-        """
-        getProbablePrimarySchoolsByMSOAIZ
+        """getProbablePrimarySchoolsByMSOAIZ
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
         a list of all the surrounding primary schools whose probabilty of being visited by the MSOA_IZ is
         greater than or equal to the threshold.
         School ids are taken from the Edubase list of URN
         NOTE: code identical to the secondary school version, only with switched lookup tables
-        @param msoa_iz An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
-        @param threshold Probability threshold e.g. 0.5 means return all possible schools with probability>=0.5
-        @returns a list of probabilities in the same order as the venues
-        """
+
+        :param dfPrimaryPopulation: # needs clarification
+        :type dfPrimaryPopulation: pandas.DataFrame
+        :param dfPrimaryZones: # needs clarification
+        :type dfPrimaryZones: pandas.DataFrame
+        :param primary_probPij: matrix of probability scores of a primary school being visited
+        :type primary_probPij: numpy.matrix
+        :param msoa_iz: An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
+        :type msoa_iz: str
+        :param threshold: Probability threshold e.g. 0.5 means return all possible schools with probability>=0.5
+        :type threshold: float
+        :return: a list of probabilities in the same order as the venues
+        :rtype: list
+        """ 
+
         result = []
+
         zonei = int(dfPrimaryPopulation.loc[dfPrimaryPopulation['msoaiz'] == msoa_iz,'zonei'])
+
         m,n = primary_probPij.shape
+
         for j in range(n):
+
             p = primary_probPij[zonei,j]
+
             if p>=threshold:
+
                 row2 = dfPrimaryZones.loc[dfPrimaryZones['zonei'] == j] #yes, zonei==j is correct, they're always called 'zonei'
+
                 id = row2['URN'].values[0]
+
                 result.append(p)
-            #end if
-        #end for
+
         return result
 
 
     @staticmethod
     def getProbableSecondarySchoolsByMSOAIZ(dfSecondaryPopulation,dfSecondaryZones,secondary_probPij,msoa_iz,threshold):
-        """
-        getProbableSecondarySchoolsByMSOAIZ
+        """getProbableSecondarySchoolsByMSOAIZ
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
         a list of all the surrounding secondary schools whose probabilty of being visited by the MSOA_IZ is
         greater than or equal to the threshold.
         School ids are taken from the Edubase list of URN
         NOTE: code identical to the primary school version, only with switched lookup tables
+
+        :param dfSecondaryPopulation: # needs clarification
+        :type dfSecondaryPopulation: pandas.DataFrame
+        :param dfSecondaryZones: # needs clarification
+        :type dfSecondaryZones: pandas.DataFrame
+        :param secondary_probPij: matrix of probability scores of a secondary school being visited
+        :type secondary_probPij: numpy.matrix
+        :param msoa_iz: An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
+        :type msoa_iz: str
+        :param threshold: Probability threshold e.g. 0.5 means return all possible schools with probability>=0.5
+        :type threshold: float
+        :return: a list of probabilities in the same order as the venues
+        :rtype: list
+        
         @param msoa_iz An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
         @param threshold Probability threshold e.g. 0.5 means return all possible schools with probability>=0.5
         @returns a list of probabilities in the same order as the venues
         """
         result = []
+
         zonei = int(dfSecondaryPopulation.loc[dfSecondaryPopulation['msoaiz'] == msoa_iz, 'zonei'])
+
         m,n = secondary_probPij.shape
+
         for j in range(n):
+
             p = secondary_probPij[zonei,j]
+
             if p>=threshold:
+
                 row2 = dfSecondaryZones.loc[dfSecondaryZones['zonei'] == j] #yes, zonei==j is correct, they're always called 'zonei'
                 id = row2['URN'].values[0]
+
                 result.append(p)
-            #end if
-        #end for
+
         return result
     
 
     @staticmethod
     def getProbableRetailByMSOAIZ(dfRetailPointsPopulation,dfRetailPointsZones,retailpoints_probSij,msoa_iz,threshold):
-        """
-        getProbableRetailByMSOAIZ
+        """getProbableRetailByMSOAIZ
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
         a list of all the surrounding retail points whose probabilty of being visited by the MSOA_IZ is
         greater than or equal to the threshold.
         Retail ids are from ????
-        @param msoa_iz An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
-        @param threshold Probability threshold e.g. 0.5 means return all possible retail points with probability>=0.5
-        @returns a list of probabilities in the same order as the venues
+
+        :param dfRetailPointsPopulation: # needs clarification
+        :type dfRetailPointsPopulation: pandas.DataFrame
+        :param dfRetailPointsZones: # needs clarification
+        :type dfRetailPointsZones: pandas.DataFrame
+        :param retailpoints_probSij: matrix of probability scores of a retail points being visited
+        :type retailpoints_probSij: numpy.matrix
+        :param msoa_iz: An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
+        :type msoa_iz: str
+        :param threshold: Probability threshold e.g. 0.5 means return all possible retail points with probability>=0.5
+        :type threshold: float
+        :return: a list of probabilities in the same order as the venues
+        :rtype: list
+
         """
         result = []
+
         zonei = int(dfRetailPointsPopulation.loc[dfRetailPointsPopulation['msoaiz'] == msoa_iz, 'zonei'])
+
         m,n = retailpoints_probSij.shape
+
         for j in range(n):
+
             p = retailpoints_probSij[zonei,j]
+
             if p>=threshold:
+
                 row2 = dfRetailPointsZones.loc[dfRetailPointsZones['zonei'] == j] #yes, zonei==j is correct, they're always called 'zonei'
+
                 id = row2['id'].values[0]
+
                 result.append(p)
-            #end if
-        #end for
+
         return result
     
 
