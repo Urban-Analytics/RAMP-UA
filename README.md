@@ -2,7 +2,7 @@
 [![codecov](https://codecov.io/gh/Urban-Analytics/RAMP-UA/branch/master/graph/badge.svg)](https://codecov.io/gh/Urban-Analytics/RAMP-UA)
 # RAMP-UA and EcoTwins integration
 
-This is branch is a first draft of the scaling up of the RAMP Urban Analytics project to a national level. It takes the project workflow and aims at making it run on other UK regions (in the current project only Devon is implemented, see issue #254).
+This is branch is a first draft of the scaling up of the RAMP Urban Analytics project to a national level. It takes the project workflow and aims at making it run on other UK regions (in the current project only Devon is implemented, see issue https://github.com/Urban-Analytics/RAMP-UA/issues/254).
 To do so, few steps are to be taken:
 - reshuffling of parts of the data and files (folders structure)
 - removing some hard-coded parts
@@ -47,7 +47,7 @@ Documentation currently follows the one for RAMP-UA, plus some README files here
 
 ## TODO list:
 Features that currently are not available, but are to be implemented on this version as well.
-[] reorganise folders structure depending on the agreed option (discussed separately in the HackMD mentioned above)
-[] implement the connection with the 'initialisation' process (TBD)
-[] implement R model compatibility
-[] run tests
+- [] reorganise folders structure depending on the agreed option (discussed separately in the HackMD mentioned above)
+- [] implement the connection with the 'initialisation' process (TBD)
+- [] implement R model compatibility
+- [] run tests
