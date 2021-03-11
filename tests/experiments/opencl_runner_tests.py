@@ -1,7 +1,5 @@
 import pytest
-import yaml
 import os
-import warnings
 import numpy as np
 import pandas as pd
 from experiments.opencl_runner import OpenCLRunner # Some additional notebook-specific functions required (functions.py)
@@ -14,8 +12,6 @@ from opencl.ramp.disease_statuses import DiseaseStatus
 # This 'fixture' means that other test functions can use the object created here.
 # Note: Don't try to run this test, it will be called when running the others that need it,
 # like `test_step()`.
-from opencl.ramp.params import Params
-
 
 @pytest.fixture()
 def setup_results():
@@ -96,108 +92,6 @@ def test_run_model_with_params():
     assert out_params.individual_hazard_multipliers[2] == 0.5
 
     # TODO: change parameters, run again, and check that the results make some sort of sense
-
-def test_create_parameters():
-    """Check that the create_parameters files correctly returns a Parameters object"""
-    # Firstly, using the defaults is not recommended usually as the values should be read from the parameters file
-    with pytest.warns(UserWarning):
-        Params()
-
-    # Read the default parameters file, for checking
-    parameters_file = os.path.join("./", "model_parameters/", "default.yml")
-    with open(parameters_file) as f:
-        parameters_in_file = yaml.load(f, Loader=yaml.SafeLoader)
-    default_params = OpenCLRunner.create_parameters()
-
-    # Default params should match those in default.yml.
-
-    # Check the individual multipliers
-    assert parameters_in_file['microsim_calibration']['hazard_individual_multipliers']['presymptomatic'] == \
-           default_params.individual_hazard_multipliers[0]  # presymp is second item in the array
-    assert parameters_in_file['microsim_calibration']['hazard_individual_multipliers']['asymptomatic'] == \
-           default_params.individual_hazard_multipliers[1]  # asymp is second item in the array
-    assert parameters_in_file['microsim_calibration']['hazard_individual_multipliers']['symptomatic'] == \
-            default_params.individual_hazard_multipliers[2]  # symp is third item in the array
-
-    # And the place multipliers (note that the values in the parameter file are multiplied by the
-    # current risk beta
-    current_risk_beta = parameters_in_file["disease"]["current_risk_beta"]
-    assert np.isclose(default_params.place_hazard_multipliers[0],  # Retail is first in the array
-        parameters_in_file['microsim_calibration']['hazard_location_multipliers']['Retail'] * current_risk_beta)
-    assert np.isclose( default_params.place_hazard_multipliers[1],
-        parameters_in_file['microsim_calibration']['hazard_location_multipliers']['PrimarySchool'] * current_risk_beta)
-    assert np.isclose(default_params.place_hazard_multipliers[2],
-        parameters_in_file['microsim_calibration']['hazard_location_multipliers']['SecondarySchool'] * current_risk_beta)
-    assert np.isclose(default_params.place_hazard_multipliers[3] ,
-        parameters_in_file['microsim_calibration']['hazard_location_multipliers']['Home'] * current_risk_beta)
-    assert np.isclose(default_params.place_hazard_multipliers[4],
-        parameters_in_file['microsim_calibration']['hazard_location_multipliers']['Work'] * current_risk_beta)
-
-    # Now see that if we override the defaults it still works (and others stay the same)
-    # Set new value to 0.123 (for no particular reason)
-    new_params = OpenCLRunner.create_parameters(presymptomatic=0.123)
-    assert np.isclose(new_params.individual_hazard_multipliers[0], 0.123)
-    assert np.isclose(new_params.individual_hazard_multipliers[1], default_params.individual_hazard_multipliers[1])
-    assert np.isclose(new_params.individual_hazard_multipliers[2], default_params.individual_hazard_multipliers[2])
-    new_params = OpenCLRunner.create_parameters(asymptomatic=0.123)
-    assert np.isclose(new_params.individual_hazard_multipliers[1], 0.123)
-    assert np.isclose(new_params.individual_hazard_multipliers[0], default_params.individual_hazard_multipliers[0])
-    assert np.isclose(new_params.individual_hazard_multipliers[2], default_params.individual_hazard_multipliers[2])
-    new_params = OpenCLRunner.create_parameters(symptomatic=0.123)
-    assert np.isclose(new_params.individual_hazard_multipliers[2], 0.123)
-    assert np.isclose(new_params.individual_hazard_multipliers[0], default_params.individual_hazard_multipliers[0])
-    assert np.isclose(new_params.individual_hazard_multipliers[1], default_params.individual_hazard_multipliers[1])
-
-    new_params = OpenCLRunner.create_parameters(retail=0.123)
-    assert np.isclose(new_params.place_hazard_multipliers[0], 0.123 * current_risk_beta)
-    assert np.all([new_params.place_hazard_multipliers[i] == default_params.place_hazard_multipliers[i] for i in [1,2,3,4]])
-    new_params = OpenCLRunner.create_parameters(primary_school=0.123)
-    assert np.isclose(new_params.place_hazard_multipliers[1], 0.123* current_risk_beta)
-    assert np.all([new_params.place_hazard_multipliers[i] == default_params.place_hazard_multipliers[i] for i in [0,2,3,4]])
-    new_params = OpenCLRunner.create_parameters(secondary_school=0.123)
-    assert np.isclose(new_params.place_hazard_multipliers[2], 0.123* current_risk_beta)
-    assert np.all([new_params.place_hazard_multipliers[i] == default_params.place_hazard_multipliers[i] for i in [0,1,3,4]])
-    new_params = OpenCLRunner.create_parameters(home=0.123)
-    assert np.isclose(new_params.place_hazard_multipliers[3], 0.123* current_risk_beta)
-    assert np.all([new_params.place_hazard_multipliers[i] == default_params.place_hazard_multipliers[i] for i in [0,1,2,4]])
-    new_params = OpenCLRunner.create_parameters(work=0.123)
-    assert np.isclose(new_params.place_hazard_multipliers[4], 0.123* current_risk_beta)
-    assert np.all([new_params.place_hazard_multipliers[i] == default_params.place_hazard_multipliers[i] for i in [0,1,2,3]])
-
-    # Check the current_risk_beta works properly (and dictionary unpacking while we're at it)
-    params_dict = {"presymptomatic": 0.2, "asymptomatic": 0.3, "symptomatic": 0.4,
-                   "retail": 0.1, "primary_school": 0.2, "secondary_school": 0.3, "home": 0.4, "work": 0.5}
-    current_risk_beta = 0.5
-    new_params = OpenCLRunner.create_parameters(current_risk_beta=current_risk_beta, **params_dict)
-    # Individual multipliers should be unchanged
-    for index, param_name in zip([0, 1, 2], ["presymptomatic", "asymptomatic", "symptomatic"]):
-        assert np.isclose(new_params.individual_hazard_multipliers[index], params_dict[param_name])
-    # Location-based ones should be multiplied by current_risk_beta
-    for index, param_name in zip([0, 1, 2, 3, 4], ["retail", "primary_school", "secondary_school", "home", "work"]):
-        assert np.isclose(new_params.place_hazard_multipliers[index], params_dict[param_name]*current_risk_beta)
-
-    # Check that if parameters are set as constants that it works as expected
-    OpenCLRunner.set_constants({"presymptomatic": 0.456})
-    new_params = OpenCLRunner.create_parameters()
-    # Presymptomatic should be differne,t but this other two should be same as default
-    assert np.isclose(new_params.individual_hazard_multipliers[0], 0.456)
-    assert np.all([np.isclose(default_params.individual_hazard_multipliers[i], new_params.individual_hazard_multipliers[i]) for i in [1,2] ])
-    OpenCLRunner.clear_constants()
-    # Now should all be same as the defaults again
-    new_params = OpenCLRunner.create_parameters()
-    assert np.all([ np.isclose(default_params.individual_hazard_multipliers[i], new_params.individual_hazard_multipliers[i]) for i in [0, 1,2]])
-
-    # Shouldn't be able to set a parameter *and* a constant
-    OpenCLRunner.set_constants({"current_risk_beta": 0.789})
-    with pytest.raises(Exception):
-        new_params = OpenCLRunner.create_parameters(current_risk_beta=0.123)
-    OpenCLRunner.clear_constants()
-    OpenCLRunner.create_parameters(current_risk_beta=0.123)  # This should be fine now
-
-
-    # Could check these parameters as well
-    #infection_log_scale: float = None,
-    #infection_mode: float = None,
 
 def test_get_cumulative_new_infections(setup_results):
     summaries = [x[0] for x in setup_results ]

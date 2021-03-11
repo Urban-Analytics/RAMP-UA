@@ -1,10 +1,14 @@
 ![python-testing](https://github.com/Urban-Analytics/RAMP-UA/workflows/python-testing/badge.svg)
 [![codecov](https://codecov.io/gh/Urban-Analytics/RAMP-UA/branch/master/graph/badge.svg)](https://codecov.io/gh/Urban-Analytics/RAMP-UA)
-# RAMP-UA
+# RAMP-UA and EcoTwins integration
 
-This is the code repository for the RAMP Urban Analytics project.
+This is branch is a first draft of the scaling up of the RAMP Urban Analytics project to a national level. It takes the project workflow and aims at making it run on other UK regions (in the current project only Devon is implemented, see issue #254).
+To do so, few steps are to be taken:
+- reshuffling of parts of the data and files (folders structure)
+- removing some hard-coded parts
+- probable re-organizing the project workflow, ie separating the data download from the rest of the model, which itself shall be separated into a preparatory phase and a actual running phase [more on this to come, @HSalat responsible for this part].
 
-This project contains two implementations of a microsim model which runs on a synthetic population:
+In this version, the model currently has been checked only against the OpenCL implementation of the RAMP-UA project (see #TO_DO list), but potentially could run on two ways:
 1. Python / R implementation, found in [microsim/microsim_model.py](./microsim/microsim_model.py)
 2. High performance OpenCL implementation, which can run on both CPU and GPU, 
 which is found in the [microsim/opencl](./microsim/opencl) folder. 
@@ -13,127 +17,37 @@ Further documentation on the OpenCL model can be found at [microsim/opencl/doc](
 
 Both models should be logically equivalent (with some minor differences). 
 
+
+
+## Main differences with RAMP-UA
+- The model doesn't use the same options in command line as offered in RAMP-UA, namely the only option is the `--parameters_file` that calls the `yml` where all the options are stored. This means that if you want to change them you have to edit this file only.
+The "default" config file is still `default.yml` in `model_parameters` but this needs to be edited according to each user (at first use at least, see next bullet).
+- Given some issues with the `get_cwd` command, this has been substituted all over the code with the new parameter `project-dir-absolute-path` that must be defined within `default.yml`. This choice is of course open to discussion and more ideas on this are welcome.
+- The folders structure (see below)
+- The file `microsim/column_names.py` has been included in the file `microsim/constants.py` (see class `ColumnNames`), which is meant to store all constant variables within the project. This can be further implemented.
+
+
+## Assumptions/How it is working now
+- Currently only the OpenCL has been checked against this version.
+- The current folders structure has the regional files located within each main folder (ie multiple folders within `data/regional_data`, `cache`, `output`), while we probably want to move this structure to a folder for each region and within them a folder for each of `data`, `cache`, `output` (see the document at https://hackmd.io/szqgmlYVTA-E5Pf4OSytZQ?view for some explicative diagrams).
+- The re-structuring at the moment only involved the input (ie the parameters and data mainly), so at the moment the cache and the outputs ARE NOT by region yet. This means that if you want to run the model like it is now (11 March 2021) on different regions, the easiest (and lame) way to do it would be to create a copy of the existing project and change the parameters accordingly (see in fact that in the default parameters right now the project is called 'EcoTwins2', where I have stored the WestYorkshire data to try the model on that area).
+
 ## Environment setup
+Please follow the instructions for the RAMP-UA project in general.
+Though the command line options are not available anymore (as specified above), so now all the parameters are set directly within `model_parameters/default.yml`
 
-**NB:** The OpenCL model requires following additional installation instructions located in the 
-[OpenCL Readme](./microsim/opencl/README.md)
+### Caching of population initialisation
+The population initialisation step runs before either of the models and can be time consuming (up to fa couple of hours for Devon data, a first trial for West Yorkshire stopped at 3+ hours).
+This step is gonna generated in a separate phase of the model which runs only the 'initialisation' process (as mentioned at the beginning).
 
-This project currently supports running on Linux and macOS.
-
-To start working with this repository you need to clone it onto your local machine:
-
-```bash
-$ git clone https://github.com/Urban-Analytics/RAMP-UA.git
-$ cd RAMP-UA
-```
-
-This project requires a specific conda environment in order to run so you will need the [conda package manager system](https://docs.anaconda.com/anaconda/install/) installed. Once conda has been installed you can create an environment for this project using the provided environment file.
-
-```bash
-$ conda env create -f environment.yml
-```
-
-To retrieve data to run the mode you will need to use [Git Large File Storage](https://git-lfs.github.com/) to download the input data. Git-lfs is installed within the conda environment (you may need to run `git lfs install` on your first use of git lfs). To retrieve the data you run the following commands within the root of the project repository:
-
-```bash
-$ git lfs fetch
-$ git lfs checkout
-``` 
-
-Next we install the RAMP-UA package into the environment using `setup.py`:
-
-```bash
-# if developing the code base use:
-$ python setup.py develop
-# for using the code base use
-$ python setup.py install
-```
-
-### Running the models
-Both models can be run from the [microsim/main.py](./microsim/main.py) script, which can be configured with various arguments
-to choose which model implementation to run.
-
-#### Python / R model
-
-The Python / R model runs by default, so simply run the main script with no arguments.
-
-```bash
-$ python microsim/main.py 
-```
-
-#### OpenCL model
-To run the OpenCL model pass the `--opencl` flag to the main script, as below.
-
-The OpenCL model runs in "headless" mode by default, however it can also be run with an interactive GUI and visualisation,
-to run with the GUI pass the `--opencl-gui` flag, as below.
-
-Run Headless
-```bash
-$ python microsim/main.py --opencl
-```
-
-Run with GUI
-```bash
-$ python microsim/main.py --opencl-gui
-```
-
-#### Caching of population initialisation
-The population initialisation step runs before either of the models and can be time consuming (~10 minutes). In order to run
-the models using a cache of previous results simply pass the `--use-cache` flag.
-
-### Output Dashboards
-Outputs are currently written to the [devon_data/output](./devon_data/output) directory.
-
-Interactive HTML dashboards can be created using the Bokeh library.
- 
-Run the command below to generate the full dashboard for the Python / R model output, which should automatically open
-the HTML file when it finishes.
- ```bash
-$ python microsim/dashboard.py
-```
-Configuration YAML files for the dashboard are located in the [model_parameters](./model_parameters) folder.
-
-The OpenCL model has a more limited dashboard (this may be extended soon), which can be run as follows:
- ```bash
-$ python microsim/opencl/ramp/opencl_dashboard.py
-```
-
-## Creating releases
-This repository takes advantage of a GitHub action for [creating tagged releases](https://github.com/marvinpinto/action-automatic-releases) using [semantic versioning](https://semver.org/).
-
-To initiate the GitHub action and create a release:
-
-```bash
-$ git checkout branch
-
-$ git tag -a v0.1.2 -m 'tag comment about release'
-
-$ git push --tags
-```
-Once pushed the action will initiate and attempt to create a release.
 
 ## Documentation
+Documentation currently follows the one for RAMP-UA, plus some README files here and there (see for example in the data folder).
 
-Documentation for this package is generated using [Sphinx](https://www.sphinx-doc.org/en/master/index.html). It uses the `sphinx.ext.autodoc` extension to populate the documentation from existing docstrings.
 
-To build the documentation locally:
-
-```bash
-
-$ cd docs/
-
-$ make html
-
-```
-
-If a new module is added you will need to create new `.rst` files using the `sphinx-apidoc` command.
-
-```bash
-
-$ cd docs/
-
-$ sphinx-apidoc -f -o source/ ../new_module/
-
-```
-
-This will generate new `.rst` files from the new modules docstrings that can then be rendered into html by running `make html`.
+## TODO list:
+Features that currently are not available, but are to be implemented on this version as well.
+[] reorganise folders structure depending on the agreed option (discussed separately in the HackMD mentioned above)
+[] implement the connection with the 'initialisation' process (TBD)
+[] implement R model compatibility
+[] run tests

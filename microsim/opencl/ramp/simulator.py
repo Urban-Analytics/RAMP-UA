@@ -1,12 +1,12 @@
 import numpy as np
 import pyopencl as cl
 import os
-
 from microsim.opencl.ramp.buffers import Buffers
 from microsim.opencl.ramp.kernels import Kernels
 from microsim.opencl.ramp.params import Params
 from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.initial_cases import InitialCases
+from microsim.constants import Constants
 
 
 class Simulator:
@@ -15,7 +15,11 @@ class Simulator:
     and a step() method to execute the kernels to calculate one timestep of the model.
     """
 
-    def __init__(self, snapshot, gpu=True, opencl_dir="microsim/opencl/", num_seed_days=5):
+    def __init__(self,
+                 snapshot,
+                 selected_region_folder_full_path,
+                 gpu=False,
+                 num_seed_days=5):
         """Initialise OpenCL context, kernels, and buffers for the simulator.
 
         Args:
@@ -25,6 +29,7 @@ class Simulator:
         Raises:
             OSError: If a GPU was requested but none is found.
         """
+
         nplaces = snapshot.nplaces
         npeople = snapshot.npeople
         nslots = snapshot.nslots
@@ -38,7 +43,9 @@ class Simulator:
                 break
         if platform is None:
             raise OSError("No compatible device found")
-        ctx = cl.Context(dev_type=dev_type, properties=[(cl.context_properties.PLATFORM, platform)])
+        ctx = cl.Context(dev_type=dev_type,
+                         properties=[(cl.context_properties.PLATFORM,
+                                      platform)])
         queue = cl.CommandQueue(ctx)
 
         # Initialise the device buffers
@@ -63,11 +70,17 @@ class Simulator:
 
             params=cl.Buffer(ctx, cl.mem_flags.READ_WRITE, Params().num_bytes()),
         )
-
-        kernel_dir = os.path.join(opencl_dir, "ramp/kernels/")
-
+        # kernel_dir = os.path.join(opencl_dir, "ramp/kernels/")
+        kernel_dir = os.path.join(
+                                  Constants.Paths.SOURCE_FOLDER,
+                                  Constants.Paths.OPENCL.OPENCL_FOLDER,
+                                  Constants.Paths.OPENCL.OPENCL_SOURCE_FOLDER,
+                                  Constants.Paths.OPENCL.SOURCE.OPENCL_KERNELS_FOLDER)
+        #kernel_dir = kernel_dir + "/"
+        print(f"Checking kernel_dir \t{kernel_dir}\n")
         # Load the OpenCL kernel programs
-        with open(os.path.join(kernel_dir, "ramp_ua.cl")) as f:
+        with open(os.path.join(kernel_dir,
+                               Constants.Paths.OPENCL.SOURCE.KERNEL_FILE)) as f:
             program = cl.Program(ctx, f.read())
             program.build(options=[f"-I {kernel_dir}"])
 
@@ -114,8 +127,10 @@ class Simulator:
         self.buffers = buffers
         self.kernels = kernels
 
-        data_dir = os.path.join(opencl_dir, "data/")
-        self.initial_cases = InitialCases(snapshot.area_codes, snapshot.not_home_probs, data_dir)
+        # data_dir = os.path.join(opencl_dir, "data/")
+        self.initial_cases = InitialCases(snapshot.area_codes,
+                                          snapshot.not_home_probs,
+                                          selected_region_folder_full_path)
 
         self.num_seed_days = num_seed_days
 
@@ -210,4 +225,3 @@ class Simulator:
         # run only the update statuses kernel so that people transition through disease states
         self.step_kernel("people_update_statuses")
         self.time += np.uint32(1)
-

@@ -50,3 +50,9 @@ docs/build/*
 # data directories
 devon_data
 devon_data.tar.gz
+
+# ignoring new folders
+data/**
+!data/**/
+!data/README.md
+!data/**/.gitkeep

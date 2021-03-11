@@ -31,7 +31,9 @@ from yaml import load, dump, SafeLoader  # pyyaml library for reading the parame
 # Uses 'click' library so that it can be run from the command line
 # ********
 @click.command()
-@click.option('-p', '--parameters_file', default="./model_parameters/default_dashboard.yml", type=click.Path(exists=True),
+@click.option('-p', '--parameters_file',
+              default="./model_parameters/default_dashboard.yml",
+              type=click.Path(exists=True),
               help="Parameters file to use to configure the dashboard. Default: ./model_parameters/default_dashboard.yml")
 def create_dashboard(parameters_file):
     # FUNCTIONS FOR PLOTTING
@@ -212,7 +214,7 @@ def create_dashboard(parameters_file):
     # Set to None to use defaults
     
     base_dir = os.getcwd()  # get current directory (usually RAMP-UA)
-    
+
     # from file
     # parameters_file = os.path.join(base_dir, "model_parameters","default_dashboard.yml")
     

@@ -14,6 +14,7 @@ from microsim.opencl.ramp.shader import load_shader
 from microsim.opencl.ramp.snapshot import Snapshot
 from microsim.opencl.ramp.style import set_styles
 from microsim.opencl.ramp.summary import Summary
+from microsim.constants import Constants
 
 default_flags = imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_COLLAPSE
 
@@ -22,7 +23,13 @@ class Inspector:
     """User Interface: manager for all user input and rendering for the application."""
 
     def __init__(self, simulator, snapshot, nlines, window_name, width, height,
-                 font_path="microsim/opencl/fonts/RobotoMono.ttf"):
+                 # font_path="microsim/opencl/fonts/RobotoMono.ttf"):
+                 font_path=os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
+                                        Constants.Paths.SOURCE_FOLDER,
+                                        Constants.Paths.OPENCL.OPENCL_FOLDER,
+                                        Constants.Paths.OPENCL.OPENCL_FONTS_FOLDER,
+                                        Constants.Paths.OPENCL.FONT_ROBOTO)):
+                 # font_path="/Users/azanchetta/EcoTwins/microsim/opencl/fonts/RobotoMono.ttf"):
         """Create the window, imgui renderer, and all background renderers.
 
         Args:
@@ -166,7 +173,10 @@ class Inspector:
         self.move_sensitivity = 10.0
         self.zoom_multiplier = 1.01
         self.position = position
-        self.snapshot_dir = "microsim/opencl/snapshots"
+        # self.snapshot_dir = "microsim/opencl/snapshots"
+        self.snapshot_dir = os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
+                                         Constants.Paths.CACHE_FOLDER,
+                                         Constants.Paths.OPENCL.OPENCL_SNAPSHOTS_FOLDER)
         self.snapshots = [f for f in os.listdir(self.snapshot_dir) if f.endswith(".npz")]
         self.current_snapshot = self.snapshots.index(f"{snapshot.name}.npz")
         self.selected_snapshot = self.current_snapshot
@@ -239,6 +249,8 @@ class Inspector:
             self.position[2] /= self.zoom_multiplier
         if self.is_pressed(glfw.KEY_DOWN):
             self.position[2] *= self.zoom_multiplier
+
+    # TODO: hard-coded lat-lon !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     def upload_locations(self, locations, lat=50.7184, lon=-3.5339):
         """Reprojects the lat lons around the provided one and uploads them to OpenGL.

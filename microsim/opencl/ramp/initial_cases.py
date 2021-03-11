@@ -1,10 +1,15 @@
 import pandas as pd
 import numpy as np
 import os
+from microsim.constants import Constants
 
 
 class InitialCases:
-    def __init__(self, area_codes, not_home_probs, data_dir="microsim/opencl/data/"):
+    def __init__(self,
+                 area_codes,
+                 not_home_probs,
+                 # data_dir="microsim/opencl/data/"):
+                 selected_region_folder_full_path):
         """
         This class loads the initial cases data for seeding infections in the model.
         Once the data is loaded it selects the people from higher risk area codes who
@@ -12,15 +17,20 @@ class InitialCases:
         """
 
         # load initial case data
-        self.initial_cases = pd.read_csv(os.path.join(data_dir, "devon_initial_cases.csv"))
+        self.initial_cases = pd.read_csv(os.path.join(selected_region_folder_full_path,
+                                                      Constants.Paths.INITIAL_CASES_FILE))
 
-        msoa_risks_df = pd.read_csv(os.path.join(data_dir, "msoas.csv"), usecols=[1, 2])
+        msoa_risks_df = pd.read_csv(os.path.join(selected_region_folder_full_path,
+                                                      Constants.Paths.MSOAS_RISK_FILE),
+                                    usecols=[1, 2])
+        # TODO: assign here not hard-coded columns names!
 
         # combine into a single dataframe to allow easy filtering based on high risk area codes and
         # not home probabilities
         people_df = pd.DataFrame({"area_code": area_codes,
                                   "not_home_prob": not_home_probs})
-        people_df = people_df.merge(msoa_risks_df, on="area_code")
+        people_df = people_df.merge(msoa_risks_df,
+                                    on="area_code")
 
         # get people_ids for people in high risk MSOAs and high not home probability
         self.high_risk_ids = np.where((people_df["risk"] == "High") & (people_df["not_home_prob"] > 0.3))[0]

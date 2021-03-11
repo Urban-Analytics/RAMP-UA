@@ -32,7 +32,7 @@ class Snapshot:
         npeople = np.uint32(npeople)
         nslots = np.uint32(nslots)
         time = np.uint32(0)
-        area_codes = np.full(npeople, "E02004129")
+        area_codes = np.full(npeople, "E02002371") # "E02004129")
         not_home_probs = np.zeros(npeople).astype(np.float32)
 
         lockdown_multipliers = np.ones(100)
@@ -62,13 +62,14 @@ class Snapshot:
         return cls(nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers)
 
     @classmethod
-    def random(cls, nplaces, npeople, nslots, lat=50.7, lon=-3.5):
+    # def random(cls, nplaces, npeople, nslots, lat=50.7, lon=-3.5):
+    def random(cls, nplaces, npeople, nslots, lat=53.735983, lon=-1.678567):
         """Generates a random snapshot for testing in a 1 degree square around lat/lon."""
         nplaces = np.uint32(nplaces)
         npeople = np.uint32(npeople)
         nslots = np.uint32(nslots)
         time = np.uint32(0)
-        area_codes = np.full(npeople, "E02004129")
+        area_codes = np.full(npeople, "E02002371") # "E02004129")
         not_home_probs = np.random.rand(npeople).astype(np.float32)
 
         lockdown_multipliers = np.ones(100)

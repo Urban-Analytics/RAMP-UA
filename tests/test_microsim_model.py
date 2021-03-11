@@ -1,9 +1,11 @@
 import os
 import pytest
 import copy
-from microsim.microsim_model import Microsim
-from microsim.column_names import ColumnNames
+from microsim.microsim_model import MicrosimModel
+from microsim.constants import ColumnNames
 from microsim.population_initialisation import PopulationInitialisation
+from microsim.constants import Constants
+
 import multiprocessing
 
 # ********************************************************
@@ -21,15 +23,15 @@ microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
                  "r_script_dir": os.path.normpath(os.path.join(test_dir, "..", "R/py_int")),
                  "disable_disease_status": True}
 
-
 # This 'fixture' means that other test functions can use the object created here.
 # Note: Don't try to run this test, it will be called when running the others that need it,
 # like `test_step()`.
 @pytest.fixture()
 def test_microsim():
+
     population_init = PopulationInitialisation(**population_init_args)
 
-    microsim = Microsim(
+    microsim = MicrosimModel(
         individuals=population_init.individuals,
         activity_locations=population_init.activity_locations,
         time_activity_multiplier=None,
@@ -381,14 +383,14 @@ def test_random():
     """
     population_init = PopulationInitialisation(**population_init_args)
 
-    p1 = Microsim(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
+    p1 = MicrosimModel(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
                   **microsim_args)
-    p2 = Microsim(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
+    p2 = MicrosimModel(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
                   random_seed=2.0, **microsim_args)
-    p3 = Microsim(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
+    p3 = MicrosimModel(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
                   random_seed=2.0, **microsim_args)
 
-    # Genrate a random number from each model. The second two numbers should be the same
+    # Generate a random number from each model. The second two numbers should be the same
     r1, r2, r3 = [_get_rand(x) for x in [p1, p2, p3]]
 
     assert r1 != r2
@@ -398,7 +400,7 @@ def test_random():
     # Create a large number of microsims and check that all random numbers are unique
     pool = multiprocessing.Pool()
     num_reps = 1000
-    m = [Microsim(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
+    m = [MicrosimModel(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
                   **microsim_args) for _ in range(num_reps)]
     r = pool.map(_get_rand, m)
     assert len(r) == len(set(r))
@@ -407,7 +409,7 @@ def test_random():
     # Repeat, this time explicitly passing a None seed
     pool = multiprocessing.Pool()
     num_reps = 50  # (don't do quite as many this time, it takes ages)
-    m = [Microsim(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
+    m = [MicrosimModel(individuals=population_init.individuals, activity_locations=population_init.activity_locations,
                   random_seed=None, **microsim_args) for _ in range(num_reps)]
     r = pool.map(_get_rand, m)
     assert len(r) == len(set(r))

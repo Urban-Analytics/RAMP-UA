@@ -30,7 +30,7 @@ from bokeh.transform import transform, factor_cmap
 import click  # command-line interface
 from yaml import load, dump, SafeLoader  # pyyaml library for reading the parameters.yml file
 
-from microsim.column_names import ColumnNames
+from microsim.constants import ColumnNames
 
 
 # Functions for preprocessing

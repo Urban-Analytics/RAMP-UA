@@ -2,7 +2,8 @@ import sys
 
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
 from microsim.r_interface import RInterface
-from microsim.column_names import ColumnNames
+from microsim.constants import ColumnNames
+from microsim.constants import Constants
 from microsim.utilities import check_durations_sum_to_1
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
@@ -16,7 +17,7 @@ import copy
 import random
 
 
-class Microsim:
+class MicrosimModel:
     """
     Class containing code for running timesteps of the Python/ R microsim model.
     This operates on two main dataframes: individuals and activity_locations.
@@ -24,11 +25,11 @@ class Microsim:
     def __init__(self,
                  individuals,
                  activity_locations,
+                 r_script_dir: str,
+                 regional_data_dir: str,
                  time_activity_multiplier=None,
                  random_seed: float = None,
-                 disable_disease_status=False,
-                 r_script_dir: str = "./R/py_int/",
-                 data_dir: str = "./data/",
+                 disable_disease_status=False,output_dir: str = Constants.Paths.OUTPUT_FOLDER,
                  scen_dir: str = "default",
                  output: bool = True,
                  output_every_iteration=False,
@@ -49,7 +50,7 @@ class Microsim:
             disease status. Only good for testing.
         :param r_script_dir: A directory with the required R scripts in (these are used to estimate disease status)
         :param scen_dir: A data directory to write the output to (i.e. a name for this model run)
-        :param data_dir: A data directory from which to read the source data
+        :param data_dir: A data directory from which to read the microsim data
         :param output: Whether to create files to store the results (default True)
         :param output_every_iteration: Whether to create files to store the results at every iteration rather than
             just at the end (default False)
@@ -72,15 +73,17 @@ class Microsim:
         self.output = output
         self.output_every_iteration = output_every_iteration
 
-        Microsim.DATA_DIR = data_dir  # TODO (minor) pass the data_dir to class functions directly so no need to have it defined at class level
-        self.DATA_DIR = data_dir
+        MicrosimModel.DATA_DIR = regional_data_dir  # TODO (minor) pass the data_dir to class functions directly so no need to have it defined at class level
+        self.DATA_DIR = regional_data_dir
         self.SCEN_DIR = scen_dir
 
         # create full path for scenario dir, also check if scenario dir exists and if so, add nr
-        self.SCEN_DIR = self._find_new_directory(os.path.join(self.DATA_DIR, "output"), self.SCEN_DIR)
+        self.SCEN_DIR = self._find_new_directory(os.path.join(self.DATA_DIR,
+                                                              "output"),
+                                                 self.SCEN_DIR)
 
         # We need an interface to R code to calculate disease status, but don't initialise it until the run()
-        # method is called so that the R process is initiatied in the same process as the Microsim object
+        # method is called so that the R process is initiated in the same process as the Microsim object
         self.r_int = None
 
         # If we do output information, then it will go to this directory. This is determined in run(), rather than
@@ -93,7 +96,7 @@ class Microsim:
         self.risk_multiplier = risk_multiplier
 
         self.hazard_individual_multipliers = hazard_individual_multipliers
-        Microsim.__check_hazard_location_multipliers(hazard_location_multipliers)
+        MicrosimModel.__check_hazard_location_multipliers(hazard_location_multipliers)
         self.hazard_location_multipliers = hazard_location_multipliers
 
         self.disease_params = disease_params
@@ -104,7 +107,7 @@ class Microsim:
         """
         Run the model (call the step() function) for the given number of iterations.
         :param iterations: The number of iterations to run
-        :param repnr: The repition number of this model. Like an ID. Used to create new unique directory for this
+        :param repnr: The repetition number of this model. Like an ID. Used to create new unique directory for this
          model instance.
         """
         # Now that this model is being run we know it's ID (repetition number)
@@ -387,7 +390,7 @@ class Microsim:
     #    """Update some disease counters -- counts of diseases in MSOAs & households -- which are useful
     #    in estimating the probability of contracting the disease"""
     #    # Update the diseases per MSOA and household
-    #    # TODO replace Nan's with 0 (not a problem with MSOAs because they're a cateogry so the value_counts()
+    #    # TODO replace Nan's with 0 (not a problem with MSOAs because they're a category so the value_counts()
     #    # returns all, including those with 0 counts, but with HID those with 0 count don't get returned
     #    # Get rows with cases
     #    cases = self.individuals.loc[(self.individuals[ColumnNames.DISEASE_STATUS] == 1) |
@@ -455,7 +458,7 @@ class Microsim:
         # Now set their new behaviour
         self.individuals.loc[change_idx] = \
             self.individuals.loc[change_idx].apply(
-                func=Microsim._set_new_behaviour, args=(list(self.activity_locations.keys()),), axis=1)
+                func=MicrosimModel._set_new_behaviour, args=(list(self.activity_locations.keys()),), axis=1)
         # self.individuals.loc[change_idx].swifter.progress_bar(True, desc="Changing behaviour of infected"). \
 
         print(f"\tCurrent statuses:"

@@ -1,23 +1,31 @@
-# Utility parameters for the microsimulation (python) part.
-# These can also be passed as command line arguments
+###### Utility parameters for the microsimulation (python) part. #####
+###### These can also be passed as command line arguments   ##### REVIEW THIS!!!
+
 microsim:
-  scenario: "BaselineScenario" # name for scenario directory
-  iterations: 80 # Number of model iterations. 0 means just run the initialisation.
-  data-dir: devon_data # Root directory to load data from
-  output: true # Whether to generate output or not
-  output-every-iteration: false # Can optionally write output at every iteration, not just at the end
-  debug: false # Whether to run some more expensive checks
+  project-dir-absolute-path: "/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/"
+  selected-region-folder-name: WestYorkshire # Name of a directory nested under data/regional_data/ that should be used
+  scenario: "BaseScenario" # name for scenario directory
+  initialise: FALSE
+  iterations: 80 # Number of model iterations. 0 means just initialise the model and create caches and snapshots, don't run it
+  output: TRUE # Whether to generate output or not
+  output-every-iteration: FALSE # Can optionally write output at every iteration, not just at the end
+  debug: FALSE # Whether to run some more expensive checks
   repetitions: 1 # How many times to run the model
   lockdown-file: "google_mobility_lockdown_daily_14_day_moving_average.csv" # Read lockdown mobility data from a file? (Empty string means no lockdown)
-  quant-dir: QUANT_RAMP # Directory to QUANT data, leave empty to use Devon data
+  quant-dir: QUANT_RAMP # Directory to QUANT data
+  use-cache: TRUE # Whether to cache the population data initialisation
+  opencl-model: TRUE # Run the OpenCL model
+  opencl-gui: TRUE # Run the OpenCL model with GUI visualisation for OpenCL model
+  opencl-gpu: FALSE # Run OpenCL model on the GPU (if false then run using CPU)
+
 
 # Parameters that are used to calibrate the model.
 # These can only be passed using the parameters file
 microsim_calibration:
   # These multiply the amount of hazard that individuals pass on to shops etc:
   hazard_individual_multipliers:
-    presymptomatic: 1.0
-    asymptomatic: 0.25
+    presymptomatic: 1
+    asymptomatic: 0.75
     symptomatic: 1.0
   # Different locations can also have their own multipliers (e.g. to make it easier to pass the disease on to shops than schools)
   hazard_location_multipliers:
@@ -31,9 +39,9 @@ microsim_calibration:
 
 
 disease: # This is where the parameter for the disease model (the R part) can go (same format the 'microsim_calibration' above)
-  current_risk_beta: 0.00555
+  current_risk_beta: 0.003
   risk_cap: 5
-  seed_days: 5
+  seed_days: 10
   exposed_dist: "weibull"
   exposed_mean: 2.56
   exposed_sd: 0.72
@@ -41,7 +49,7 @@ disease: # This is where the parameter for the disease model (the R part) can go
   presymp_mean: 2.3
   presymp_sd: 0.35
   infection_dist: "lognormal"
-  infection_mean: 17
+  infection_mean: 7
   infection_sd: 1.3
   output_switch: TRUE
   rank_assign: FALSE

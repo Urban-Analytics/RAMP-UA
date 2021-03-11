@@ -4,6 +4,11 @@ import pickle
 import os
 from tqdm import tqdm
 
+import sys
+sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
+
+from microsim.constants import Constants
+
 class QuantRampAPI:
     """
     Class that handles integration of QUANT data into the RAMP microsim model
@@ -13,7 +18,7 @@ class QuantRampAPI:
     """
 
     def __init__(self,
-                 quant_dir: str = "QUANT_RAMP"
+                 quant_dir: str = Constants.Paths.QUANT.QUANT_FOLDER  #"QUANT_RAMP"
                  ):
         """
         Initialiser for QuantRampAPI This reads all of the necessary data.
@@ -26,7 +31,6 @@ class QuantRampAPI:
         # read in and store data 
         QuantRampAPI.read_data(self.QUANT_DIR)
      
-
     @classmethod
     def read_data(cls,QUANT_DIR):
         """
@@ -56,7 +60,7 @@ class QuantRampAPI:
         """
         getProbablePrimarySchoolsByMSOAIZ
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
-        a list of all the surrounding primary schools whose probabilty of being visited by the MSOA_IZ is
+        a list of all the surrounding primary schools whose probability of being visited by the MSOA_IZ is
         greater than or equal to the threshold.
         School ids are taken from the Edubase list of URN
         NOTE: code identical to the secondary school version, only with switched lookup tables
@@ -83,7 +87,7 @@ class QuantRampAPI:
         """
         getProbableSecondarySchoolsByMSOAIZ
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
-        a list of all the surrounding secondary schools whose probabilty of being visited by the MSOA_IZ is
+        a list of all the surrounding secondary schools whose probability of being visited by the MSOA_IZ is
         greater than or equal to the threshold.
         School ids are taken from the Edubase list of URN
         NOTE: code identical to the primary school version, only with switched lookup tables
@@ -110,7 +114,7 @@ class QuantRampAPI:
         """
         getProbableRetailByMSOAIZ
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
-        a list of all the surrounding retail points whose probabilty of being visited by the MSOA_IZ is
+        a list of all the surrounding retail points whose probability of being visited by the MSOA_IZ is
         greater than or equal to the threshold.
         Retail ids are from ????
         @param msoa_iz An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
@@ -118,7 +122,15 @@ class QuantRampAPI:
         @returns a list of probabilities in the same order as the venues
         """
         result = []
-        zonei = int(dfRetailPointsPopulation.loc[dfRetailPointsPopulation['msoaiz'] == msoa_iz, 'zonei'])
+
+        #TODO: revert back to this version?
+        # zonei = int(dfRetailPointsPopulation.loc[dfRetailPointsPopulation['msoaiz'] == msoa_iz, 'zonei'])
+        series = dfRetailPointsPopulation.loc[dfRetailPointsPopulation['msoaiz'] == msoa_iz, 'zonei']
+        if series.size > 0:
+            zonei = int(series)
+        else:
+            zonei = 0
+
         m,n = retailpoints_probSij.shape
         for j in range(n):
             p = retailpoints_probSij[zonei,j]
@@ -132,11 +144,11 @@ class QuantRampAPI:
     
 
     @staticmethod
-    def getProbableHospitalByMSOAIZ(dfHospitalPopulation,dfHospitalZones,hospital_probHijmsoa_iz,threshold):
+    def getProbableHospitalByMSOAIZ(dfHospitalPopulation,dfHospitalZones,hospital_probHij,msoa_iz,threshold):
         """
         getProbableHospitalByMSOAIZ
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
-        a list of all the surrounding hospitals whose probabilty of being visited by the MSOA_IZ is
+        a list of all the surrounding hospitals whose probability of being visited by the MSOA_IZ is
         greater than or equal to the threshold.
         Hospital ids are taken from the NHS England export of "location" - see hospitalZones for ids and names (and east/north)
         NOTE: code identical to the primary school version, only with switched lookup tables
@@ -167,14 +179,26 @@ class QuantRampAPI:
         """
         # get all probabilities so they sum to at least threshold value
         dic = {} # appending to dictionary is faster than dataframe
-        for m in tqdm(msoa_list, desc=f"Reading {venue} MSOA flows"):
+        for m in tqdm(msoa_list, desc=f"Reading {venue} MSOA flows"): # tqdm makes loops show a smart progress meter
             # get all probabilities for this MSOA (threshold set to 0)
             if venue == "PrimarySchool":
-                result_tmp = QuantRampAPI.getProbablePrimarySchoolsByMSOAIZ(cls.dfPrimaryPopulation, cls.dfPrimaryZones, cls.primary_probPij,m,0)
+                result_tmp = QuantRampAPI.getProbablePrimarySchoolsByMSOAIZ(cls.dfPrimaryPopulation,
+                                                                            cls.dfPrimaryZones,
+                                                                            cls.primary_probPij,
+                                                                            m,
+                                                                            0)
             elif venue == "SecondarySchool":
-                result_tmp = QuantRampAPI.getProbableSecondarySchoolsByMSOAIZ(cls.dfSecondaryPopulation, cls.dfSecondaryZones, cls.secondary_probPij,m,0)
+                result_tmp = QuantRampAPI.getProbableSecondarySchoolsByMSOAIZ(cls.dfSecondaryPopulation,
+                                                                              cls.dfSecondaryZones,
+                                                                              cls.secondary_probPij,
+                                                                              m,
+                                                                              0)
             elif venue == "Retail":
-                result_tmp = QuantRampAPI.getProbableRetailByMSOAIZ(cls.dfRetailPointsPopulation, cls.dfRetailPointsZones, cls.retailpoints_probSij ,m,0)
+                result_tmp = QuantRampAPI.getProbableRetailByMSOAIZ(cls.dfRetailPointsPopulation,
+                                                                    cls.dfRetailPointsZones,
+                                                                    cls.retailpoints_probSij,
+                                                                    m,
+                                                                    0)
             else:
                 raise Exception("unknown venue type")
             # keep only values that sum to at least the specified threshold
@@ -217,11 +241,10 @@ class QuantRampAPI:
 # # to test:
 # microsim_data_dir = os.getcwd()
 # quant_user_dir = os.path.join("QUANT_RAMP", "model-runs")
-
+#
 # qa = QuantRampAPI(microsim_data_dir, quant_user_dir)
-
+#
 # threshold = 10 # top 10
 # thresholdtype = "nr" # threshold based on nr venues
 # study_msoas = ['E02002559', 'E02002560']
 # flow_matrix = qa.get_flows("Retail", study_msoas,threshold,thresholdtype)
-

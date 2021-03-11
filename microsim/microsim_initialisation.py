@@ -17,11 +17,11 @@ import random
 import copy
 import multiprocessing
 
-from microsim_model import Microsim
+from microsim.microsim_model import MicrosimModel
 from column_names import ColumnNames
 
 
-class MicrosimInit(Microsim):
+class MicrosimInit(MicrosimModel):
     """
     Create some preliminary data that are needed to estimate coefficients for the disease estimates.
 
@@ -61,7 +61,7 @@ class MicrosimInit(Microsim):
         assert len(self.individuals.loc[self.high_risk_individuals, :]["Area"].unique()) == len(self.high_risk_msoas)
 
     @staticmethod
-    def run(m: Microsim, results_subdirectory: str):
+    def run(m: MicrosimModel, results_subdirectory: str):
         """
         Run the initialisation for a model.
 
@@ -146,7 +146,7 @@ class MicrosimInit(Microsim):
         return individual_risks
 
     @staticmethod
-    def make_a_copy(m: Microsim):
+    def make_a_copy(m: MicrosimModel):
         """When copying a microsim object, reset the seed"""
         m.random.seed()
         return copy.deepcopy(m)

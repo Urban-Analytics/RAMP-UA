@@ -4,9 +4,9 @@ import rpy2.robjects.packages as rpackages  # For installing packages
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 pandas2ri.activate()
-from microsim.column_names import ColumnNames
+from microsim.constants import ColumnNames
 
-class RInterface():
+class RInterface:
     """
     An RInterface object can be used to create an R session, initialise everything that is needed for the disease
     status estimation function, and then interact with session to calculate the disease status.
@@ -49,7 +49,7 @@ class RInterface():
         :return: a new dataframe that includes new disease statuses
         """
         print("\tCalculating new disease status...", end='')
-        # It's expesive to convert large dataframes, only give the required columns to R.
+        # It's expensive to convert large dataframes, only give the required columns to R.
         cols = ["area", "House_ID", "ID", "age", "Sex", ColumnNames.CURRENT_RISK, "pnothome",
                 ColumnNames.DISEASE_STATUS, ColumnNames.DISEASE_PRESYMP, ColumnNames.DISEASE_SYMP_DAYS,
                 ColumnNames.DISEASE_EXPOSED_DAYS, "cvd", "diabetes", "bloodpressure", "BMIvg6", "BMI_healthier"]

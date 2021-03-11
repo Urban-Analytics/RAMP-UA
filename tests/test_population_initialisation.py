@@ -3,7 +3,7 @@ import pytest
 import multiprocessing
 import pandas as pd
 import numpy as np
-from microsim.column_names import ColumnNames
+from microsim.constants import ColumnNames
 from microsim.population_initialisation import PopulationInitialisation
 
 # ********************************************************

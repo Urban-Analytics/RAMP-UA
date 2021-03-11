@@ -23,7 +23,7 @@ population_init_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
 
 population_init = PopulationInitialisation(**population_init_args)
 time_activity_multiplier = PopulationInitialisation.read_time_activity_multiplier(
-    os.path.join(population_init.DATA_DIR, "google_mobility_lockdown_daily.csv"))
+    os.path.join(population_init.REGIONAL_DATA_DIR, "google_mobility_lockdown_daily.csv"))
 lockdown_multipliers = time_activity_multiplier.loc[:, "timeout_multiplier"]
 
 

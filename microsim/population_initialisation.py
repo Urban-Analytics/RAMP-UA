@@ -11,12 +11,13 @@ import sys
 
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
 from microsim.activity_location import ActivityLocation
-from microsim.column_names import ColumnNames
+from microsim.constants import ColumnNames
+from microsim.constants import Constants
 from microsim.utilities import Optimise, check_durations_sum_to_1
-import multiprocessing
+from microsim.quant_api import QuantRampAPI
 
+import multiprocessing  # process based parallelism
 import pandas as pd
-
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
 # pd.set_option('display.width', 0)  # Automatically find the best width
 import numpy as np
@@ -28,45 +29,58 @@ from tqdm import tqdm  # For a progress bar
 
 
 class PopulationInitialisation:
+
     """
-    A class used to load different datasources and generate the population of people ready to be iterated.
+    A class used to load different data microsims and generate the population of people ready to be iterated.
     This produces dataframes of people and places ready to start either model implementation.
     """
 
+    # Static variables:
+    COMMON_DATA_DIR = ""
+    REGIONAL_DATA_DIR = ""
+    testing = False
+    debug = False
+
     def __init__(self,
-                 data_dir: str = "./data/",
+                 common_data_dir: str = "",
+                 regional_data_dir: str = "",
                  read_data: bool = True,
                  testing: bool = False,
-                 debug=False,
-                 quant_object=None
+                 debug = False,
+                 #quant_object=None
                  ):
         """
         PopulationInitialisation constructor. This reads all of the necessary data to run the microsimulation.
         ----------
-        :param data_dir: A data directory from which to read the source data
+        #:param data_dir: A data directory from which to read the microsim data
         :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
             in debugging).
         :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!)
         :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
-        :param quant_object: optional parameter to use QUANT data, don't specify if you want to use Devon data
+        #:param quant_object: optional parameter to use QUANT data, don't specify if you want to use Devon data
         """
 
-        PopulationInitialisation.DATA_DIR = data_dir  # TODO (minor) pass the data_dir to class functions directly so no need to have it defined at class level
-        self.DATA_DIR = data_dir
+        PopulationInitialisation.COMMON_DATA_DIR = common_data_dir
+        PopulationInitialisation.REGIONAL_DATA_DIR = regional_data_dir
+        # TODO (minor) pass the data_dir to class functions directly so no need to have it defined at class level
+        #self.DATA_DIR = data_dir
 
-        # Administrative variables that need to be defined
-        if quant_object is None:
-            PopulationInitialisation.quant_object = False
-        else:
-            PopulationInitialisation.quant_object = quant_object
+        # # Administrative variables that need to be defined
+        # if testing is False:
+        #     PopulationInitialisation.DATA_DIR = Configuration.Paths.DATA_FOLDER
+        # else:
+        #     PopulationInitialisation.DATA_DIR = Configuration.Paths.TESTS_FOLDER
 
         PopulationInitialisation.debug = debug
         PopulationInitialisation.testing = testing
-        if self.testing:
+        if testing:
             warnings.warn("Running in testing mode. Some exceptions will be disabled.")
 
         if not read_data:  # Optionally can not do this, usually for debugging
             return
+
+        self.quant_object = QuantRampAPI(os.path.join(common_data_dir,
+                                                      Constants.Paths.QUANT.QUANT_FOLDER))
 
         # *********
         # Generate population and places dataframes
@@ -77,7 +91,7 @@ class PopulationInitialisation:
         # This also creates flows and venues columns for the journeys of individuals to households, and makes a new
         # households dataset to replace the one we read in above.
         home_name = ColumnNames.Activities.HOME  # How to describe flows to people's houses
-        self.individuals, self.households = PopulationInitialisation.read_individual_time_use_and_health_data(home_name)
+        self.individuals, self.households = self.read_individual_time_use_and_health_data(home_name)
 
         # Extract a list of all MSOAs in the study area. Will need this for the new SIMs
         self.all_msoas = PopulationInitialisation.extract_msoas_from_individuals(self.individuals)
@@ -87,7 +101,7 @@ class PopulationInitialisation:
         #
         # For each 'activity' (e.g shopping), we need to store the following things:
         #
-        # 1. A data frame of the places where the activities take place (e.g. a list of shops). Refered to as
+        # 1. A data frame of the places where the activities take place (e.g. a list of shops). Referred to as
         # the 'locations' dataframe. Importantly this will have a 'Danger' column which records whether infected
         # people have visited the location.
         #
@@ -98,7 +112,7 @@ class PopulationInitialisation:
         # For most activities, there are a number of different possible locations that the individual
         # could visit. The 'venues' column stores a list of indexes to the locations dataframe. E.g. one individual
         # might have venues=[2,54,19]. Those numbers refer to the *row numbers* of locations in the locations
-        # dataframe. So venue '2' is the third venue in the list of all the locaitons associated with that activity.
+        # dataframe. So venue '2' is the third venue in the list of all the locations associated with that activity.
         # Flows are also a list, e.g. for that individual the flows might be flows=[0.8,0.1,0.1] which means they
         # are most likely to go to venue with index 2, and less likely to go to the other two.
         #
@@ -106,7 +120,7 @@ class PopulationInitialisation:
         # venues and flows columns will only be single-element lists.
         #
         # For multi-venue activities, the process is as follows (easiest to see the retail or shopping example):
-        # 1. Create a dataframe of individual locations and use a spatial interation model to estimate flows to those
+        # 1. Create a dataframe of individual locations and use a spatial interaction model to estimate flows to those
         # locations, creating a flow matrix. E.g. the `read_retail_flows_data()` function
         # 2. Run through the flow matrix, assigning all individuals in each MSOA the appropriate flows. E.g. the
         # `add_individual_flows()` function.
@@ -130,17 +144,18 @@ class PopulationInitialisation:
                                                               duration_col="phome")
 
         # Generate travel time columns and assign travel modes to some kind of risky activity (not doing this yet)
-        # individuals = PopulationInitialisation.generate_travel_time_colums(individuals)
+        # individuals = PopulationInitialisation.generate_travel_time_columns(individuals)
         # One thing we do need to do (this would be done in the function) is replace NaNs in the time use data with 0
         # for col in ["pwork", "_pschool", "pshop", "pleisure", "ptransport", "pother"]:
         for col in ["punknown", "phome", "pworkhome", "pwork", "_pschool", "pshop", "pservices", "pleisure",
                     "pescort", "ptransport", "pnothome", "phometot", "pmwalk", "pmcycle", "pmprivate",
                     "pmpublic", "pmunknown"]:
+ #TODO: this is hard-coded, add this to ColumnNames?
             self.individuals[col].fillna(0, inplace=True)
 
         # Read Retail flows data
         retail_name = ColumnNames.Activities.RETAIL  # How to refer to this in data frame columns etc.
-        stores, stores_flows = PopulationInitialisation.read_retail_flows_data(self.all_msoas)  # (list of shops and a flow matrix)
+        stores, stores_flows = PopulationInitialisation.read_retail_flows_data(self, self.all_msoas)  # (list of shops and a flow matrix)
         PopulationInitialisation.check_sim_flows(stores, stores_flows)
         # Assign Retail flows data to the individuals
         self.individuals = PopulationInitialisation.add_individual_flows(retail_name, self.individuals, stores_flows)
@@ -151,22 +166,25 @@ class PopulationInitialisation:
         primary_name = ColumnNames.Activities.PRIMARY
         secondary_name = ColumnNames.Activities.SECONDARY
         primary_schools, secondary_schools, primary_flows, secondary_flows = \
-            PopulationInitialisation.read_school_flows_data(self.all_msoas)  # (list of schools and a flow matrix)
+            PopulationInitialisation.read_school_flows_data(self, self.all_msoas)  # (list of schools and a flow matrix)
         PopulationInitialisation.check_sim_flows(primary_schools, primary_flows)
         PopulationInitialisation.check_sim_flows(secondary_schools, secondary_flows)
         # Assign Schools
         # TODO: need to separate primary and secondary school duration. At the moment everyone is given the same
         # duration, 'pschool', which means that children will be assigned a PrimarySchool duration *and* a
-        # seconary school duration, regardless of their age. I think the only way round this is to
-        # make two new columns - 'pschool_primary' and 'pschool_seconary', and set these to either 'pschool'
+        # secondary school duration, regardless of their age. I think the only way round this is to
+        # make two new columns - 'pschool_primary' and 'pschool_secondary', and set these to either 'pschool'
         # or 0 depending on the age of the child.
         self.individuals = PopulationInitialisation.add_individual_flows(primary_name, self.individuals, primary_flows)
         self.activity_locations[primary_name] = \
             ActivityLocation(primary_name, primary_schools.copy(), primary_flows, self.individuals, "pschool-primary")
+# TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
+
         self.individuals = PopulationInitialisation.add_individual_flows(secondary_name, self.individuals, secondary_flows)
         self.activity_locations[secondary_name] = \
             ActivityLocation(secondary_name, secondary_schools.copy(), secondary_flows, self.individuals,
                              "pschool-secondary")
+# TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
         del primary_schools, secondary_schools  # No longer needed as we gave copies to the ActivityLocation
 
         # Assign work. Use a flow matrix of general commuting flows. Assume one office for each different employment
@@ -174,6 +192,7 @@ class PopulationInitialisation:
         # flows from their home MSOA.
         # Occupation is taken from column soc2010 in individuals df
         self.individuals['soc2010'] = self.individuals['soc2010'].astype(str)  # These are integers but we need string
+# TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
         possible_jobs = sorted(self.individuals.soc2010.unique())  # list of possible jobs in alphabetical order
         workplace_names = []  # Creat a list of workplace names, built from the MSOA code and the SOC
         workplace_msoas = []
@@ -195,12 +214,14 @@ class PopulationInitialisation:
         PopulationInitialisation._add_location_columns(workplaces, location_names=workplace_names)
         work_name = ColumnNames.Activities.WORK
         # Workplaces dataframe is ready. Now read commuting flows
-        commuting_flows = PopulationInitialisation.read_commuting_flows_data(self.all_msoas)
+        commuting_flows = PopulationInitialisation.read_commuting_flows_data(self, self.all_msoas)
         num_individuals = len(self.individuals)  # (sanity check)
         cols = self.individuals.columns
-        self.individuals = PopulationInitialisation.add_work_flows(flow_type=work_name, individuals=self.individuals,
+        self.individuals = PopulationInitialisation.add_work_flows(self, flow_type=work_name, individuals=self.individuals,
                                                             workplaces=workplaces, commuting_flows=commuting_flows,
                                                             flow_threshold=5)
+#TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
+
         assert num_individuals == len(self.individuals), \
             "There was an error reading workplaces (caching?) and the number of individuals has changed!"
         assert (self.individuals.columns[0:-3] == cols).all(), \
@@ -208,15 +229,16 @@ class PopulationInitialisation:
         del num_individuals, cols
         self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
                                                               individuals=self.individuals, duration_col="pwork")
+#TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
 
         ## Some flows will be very complicated numbers. Reduce the numbers of decimal places across the board.
         ## This makes it easier to write out the files and to make sure that the proportions add up properly
-        ## Use multiprocessing because swifter doesn't work properly for some reason (wont paralelise)
+        ## Use multiprocessing because swifter doesn't work properly for some reason (wont parallelise)
         # with multiprocessing.Pool(processes=int(os.cpu_count()/2)) as pool:
         #   for name in tqdm(activity_locations.keys(), desc="Rounding all flows"):
         #       rounded_flows = pool.map( PopulationInitialisation._round_flows, list(individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"]))
         #       individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = rounded_flows
-        #   # Use swifter, but for some reason it wont paralelise the problem. Not sure why.
+        #   # Use swifter, but for some reason it wont parallelise the problem. Not sure why.
         #   #individuals[f"{name}{ColumnNames.ACTIVITY_FLOWS}"] = \
         #   #        individuals.loc[:,f"{name}{ColumnNames.ACTIVITY_FLOWS}"].\
         #   #            swifter.allow_dask_on_strings(enable=True).progress_bar(True, desc=name).\
@@ -226,12 +248,13 @@ class PopulationInitialisation:
         for name in tqdm(self.activity_locations.keys(), desc="Rounding all durations"):
             self.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = \
                 self.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"].apply(lambda x: round(x, 5))
+#TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
 
         # Some people's activity durations will not add up to 1.0 because we don't model all their activities.
         # Extend the amount of time at home to make up for this
         self.individuals = PopulationInitialisation.pad_durations(self.individuals, self.activity_locations)
 
-        # Now that we have everone's initial activities, remember the proportions of times that they spend doing things
+        # Now that we have everyone's initial activities, remember the proportions of times that they spend doing things
         # so that if these change (e.g. under lockdown) they can return to 'normality' later
         for activity_name in self.activity_locations.keys():
             self.individuals[f"{activity_name}{ColumnNames.ACTIVITY_DURATION_INITIAL}"] = \
@@ -245,12 +268,12 @@ class PopulationInitialisation:
     @staticmethod
     def _round_flows(flows):
         return [round(flow, 5) for flow in flows]
+# TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
 
-    @classmethod
-    def _check_no_homeless(cls, individuals, households, warn=True):
+    def _check_no_homeless(self, individuals, households, warn=True):
         """
         Check that each individual has a household. NOTE: this only works for the raw mirosimulation data.
-        Once the health data has been attached this wont work becuase the unique identifiers change.
+        Once the health data has been attached this wont work because the unique identifiers change.
         If this function is still needed then it will need to take the specific IDs as arguments, but this is
         a little complicated because some combination of [area, HID, (PID)] is needed for unique identification.
 
@@ -271,6 +294,8 @@ class PopulationInitialisation:
         # Find individuals who do not have a related entry in the households dataset
         homeless = [(area, hid, pid) for area, hid, pid in individuals.loc[:, ["House_OA", "HID", "PID"]].values if
                     (area, hid) not in hids.index]
+# TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
+
         # (version using apply isn't quicker)
         # h2 = individuals.reset_index().loc[:, ["House_OA", "HID", "PID"]].swifter.apply(
         #    lambda x: x[2] if (x[0], x[1]) in hids.index else None, axis=1)
@@ -286,8 +311,8 @@ class PopulationInitialisation:
         print("... finished checking homeless")
         return True
 
-    @classmethod
-    def extract_msoas_from_individuals(cls, individuals: pd.DataFrame) -> List[str]:
+    @staticmethod
+    def extract_msoas_from_individuals(individuals: pd.DataFrame) -> List[str]:
         """
         Analyse a DataFrame of individuals and extract the unique MSOA codes, returning them as a list in ascending
         order
@@ -298,8 +323,9 @@ class PopulationInitialisation:
         areas.sort()
         return areas
 
-    @classmethod
-    def read_individual_time_use_and_health_data(cls, home_name: str) -> pd.DataFrame:
+
+    def read_individual_time_use_and_health_data(self, home_name: str) -> (pd.DataFrame, pd.DataFrame):
+#TODO solve this tuple not defined as tuple (see return)
         """
         Read a population of individuals. Includes time-use & health info.
 
@@ -310,7 +336,12 @@ class PopulationInitialisation:
         # filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_health.txt")
         # filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_keyworker.txt")
         # filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_Complete.txt")
-        filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_keyworker_health.csv")
+# TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
+
+        #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_keyworker_health.csv")
+        #filename_withpath =
+        filename = os.path.join(PopulationInitialisation.REGIONAL_DATA_DIR,
+                                Constants.Paths.TU_FILE)
 
         tuh = pd.read_csv(filename)  # , encoding = "ISO-8859-1")
         tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.
@@ -325,8 +356,9 @@ class PopulationInitialisation:
         # Indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
         # identify indivuals / households in this health data
         tuh = tuh.rename(columns={'hid': '_hid', 'pid': '_pid'})
+# TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
 
-        # Make a new, unique id for each individual (PIDs have been replicated so no longer uniquely idenfity individuals}
+        # Make a new, unique id for each individual (PIDs have been replicated so no longer uniquely identify individuals}
         assert len(tuh.index.unique()) == len(tuh)  # Index should have been set to row number when tuh was read in
         tuh.insert(0, "ID", tuh.index, allow_duplicates=False)  # Insert into first position
 
@@ -359,7 +391,7 @@ class PopulationInitialisation:
         for i, (area, hid, pid) in enumerate(zip(_areas, _hids, _pids)):
             # print(i, area, hid, pid)
             unique_individuals.append((area, hid, pid))
-            house_key = (area, hid)  # Uniqely identifies a household
+            house_key = (area, hid)  # Uniquely identifies a household
             house_id_number = -1
             try:  # If this lookup works then we've seen this house before. Get it's ID number and increase num people in it
                 house_info = house_ids_dict[house_key]
@@ -369,13 +401,13 @@ class PopulationInitialisation:
                 assert house_key[0] == house_info[2] and house_key[1] == house_info[3]
                 # We need the ID number to tell the individual which their house is
                 house_id_number = house_info[0]
-                # Increse the number of people in the house and create a new list of info for this house
+                # Increase the number of people in the house and create a new list of info for this house
                 people_per_house = house_info[1] + 1
                 house_ids_dict[house_key] = [house_id_number, people_per_house, area, hid]
             except KeyError:  # If the lookup failed then this is the first time we've seen this house. Make a new ID.
                 house_id_number = house_id_counter
                 house_ids_dict[house_key] = [house_id_number, 1, area,
-                                             hid]  # (1 is beacuse 1 person so far in the hosue)
+                                             hid]  # (1 is because 1 person so far in the house)
                 house_id_counter += 1
             assert house_id_number > -1
             house_ids_list.append(house_id_number)  # Remember the house for this individual
@@ -391,6 +423,7 @@ class PopulationInitialisation:
 
         # Done! Now can create the households dataframe
         households_df = pd.DataFrame(house_ids_dict.values(), columns=['House_ID', 'Num_People', 'area', '_hid'])
+# TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
         households_df = Optimise.optimize(households_df)
 
         # And tell the individuals which house they live in
@@ -404,7 +437,7 @@ class PopulationInitialisation:
         assert len(temp_merge) == len(tuh)
         assert (temp_merge['area_x'] == temp_merge['area_y']).all()  # (all says 'all are true')
 
-        # Check that NumPople in the house dataframe is the same as number of people in the indivdiuals dataframe
+        # Check that NumPeople in the house dataframe is the same as number of people in the individuals dataframe
         # with this house id
         if PopulationInitialisation.debug:
             for house_id, num_people in tqdm(zip(households_df.House_ID, households_df.Num_People),
@@ -462,6 +495,7 @@ class PopulationInitialisation:
         # households_df = households_df.loc[households_df.Num_People <= 10]
         # Check that the large house ids no longer exist in the individuals df (use House_ID rather than index to be sure, but they're the same anyway)
         id_set = frozenset(households_df.loc[households_df.Num_People > 10, "House_ID"].values)
+# TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
         assert True not in list(tuh["House_ID"].apply(lambda x: x in id_set))
         del tuh["TEMP_HOUSE_ID"]
 
@@ -481,8 +515,7 @@ class PopulationInitialisation:
 
         return tuh, households_df
 
-    @classmethod
-    def generate_travel_time_colums(cls, individuals: pd.DataFrame) -> pd.DataFrame:
+    def generate_travel_time_colums(self, individuals: pd.DataFrame) -> pd.DataFrame:
         """
         TODO Read the raw travel time columns and create standard ones to show how long individuals
         spend travelling on different modes. Ultimately these will be turned into activities
@@ -494,6 +527,7 @@ class PopulationInitialisation:
         # Variables pnothome, phome add up to 100% of the day and
         # pwork +pschool +pshop+ pleisure +pescort+ ptransport +pother = phome
 
+######## ------------- RELEVANT?? ---------------------------------- ######
         # TODO go through some of these with Karyn, they don't all pass
         # Time at home and not home should sum to 1.0
         if False in list((individuals.phome + individuals.pnothome) == 1.0):
@@ -506,7 +540,9 @@ class PopulationInitialisation:
         # Temporarily (?) remove NAs from activity columns (I couldn't work out how to do this in 1 line like:
         for col in ["pwork", "pschool", "pshop", "pleisure", "ptransport", "pother"]:
             individuals[col].fillna(0, inplace=True)
+# TODO: this is hard-coded, add this threshold to ColumnNames?
 
+######## ------------- RELEVANT?? ---------------------------------- ######
         # TODO assign activities properly. Need to map from columns in the dataframe to standard names
         # Assign time use for Travel (just do this arbitrarily for now, the correct columns aren't in the data).
         # travel_cols = [ x + ColumnNames.ACTIVITY_DURATION for x in
@@ -553,23 +589,23 @@ class PopulationInitialisation:
         #    individuals[col] = 0.0
         return individuals
 
-    @classmethod
-    def read_school_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
+    def read_school_flows_data(self, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
         """
         Read the flows between each MSOA and the most likely schools attended by pupils in this area.
         All schools are initially read together, but flows are separated into primary and secondary
 
         :param study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
         :return: A tuple of three dataframes. All schools, then the flows to primary and secondary
-        (Schools, PrimaryFlows, SeconaryFlows). Although all the schools are one dataframe, no primary flows will flow
+        (Schools, PrimaryFlows, SecondaryFlows). Although all the schools are one dataframe, no primary flows will flow
         to secondary schools and vice versa).
         """
 
+        ### AZ note: got rid of 'devon data' case
         # devon data
-        if cls.quant_object is False:
+        if self.quant_object is False or PopulationInitialisation.testing:
             # TODO Need to read full school flows, not just those of Devon
             print("Reading school flow data for Devon...", )
-            dir = os.path.join(cls.DATA_DIR, "devon-schools")
+            dir = os.path.join(self.REGIONAL_DATA_DIR, "devon-schools")
 
             # Read the schools (all of them)
             schools = pd.read_csv(os.path.join(dir, "exeter schools.csv"))
@@ -671,11 +707,16 @@ class PopulationInitialisation:
 
         # QUANT data
         else:
-            #print("Reading school flow data...", )
-            dir = cls.quant_object.QUANT_DIR
+            print("Reading school flow data...", )
 
             # Read the primary schools
-            primary_schools = pd.read_csv(os.path.join(dir, "primaryZones.csv"))
+            # primary_schools = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+            #                                            "..",
+            #                                            Constants.Paths.QUANT.QUANT_FOLDER,
+            #                                            Constants.Paths.QUANT.PRIMARYSCHOOLS_FILE))
+            primary_schools = pd.read_csv(os.path.join(PopulationInitialisation.COMMON_DATA_DIR,
+                                                       Constants.Paths.QUANT.QUANT_FOLDER,
+                                                       Constants.Paths.QUANT.PRIMARYSCHOOLS_FILE))
             # Add some standard columns that all locations need
             primary_school_ids = list(primary_schools.index)
             primary_school_names = primary_schools.URN  # unique ID for venue
@@ -683,40 +724,54 @@ class PopulationInitialisation:
                                            location_ids=primary_school_ids)
 
             # Read the secondary schools
-            secondary_schools = pd.read_csv(os.path.join(dir, "secondaryZones.csv"))
+            # secondary_schools = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+            #                                              "..",
+            #                                              Constants.Paths.QUANT.QUANT_FOLDER,
+            #                                              Constants.Paths.QUANT.SECONDARYSCHOOLS_FILE))
+            secondary_schools = pd.read_csv(os.path.join(PopulationInitialisation.COMMON_DATA_DIR,
+                                                         Constants.Paths.QUANT.QUANT_FOLDER,
+                                                         Constants.Paths.QUANT.SECONDARYSCHOOLS_FILE))
             # Add some standard columns that all locations need
             secondary_school_ids = list(secondary_schools.index)
             secondary_school_names = secondary_schools.URN  # unique ID for venue
-            PopulationInitialisation._add_location_columns(secondary_schools, location_names=secondary_school_names,
-                                           location_ids=secondary_school_ids)
+            PopulationInitialisation._add_location_columns(secondary_schools,
+                                                           location_names=secondary_school_names,
+                                                           location_ids=secondary_school_ids)
 
             # Read the primary school flows
-            threshold = 5  # top 5
-            thresholdtype = "nr"  # threshold based on nr venues
-            primary_flow_matrix = cls.quant_object.get_flows(ColumnNames.Activities.PRIMARY, study_msoas, threshold,
-                                                             thresholdtype)
+            threshold = Constants.Thresholds.SCHOOL  # top 5
+            thresholdtype = Constants.Thresholds.SCHOOL_TYPE  # threshold based on nr venues
+            primary_flow_matrix = self.quant_object.get_flows(ColumnNames.Activities.PRIMARY,
+                                                         study_msoas,
+                                                         threshold,
+                                                         thresholdtype) ## get_flows is defined in file 'quant_api.py'
 
             # Read the secondary school flows
             # same thresholds as before
-            secondary_flow_matrix = cls.quant_object.get_flows(ColumnNames.Activities.SECONDARY, study_msoas, threshold,
-                                                               thresholdtype)
+            secondary_flow_matrix = self.quant_object.get_flows(ColumnNames.Activities.SECONDARY,
+                                                           study_msoas,
+                                                           threshold,
+                                                           thresholdtype)  ## get_flows is defined in file 'quant_api.py'
 
         return primary_schools, secondary_schools, primary_flow_matrix, secondary_flow_matrix
 
-    @classmethod
-    def read_commuting_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
+    def read_commuting_flows_data(self, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
         """
         Read the commuting flows between each MSOA
 
         :param study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
         :return: A dataframe with origin and destination flows in all MSOAs in the study area
         """
-        print("Reading commuting flow data for Devon...", )
-        commuting_flows = pd.read_csv(os.path.join(cls.DATA_DIR, "devon-commuting", "commuting_od.csv"),
-                                      dtype={'HomeMSOA': str, 'DestinationMSOA': str, 'Total_Flow': int})
+        print("Reading commuting flow data for the selected region...", )
+        commuting_flows = pd.read_csv(os.path.join(PopulationInitialisation.REGIONAL_DATA_DIR,
+                                                   Constants.Paths.COMMUTING_FILE),
+                                      dtype={'HomeMSOA': str,
+                                             'DestinationMSOA': str,
+                                             'Total_Flow': int})
+# TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
         # Need to append the devon code to the areas (they're integers in the csv file)
-        commuting_flows["Orig"] = commuting_flows["HomeMSOA"].apply(lambda x: "E0" + x)
-        commuting_flows["Dest"] = commuting_flows["DestinationMSOA"].apply(lambda x: "E0" + x)
+        commuting_flows["Orig"] = commuting_flows["HomeMSOA"] # .apply(lambda x: "E0" + x)
+        commuting_flows["Dest"] = commuting_flows["DestinationMSOA"] # .apply(lambda x: "E0" + x)
         print(f"\tRead {len(pd.unique(commuting_flows['Orig']))} orgins and {len(pd.unique(commuting_flows['Dest']))} "
               f"destinations (MSOAs in the study area: {len(study_msoas)})")
 
@@ -734,13 +789,13 @@ class PopulationInitialisation:
         assert len(pd.unique(commuting_flows["Orig"])) == len(study_msoas)
         assert len(pd.unique(commuting_flows["Dest"])) == len(study_msoas)
 
-        # There should be a flow between every possible combionation of areas:
+        # There should be a flow between every possible combination of areas:
         assert len(study_msoas) ** 2 == len(commuting_flows)
 
         return commuting_flows
 
-    @classmethod
-    def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame,
+
+    def add_work_flows(self, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame,
                        commuting_flows: pd.DataFrame, flow_threshold) -> (pd.DataFrame):
         """
         Create a dataframe of work locations that individuals travel to. The flows are based on general commuting
@@ -779,6 +834,7 @@ class PopulationInitialisation:
                     dests_and_flows = \
                         dests_and_flows.sort_values(by="Total_Flow", ascending=False).iloc[0:flow_threshold].copy()
                 dests_msoas = dests_and_flows["Dest"].values  # The MSOA destinations
+# TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
                 flows = PopulationInitialisation._normalise(dests_and_flows["Total_Flow"].values)
                 assert len(dests_msoas) == len(flows)
                 assert True in [x > 0.0 for x in flows]  # Check that there is a non-zero flow
@@ -787,6 +843,7 @@ class PopulationInitialisation:
                 # what the destination activity place is called (MSOA+SOC), get that place's ID and assign
                 # those IDs as the destinations.
                 socs = list(individuals.loc[individuals_idx, "soc2010"].values)  # SOC for each individual
+# TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
                 individuals_venues = np.array(pool.starmap(PopulationInitialisation._calc_workplace_indices, zip(
                     socs,  # A 1D list; one soc for each individual in this msoa
                     (dests_msoas for _ in range(len(socs))),  # list of dests, 2D, one list for each individual
@@ -815,7 +872,7 @@ class PopulationInitialisation:
         they can work out what the index of the workplace is. This works because each virtual workplace is uniquely
         named by it's msoa and industry type (i.e. f"{msoa}-{row['soc2010']}")
 
-        :param soc: A individuals's soc (industry where they work)
+        :param soc: A individuals's soc (industry where they work)3
         :param dest_msoas: A list of the destination MSOA names for the individual
         :param workplace_df: The dataframe containing all workplaces
         :return:
@@ -830,8 +887,8 @@ class PopulationInitialisation:
     def _assign_work_flow(job, workplaces):
         return workplaces.index[workplaces[ColumnNames.LOCATION_NAME] == job].values[0]
 
-    @classmethod
-    def read_retail_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
+
+    def read_retail_flows_data(self, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
         """
         Read the flows between each MSOA and the most commonly visited shops
 
@@ -840,13 +897,14 @@ class PopulationInitialisation:
         containing information about the stores themselves.
         """
 
+        ### AZ note: got rid of 'devon data' case
         # Devon data
-        if cls.quant_object is False:
+        if self.quant_object is False or PopulationInitialisation.testing:
             # TODO Need to read full retail flows, not just those of Devon (temporarily created by Mark).
             # Will also need to subset the flows into areas of interst, but at the moment assume that we area already
             # working with Devon subset of flows
             print("Reading retail flow data for Devon...", )
-            dir = os.path.join(cls.DATA_DIR, "devon-retail")
+            dir = os.path.join(self.REGIONAL_DATA_DIR, "devon-retail")
 
             # Read the stores
             stores = pd.read_csv(os.path.join(dir, "devon smkt.csv"))
@@ -861,7 +919,7 @@ class PopulationInitialisation:
             with open(os.path.join(dir, "DJR002.TXT")) as f:
                 count = 1  # Mark's file comes in batches of 3 lines, each giving different data
 
-                # See the README for info about these variables. This is only tempoarary so I can't be bothered
+                # See the README for info about these variables. This is only temporary so I can't be bothered
                 # to explain properly
                 oa = None
                 oa_name = ""
@@ -876,7 +934,7 @@ class PopulationInitialisation:
                         oa = int(line_list[0])
                         if oa > len(study_msoas):
                             msg = f"Attempting to read more output areas ({oa}) than are present in the study area {study_msoas}."
-                            if cls.testing:
+                            if PopulationInitialisation.testing:
                                 warnings.warn(msg)
                             else:
                                 raise Exception(msg)
@@ -933,24 +991,25 @@ class PopulationInitialisation:
 
         # QUANT data
         else:
-            #print("Reading retail flow data...", )
-            dir = cls.quant_object.QUANT_DIR
+            print("Reading retail flow data...", )
             # Read the stores
-            stores = pd.read_csv(os.path.join(dir, "retailpointsZones.csv"))
+            stores = pd.read_csv(os.path.join(PopulationInitialisation.COMMON_DATA_DIR,
+                                              Constants.Paths.QUANT.QUANT_FOLDER,
+                                              Constants.Paths.QUANT.RETAIL_FILE))
             # Add some standard columns that all locations need
             stores_ids = list(stores.index)
             store_names = stores.id  # unique ID for venue
             PopulationInitialisation._add_location_columns(stores, location_names=store_names, location_ids=stores_ids)
 
             # Read the flows
-            threshold = 10  # top 10
-            thresholdtype = "nr"  # threshold based on nr venues
-            flow_matrix = cls.quant_object.get_flows("Retail", study_msoas, threshold, thresholdtype)
+            threshold = Constants.Thresholds.RETAIL  # top 10
+            thresholdtype = Constants.Thresholds.RETAIL_TYPE  # threshold based on nr venues
+            flow_matrix = self.quant_object.get_flows("Retail", study_msoas, threshold, thresholdtype)  ## get_flows is defined in file 'quant_api.py'
 
         return stores, flow_matrix
 
-    @classmethod
-    def check_sim_flows(cls, locations: pd.DataFrame, flows: pd.DataFrame):
+    @staticmethod
+    def check_sim_flows(locations: pd.DataFrame, flows: pd.DataFrame):
         """
         Check that the flow matrix looks OK, raising an error if not
         :param locations: A DataFrame with information about each location (destination)
@@ -959,12 +1018,12 @@ class PopulationInitialisation:
         """
         # TODO All MSOA codes are unique
         # TODO Locations have 'Danger' and 'ID' columns
-        # TODO Number of destination columns ('Loc_*') matches number of locaitons
+        # TODO Number of destination columns ('Loc_*') matches number of locations
         # TODO Number of origins (rows) in the flow matrix matches number of OAs in the locations
         return
 
-    @classmethod
-    def _add_location_columns(cls, locations: pd.DataFrame, location_names: List[str], location_ids: List[int] = None):
+    @staticmethod
+    def _add_location_columns(locations: pd.DataFrame, location_names: List[str], location_ids: List[int] = None):
         """
         Add some standard columns to DataFrame (in place) that contains information about locations.
         :param locations: The dataframe of locations that the columns will be added to
@@ -995,8 +1054,8 @@ class PopulationInitialisation:
         # locations.set_index(ColumnNames.LOCATION_ID, inplace=True, drop=False)
         return None  # Columns added in place so nothing to return
 
-    @classmethod
-    def add_individual_flows(cls, flow_type: str, individuals: pd.DataFrame, flow_matrix: pd.DataFrame) -> pd.DataFrame:
+    @staticmethod
+    def add_individual_flows(flow_type: str, individuals: pd.DataFrame, flow_matrix: pd.DataFrame) -> pd.DataFrame:
         """
         Take a flow matrix from MSOAs to (e.g. retail) locations and assign flows to individuals.
 
@@ -1004,10 +1063,10 @@ class PopulationInitialisation:
         that has flows for a destination is given index 0, the second is index 1, etc. This is probably not the same as
         the ID of the venue that they point to (e.g. the first store probably has ID 1, but will be given the index 0)
         so it is important that when the activity_locations are created, they are created in the same order as the
-        columns that appear in the matix. The first column in the matrix must also be the first row in the locations
+        columns that appear in the matrix. The first column in the matrix must also be the first row in the locations
         data.
         :param flow_type: What type of flows are these. This will be appended to the column names. E.g. "Retail".
-        :param individuals: The DataFrame contining information about all individuals
+        :param individuals: The DataFrame containing information about all individuals
         :param flow_matrix: The flow matrix, created by (e.g.) read_retail_flows_data()
         :return: The DataFrame of individuals with new locations and probabilities added
         """
@@ -1026,7 +1085,7 @@ class PopulationInitialisation:
         venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
         flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
 
-        # Create empty lists to hold the vanues and flows for each individuals
+        # Create empty lists to hold the venues and flows for each individuals
         individuals[venues_col] = [[] for _ in range(len(individuals))]
         individuals[flows_col] = [[] for _ in range(len(individuals))]
 
@@ -1057,7 +1116,7 @@ class PopulationInitialisation:
 
             # Now assign individuals in those areas to those flows
             # This ridiculous 'apply' line is the only way I could get pandas to update the particular
-            # rows required. Something like 'individuals.loc[ ...] = dests' (see below) didn't work becuase
+            # rows required. Something like 'individuals.loc[ ...] = dests' (see below) didn't work because
             # instead of inserting the 'dests' list itself, pandas tried to unpack the list and insert
             # the individual values instead.
             # individuals.loc[individuals.area == oa_code, f"{flow_type}_Venues"] = dests
@@ -1083,10 +1142,10 @@ class PopulationInitialisation:
 
         return individuals
 
-    @classmethod
-    def pad_durations(cls, individuals, activity_locations) -> pd.DataFrame:
+    @staticmethod
+    def pad_durations(individuals, activity_locations) -> pd.DataFrame:
         """
-        Some indvidiuals' activity durations don't add up to 1. In these cases pad them out with extra time at home.
+        Some individuals' activity durations don't add up to 1. In these cases pad them out with extra time at home.
         :param individuals:
         :param activity_locations:
         :return: The new individuals dataframe
@@ -1125,8 +1184,8 @@ class PopulationInitialisation:
 
         return time_activity
 
-    @classmethod
-    def _normalise(cls, l: List[float], decimals=3) -> List[float]:
+    @staticmethod
+    def _normalise(l: List[float], decimals=3) -> List[float]:
         """
         Normalise a list so that it sums to almost 1.0. Rounding might cause it not to add exactly to 1
 
@@ -1144,8 +1203,8 @@ class PopulationInitialisation:
             return list(l)
         return [round(x, decimals) for x in l]
 
-    @classmethod
-    def add_disease_columns(cls, individuals: pd.DataFrame) -> pd.DataFrame:
+    @staticmethod
+    def add_disease_columns(individuals: pd.DataFrame) -> pd.DataFrame:
         """Adds columns required to estimate disease prevalence"""
         individuals[ColumnNames.DISEASE_STATUS] = 0
         individuals[ColumnNames.DISEASE_STATUS_CHANGED] = False

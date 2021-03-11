@@ -2,7 +2,7 @@ from typing import List
 
 import pandas as pd
 
-from microsim.column_names import ColumnNames
+from microsim.constants import ColumnNames
 
 
 class ActivityLocation():
