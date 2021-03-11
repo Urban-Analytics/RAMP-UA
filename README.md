@@ -2,16 +2,15 @@
 [![codecov](https://codecov.io/gh/Urban-Analytics/RAMP-UA/branch/master/graph/badge.svg)](https://codecov.io/gh/Urban-Analytics/RAMP-UA)
 # RAMP-UA and EcoTwins integration
 
-This is branch is a first draft of the scaling up of the RAMP Urban Analytics project to a national level. It takes the project workflow and aims at making it run on other UK regions (in the current project only Devon is implemented, see issue https://github.com/Urban-Analytics/RAMP-UA/issues/254).
+This branch is a first draft of the scaling up of the RAMP Urban Analytics project to a national level. It takes the project workflow as it is now and aims at making it run on other UK regions (in the current project only Devon is implemented, see issue https://github.com/Urban-Analytics/RAMP-UA/issues/254).
 To do so, few steps are to be taken:
 - reshuffling of parts of the data and files (folders structure)
 - removing some hard-coded parts
-- probable re-organizing the project workflow, ie separating the data download from the rest of the model, which itself shall be separated into a preparatory phase and a actual running phase [more on this to come, @HSalat responsible for this part].
+- some probable re-organizing the project workflow, ie separating the data download from the rest of the model, which itself shall be separated into a preparatory phase and a actual running phase [more on this to come, @HSalat responsible for this part].
 
-In this version, the model currently has been checked only against the OpenCL implementation of the RAMP-UA project (see #TO_DO list), but potentially could run on two ways:
+In this version, the model currently has been checked only against the OpenCL implementation of the RAMP-UA project (see #TO_DO list), but potentially could run in two ways:
 1. Python / R implementation, found in [microsim/microsim_model.py](./microsim/microsim_model.py)
-2. High performance OpenCL implementation, which can run on both CPU and GPU, 
-which is found in the [microsim/opencl](./microsim/opencl) folder. 
+2. High performance OpenCL implementation, which can run on both CPU and GPU, which is found in the [microsim/opencl](./microsim/opencl) folder. 
 
 Further documentation on the OpenCL model can be found at [microsim/opencl/doc](./microsim/opencl/doc)
 
@@ -47,7 +46,7 @@ Documentation currently follows the one for RAMP-UA, plus some README files here
 
 ## TODO list:
 Features that currently are not available, but are to be implemented on this version as well.
-- [] reorganise folders structure depending on the agreed option (discussed separately in the HackMD mentioned above)
-- [] implement the connection with the 'initialisation' process (TBD)
-- [] implement R model compatibility
-- [] run tests
+- [ ] reorganise folders structure depending on the agreed option (discussed separately in the HackMD mentioned above)
+- [ ] implement the connection with the 'initialisation' process (TBD)
+- [ ] implement R model compatibility
+- [ ] run tests
