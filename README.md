@@ -78,7 +78,7 @@ $ python microsim/main.py --opencl-gui
 ```
 
 #### Caching of population initialisation
-The population initialisation step runs before either of the models and can be time consuming (~10 minutes). In order to run
+The population initialisation step runs before either of the models and can be time consuming (~10 minutes or up to 2 hours). In order to run
 the models using a cache of previous results simply pass the `--use-cache` flag.
 
 ### Output Dashboards
