@@ -47,7 +47,7 @@ Documentation currently follows the one for RAMP-UA, plus some README files here
 
 ## TODO list:
 Features that currently are not available, but are to be implemented on this version as well.
-[] reorganise folders structure depending on the agreed option (discussed separately in the HackMD mentioned above)
-[] implement the connection with the 'initialisation' process (TBD)
-[] implement R model compatibility
-[] run tests
+- [ ] reorganise folders structure depending on the agreed option (discussed separately in the HackMD mentioned above)
+- [ ] implement the connection with the 'initialisation' process (TBD)
+- [ ] implement R model compatibility
+- [ ] run tests
