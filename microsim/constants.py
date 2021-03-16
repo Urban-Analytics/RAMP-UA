@@ -6,6 +6,7 @@ class Constants:
         SOURCE_FOLDER = "microsim"
         DATA_FOLDER = "data"
         REGIONAL_DATA_FOLDER = "regional_data"
+        OSM_FOLDER = "osm"
         TU_FILE = "simulated_TU_keyworker_health.csv" # csv file
         INITIAL_CASES_FILE = "initial_cases.csv"
         MSOAS_RISK_FILE = "msoas_risk.csv"

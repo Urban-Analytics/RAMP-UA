@@ -252,7 +252,7 @@ class Inspector:
 
     # TODO: hard-coded lat-lon !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    def upload_locations(self, locations, lat=50.7184, lon=-3.5339):
+    def upload_locations(self, locations, lat=53.735983, lon=-1.678567): #lat=50.7184, lon=-3.5339):
         """Reprojects the lat lons around the provided one and uploads them to OpenGL.
 
         Args:

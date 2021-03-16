@@ -1,9 +1,12 @@
 import os
+# import sys
+# sys.path.append("microsim") 
 import json
 from tqdm import tqdm
 import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
+from microsim.constants import Constants
 
 # Functionality to create a lookup table of MSOA codes to a list of coordinates of all the buildings
 # in that MSOA area, this is stored to a JSON file and used in the OpenCL SnapshotConverter to allocate people's
@@ -24,8 +27,9 @@ def load_osm_shapefile(data_dir):
     return osm_buildings
 
 
-def load_devon_msoas(data_dir, msoa_filename="devon_msoas.csv"):
-    return pd.read_csv(os.path.join(data_dir, msoa_filename), header=None,
+def load_devon_msoas(data_dir, msoa_filename="msoas_list.csv"):
+    return pd.read_csv(os.path.join("/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/data/regional_data/WestYorkshire/",
+                                    msoa_filename), header=None,
                        names=["Easting", "Northing", "Num", "Code", "Desc"])
 
 
@@ -78,17 +82,21 @@ def calculate_msoa_buildings(osm_buildings, msoa_shapes):
 
 
 def main():
-    base_dir = os.getcwd()
-    data_dir = os.path.join(base_dir, "devon_data")
+    base_dir = "/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/" # os.getcwd()
+    data_dir = os.path.join(base_dir,
+                            Constants.Paths.DATA_FOLDER,
+                            Constants.Paths.COMMON_DATA_FOLDER) #"devon_data")
 
-    osm_buildings = load_osm_shapefile(data_dir)
+    osm_buildings = load_osm_shapefile("/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/data/regional_data/WestYorkshire/")
 
-    devon_msoa_shapes = load_msoa_shapes(data_dir, visualize=False)
+    devon_msoa_shapes = load_msoa_shapes(data_dir,
+                                         visualize=False)
 
-    msoa_buildings = calculate_msoa_buildings(osm_buildings, devon_msoa_shapes)
+    msoa_buildings = calculate_msoa_buildings(osm_buildings,
+                                              devon_msoa_shapes)
 
     print("Writing MSOA buildings to JSON file")
-    output_filepath = os.path.join(data_dir, "msoa_building_coordinates.json")
+    output_filepath = os.path.join(data_dir, "msoa_building_coordinates.json") # correct this
 
     with open(output_filepath, 'w') as output_file:
         json.dump(msoa_buildings, output_file)
