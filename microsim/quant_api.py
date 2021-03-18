@@ -190,7 +190,7 @@ class QuantRampAPI:
     
 
     @staticmethod
-    def getProbableHospitalByMSOAIZ(dfHospitalPopulation,dfHospitalZones,hospital_probHijmsoa_iz,threshold):
+    def getProbableHospitalByMSOAIZ(dfHospitalPopulation,dfHospitalZones,hospital_probHij,msoa_iz,threshold):
         """getProbableHospitalByMSOAIZ
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
         a list of all the surrounding hospitals whose probabilty of being visited by the MSOA_IZ is
@@ -202,7 +202,9 @@ class QuantRampAPI:
         :type dfHospitalPopulation: pandas.DataFrame
         :param dfHospitalZones: # needs clarification
         :type dfHospitalZones: pandas.DataFrame
-        :param hospital_probHijmsoa_iz: An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
+        :param hospital_probHij: matrix of probability scores of a hospital being visited
+        :type hospital_probHij: numpy.matrix
+        :param msoa_iz: An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
         :type hospital_probHijmsoa_iz: str
         :param threshold: Probability threshold e.g. 0.5 means return all possible hospital points with probability>=0.5
         :type threshold: float
