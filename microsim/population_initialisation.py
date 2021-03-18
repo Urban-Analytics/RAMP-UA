@@ -299,8 +299,10 @@ class PopulationInitialisation:
         Read a population of individuals. Includes time-use & health info.
 
         :param home_name: A string to describe flows to people's homes (probably 'Home')
-        :return A tuple with new dataframes of individuals and households
+        :return: A tuple with new dataframes of individuals and households
+
         """
+
         print("Reading time use and health data ... ", )
         # filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_health.txt")
         # filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_keyworker.txt")
