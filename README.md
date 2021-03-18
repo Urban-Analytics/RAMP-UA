@@ -50,9 +50,6 @@ Features that currently are not available, but are to be implemented on this ver
 - [ ] implement the connection with the 'initialisation' process (TBD)
 - [ ] implement R model compatibility
 - [ ] run tests
-<<<<<<< HEAD
-- [ ] understand where/when the `msoa_building_coordinates.json` is created (see `load_msoa_locations.py`)
-- [ ] correct the hard-coded coordinates and MSOA code within `snapshot.py`
+- [X] understand where/when the `msoa_building_coordinates.json` is created (see `load_msoa_locations.py`)
+- [ ] correct the hard-coded coordinates and MSOA code within `snapshot.py` &rarr add this to the input data
 - [ ] fix the `project-dir-absolute-path` variable (eliminate if possible)
-=======
->>>>>>> e8b6c884046b8073e1e17fe1595e09386a17682b
