@@ -30,7 +30,7 @@ class QuantRampAPI:
 
     @classmethod
     def read_data(cls, QUANT_DIR):
-        """read_data
+        """
         reads in all data in provided data directory and creates series of class object attributes
 
         :param QUANT_DIR: a string of the full path to QUANT files
@@ -58,7 +58,7 @@ class QuantRampAPI:
 
     @staticmethod
     def getProbablePrimarySchoolsByMSOAIZ(dfPrimaryPopulation,dfPrimaryZones,primary_probPij,msoa_iz,threshold):
-        """getProbablePrimarySchoolsByMSOAIZ
+        """
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
         a list of all the surrounding primary schools whose probabilty of being visited by the MSOA_IZ is
         greater than or equal to the threshold.
@@ -102,7 +102,7 @@ class QuantRampAPI:
 
     @staticmethod
     def getProbableSecondarySchoolsByMSOAIZ(dfSecondaryPopulation,dfSecondaryZones,secondary_probPij,msoa_iz,threshold):
-        """getProbableSecondarySchoolsByMSOAIZ
+        """
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
         a list of all the surrounding secondary schools whose probabilty of being visited by the MSOA_IZ is
         greater than or equal to the threshold.
@@ -121,10 +121,6 @@ class QuantRampAPI:
         :type threshold: float
         :return: a list of probabilities in the same order as the venues
         :rtype: list
-        
-        @param msoa_iz An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
-        @param threshold Probability threshold e.g. 0.5 means return all possible schools with probability>=0.5
-        @returns a list of probabilities in the same order as the venues
         """
         result = []
 
@@ -148,7 +144,7 @@ class QuantRampAPI:
 
     @staticmethod
     def getProbableRetailByMSOAIZ(dfRetailPointsPopulation,dfRetailPointsZones,retailpoints_probSij,msoa_iz,threshold):
-        """getProbableRetailByMSOAIZ
+        """
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
         a list of all the surrounding retail points whose probabilty of being visited by the MSOA_IZ is
         greater than or equal to the threshold.
@@ -191,7 +187,7 @@ class QuantRampAPI:
 
     @staticmethod
     def getProbableHospitalByMSOAIZ(dfHospitalPopulation,dfHospitalZones,hospital_probHij,msoa_iz,threshold):
-        """getProbableHospitalByMSOAIZ
+        """
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
         a list of all the surrounding hospitals whose probabilty of being visited by the MSOA_IZ is
         greater than or equal to the threshold.
