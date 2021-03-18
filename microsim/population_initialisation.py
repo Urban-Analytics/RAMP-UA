@@ -37,16 +37,19 @@ class PopulationInitialisation:
                  debug=False,
                  quant_object=None
                  ):
-        """
-        PopulationInitialisation constructor. This reads all of the necessary data to run the microsimulation.
-        ----------
-        :param data_dir: A data directory from which to read the source data
-        :param read_data: Optionally don't read in the data when instantiating this Microsim (useful
-            in debugging).
-        :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!)
-        :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies)
-        :param quant_object: optional parameter to use QUANT data, don't specify if you want to use Devon data
-        """
+        """PopulationInitialisation constructor. This reads all of the necessary data to run the microsimulation.
+
+        :param data_dir: A data directory from which to read the source data, defaults to "./data/"
+        :type data_dir: str, optional
+        :param read_data: Optionally don't read in the data when instantiating this Microsim (useful in debugging), defaults to True
+        :type read_data: bool, optional
+        :param testing: Optionally turn off some exceptions and replace them with warnings (only good when testing!), defaults to False
+        :type testing: bool, optional
+        :param debug: Whether to do some more intense error checks (e.g. for data inconsistencies), defaults to False
+        :type debug: bool, optional
+        :param quant_object: optional parameter to use QUANT data, don't specify if you want to use Devon data, defaults to None
+        :type quant_object: bool, optional
+        """        
 
         PopulationInitialisation.DATA_DIR = data_dir  # TODO (minor) pass the data_dir to class functions directly so no need to have it defined at class level
         self.DATA_DIR = data_dir
@@ -243,19 +246,22 @@ class PopulationInitialisation:
 
     @classmethod
     def _check_no_homeless(cls, individuals, households, warn=True):
-        """
-        Check that each individual has a household. NOTE: this only works for the raw mirosimulation data.
-        Once the health data has been attached this wont work becuase the unique identifiers change.
+        """Check that each individual has a household. NOTE: this only works for the raw mirosimulation data.
+        Once the health data has been attached this won't work because the unique identifiers change.
         If this function is still needed then it will need to take the specific IDs as arguments, but this is
         a little complicated because some combination of [area, HID, (PID)] is needed for unique identification.
 
-        :param individuals:
-        :param households:
-        :param warn: Whether to warn (default, True) or raise an exception (False)
+        :param individuals: dataframe of individuals in the simulation
+        :type individuals: pandas.DataFrame
+        :param households: dataframe of households 
+        :type households: pandas.DataFrame
+        :param warn: Whether to warn (default, True) or raise an exception (False), defaults to True
+        :type warn: bool, optional
         :return: True if there are no homeless, False otherwise (unless `warn==False` in which case an
-        exception is raised).
-        :raise: An exception if `warn==False` and there are individuals without a household
-        """
+            exception is raised).
+        :rtype: bool
+        """        
+
         print("Checking no homeless (all individuals assigned to a household) ...", )
         # This will fail if used on anything other than the raw msm data because once I read in the
         # health data the PID and HID columns are renamed to prevent them being accidentally used.
@@ -283,23 +289,27 @@ class PopulationInitialisation:
 
     @classmethod
     def extract_msoas_from_individuals(cls, individuals: pd.DataFrame) -> List[str]:
-        """
-        Analyse a DataFrame of individuals and extract the unique MSOA codes, returning them as a list in ascending
+        """Analyse a DataFrame of individuals and extract the unique MSOA codes, returning them as a list in ascending
         order
-        :param individuals:
-        :return:
-        """
+
+        :param individuals: dataframe of individuals within the microsim
+        :type individuals: pandas.DataFrame
+        :return: list of unique MSOA codes from individuals dataframe
+        :rtype: List[str]
+        """        
+
         areas = list(individuals.area.unique())
         areas.sort()
         return areas
 
     @classmethod
     def read_individual_time_use_and_health_data(cls, home_name: str) -> pd.DataFrame:
-        """
-        Read a population of individuals. Includes time-use & health info.
+        """Read a population of individuals. Includes time-use & health info.
 
         :param home_name: A string to describe flows to people's homes (probably 'Home')
+        :type home_name: str
         :return: A tuple with new dataframes of individuals and households
+        :rtype: (pandas.DataFrame, pandas.DataFrame)
 
         """
 
@@ -480,12 +490,16 @@ class PopulationInitialisation:
 
     @classmethod
     def generate_travel_time_colums(cls, individuals: pd.DataFrame) -> pd.DataFrame:
-        """
-        TODO Read the raw travel time columns and create standard ones to show how long individuals
+        """TODO Read the raw travel time columns and create standard ones to show how long individuals
         spend travelling on different modes. Ultimately these will be turned into activities
-        :param individuals:
-        :return:
-        """
+
+        :param individuals: a dataframe of individuals in the microsim
+        :type individuals: pd.DataFrame
+        :raises Exception: exception if individuals normalized time at home and normalized time not at home does not equal 1
+        :return: [description]
+        :rtype: pd.DataFrame
+        """        
+
 
         # Some sanity checks for the time use data
         # Variables pnothome, phome add up to 100% of the day and
@@ -596,12 +610,15 @@ class PopulationInitialisation:
         return primary_schools, secondary_schools, primary_flow_matrix, secondary_flow_matrix
 
     @classmethod
-    def read_commuting_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
+    def read_commuting_flows_data(cls, study_msoas: List[str]) -> pd.DataFrame:     
         """
         Read the commuting flows between each MSOA
 
         :param study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
+        :type study_msoas: List[str]
         :return: A dataframe with origin and destination flows in all MSOAs in the study area
+        :rtype: pandas.DataFrame
+
         """
         print("Reading commuting flow data for Devon...", )
         commuting_flows = pd.read_csv(os.path.join(cls.DATA_DIR, "devon-commuting", "commuting_od.csv"),
@@ -633,16 +650,22 @@ class PopulationInitialisation:
 
     @classmethod
     def add_work_flows(cls, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame,
-                       commuting_flows: pd.DataFrame, flow_threshold) -> (pd.DataFrame):
+                       commuting_flows: pd.DataFrame, flow_threshold) -> (pd.DataFrame):        
         """
         Create a dataframe of work locations that individuals travel to. The flows are based on general commuting
         patterns and assume one work location per industry type MSOA.
         :param flow_type: The name for these flows (probably something like 'Work')
+        :type flow_type: str
         :param individuals: The dataframe of synthetic individuals
+        :type individuals: pandas.DataFrame
         :param workplaces:  The dataframe of workplaces (i.e. occupations)
+        :type workplaces: pandas.DataFrame
         :param commuting_flows: The general commuting flows between MSOAs (an O-D matrix)
+        :type commuting_flows: pandas.DataFrame
         :param flow_threshold: Only include the top x destinations as possible flows. 'None' means no limit.
+        :type flow_threshold: int
         :return: The new 'individuals' dataframe (with new columns)
+        :rtype: pandas.DataFrame
         """
         # The logic of this function is basically copied from add_individual_flows()
 
@@ -708,14 +731,20 @@ class PopulationInitialisation:
         named by it's msoa and industry type (i.e. f"{msoa}-{row['soc2010']}")
 
         :param soc: A individuals's soc (industry where they work)
+        :type soc: str
         :param dest_msoas: A list of the destination MSOA names for the individual
+        :type dest_msoas: list
         :param workplace_df: The dataframe containing all workplaces
-        :return:
+        :type workplace_df: pandas.DataFrame
+        :return: a list of potential workplace IDs
+        :rtype: list
         """
         workplace_ids = [
             int(workplace_df.loc[workplace_df[ColumnNames.LOCATION_NAME] == f"{msoa}-{soc}"].index[0])
             for msoa in dest_msoas]
+
         assert False not in (isinstance(id, int) for id in workplace_ids)  # Check all are ints (not lists etc)
+
         return workplace_ids
 
     @staticmethod
@@ -754,9 +783,12 @@ class PopulationInitialisation:
         """
         Check that the flow matrix looks OK, raising an error if not
         :param locations: A DataFrame with information about each location (destination)
+        :type locations: pandas.DataFrame
         :param flows: The flow matrix itself, showing flows from origin MSOAs to destinations
-        :return:
+        :type flows: pandas.DataFrame
+        :return: None
         """
+        
         # TODO All MSOA codes are unique
         # TODO Locations have 'Danger' and 'ID' columns
         # TODO Number of destination columns ('Loc_*') matches number of locaitons
