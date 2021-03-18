@@ -191,28 +191,43 @@ class QuantRampAPI:
 
     @staticmethod
     def getProbableHospitalByMSOAIZ(dfHospitalPopulation,dfHospitalZones,hospital_probHijmsoa_iz,threshold):
-        """
-        getProbableHospitalByMSOAIZ
+        """getProbableHospitalByMSOAIZ
         Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
         a list of all the surrounding hospitals whose probabilty of being visited by the MSOA_IZ is
         greater than or equal to the threshold.
         Hospital ids are taken from the NHS England export of "location" - see hospitalZones for ids and names (and east/north)
         NOTE: code identical to the primary school version, only with switched lookup tables
-        @param msoa_iz An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
-        @param threshold Probability threshold e.g. 0.5 means return all possible hospital points with probability>=0.5
-        @returns a list of [ {id: 'hospitalid1', p: 0.5}, {id: 'hospitalid2', p:0.6}, ... etc] (NOTE: not sorted in any particular order)
+
+        :param dfHospitalPopulation: # needs clarification
+        :type dfHospitalPopulation: pandas.DataFrame
+        :param dfHospitalZones: # needs clarification
+        :type dfHospitalZones: pandas.DataFrame
+        :param hospital_probHijmsoa_iz: An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
+        :type hospital_probHijmsoa_iz: str
+        :param threshold: Probability threshold e.g. 0.5 means return all possible hospital points with probability>=0.5
+        :type threshold: float
+        :return: a list of [ {id: 'hospitalid1', p: 0.5}, {id: 'hospitalid2', p:0.6}, ... etc] (NOTE: not sorted in any particular order)
+        :rtype: list
         """
+
         result = []
+
         zonei = int(dfHospitalPopulation.loc[dfHospitalPopulation['msoaiz'] == msoa_iz, 'zonei'])
+
         m,n = hospital_probHij.shape
+
         for j in range(n):
+
             p = hospital_probHij[zonei,j]
+
             if p>=threshold:
+
                 row2 = dfHospitalZones.loc[dfHospitalZones['zonei'] == j] #yes, zonei==j is correct, they're always called 'zonei'
+
                 id = row2['id'].values[0]
+
                 result.append(p)
-            #end if
-        #end for
+
         return result
     
 
