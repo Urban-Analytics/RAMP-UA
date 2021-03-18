@@ -2,6 +2,9 @@ import pickle
 from tqdm import tqdm
 import pandas as pd
 import os
+import csv
+import numpy as np
+
 
 from microsim.opencl.ramp.inspector import Inspector
 from microsim.opencl.ramp.params import Params
@@ -133,6 +136,13 @@ def store_summary_data(summary,
 
     with open(output_dir + "/total_counts.pkl", "wb") as f:
         pickle.dump(total_counts_dict, f)
+        # w = csv.DictWriter(f, total_counts_dict.keys())
+        # w.writeheader()
+        # w.writerow(total_counts_dict)
+        total_counts_df = pd.DataFrame.from_dict(total_counts_dict) # transform to df so we can export to csv
+        total_counts_df.to_csv(output_dir + '/total_counts.csv',
+                               index = False)
+
 
     if store_detailed_counts:
         # turn 2D arrays into dataframes for ages and areas
@@ -142,5 +152,15 @@ def store_summary_data(summary,
         # Store pickled summary objects
         with open(output_dir + "/age_counts.pkl", "wb") as f:
             pickle.dump(age_counts_dict, f)
+            age_counts_df = pd.DataFrame.from_dict(age_counts_dict, # transform to df so we can export to csv
+                                                   orient = 'index')
+            age_counts_df.to_csv(output_dir + '/age_counts.csv',
+                               index = False)
+
         with open(output_dir + "/area_counts.pkl", "wb") as f:
             pickle.dump(area_counts_dict, f)
+            area_counts_df = pd.DataFrame.from_dict(area_counts_dict,
+                                                    orient = 'index') # transform to df so we can export to csv
+            area_counts_df.to_csv(output_dir + '/area_counts.csv',
+                               index = False)
+

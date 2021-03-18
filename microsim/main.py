@@ -105,7 +105,7 @@ def main(parameters_file):
 
 
     # To fix file path issues, use absolute/full path at all times
-    # Pick either: get working directory (if user starts this script in place, or set working directory
+    # Pick either: get working directory (if user starts this script in place, or set working directory)
     # Option A: copy current working directory:
     ###### current_working_dir = os.getcwd()  # get current directory
     # TODO: change this working dir because it's not correct and had to add the ".." in the 2 paths under here
