@@ -65,7 +65,10 @@ class QuantRampAPI:
         
         cls.dfHospitalPopulation = pd.read_csv(os.path.join(QUANT_DIR,'hospitalPopulation.csv'))
         cls.dfHospitalZones = pd.read_csv(os.path.join(QUANT_DIR,'hospitalZones.csv'))
-        cls.hospital_probHij = pickle.load( open(os.path.join(QUANT_DIR,'hospitalProbHij.bin'), 'rb'))
+        if test_mode:
+            cls.hospital_probHij  = np.ndarray.copy(test_matrix)
+        else:
+            cls.hospital_probHij = pickle.load( open(os.path.join(QUANT_DIR,'hospitalProbHij.bin'), 'rb'))
 
 
 
