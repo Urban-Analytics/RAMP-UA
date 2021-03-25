@@ -12,11 +12,12 @@ import multiprocessing
 from quant_api import QuantRampAPI
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
+dummy_data_dir = os.path.join(test_dir, "dummy_data")
 
 # arguments used when calling the PopulationInitialisation constructor.
-population_init_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
+population_init_args = {"data_dir": dummy_data_dir,
                         "testing": True, "debug": True,
-                        "quant_object": QuantRampAPI(os.path.join("devon_data", "QUANT_RAMP"))
+                        "quant_object": QuantRampAPI(os.path.join(dummy_data_dir, "QUANT_RAMP"))
                         }
 
 # arguments used when calling the Microsim constructor.
