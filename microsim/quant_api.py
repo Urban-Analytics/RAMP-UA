@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import os
 from tqdm import tqdm
+import warnings
 
 class QuantRampAPI:
     """
@@ -13,36 +14,54 @@ class QuantRampAPI:
     """
 
     def __init__(self,
-                 quant_dir: str = "QUANT_RAMP"
+                 quant_dir: str = "QUANT_RAMP",
+                 test_mode: bool = False
                  ):
         """
         Initialiser for QuantRampAPI This reads all of the necessary data.
         ----------
         :param quant_dir: Full path to QUANT files
+        :param test_mode: Mode used running code tests.
     
         """
         self.QUANT_DIR = quant_dir
 
+        if test_mode:
+            warnings.warn("IMPORTANT! QUANT is running in test mode. This should only be used when running tests.",
+                          UserWarning)
+
         # read in and store data 
-        QuantRampAPI.read_data(self.QUANT_DIR)
+        QuantRampAPI.read_data(self.QUANT_DIR, test_mode)
      
 
     @classmethod
-    def read_data(cls,QUANT_DIR):
+    def read_data(cls,QUANT_DIR, test_mode):
         """
         reads in all data in provided data directory and creates series of class object attributes
         """
+        # In test mode create small array to represent retail flows (8*8 matrix of small numbers)
+        test_matrix = np.tile(np.array([0.001] * 8), (8, 1))
+
         cls.dfPrimaryPopulation = pd.read_csv(os.path.join(QUANT_DIR,'primaryPopulation.csv'))
         cls.dfPrimaryZones = pd.read_csv(os.path.join(QUANT_DIR,'primaryZones.csv'))
-        cls.primary_probPij =  pickle.load( open(os.path.join(QUANT_DIR,'primaryProbPij.bin'), 'rb'))
+        if test_mode:
+            cls.primary_probPij = np.ndarray.copy(test_matrix)
+        else:
+            cls.primary_probPij = pickle.load( open(os.path.join(QUANT_DIR,'primaryProbPij.bin'), 'rb'))
         
         cls.dfSecondaryPopulation = pd.read_csv(os.path.join(QUANT_DIR,'secondaryPopulation.csv'))
         cls.dfSecondaryZones = pd.read_csv(os.path.join(QUANT_DIR,'secondaryZones.csv'))
-        cls.secondary_probPij = pickle.load( open(os.path.join(QUANT_DIR,'secondaryProbPij.bin'), 'rb'))
+        if test_mode:
+            cls.secondary_probPij  = np.ndarray.copy(test_matrix)
+        else:
+            cls.secondary_probPij = pickle.load( open(os.path.join(QUANT_DIR,'secondaryProbPij.bin'), 'rb'))
         
         cls.dfRetailPointsPopulation = pd.read_csv(os.path.join(QUANT_DIR,'retailpointsPopulation.csv'))
         cls.dfRetailPointsZones = pd.read_csv(os.path.join(QUANT_DIR,'retailpointsZones.csv'))
-        cls.retailpoints_probSij = pickle.load( open(os.path.join(QUANT_DIR,'retailpointsProbSij.bin'), 'rb'))
+        if test_mode:
+            cls.retailpoints_probSij  = np.ndarray.copy(test_matrix)
+        else:
+            cls.retailpoints_probSij = pickle.load( open(os.path.join(QUANT_DIR,'retailpointsProbSij.bin'), 'rb'))
         
         cls.dfHospitalPopulation = pd.read_csv(os.path.join(QUANT_DIR,'hospitalPopulation.csv'))
         cls.dfHospitalZones = pd.read_csv(os.path.join(QUANT_DIR,'hospitalZones.csv'))

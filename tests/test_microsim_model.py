@@ -17,7 +17,7 @@ dummy_data_dir = os.path.join(test_dir, "dummy_data")
 # arguments used when calling the PopulationInitialisation constructor.
 population_init_args = {"data_dir": dummy_data_dir,
                         "testing": True, "debug": True,
-                        "quant_object": QuantRampAPI(os.path.join(dummy_data_dir, "QUANT_RAMP"))
+                        "quant_object": QuantRampAPI(os.path.join(dummy_data_dir, "QUANT_RAMP"), test_mode=True)
                         }
 
 # arguments used when calling the Microsim constructor.
@@ -31,7 +31,8 @@ microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
 # like `test_step()`.
 @pytest.fixture()
 def test_microsim():
-    population_init = PopulationInitialisation(**population_init_args)
+    with pytest.warns(UserWarning):  # (PopInit should throw a warning because the QUANT api is in test mode
+        population_init = PopulationInitialisation(**population_init_args)
 
     microsim = Microsim(
         individuals=population_init.individuals,

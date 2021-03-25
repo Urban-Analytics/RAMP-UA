@@ -21,7 +21,7 @@ dummy_data_dir = os.path.join(test_dir, "dummy_data")
 # arguments used when calling the PopulationInitialisation constructor. Usually these are the same
 population_init_args = {"data_dir": dummy_data_dir,
                         "testing": True, "debug": True,
-                        "quant_object": QuantRampAPI(os.path.join(dummy_data_dir, "QUANT_RAMP"))
+                        "quant_object": QuantRampAPI(os.path.join(dummy_data_dir, "QUANT_RAMP"), test_mode=True)
                         }
 
 population_init = PopulationInitialisation(**population_init_args)
