@@ -354,7 +354,7 @@ class PopulationInitialisation:
         tuh = tuh.loc[tuh.hid != -1]
 
         # Indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
-        # identify indivuals / households in this health data
+        # identify individuals / households in this health data
         tuh = tuh.rename(columns={'hid': '_hid', 'pid': '_pid'})
 # TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
 
