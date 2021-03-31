@@ -78,12 +78,3 @@ for key in gdf_venues:
             tmp = results[0][1]
             venues[key].iloc[tmp.zonei,4] = m
     venues[key].to_csv (os.path.join(base_dir,"data","QUANT_RAMP","model-runs",f"test{key}.csv"), index = True, header=True)
-
-
-# import matplotlib.pyplot as plt
-# fig, ax = plt.subplots()
-# map_df.plot(ax=ax, facecolor='gray');
-# msoa_mask.plot(ax=ax, facecolor='red');
-# gdf_PrimaryZones.plot(ax=ax, color='blue', markersize=1);
-# plt.tight_layout();
-# plt.show()
