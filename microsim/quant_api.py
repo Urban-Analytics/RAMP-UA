@@ -9,7 +9,8 @@ class QuantRampAPI:
     Class that handles integration of QUANT data into the RAMP microsim model
     QUANT spatial interaction data include probabilities of trips from MSOA 
     or IZ origins to primary schools, secondary schools and retail locations.
-    Based on QUANTRampAPI.py provided by UCL
+    Based on QUANTRampAPI.py provided by UCL. For further details about QUANT,
+    see https://github.com/maptube/QUANT_RAMP 
     """
 
     def __init__(self,
@@ -65,9 +66,10 @@ class QuantRampAPI:
         School ids are taken from the Edubase list of URN
         NOTE: code identical to the secondary school version, only with switched lookup tables
 
-        :param dfPrimaryPopulation: # needs clarification
+        :param dfPrimaryPopulation: the population in an MSOA IZ zone who go to primary school
         :type dfPrimaryPopulation: pandas.DataFrame
-        :param dfPrimaryZones: # needs clarification
+        :param dfPrimaryZones: the points representing the schools (location and ID code) from 
+        the schools database dump for the UK
         :type dfPrimaryZones: pandas.DataFrame
         :param primary_probPij: matrix of probability scores of a primary school being visited
         :type primary_probPij: numpy.matrix
@@ -109,9 +111,9 @@ class QuantRampAPI:
         School ids are taken from the Edubase list of URN
         NOTE: code identical to the primary school version, only with switched lookup tables
 
-        :param dfSecondaryPopulation: # needs clarification
+        :param dfSecondaryPopulation: the population in an MSOA IZ zone who go to secondary school
         :type dfSecondaryPopulation: pandas.DataFrame
-        :param dfSecondaryZones: # needs clarification
+        :param dfSecondaryZones: the points representing the schools (location and ID code) from the schools database dump for the UK
         :type dfSecondaryZones: pandas.DataFrame
         :param secondary_probPij: matrix of probability scores of a secondary school being visited
         :type secondary_probPij: numpy.matrix
@@ -150,9 +152,9 @@ class QuantRampAPI:
         greater than or equal to the threshold.
         Retail ids are from ????
 
-        :param dfRetailPointsPopulation: # needs clarification
+        :param dfRetailPointsPopulation: the population in an MSOA IZ zone who might use retail (everyone) and the amounts available for retail spending (although that is not used in RAMP)
         :type dfRetailPointsPopulation: pandas.DataFrame
-        :param dfRetailPointsZones: # needs clarification
+        :param dfRetailPointsZones: destinations (the locations of shops)
         :type dfRetailPointsZones: pandas.DataFrame
         :param retailpoints_probSij: matrix of probability scores of a retail points being visited
         :type retailpoints_probSij: numpy.matrix
@@ -194,9 +196,9 @@ class QuantRampAPI:
         Hospital ids are taken from the NHS England export of "location" - see hospitalZones for ids and names (and east/north)
         NOTE: code identical to the primary school version, only with switched lookup tables
 
-        :param dfHospitalPopulation: # needs clarification
+        :param dfHospitalPopulation: the population in an MSOA IZ zone who can travel to hospital
         :type dfHospitalPopulation: pandas.DataFrame
-        :param dfHospitalZones: # needs clarification
+        :param dfHospitalZones: locations of hospitals and size (in number of beds)
         :type dfHospitalZones: pandas.DataFrame
         :param hospital_probHij: matrix of probability scores of a hospital being visited
         :type hospital_probHij: numpy.matrix
