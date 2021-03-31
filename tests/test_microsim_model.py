@@ -31,8 +31,8 @@ microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
 # like `test_step()`.
 @pytest.fixture()
 def test_microsim():
-    with pytest.warns(UserWarning):  # (PopInit should throw a warning because the QUANT api is in test mode
-        population_init = PopulationInitialisation(**population_init_args)
+  
+    population_init = PopulationInitialisation(**population_init_args)
 
     microsim = Microsim(
         individuals=population_init.individuals,
