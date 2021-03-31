@@ -1,5 +1,5 @@
 # After running filter_data2 to find out which areas are included in the test data,
-# you will now also be abl to see which zone numbers these areas refer to (the zonei column)
+# you will now also be able to see which zone numbers these areas refer to (the zonei column)
 # So now you can run this code to get rid of those zones from the *Zones.csv files.
 
 
