@@ -1,4 +1,4 @@
-# Used to filter out aras in the QUANT data to create dummy data for testing.
+# Used to filter out areas in the QUANT data to create dummy data for testing.
 # Reads one of the QUANT input files and looks for lines that represent a particular area (i.e. areas that
 # are used in the RAMP test data). It writes any matching lines to the console.
 
@@ -38,4 +38,3 @@ with open(input_file, 'r') as f:
 
 assert matched_lines == len(AREAS), f"Warning, there are {len(AREAS)} to look for, but only {matched_lines} lines found"
 print("Finished")
-
