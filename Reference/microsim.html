@@ -959,18 +959,33 @@ reads a file that tells us how much more time should be spent at home on each da
 <p>Class that handles integration of QUANT data into the RAMP microsim model
 QUANT spatial interaction data include probabilities of trips from MSOA 
 or IZ origins to primary schools, secondary schools and retail locations.
-Based on QUANTRampAPI.py provided by UCL</p>
+Based on QUANTRampAPI.py provided by UCL. For further details about QUANT,
+see <a class="reference external" href="https://github.com/maptube/QUANT_RAMP">https://github.com/maptube/QUANT_RAMP</a></p>
 <dl class="py method">
 <dt id="microsim.quant_api.QuantRampAPI.getProbableHospitalByMSOAIZ">
-<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">getProbableHospitalByMSOAIZ</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dfHospitalPopulation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dfHospitalZones</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hospital_probHijmsoa_iz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.quant_api.QuantRampAPI.getProbableHospitalByMSOAIZ" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">getProbableHospitalByMSOAIZ</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dfHospitalPopulation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dfHospitalZones</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hospital_probHij</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msoa_iz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.quant_api.QuantRampAPI.getProbableHospitalByMSOAIZ" title="Permalink to this definition">¶</a></dt>
 <dd><p>Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
 a list of all the surrounding hospitals whose probabilty of being visited by the MSOA_IZ is
 greater than or equal to the threshold.
 Hospital ids are taken from the NHS England export of “location” - see hospitalZones for ids and names (and east/north)
-NOTE: code identical to the primary school version, only with switched lookup tables
-&#64;param msoa_iz An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
-&#64;param threshold Probability threshold e.g. 0.5 means return all possible hospital points with probability&gt;=0.5
-&#64;returns a list of [ {id: ‘hospitalid1’, p: 0.5}, {id: ‘hospitalid2’, p:0.6}, … etc] (NOTE: not sorted in any particular order)</p>
+NOTE: code identical to the primary school version, only with switched lookup tables</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dfHospitalPopulation</strong> (<em>pandas.DataFrame</em>) – the population in an MSOA IZ zone who can travel to hospital</p></li>
+<li><p><strong>dfHospitalZones</strong> (<em>pandas.DataFrame</em>) – locations of hospitals and size (in number of beds)</p></li>
+<li><p><strong>hospital_probHij</strong> (<em>numpy.matrix</em>) – matrix of probability scores of a hospital being visited</p></li>
+<li><p><strong>msoa_iz</strong> – An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)</p></li>
+<li><p><strong>threshold</strong> (<em>float</em>) – Probability threshold e.g. 0.5 means return all possible hospital points with probability&gt;=0.5</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a list of [ {id: ‘hospitalid1’, p: 0.5}, {id: ‘hospitalid2’, p:0.6}, … etc] (NOTE: not sorted in any particular order)</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -980,10 +995,25 @@ NOTE: code identical to the primary school version, only with switched lookup ta
 a list of all the surrounding primary schools whose probabilty of being visited by the MSOA_IZ is
 greater than or equal to the threshold.
 School ids are taken from the Edubase list of URN
-NOTE: code identical to the secondary school version, only with switched lookup tables
-&#64;param msoa_iz An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
-&#64;param threshold Probability threshold e.g. 0.5 means return all possible schools with probability&gt;=0.5
-&#64;returns a list of probabilities in the same order as the venues</p>
+NOTE: code identical to the secondary school version, only with switched lookup tables</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dfPrimaryPopulation</strong> (<em>pandas.DataFrame</em>) – the population in an MSOA IZ zone who go to primary school</p></li>
+<li><p><strong>dfPrimaryZones</strong> – the points representing the schools (location and ID code) from</p></li>
+</ul>
+</dd>
+</dl>
+<p>the schools database dump for the UK
+:type dfPrimaryZones: pandas.DataFrame
+:param primary_probPij: matrix of probability scores of a primary school being visited
+:type primary_probPij: numpy.matrix
+:param msoa_iz: An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
+:type msoa_iz: str
+:param threshold: Probability threshold e.g. 0.5 means return all possible schools with probability&gt;=0.5
+:type threshold: float
+:return: a list of probabilities in the same order as the venues
+:rtype: list</p>
 </dd></dl>
 
 <dl class="py method">
@@ -992,10 +1022,24 @@ NOTE: code identical to the secondary school version, only with switched lookup 
 <dd><p>Given an MSOA area code (England and Wales) or an Intermediate Zone (IZ) 2001 code (Scotland), return
 a list of all the surrounding retail points whose probabilty of being visited by the MSOA_IZ is
 greater than or equal to the threshold.
-Retail ids are from ????
-&#64;param msoa_iz An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
-&#64;param threshold Probability threshold e.g. 0.5 means return all possible retail points with probability&gt;=0.5
-&#64;returns a list of probabilities in the same order as the venues</p>
+Retail ids are from ????</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dfRetailPointsPopulation</strong> (<em>pandas.DataFrame</em>) – the population in an MSOA IZ zone who might use retail (everyone) and the amounts available for retail spending (although that is not used in RAMP)</p></li>
+<li><p><strong>dfRetailPointsZones</strong> (<em>pandas.DataFrame</em>) – destinations (the locations of shops)</p></li>
+<li><p><strong>retailpoints_probSij</strong> (<em>numpy.matrix</em>) – matrix of probability scores of a retail points being visited</p></li>
+<li><p><strong>msoa_iz</strong> (<em>str</em>) – An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)</p></li>
+<li><p><strong>threshold</strong> (<em>float</em>) – Probability threshold e.g. 0.5 means return all possible retail points with probability&gt;=0.5</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a list of probabilities in the same order as the venues</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1005,22 +1049,57 @@ Retail ids are from ????
 a list of all the surrounding secondary schools whose probabilty of being visited by the MSOA_IZ is
 greater than or equal to the threshold.
 School ids are taken from the Edubase list of URN
-NOTE: code identical to the primary school version, only with switched lookup tables
-&#64;param msoa_iz An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)
-&#64;param threshold Probability threshold e.g. 0.5 means return all possible schools with probability&gt;=0.5
-&#64;returns a list of probabilities in the same order as the venues</p>
+NOTE: code identical to the primary school version, only with switched lookup tables</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dfSecondaryPopulation</strong> (<em>pandas.DataFrame</em>) – the population in an MSOA IZ zone who go to secondary school</p></li>
+<li><p><strong>dfSecondaryZones</strong> (<em>pandas.DataFrame</em>) – the points representing the schools (location and ID code) from the schools database dump for the UK</p></li>
+<li><p><strong>secondary_probPij</strong> (<em>numpy.matrix</em>) – matrix of probability scores of a secondary school being visited</p></li>
+<li><p><strong>msoa_iz</strong> (<em>str</em>) – An MSOA code (England/Wales e.g. E02000001) or an IZ2001 code (Scotland e.g. S02000001)</p></li>
+<li><p><strong>threshold</strong> (<em>float</em>) – Probability threshold e.g. 0.5 means return all possible schools with probability&gt;=0.5</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a list of probabilities in the same order as the venues</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="microsim.quant_api.QuantRampAPI.get_flows">
 <em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">get_flows</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">venue</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msoa_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresholdtype</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.quant_api.QuantRampAPI.get_flows" title="Permalink to this definition">¶</a></dt>
-<dd><p>Prepare RAMP UA compatible data</p>
+<dd><p>Wrapper function that generates flow data for a given venue type, MSOA list, and specified threshold.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>venue</strong> (<em>str</em>) – venue type from ColumnNames.Activities class to generate flow data for</p></li>
+<li><p><strong>msoa_list</strong> (<em>list</em>) – list of MSOAs to calculate flow data for</p></li>
+<li><p><strong>threshold</strong> (<em>float</em>) – Probability threshold e.g. 0.5 means return all possible hospital points with probability&gt;=0.5</p></li>
+<li><p><strong>thresholdtype</strong> (<em>str</em>) – the threshold type setting, can either be <cite>prob</cite> or <cite>nr</cite></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dataframe of flow data</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="microsim.quant_api.QuantRampAPI.read_data">
 <em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">read_data</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">QUANT_DIR</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.quant_api.QuantRampAPI.read_data" title="Permalink to this definition">¶</a></dt>
 <dd><p>reads in all data in provided data directory and creates series of class object attributes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>QUANT_DIR</strong> (<em>str</em>) – a string of the full path to QUANT files</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
