@@ -56,7 +56,6 @@ from microsim.utilities import data_setup, unpack_data
 @click.option('-l', '--lockdown-file', default="google_mobility_lockdown_daily.csv",
               help="Optionally read lockdown mobility data from a file (default use google mobility). To have no "
                    "lockdown pass an empty string, i.e. --lockdown-file='' ")
-@click.option('--quant-dir', default=None, help='Directory to QUANT data, set to None to use Devon data')
 @click.option('-c', '--use-cache/--no-use-cache', default=True,
               help="Whether to cache the population data initialisation")
 @click.option('-ocl', '--opencl/--no-opencl', default=False, help="Run OpenCL model (runs in headless mode by default")
@@ -65,7 +64,7 @@ from microsim.utilities import data_setup, unpack_data
 @click.option('-gpu', '--opencl-gpu/--no-opencl-gpu', default=False,
               help="Run OpenCL model on the GPU (if false then run using CPU")
 def main(parameters_file, no_parameters_file, initialise, iterations, scenario, data_dir, output, output_every_iteration,
-               debug, repetitions, lockdown_file, quant_dir, use_cache, opencl, opencl_gui, opencl_gpu):
+               debug, repetitions, lockdown_file, use_cache, opencl, opencl_gui, opencl_gpu):
     """
     Main function which runs the population initialisation, then chooses which model to run, either the Python/R
     model or the OpenCL model
@@ -98,7 +97,6 @@ def main(parameters_file, no_parameters_file, initialise, iterations, scenario, 
             debug = sim_params["debug"]
             repetitions = sim_params["repetitions"]
             lockdown_file = sim_params["lockdown-file"]
-            quant_dir = sim_params["quant-dir"]
 
     # Check the parameters are sensible
     if iterations < 1:
@@ -116,7 +114,6 @@ def main(parameters_file, no_parameters_file, initialise, iterations, scenario, 
           f"\tInitialise (and then exit?): {initialise}\n"
           f"\tNumber of iterations: {iterations}\n"
           f"\tData dir: {data_dir}\n"
-          f"\tUsing quant data? {'no' if quant_dir is None else ('yes: '+quant_dir)}\n"
           f"\tOutputting results?: {output}\n"
           f"\tOutputting results at every iteration?: {output_every_iteration}\n"
           f"\tDebug mode?: {debug}\n"
@@ -154,19 +151,13 @@ def main(parameters_file, no_parameters_file, initialise, iterations, scenario, 
     # devon_msoas = pd.read_csv(os.path.join(data_dir, "devon_msoas.csv"), header=None,
     #                           names=["x", "y", "Num", "Code", "Desc"])
 
-    # check whether to use QUANT or Devon data
-    if quant_dir is None:
-        quant_object = None
-        print("Using Devon data")
-    else:
-        print("Using QUANT data")
-        # we only need 1 QuantRampAPI object even if we do multiple iterations
-        # the quant_object object will be called by each microsim object
-        if os.path.isdir(os.path.join(data_dir, quant_dir)):
-            print(os.path.join(data_dir, quant_dir))
-        else:
-            raise Exception("QUANT directory does not exist, please check input")
-        quant_object = QuantRampAPI(os.path.join(data_dir, quant_dir))
+    # Prepare the QUANT api (for estimating school and retail destinations)
+    # we only need 1 QuantRampAPI object even if we do multiple iterations
+    # the quant_object object will be called by each microsim object
+    quant_path = os.path.join(data_dir, "QUANT_RAMP")
+    if not os.path.isdir(quant_path):
+        raise Exception("QUANT directory does not exist, please check input")
+    quant_object = QuantRampAPI(quant_path)
 
     # args for population initialisation
     population_args = {"data_dir": data_dir, "debug": debug,

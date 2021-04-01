@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import os
 from tqdm import tqdm
+import warnings
 
 class QuantRampAPI:
     """
@@ -14,18 +15,18 @@ class QuantRampAPI:
     """
 
     def __init__(self,
-                 quant_dir: str = "QUANT_RAMP"
+                 quant_dir: str = "QUANT_RAMP",
                  ):
         """
         Initialiser for QuantRampAPI This reads all of the necessary data.
         
         :param quant_dir: Full path to QUANT files
         :type quant_dir: str
-    
         """
+        
         self.QUANT_DIR = quant_dir
 
-        # read in and store data 
+        # read in and store data
         QuantRampAPI.read_data(self.QUANT_DIR)
      
 
@@ -36,11 +37,11 @@ class QuantRampAPI:
 
         :param QUANT_DIR: a string of the full path to QUANT files
         :type QUANT_DIR: str
-        """                
+        """
 
         cls.dfPrimaryPopulation = pd.read_csv(os.path.join(QUANT_DIR,'primaryPopulation.csv'))
         cls.dfPrimaryZones = pd.read_csv(os.path.join(QUANT_DIR,'primaryZones.csv'))
-        cls.primary_probPij =  pickle.load( open(os.path.join(QUANT_DIR,'primaryProbPij.bin'), 'rb'))
+        cls.primary_probPij = pickle.load( open(os.path.join(QUANT_DIR,'primaryProbPij.bin'), 'rb'))
         
         cls.dfSecondaryPopulation = pd.read_csv(os.path.join(QUANT_DIR,'secondaryPopulation.csv'))
         cls.dfSecondaryZones = pd.read_csv(os.path.join(QUANT_DIR,'secondaryZones.csv'))
