@@ -93,7 +93,7 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">RAMP-UA API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Python model</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#module-microsim.QUANTRampAPI2">microsim.QUANTRampAPI2 module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microsim-quantrampapi2-module">microsim.QUANTRampAPI2 module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-microsim.activity_location">microsim.activity_location module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-microsim.column_names">microsim.column_names module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-microsim.dashboard">microsim.dashboard module</a></li>
@@ -187,48 +187,8 @@
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-microsim.QUANTRampAPI2">
-<span id="microsim-quantrampapi2-module"></span><h2>microsim.QUANTRampAPI2 module<a class="headerlink" href="#module-microsim.QUANTRampAPI2" title="Permalink to this headline">¶</a></h2>
-<p>Public interface to the data
-Contains accessor functions for getting probabilities of trips from MSOA or IZ origins to
-primary schools, secondary schools and retail locations.
-Further information is contained in each function description.
-Changes made to read in data in format suitable for RAMP UA.</p>
-<dl class="py function">
-<dt id="microsim.QUANTRampAPI2.getProbableHospitalByMSOAIZ">
-<code class="sig-prename descclassname"><span class="pre">microsim.QUANTRampAPI2.</span></code><code class="sig-name descname"><span class="pre">getProbableHospitalByMSOAIZ</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dfHospitalPopulation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dfHospitalZones</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hospital_probHijmsoa_iz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.QUANTRampAPI2.getProbableHospitalByMSOAIZ" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt id="microsim.QUANTRampAPI2.getProbablePrimarySchoolsByMSOAIZ">
-<code class="sig-prename descclassname"><span class="pre">microsim.QUANTRampAPI2.</span></code><code class="sig-name descname"><span class="pre">getProbablePrimarySchoolsByMSOAIZ</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dfPrimaryPopulation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dfPrimaryZones</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">primary_probPij</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msoa_iz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.QUANTRampAPI2.getProbablePrimarySchoolsByMSOAIZ" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt id="microsim.QUANTRampAPI2.getProbableRetailByMSOAIZ">
-<code class="sig-prename descclassname"><span class="pre">microsim.QUANTRampAPI2.</span></code><code class="sig-name descname"><span class="pre">getProbableRetailByMSOAIZ</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dfRetailPointsPopulation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dfRetailPointsZones</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">retailpoints_probSij</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msoa_iz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.QUANTRampAPI2.getProbableRetailByMSOAIZ" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt id="microsim.QUANTRampAPI2.getProbableSecondarySchoolsByMSOAIZ">
-<code class="sig-prename descclassname"><span class="pre">microsim.QUANTRampAPI2.</span></code><code class="sig-name descname"><span class="pre">getProbableSecondarySchoolsByMSOAIZ</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dfSecondaryPopulation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dfSecondaryZones</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">secondary_probPij</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msoa_iz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.QUANTRampAPI2.getProbableSecondarySchoolsByMSOAIZ" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt id="microsim.QUANTRampAPI2.get_flows">
-<code class="sig-prename descclassname"><span class="pre">microsim.QUANTRampAPI2.</span></code><code class="sig-name descname"><span class="pre">get_flows</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">venue</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Population</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Zones</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probPij</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msoa_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresholdtype</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.QUANTRampAPI2.get_flows" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt id="microsim.QUANTRampAPI2.loadMatrix">
-<code class="sig-prename descclassname"><span class="pre">microsim.QUANTRampAPI2.</span></code><code class="sig-name descname"><span class="pre">loadMatrix</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.QUANTRampAPI2.loadMatrix" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt id="microsim.QUANTRampAPI2.readQUANT">
-<code class="sig-prename descclassname"><span class="pre">microsim.QUANTRampAPI2.</span></code><code class="sig-name descname"><span class="pre">readQUANT</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quant_dir</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.QUANTRampAPI2.readQUANT" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
+<div class="section" id="microsim-quantrampapi2-module">
+<h2>microsim.QUANTRampAPI2 module<a class="headerlink" href="#microsim-quantrampapi2-module" title="Permalink to this headline">¶</a></h2>
 </div>
 <div class="section" id="module-microsim.activity_location">
 <span id="microsim-activity-location-module"></span><h2>microsim.activity_location module<a class="headerlink" href="#module-microsim.activity_location" title="Permalink to this headline">¶</a></h2>
@@ -901,11 +861,14 @@ spend travelling on different modes. Ultimately these will be turned into activi
 
 <dl class="py method">
 <dt id="microsim.population_initialisation.PopulationInitialisation.read_retail_flows_data">
-<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">read_retail_flows_data</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">study_msoas</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.population_initialisation.PopulationInitialisation.read_retail_flows_data" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">read_retail_flows_data</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">study_msoas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quant_object</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.population_initialisation.PopulationInitialisation.read_retail_flows_data" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read the flows between each MSOA and the most commonly visited shops</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>study_msoas</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – A list of MSOAs in the study area (flows outside of this will be ignored)</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>study_msoas</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – A list of MSOAs in the study area (flows outside of this will be ignored)</p></li>
+<li><p><strong>quant_object</strong> (<a class="reference internal" href="#microsim.quant_api.QuantRampAPI" title="microsim.quant_api.QuantRampAPI"><code class="xref py py-class docutils literal notranslate"><span class="pre">QuantRampAPI</span></code></a>) – The QuantRampAPI object used to estimate destination school and retail locations</p></li>
+</ul>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>(&lt;class ‘pandas.core.frame.DataFrame’&gt;, &lt;class ‘pandas.core.frame.DataFrame’&gt;)</p>
@@ -919,12 +882,15 @@ spend travelling on different modes. Ultimately these will be turned into activi
 
 <dl class="py method">
 <dt id="microsim.population_initialisation.PopulationInitialisation.read_school_flows_data">
-<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">read_school_flows_data</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">study_msoas</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.population_initialisation.PopulationInitialisation.read_school_flows_data" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">read_school_flows_data</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">study_msoas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quant_object</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#microsim.population_initialisation.PopulationInitialisation.read_school_flows_data" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read the flows between each MSOA and the most likely schools attended by pupils in this area.
 All schools are initially read together, but flows are separated into primary and secondary</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>study_msoas</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – A list of MSOAs in the study area (flows outside of this will be ignored)</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>study_msoas</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – A list of MSOAs in the study area (flows outside of this will be ignored)</p></li>
+<li><p><strong>quant_object</strong> (<a class="reference internal" href="#microsim.quant_api.QuantRampAPI" title="microsim.quant_api.QuantRampAPI"><code class="xref py py-class docutils literal notranslate"><span class="pre">QuantRampAPI</span></code></a>) – A pointer to the QuantRampAPI object that implements the spatial interaction model</p></li>
+</ul>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>(&lt;class ‘pandas.core.frame.DataFrame’&gt;, &lt;class ‘pandas.core.frame.DataFrame’&gt;, &lt;class ‘pandas.core.frame.DataFrame’&gt;, &lt;class ‘pandas.core.frame.DataFrame’&gt;)</p>
