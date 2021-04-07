@@ -120,7 +120,7 @@ class MicrosimModel:
         # Initialise the R interface. Do this here, rather than in init, because when in multiprocessing mode
         # at this point the Microsim object will be in its own process
         if not self.disable_disease_status:
-            self.r_int = RInterface(self.r_script_dir)
+            self.r_int = fRInterface(self.r_script_dir)
 
         # Step the model
         for i in range(iterations):
@@ -259,8 +259,8 @@ class MicrosimModel:
         Update the danger score for each location, based on where the individuals who have the infection visit.
         Then look through the individuals again, assigning some of that danger back to them as 'current risk'.
 
-        :param risk_multiplier: Risk is calcuated as duration * flow * risk_multiplier.
-        :param decimals: Number of decimals to round the indivdiual risks and dangers to (defult 10). If 'None'
+        :param risk_multiplier: Risk is calculated as duration * flow * risk_multiplier.
+        :param decimals: Number of decimals to round the individual risks and dangers to (defult 10). If 'None'
                         then do no rounding
         """
         print("\tUpdating danger associated with visiting each venue")
@@ -412,8 +412,8 @@ class MicrosimModel:
     def calculate_new_disease_status(self) -> None:
         """
         Call an R function to calculate the new disease status for all individuals.
-        Update the indivdiuals dataframe in place
-        :return: . Update the dataframe inplace
+        Update the individuals dataframe in place
+        :return: . Update the dataframe in place
         """
         # Remember the old status so that we can calculate whether it has changed
         old_status: pd.Series = self.individuals[ColumnNames.DISEASE_STATUS].copy()

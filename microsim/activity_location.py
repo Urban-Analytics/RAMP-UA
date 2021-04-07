@@ -18,11 +18,11 @@ class ActivityLocation():
 
         :param name: A name to use to refer to this activity. Column names in the big DataFrame of individuals
         will be named according to this
-        :param locations: A dataframe containing information about each loction.
+        :param locations: A dataframe containing information about each location.
         :param flows: A dataframe containing the flows.
         :param individuals: The dataframe containing the individual population. This is needed because a new
         '*_DURATION' column will be added to that table to show how much time each individual spends doing
-        this activity. The new column is added inplace
+        this activity. The new column is added in place
         :param duration_col: The column in the 'individuals' dataframe that gives the proportion of time
         spend doing this activity. This needs to be renamed according to a standard format, e.g. for retail
         the column needs to be called 'RETAIL_DURATION'.
@@ -74,7 +74,7 @@ class ActivityLocation():
         return self._locations.copy()
 
     def get_ids(self) -> List[int]:
-        """Retrn the IDs of each destination.
+        """Return the IDs of each destination.
         Shouldn't need to know these. Use get_dangers or update_dangers instead"""
         return list(self._locations[ColumnNames.LOCATION_ID])
 

@@ -18,7 +18,7 @@ import copy
 import multiprocessing
 
 from microsim.microsim_model import MicrosimModel
-from column_names import ColumnNames
+from microsim.constants import ColumnNames
 
 
 class MicrosimInit(MicrosimModel):
