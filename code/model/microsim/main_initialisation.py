@@ -84,10 +84,10 @@ def main(parameters_file):
             repetitions = sim_params["repetitions"]
             lockdown_file = sim_params["lockdown-file"]
             #quant_dir = sim_params["quant-dir"]
-            use_cache = sim_params["use-cache"]
-            open_cl_model = sim_params["opencl-model"]
-            opencl_gui = sim_params["opencl-gui"]
-            opencl_gpu = sim_params["opencl-gpu"]
+            # use_cache = sim_params["use-cache"]
+            # open_cl_model = sim_params["opencl-model"]
+            # opencl_gui = sim_params["opencl-gui"]
+            # opencl_gpu = sim_params["opencl-gpu"]
     except Exception as error:
         print('Error in parameters file format')
         raise error
@@ -178,6 +178,9 @@ def main(parameters_file):
 
         # store in cache so we can load later
         cache.store_in_cache(individuals, activity_locations)
+    
+    ### SEPARATE HERE!!! ###
+    
     else:  # load from cache
         print("Loading data from previous cache")
         individuals, activity_locations = cache.read_from_cache()

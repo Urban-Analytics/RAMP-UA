@@ -92,7 +92,7 @@ lockdown = (1 - (np.mean(tus_hse.phome) * change))/np.mean(tus_hse.phome)
 """In theory: shp already loaded before"""
 msoas_risks = shp.risk[shp.MSOA11CD.isin(msoasList)]
 # %%
-"""Dashnboard material"""
+"""Dashboard material"""
 """In theory: msoas.shp already loaded before"""
 """In theory: tus_hse_ref already defined, see above"""
 osm_ref = np.unique(lookUp.OSM[lookUp.MSOA11CD.isin(msoasList)])
