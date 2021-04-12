@@ -1,9 +1,12 @@
 # Contains some useful utility functionality
 import os
+from urllib.request import urlopen
+
 import requests
 import tarfile
 import pandas as pd
 from typing import List
+from tqdm import tqdm
 
 from microsim.column_names import ColumnNames
 
@@ -68,11 +71,18 @@ def download_data(url : str):
     # specify target_path as name of tarfile downloaded by splitting url 
     # and retrieving last item
     target_path = os.path.join(url.split('/')[-1])
-    
+
+    # Create a progress bar
+    file_size = int(urlopen(url).info().get('Content-Length', -1))
+    pbar = tqdm(total=file_size, initial=0, unit='B', unit_scale=True, desc=url.split('/')[-1])
+
     if response.status_code == 200:
         with open(target_path, 'wb') as f:
-            f.write(response.raw.read())
-
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+                    pbar.update(1024)
+    pbar.close()
     return target_path
 
 def unpack_data(archive : str):

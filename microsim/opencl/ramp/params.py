@@ -1,5 +1,6 @@
 import numpy as np
 from collections import namedtuple
+import warnings
 
 LocationHazardMultipliers = namedtuple(
     "LocationHazardMultipliers",
@@ -23,7 +24,8 @@ IndividualHazardMultipliers = namedtuple(
 
 
 class Params:
-    """Convenience class for setting simulator parameters. Also holds the default values."""
+    """Convenience class for setting simulator parameters. Also holds the hard-coded default values
+    (these defaults should not usually be used; parameters should be read from the parameters file)"""
 
     def __init__(self,
                  location_hazard_multipliers=LocationHazardMultipliers(
@@ -42,9 +44,17 @@ class Params:
                  cvd_multiplier=1,
                  diabetes_multiplier=1,
                  bloodpressure_multiplier=1,
-                 overweight_sympt_mplier=1.46
+                 overweight_sympt_mplier=1.46,
+                 warn=True  # Can surpress warnings about using default values
                  ):
-        """Create a simulator with the default parameters."""
+
+        # Warn if the default values are being used (note that this isn't perfect; this will be called
+        # if the defaults in the parameter file match these hard-coded defaults, but that's unlikely
+        if location_hazard_multipliers == Params.__init__.__defaults__[0] or \
+                individual_hazard_multipliers == Params.__init__.__defaults__[1]:
+            warnings.warn("Params object is being created using hard-coded default values, "
+                          "not those in the parameters file.")
+
         if obesity_multipliers is None:
             obesity_multipliers = [1, 1.48, 1.48, 1.48]
         self.symptomatic_multiplier = 0.1
