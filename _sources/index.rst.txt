@@ -16,7 +16,6 @@ Site contents
    Home <self>
    Usage Guide <usage/index>
    Developers Guide <dev_guide/index>
-   usage/index 
    contributing/index
    Reference/index
 
