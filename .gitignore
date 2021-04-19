@@ -33,6 +33,10 @@ __pycache__
 *.npz
 *.pkl
 
+# data files
+*.csv
+*.txt
+
 # setuptools items
 **/*.egg-info/*
 **/build/*
@@ -50,6 +54,7 @@ docs/build/*
 # data directories
 devon_data
 devon_data.tar.gz
+tests
 
 # ignoring new folders
 data/**
