@@ -3,26 +3,33 @@ class Constants:
 
     class Paths:
         PROJECT_FOLDER_ABSOLUTE_PATH = "" # leave this empty, will inputted from the default.yml file
-        SOURCE_FOLDER = "microsim"
+        # SOURCE_FOLDER = "microsim"
+        CODE_FOLDER = "code"
         DATA_FOLDER = "data"
-        REGIONAL_DATA_FOLDER = "regional_data"
-        OSM_FOLDER = "osm"
-        TU_FILE = "simulated_TU_keyworker_health.csv" # csv file
-        INITIAL_CASES_FILE = "initial_cases_.csv"
-        MSOAS_RISK_FILE = "msoas_risk.csv"
-        COMMUTING_FILE = "commuting_od.csv"
-        COMMON_DATA_FOLDER = "common_data"
+        # REGIONAL_DATA_FOLDER = "regional_data"
+        # COMMON_DATA_FOLDER = "common_data"
         OUTPUT_FOLDER = "output"
         CACHE_FOLDER = "cache"
-        class QUANT:
+        MSOAS_LIST = "test_msoalist.csv"
+        TESTS_FOLDER = "tests"
+        DUMMYDATA_FOLDER = "dummy_data"
+        class DATA:
+            OSM_FOLDER = "osm"
+            TU_FILE = "simulated_TU_keyworker_health.csv" # csv file
+            INITIAL_CASES_FILE = "initial_cases_.csv"
+            MSOAS_RISK_FILE = "msoas_risk.csv"
+            COMMUTING_FILE = "commuting_od.csv"
+        # INIT_DATA_MSOAS_RISK = "initial_cases.csv"
+        # INIT_DATA_CASES = "msoas.csv"
+        class INITIALISATION:
+            INITIALISE_FOLDER = "initialise"
+            class QUANT:
             QUANT_FOLDER = "QUANT_RAMP"
             PRIMARYSCHOOLS_FILE = "primaryZones.csv"
             SECONDARYSCHOOLS_FILE = "secondaryZones.csv"
             RETAIL_FILE = "retailpointsZones.csv"
-        TESTS_FOLDER = "tests"
-        DUMMYDATA_FOLDER = "dummy_data"
-        # INIT_DATA_MSOAS_RISK = "initial_cases.csv"
-        # INIT_DATA_CASES = "msoas.csv"
+        class MODEL:
+            
         class OPENCL:
             OPENCL_FOLDER = "opencl"
             OPENCL_FONTS_FOLDER = "fonts"

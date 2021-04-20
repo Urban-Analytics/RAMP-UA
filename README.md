@@ -51,5 +51,5 @@ Features that currently are not available, but are to be implemented on this ver
 - [ ] implement R model compatibility
 - [ ] run tests
 - [X] understand where/when the `msoa_building_coordinates.json` is created (see `load_msoa_locations.py`)
-- [ ] correct the hard-coded coordinates and MSOA code within `snapshot.py` &rarr add this to the input data
+- [ ] correct the hard-coded coordinates and MSOA code within `snapshot.py` add this to the input data
 - [ ] fix the `project-dir-absolute-path` variable (eliminate if possible)
