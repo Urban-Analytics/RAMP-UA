@@ -25,15 +25,15 @@ import zipfile
 import geopandas as gpd
 import numpy as np
 # Packages as in the original model code
-from microsim.quant_api import QuantRampAPI
-from microsim.population_initialisation import PopulationInitialisation
-from microsim.microsim_model import MicrosimModel
+from initialise.quant_api import QuantRampAPI
+from initialise.population_initialisation import PopulationInitialisation
+from model.microsim.microsim_model import MicrosimModel
 # from microsim.opencl.ramp.run import run_opencl
 # from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
 # from microsim.opencl.ramp.snapshot import Snapshot
 # from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
-from microsim.initialisation_cache import InitialisationCache
-from microsim.constants import Constants
+from initialise.initialisation_cache import InitialisationCache
+from constants import Constants
 
 
 # ********
@@ -41,6 +41,10 @@ from microsim.constants import Constants
 # Uses 'click' library so that it can be run from the command line
 # ********
 
+
+home_dir = Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH
+data_dir = os.path.join(Constants.Paths.DATA_FOLDER,
+                        Constants.Paths.DATA.RAW_DATA_FOLDER)
 
 """
 Data download and unpack
@@ -55,7 +59,8 @@ Data download and unpack
 # msoasList = pd.read_csv("/Users/hsalat/West_Yorkshire/Seeding/msoas.csv")
 # msoasList = msoasList["area_code"]
 # Note: this step needs to be improved by creating a formal way of introducing the list and checking its format is correct
-msoasList = pd.read_csv()
+msoasList = pd.read_csv(os.path.join(home_dir,
+                                     Constants.Paths.LIST_MSOAS_FILE))  ### Needs to be put as initial parameter, for now in Constants
 
 ### %%
 ### Defining functions to download data from Azure repository and unpack them right after
@@ -67,10 +72,11 @@ def download_data(folder: str,file : str):
         folder (str): can be: nationaldata, countydata or referencedata.
         file (str): name of the file, must include the extension.
     """
-    url = "https://ramp0storage.blob.core.windows.net/" + folder + "/" + file
-    target_path = os.path.join("data/common_data/",file)
+    url = Constants.Paths.AZURE_URL + folder + "/" + file   # TO_DO: does this work written like this?
+    target_path = os.path.join(,
+                               file)
     response = requests.get(url, stream=True)
-    if response.status_code == 200:
+    if response.status_code == 200:  # Ie checking that the HTTP status code is 'OK'
         with open(target_path, 'wb') as f:
             f.write(response.raw.read())
     return target_path
@@ -82,16 +88,24 @@ def unpack_data(archive : str):
         archive (str): A string directory path to archive file using
     """
     tar_file = tarfile.open(archive)
-    tar_file.extractall("data/common_data/")
+    tar_file.extractall(data_dir) # ("data/common_data/")  ### extract all or not?
 
 ### %%
 ###  Checking that look-up table exists and reading it in
 
-if not os.path.isfile("data/common_data/lookUp.csv"):
+if not os.path.isfile(os.path.join(data_dir,
+                                   Constants.Paths.DATA_FOLDER,
+                                   Constants.Paths.DATA.RAW_DATA_FOLDER,
+                                   Constants.Paths.DATA.RAW_DATA.REFERENCE_DATA_FOLDER,
+                                   Constants.Paths.DATA.RAW_DATA.LUT_FILE)):  #("data/common_data/lookUp.csv"):
     lookUp_path = download_data("referencedata","lookUp.csv")
     lookUp = pd.read_csv(lookUp_path)
 else:
-    lookUp = pd.read_csv("data/common_data/lookUp.csv")
+    lookUp = pd.read_csv(os.path.join(data_dir,
+                                   Constants.Paths.DATA_FOLDER,
+                                   Constants.Paths.DATA.RAW_DATA_FOLDER,
+                                   Constants.Paths.DATA.RAW_DATA.REFERENCE_DATA_FOLDER,
+                                   Constants.Paths.DATA.RAW_DATA.LUT_FILE)) #("data/common_data/lookUp.csv")
     
 ### %%
 ### TU files
@@ -99,6 +113,7 @@ else:
 tus_hse_ref = np.unique(lookUp.NewTU[lookUp.MSOA11CD.isin(msoasList)])
 tus_hse = pd.DataFrame()
 
+# initially only try with the WYtest TUH file
 for x in tus_hse_ref:
     if not os.path.isfile("data/common_data/tus_hse_" + x + ".csv"):
         temp_path = download_data("countydata","tus_hse_" + x + ".csv")

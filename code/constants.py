@@ -2,46 +2,53 @@ class Constants:
     """Used to reflect the folder structure expected by the code"""
 
     class Paths:
+        AZURE_URL = "https://ramp0storage.blob.core.windows.net/"
         PROJECT_FOLDER_ABSOLUTE_PATH = "" # leave this empty, will inputted from the default.yml file
         # SOURCE_FOLDER = "microsim"
         CODE_FOLDER = "code"
         DATA_FOLDER = "data"
         # REGIONAL_DATA_FOLDER = "regional_data"
         # COMMON_DATA_FOLDER = "common_data"
-        OUTPUT_FOLDER = "output"
-        CACHE_FOLDER = "cache"
-        MSOAS_LIST = "test_msoalist.csv"
-        TESTS_FOLDER = "tests"
-        DUMMYDATA_FOLDER = "dummy_data"
+        # OUTPUT_FOLDER = "output"
+        # CACHE_FOLDER = "cache"
+        # TESTS_FOLDER = "tests"
+        # DUMMYDATA_FOLDER = "dummy_data"
+        LIST_MSOAS_FILE = "model_parameters/test_msoalist.csv" ## better in parameters! (default.yml)
         class DATA:
-            OSM_FOLDER = "osm"
-            TU_FILE = "simulated_TU_keyworker_health.csv" # csv file
-            INITIAL_CASES_FILE = "initial_cases_.csv"
-            MSOAS_RISK_FILE = "msoas_risk.csv"
-            COMMUTING_FILE = "commuting_od.csv"
+            RAW_DATA_FOLDER = "raw_data"
+            class RAW_DATA:
+                REFERENCE_DATA_FOLDER = "reference_data"
+                LUT_FILE = "lookUp.csv"
+                SEEDING_FILE = "england_initial_casesCTY_tbc.csv"
+            # OSM_FOLDER = "osm"
+            NATIONAL_DATA_FOLDER = "national_data"
+            class NATIONAL_DATA:
+                TIME_AT_HOME_FILE = "timeAtHomeIncreaseCTY.csv"
+                COMMUTING_FILE = "commutingOD.csv"
+                QUANT_FOLDER = "QUANT_RAMP"
+                PRIMARYSCHOOLS_FILE = "primaryZones.csv"
+                SECONDARYSCHOOLS_FILE = "secondaryZones.csv"
+                RETAIL_FILE = "retailpointsZones.csv"
+                
         # INIT_DATA_MSOAS_RISK = "initial_cases.csv"
         # INIT_DATA_CASES = "msoas.csv"
         class INITIALISATION:
             INITIALISE_FOLDER = "initialise"
-            class QUANT:
-            QUANT_FOLDER = "QUANT_RAMP"
-            PRIMARYSCHOOLS_FILE = "primaryZones.csv"
-            SECONDARYSCHOOLS_FILE = "secondaryZones.csv"
-            RETAIL_FILE = "retailpointsZones.csv"
+
         class MODEL:
-            
-        class OPENCL:
-            OPENCL_FOLDER = "opencl"
-            OPENCL_FONTS_FOLDER = "fonts"
-            FONT_DROID = "DroidSans.ttf"
-            FONT_ROBOTO = "RobotoMono.ttf"
-            OPENCL_SOURCE_FOLDER = "ramp"
-            class SOURCE:
-                OPENCL_KERNELS_FOLDER = "kernels"
-                KERNEL_FILE = "ramp_ua.cl"
-                OPENCL_SHADERS_FOLDER = "shaders"
-            OPENCL_SNAPSHOTS_FOLDER = "snapshots"
-            OPENCL_CACHE_FILE = "cache.npz"
+            MODEL_FOLDER = "model"
+            class OPENCL:
+                OPENCL_FOLDER = "opencl"
+                OPENCL_FONTS_FOLDER = "fonts"
+                FONT_DROID = "DroidSans.ttf"
+                FONT_ROBOTO = "RobotoMono.ttf"
+                OPENCL_SOURCE_FOLDER = "ramp"
+                class SOURCE:
+                    OPENCL_KERNELS_FOLDER = "kernels"
+                    KERNEL_FILE = "ramp_ua.cl"
+                    OPENCL_SHADERS_FOLDER = "shaders"
+                OPENCL_SNAPSHOTS_FOLDER = "snapshots"
+                OPENCL_CACHE_FILE = "cache.npz"
 
 
 
