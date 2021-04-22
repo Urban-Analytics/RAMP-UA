@@ -1,12 +1,16 @@
-class Constants:
-    """Used to reflect the folder structure expected by the code"""
+import os
 
+class Constants:
+    """Used to reflect the folder structure expected by the code"""    
+    
     class Paths:
         AZURE_URL = "https://ramp0storage.blob.core.windows.net/"
         PROJECT_FOLDER_ABSOLUTE_PATH = "" # leave this empty, will inputted from the default.yml file
         # SOURCE_FOLDER = "microsim"
-        CODE_FOLDER = "code"
-        DATA_FOLDER = "data"
+        class CODE:
+            FOLDER = "code"
+            FULL_PATH = os.path.join(PROJECT_FOLDER_ABSOLUTE_PATH,FOLDER)
+        
         # REGIONAL_DATA_FOLDER = "regional_data"
         # COMMON_DATA_FOLDER = "common_data"
         # OUTPUT_FOLDER = "output"
@@ -15,21 +19,58 @@ class Constants:
         # DUMMYDATA_FOLDER = "dummy_data"
         LIST_MSOAS_FILE = "model_parameters/test_msoalist.csv" ## better in parameters! (default.yml)
         class DATA:
-            RAW_DATA_FOLDER = "raw_data"
-            class RAW_DATA:
-                REFERENCE_DATA_FOLDER = "reference_data"
-                LUT_FILE = "lookUp.csv"
-                SEEDING_FILE = "england_initial_casesCTY_tbc.csv"
-            # OSM_FOLDER = "osm"
-            NATIONAL_DATA_FOLDER = "national_data"
-            class NATIONAL_DATA:
-                TIME_AT_HOME_FILE = "timeAtHomeIncreaseCTY.csv"
-                COMMUTING_FILE = "commutingOD.csv"
-                QUANT_FOLDER = "QUANT_RAMP"
-                PRIMARYSCHOOLS_FILE = "primaryZones.csv"
-                SECONDARYSCHOOLS_FILE = "secondaryZones.csv"
-                RETAIL_FILE = "retailpointsZones.csv"
-                
+            FOLDER = "data"
+            FULL_PATH_FOLDER = os.path.join(PROJECT_FOLDER_ABSOLUTE_PATH,FOLDER)
+        #--> DATA
+        class RAW_DATA:
+            FOLDER = "raw_data"
+            FULL_PATH_FOLDER = os.path.join(DATA.FULL_PATH_FOLDER,FOLDER)
+        #-->--> RAW_DATA
+        class REFERENCE_DATA:
+            FOLDER = "reference_data"
+            FULL_PATH_FOLDER = os.path.join(RAW_DATA.FULL_PATH_FOLDER,FOLDER)
+        #-->-->--> REFERENCE_DATA
+        class LUT:
+            FILE = "lookUp.csv"
+            FULL_PATH_FILE = os.path.join(REFERENCE_DATA.FULL_PATH_FOLDER,FILE)
+        class SEEDING_FILE:
+            FILE = "england_initial_casesCTY_tbc.csv"
+            FULL_PATH_FILE = os.path.join(REFERENCE_DATA.FULL_PATH_FOLDER,FILE)
+        #<--<--<-- REFERENCE_DATA
+        #-->-->--> NATIONAL_DATA
+        class NATIONAL_DATA:
+            FOLDER = "national_data"
+            FULL_PATH_FOLDER = os.path.join(RAW_DATA.FULL_PATH_FOLDER,FOLDER)
+        class TIME_AT_HOME:
+            FILE = "timeAtHomeIncreaseCTY.csv"
+        class COMMUTING:
+            FILE = "commutingOD.csv"
+        #-->-->-->-->QUANT
+        class QUANT:
+            FOLDER = "QUANT_RAMP"
+            FULL_PATH_FOLDER = os.path.join(NATIONAL_DATA.FULL_PATH_FOLDER,FOLDER)
+        class PRIMARYSCHOOLS:
+            FILE = "primaryZones.csv"
+            FULL_PATH_FILE = os.path.join(QUANT.FULL_PATH_FOLDER,FILE)
+        class SECONDARYSCHOOLS:
+            FILE = "secondaryZones.csv"
+            FULL_PATH_FILE = os.path.join(QUANT.FULL_PATH_FOLDER,FILE)
+        class RETAIL:
+            FILE = "retailpointsZones.csv"
+            FULL_PATH_FILE = os.path.join(QUANT.FULL_PATH_FOLDER,FILE)
+        #<--<--<--<-- QUANT
+        #-->-->-->-->MSOAS_SHAPEFILE
+        class MSOAS_SHAPEFILE:
+            FOLDER = "MSOAS_shp"
+            FULL_PATH_FOLDER = os.path.join(NATIONAL_DATA.FULL_PATH_FOLDER,FOLDER)
+        class SHP:
+            FILE = "bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp"
+            FULL_PATH_FILE = os.path.join(MSOAS_SHAPEFILE.FULL_PATH_FOLDER,FILE)
+        #<--<--<--<-- MSOAS_SHAPEFILE
+        #<--<--<-- NATIONAL_DATA
+        #<--<--RAW_DATA
+        #<-- DATA:
+        
         # INIT_DATA_MSOAS_RISK = "initial_cases.csv"
         # INIT_DATA_CASES = "msoas.csv"
         class INITIALISATION:

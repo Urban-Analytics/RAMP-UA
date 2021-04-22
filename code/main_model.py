@@ -5,7 +5,7 @@ Core RAMP-UA model.
 
 Created on Tue Apr 6
 
-@author: AnnaZ
+@author: AnnaZ, Nick
 """
 import sys
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
