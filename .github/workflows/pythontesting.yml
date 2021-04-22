@@ -29,6 +29,11 @@ jobs:
         environment-file: environment.yml
         auto-activate-base: false
         activate-environment: ramp-ua
+    
+    - name: install rampuaR
+      shell: bash -l {0}
+      run: |
+        R -e "devtools::install_github('Urban-Analytics/rampuaR', dependencies = F);"
 
     - name: run setup.py
       shell: bash -l {0}

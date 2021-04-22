@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import rpy2.rinterface
 import rpy2.robjects.packages as rpackages  # For installing packages
@@ -20,10 +21,9 @@ class RInterface():
         print(f"Initialising R interface. Loading R scripts in {script_dir}.")
         self.script_dir = script_dir  # Useful to remember for debugging, but not actually needed
         R = ro.r
-        R.setwd(script_dir)
         try:
             # Read the script (doesn't run any functions)
-            R.source("covid_run.R")
+            R.source(os.path.join(script_dir,"covid_run.R"))
             # Call a function to initialize the needed R packages and data
             R.initialize_r()
         except rpy2.rinterface.embedded.RRuntimeError as e:
