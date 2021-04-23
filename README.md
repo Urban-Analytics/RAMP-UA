@@ -25,6 +25,15 @@ The "default" config file is still `default.yml` in `model_parameters` but this 
 - The folders structure (see below)
 - The file `microsim/column_names.py` has been included in the file `microsim/constants.py` (see class `ColumnNames`), which is meant to store all constant variables within the project. This can be further implemented.
 
+Conclusive folders structure:
+![EcoTwins folders structure](https://github.com/Urban-Analytics/RAMP-UA/tree/EcoTwins/img/folders_structure.jpg?raw=true)
+
+RampUA model diagram
+![RampUA model](https://github.com/Urban-Analytics/RAMP-UA/tree/EcoTwins/img/fmodel_diagram_EcoTwins.jpg?raw=true)
+
+EcoTwins model diagram
+![EcoTwins model](https://github.com/Urban-Analytics/RAMP-UA/tree/EcoTwins/img/model_diagram_rampUA.jpg?raw=true)
+
 
 ## Assumptions/How it is working now
 - Currently only the OpenCL has been checked against this version.
@@ -46,8 +55,8 @@ Documentation currently follows the one for RAMP-UA, plus some README files here
 
 ## TODO list:
 Features that currently are not available, but are to be implemented on this version as well.
-- [ ] reorganise folders structure depending on the agreed option (discussed separately in the HackMD mentioned above)
-- [ ] implement the connection with the 'initialisation' process (TBD)
+- [X] reorganise folders structure depending on the agreed option (discussed separately in the HackMD mentioned above)
+- [X] implement the connection with the 'initialisation' process (TBD)
 - [ ] implement R model compatibility
 - [ ] run tests
 - [X] understand where/when the `msoa_building_coordinates.json` is created (see `load_msoa_locations.py`)
