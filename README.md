@@ -26,13 +26,15 @@ The "default" config file is still `default.yml` in `model_parameters` but this 
 - The file `microsim/column_names.py` has been included in the file `microsim/constants.py` (see class `ColumnNames`), which is meant to store all constant variables within the project. This can be further implemented.
 
 Conclusive folders structure:
-![EcoTwins folders structure](https://github.com/Urban-Analytics/RAMP-UA/tree/EcoTwins/img/folders_structure.jpg?raw=true)
 
-RampUA model diagram
-![RampUA model](https://github.com/Urban-Analytics/RAMP-UA/tree/EcoTwins/img/fmodel_diagram_EcoTwins.jpg?raw=true)
+![EcoTwins folders structure](https://github.com/Urban-Analytics/RAMP-UA/blob/EcoTwins/img/folders_structure.png)
+RampUA model diagram:
 
-EcoTwins model diagram
-![EcoTwins model](https://github.com/Urban-Analytics/RAMP-UA/tree/EcoTwins/img/model_diagram_rampUA.jpg?raw=true)
+![RampUA model](https://github.com/Urban-Analytics/RAMP-UA/blob/EcoTwins/img/model_diagram_EcoTwins.png)
+
+EcoTwins model diagram:
+
+![EcoTwins model](https://github.com/Urban-Analytics/RAMP-UA/blob/EcoTwins/img/model_diagram_rampUA.png)
 
 
 ## Assumptions/How it is working now
