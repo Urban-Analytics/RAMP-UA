@@ -7,17 +7,19 @@ class Constants:
         AZURE_URL = "https://ramp0storage.blob.core.windows.net/"
         PROJECT_FOLDER_ABSOLUTE_PATH = "" # leave this empty, will inputted from the default.yml file
         # SOURCE_FOLDER = "microsim"
+        class LIST_MSOAS:
+            FILE ="test_msoalist.csv" ## better in parameters! (default.yml)
+            FILE_WITH_PARAMFOLDER = "model_parameters/test_msoalist.csv"
+            FULL_PATH_FILE = os.path.join(PROJECT_FOLDER_ABSOLUTE_PATH,FILE_WITH_PARAMFOLDER)
         class CODE:
             FOLDER = "code"
             FULL_PATH = os.path.join(PROJECT_FOLDER_ABSOLUTE_PATH,FOLDER)
-        
         # REGIONAL_DATA_FOLDER = "regional_data"
         # COMMON_DATA_FOLDER = "common_data"
         # OUTPUT_FOLDER = "output"
         # CACHE_FOLDER = "cache"
         # TESTS_FOLDER = "tests"
         # DUMMYDATA_FOLDER = "dummy_data"
-        LIST_MSOAS_FILE = "model_parameters/test_msoalist.csv" ## better in parameters! (default.yml)
         class DATA:
             FOLDER = "data"
             FULL_PATH_FOLDER = os.path.join(PROJECT_FOLDER_ABSOLUTE_PATH,FOLDER)
@@ -43,8 +45,10 @@ class Constants:
             FULL_PATH_FOLDER = os.path.join(RAW_DATA.FULL_PATH_FOLDER,FOLDER)
         class TIME_AT_HOME:
             FILE = "timeAtHomeIncreaseCTY.csv"
+            FULL_PATH_FILE= os.path.join(NATIONAL_DATA.FULL_PATH_FOLDER,FILE)
         class COMMUTING:
             FILE = "commutingOD.csv"
+            FULL_PATH_FILE= os.path.join(NATIONAL_DATA.FULL_PATH_FOLDER,FILE)
         #-->-->-->-->QUANT
         class QUANT:
             FOLDER = "QUANT_RAMP"
@@ -59,7 +63,7 @@ class Constants:
             FILE = "retailpointsZones.csv"
             FULL_PATH_FILE = os.path.join(QUANT.FULL_PATH_FOLDER,FILE)
         #<--<--<--<-- QUANT
-        #-->-->-->-->MSOAS_SHAPEFILE
+        #-->-->-->--> MSOAS_SHAPEFILE
         class MSOAS_SHAPEFILE:
             FOLDER = "MSOAS_shp"
             FULL_PATH_FOLDER = os.path.join(NATIONAL_DATA.FULL_PATH_FOLDER,FOLDER)
@@ -68,6 +72,19 @@ class Constants:
             FULL_PATH_FILE = os.path.join(MSOAS_SHAPEFILE.FULL_PATH_FOLDER,FILE)
         #<--<--<--<-- MSOAS_SHAPEFILE
         #<--<--<-- NATIONAL_DATA
+        #-->-->--> COUNTY_DATA
+        class COUNTY_DATA:
+            FOLDER = "county_data"
+            FULL_PATH_FOLDER = os.path.join(RAW_DATA.FULL_PATH_FOLDER,FOLDER)
+        #-->-->-->--> TU_DATA
+        class TU:
+            FILE = "tus_hse_"
+            FULL_PATH_FILE = os.path.join(COUNTY_DATA.FULL_PATH_FOLDER, FILE)
+        #<--<--<--<-- TU_DATA
+        #-->-->-->--> COMMUTING_DATA
+        # will be developed in a second moment, not ready yet
+        #<--<--<--<-- COMMUTING_DATA
+        #<--<--<-- COUNTY_DATA
         #<--<--RAW_DATA
         #<-- DATA:
         
@@ -93,6 +110,8 @@ class Constants:
 
 
 
+    class OnlinePaths:
+        
     class Thresholds:
         SCHOOL = 5
         SCHOOL_TYPE = "nr"

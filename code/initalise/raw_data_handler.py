@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Handling the raw data for the model initialisation
+
+Created on Thu Apr 22
+
+@author: Anna, Hadrien
+"""
+
 from code.constants import Constants
 
 class RawDataHandler:        
@@ -5,7 +15,7 @@ class RawDataHandler:
     @staticmethod
     def run():
         """
-        Data download and unpack
+        Class that handles the data download and unpack
         """
         # (Hadrien's code)
 
@@ -16,14 +26,16 @@ class RawDataHandler:
         # os.chdir("/Users/hsalat/MiscPython")
         # msoasList = pd.read_csv("/Users/hsalat/West_Yorkshire/Seeding/msoas.csv")
         # msoasList = msoasList["area_code"]
+        
         # Note: this step needs to be improved by creating a formal way of introducing the list and checking its format is correct
-        msoasList = pd.read_csv(os.path.join(home_dir,
-                                            Constants.Paths.LIST_MSOAS_FILE))  ### Needs to be put as initial parameter, for now in Constants
+        msoasList_file = pd.read_csv(Constants.Paths.LIST_MSOAS.FULL_PATH_FILE)  ### Needs to be put as initial parameter, for now in Constants
+        msoasList = msoasList_file["MSOA11CD"]      # should be ["area_code"] but the current test file has column name "MSOA11CD"
         ### %%
         ###  Checking that look-up table exists and reading it in
 
         if not os.path.isfile(Constants.Paths.LUT.FULL_PATH_FILE):  #("data/common_data/lookUp.csv"):
-            lookUp_path = _download_data("referencedata",Constants.Paths.LUT.FILE)
+            lookUp_path = _download_data("referencedata", # name of the folder online in Azure
+                                         Constants.Paths.LUT.FILE)
             lookUp = pd.read_csv(lookUp_path)
         else:
             lookUp = pd.read_csv(Constants.Paths.LUT.FULL_PATH_FILE)) #("data/common_data/lookUp.csv")
@@ -36,47 +48,52 @@ class RawDataHandler:
 
         # initially only try with the WYtest TUH file
         for x in tus_hse_ref:
-            if not os.path.isfile("data/common_data/tus_hse_" + x + ".csv"):
-                temp_path = _download_data("countydata","tus_hse_" + x + ".csv")
+            if not os.path.isfile(Constants.Paths.TU.FULL_PATH_FILE + x + ".csv"):
+                temp_path = _download_data("countydata",
+                                           Constants.Paths.TU.FILE + x + ".csv")
                 temp = pd.read_csv(temp_path)
             else:
-                temp = pd.read_csv("data/common_data/tus_hse_" + x + ".csv")
+                temp = pd.read_csv(Constants.Paths.TU.FULL_PATH_FILE + x + ".csv")
             temp = temp[temp.MSOA11CD.isin(msoasList)]
             tus_hse = tus_hse.append(temp)
             
         ### %%
         ### QUANT RAMP
 
-        if not os.path.isdir("data/common_data/QUANT_RAMP/")
-            QUANT_path = _download_data("nationaldata","QUANT_RAMP.tar.gz")
+        if not os.path.isdir(Constants.Paths.QUANT.FULL_PATH_FOLDER) #("data/common_data/QUANT_RAMP/")
+            QUANT_path = _download_data("nationaldata",
+                                        "QUANT_RAMP.tar.gz")
             _unpack_data(QUANT_path)
             
         ### %%
         ###  commutingOD dl and selection
 
-        if not os.path.isfile("data/common_data/commutingOD.csv"):
-            OD_path = _download_data("nationaldata","commutingOD.gz")
+        if not os.path.isfile(Constants.Paths.COMMUTING.FULL_PATH_FILE) #("data/common_data/commutingOD.csv"):
+            OD_path = _download_data("nationaldata",
+                                     Constants.Paths.COMMUTING.FILE) #"commutingOD.gz")
             _unpack_data(OD_path)
-        OD = pd.read_csv("data/common_data/commutingOD.csv")
+        OD = pd.read_csv(Constants.Paths.COMMUTING.FULL_PATH_FILE) #("data/common_data/commutingOD.csv")
         OD = OD[OD.HomeMSOA.isin(msoasList)]
         OD = OD[OD.DestinationMSOA.isin(msoasList)]
 
         ### %%
         ### Lockdown scenario
 
-        # In theory: lookUp already loaded before
+        # Assumption: lookUp already loaded before
 
-        if not os.path.isfile("data/common_data/timeAtHomeIncreaseCTY.csv"):
-            lockdown_path = _download_data("nationaldata","timeAtHomeIncreaseCTY.csv")
+        if not os.path.isfile(Constants.Paths.TIME_AT_HOME.FULL_PATH_FILE) #"data/common_data/timeAtHomeIncreaseCTY.csv"):
+            lockdown_path = _download_data("nationaldata",
+                                           Constants.Paths.TIME_AT_HOME.FILE) #"timeAtHomeIncreaseCTY.csv")
             lockdown = pd.read_csv(lockdown_path)
         else:
-            lockdown = pd.read_csv("data/common_data/timeAtHomeIncreaseCTY.csv")
-        if not os.path.isdir("data/common_data/MSOAS_shp/"):
-            shp_path = _download_data("nationaldata","MSOAS_shp.tar.gz")
+            lockdown = pd.read_csv(Constants.Paths.TIME_AT_HOME.FULL_PATH_FILE) #"data/common_data/timeAtHomeIncreaseCTY.csv")
+        if not os.path.isdir(Constants.Paths.MSOAS_SHAPEFILE.FULL_PATH_FOLDER) #"data/common_data/MSOAS_shp/"):
+            shp_path = _download_data("nationaldata",
+                                      Constants.Paths.SHP.FILE + ".tar.gz") #"MSOAS_shp.tar.gz")
             _unpack_data(shp_path)
             
-        shp = gpd.read_file("data/common_data/MSOAS_shp/msoas.shp")
-        msoas_pop = shp["pop"]
+        shp = gpd.read_file() #"data/common_data/MSOAS_shp/msoas.shp")
+        msoas_pop = shp["pop"]  # ?? 
         msoas_pop = msoas_pop[shp.MSOA11CD.isin(msoasList)]
 
         change_ref = np.unique(lookUp.GoogleMob[lookUp.MSOA11CD.isin(msoasList)])
@@ -95,15 +112,15 @@ class RawDataHandler:
         ### %%
         ### Seeding
 
-        # In theory: shp already loaded before
+        # Assumption: shp already loaded before
 
         msoas_risks = shp.risk[shp.MSOA11CD.isin(msoasList)]
 
         ### %%
         ### Dashboard material
 
-        # In theory: msoas.shp already loaded before
-        # In theory: tus_hse_ref already defined, see above
+        # Assumption: msoas.shp already loaded before
+        # Assumption: tus_hse_ref already defined, see above
 
         osm_ref = np.unique(lookUp.OSM[lookUp.MSOA11CD.isin(msoasList)])
         url = osm_ref[0]
