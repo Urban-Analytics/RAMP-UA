@@ -111,6 +111,8 @@ class Constants:
 
 
     class OnlinePaths:
+        pass
+   
         
     class Thresholds:
         SCHOOL = 5
