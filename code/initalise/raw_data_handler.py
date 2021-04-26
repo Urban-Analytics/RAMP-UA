@@ -8,6 +8,8 @@ Created on Thu Apr 22
 @author: Anna, Hadrien
 """
 
+#TO_DO: add columns names to Constants file (example: MSOA11CD, pop from msoa_shp, CTY20)
+
 from code.constants import Constants
 
 class RawDataHandler:        
@@ -87,18 +89,18 @@ class RawDataHandler:
             lockdown = pd.read_csv(lockdown_path)
         else:
             lockdown = pd.read_csv(Constants.Paths.TIME_AT_HOME.FULL_PATH_FILE) #"data/common_data/timeAtHomeIncreaseCTY.csv")
-        if not os.path.isdir(Constants.Paths.MSOAS_SHAPEFILE.FULL_PATH_FOLDER) #"data/common_data/MSOAS_shp/"):
+        if not os.path.isdir(Constants.Paths.MSOAS_FOLDER.FULL_PATH_FOLDER) #"data/common_data/MSOAS_shp/"):
             shp_path = _download_data("nationaldata",
-                                      Constants.Paths.SHP.FILE + ".tar.gz") #"MSOAS_shp.tar.gz")
+                                      Constants.Paths.MSOAS_SHP + ".tar.gz") #"MSOAS_shp.tar.gz")
             _unpack_data(shp_path)
             
-        shp = gpd.read_file() #"data/common_data/MSOAS_shp/msoas.shp")
-        msoas_pop = shp["pop"]  # ?? 
+        shp = gpd.read_file(Constants.Paths.MSOAS_FOLDER.FULL_PATH_FOLDER) #"data/common_data/MSOAS_shp/msoas.shp")
+        msoas_pop = shp["pop"]
         msoas_pop = msoas_pop[shp.MSOA11CD.isin(msoasList)]
 
         change_ref = np.unique(lookUp.GoogleMob[lookUp.MSOA11CD.isin(msoasList)])
 
-        # average change within studied area weighted by MSOA11CD population 
+        # average change within study area weighted by MSOA11CD population 
         cty_pop = np.repeat(0,len(change_ref))
         change = np.repeat(0,np.max(lockdown.day)+1)
         for x in range(0,len(change_ref)):
@@ -117,37 +119,41 @@ class RawDataHandler:
         msoas_risks = shp.risk[shp.MSOA11CD.isin(msoasList)]
 
         ### %%
-        ### Dashboard material
+        ### Data for the OpenCL dashboard
 
         # Assumption: msoas.shp already loaded before
         # Assumption: tus_hse_ref already defined, see above
 
         osm_ref = np.unique(lookUp.OSM[lookUp.MSOA11CD.isin(msoasList)])
         url = osm_ref[0]
-        target_path = os.path.join("data/common_data",tus_hse_ref[0] + ".zip")
+        target_path = os.path.join(Constants.Paths.COUNTY_DATA.FULL_PATH_FOLDER,
+                                   tus_hse_ref[0] + ".zip") # ("data/common_data",tus_hse_ref[0] + ".zip")
             response = requests.get(url, stream=True)
-            if response.status_code == 200:
+            if response.status_code == 200: # HTTP status code for "OK"
                 with open(target_path, 'wb') as f:
                     f.write(response.raw.read())
             zip_file = zipfile.ZipFile(target_path)
-            zip_file.extractall("data/common_data/" + tus_hse_ref[0])
+            zip_file.extractall(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER + tus_hse_ref[0] # ("data/common_data/" + tus_hse_ref[0])
             
-        osmShp = gpd.read_file("data/common_data/" + tus_hse_ref[0] + "/gis_osm_buildings_a_free_1.shp")
+        osmShp = gpd.read_file((Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER + tus_hse_ref[0] +"/" + Constants.Paths.OSM_FILE) 
+                               # ("data/common_data/" + tus_hse_ref[0] + "/gis_osm_buildings_a_free_1.shp")
 
         # If study area accross more than one County, dl other counties and combine shps into one
         if len(osm_ref)>1:
             for x in range(1,len(osm_ref)):
                 url = osm_ref[x]
-                target_path = os.path.join("data/common_data",tus_hse_ref[x] + ".zip")
+                target_path = os.path.join(Constants.Paths.OSM_FOLDER, tus_hse_ref[x] + ".zip")
+                # ("data/common_data",tus_hse_ref[x] + ".zip")
                 response = requests.get(url, stream=True)
-            if response.status_code == 200:
+            if response.status_code == 200: # HTTP status code for "OK"
                 with open(target_path, 'wb') as f:
                     f.write(response.raw.read())
             zip_file = zipfile.ZipFile(target_path)
-            zip_file.extractall("data/common_data/" + tus_hse_ref[x])
+            zip_file.extractall(Constants.Paths.OSM_FOLDER + "/" + tus_hse_ref[x] ) #("data/common_data/" + tus_hse_ref[x])
             osmShp = pd.concat([
                     osmShp,
-                    gpd.read_file("data/common_data/" + tus_hse_ref[x] + "/gis_osm_buildings_a_free_1.shp")
+                    gpd.read_file(Constants.Paths.OSM_FOLDER + "/" + tus_hse_ref[x] + "/gis_osm_buildings_a_free_1.shp") 
+                    #("data/common_data/" + tus_hse_ref[x] + "/gis_osm_buildings_a_free_1.shp")
                     ]).pipe(gpd.GeoDataFrame)
             
         # TO_DO

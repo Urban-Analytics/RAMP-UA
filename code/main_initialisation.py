@@ -5,10 +5,10 @@ Core RAMP-UA model initialisation.
 
 Created on Tue Apr 6
 
-@author: Anna, Hadrien and Nick
+@author: Anna on Nick's original version
 """
 import sys
-sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
+sys.path.append("microsim")
 import multiprocessing
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
@@ -36,10 +36,6 @@ from initialise.initialisation_cache import InitialisationCache
 from constants import Constants
 from initalise.raw_data_handler import RawDataHandler
 
-
-
-
-hjkh 
 # ********
 # PROGRAM ENTRY POINT
 # Uses 'click' library so that it can be run from the command line
@@ -62,8 +58,7 @@ Actual initialisation process
 # @click.option('-ocl', '--opencl/--no-opencl', default=True, help="Run OpenCL model (runs in headless mode by default")
 def main(parameters_file):
     """
-    Main function which runs the population initialisation, then chooses which model to run, either the Python/R
-    model or the OpenCL model
+    Main function which runs the population initialisation
     """
     
     # If parameters file is missing, raise exception:

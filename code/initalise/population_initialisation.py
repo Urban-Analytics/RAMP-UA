@@ -9,7 +9,7 @@ Created on Wed Apr 29 19:59:25 2020
 """
 import sys
 
-sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
+sys.path.append("microsim")
 from microsim.activity_location import ActivityLocation
 from microsim.constants import ColumnNames
 from microsim.constants import Constants

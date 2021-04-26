@@ -64,10 +64,10 @@ class Constants:
             FULL_PATH_FILE = os.path.join(QUANT.FULL_PATH_FOLDER,FILE)
         #<--<--<--<-- QUANT
         #-->-->-->--> MSOAS_SHAPEFILE
-        class MSOAS_SHAPEFILE:
+        class MSOAS_FOLDER:
             FOLDER = "MSOAS_shp"
             FULL_PATH_FOLDER = os.path.join(NATIONAL_DATA.FULL_PATH_FOLDER,FOLDER)
-        class SHP:
+        class MSOAS_SHP:
             FILE = "bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp"
             FULL_PATH_FILE = os.path.join(MSOAS_SHAPEFILE.FULL_PATH_FOLDER,FILE)
         #<--<--<--<-- MSOAS_SHAPEFILE
@@ -76,6 +76,12 @@ class Constants:
         class COUNTY_DATA:
             FOLDER = "county_data"
             FULL_PATH_FOLDER = os.path.join(RAW_DATA.FULL_PATH_FOLDER,FOLDER)
+        #-->-->-->-->OSM_DATA
+        class OSM_FOLDER:
+            FOLDER = "OSM"
+            FULL_PATH_FOLDER = os.path.join(RAW_DATA.FULL_PATH_FOLDER,FOLDER)
+        class OSM_FILE:
+            FILE = "gis_osm_buildings_a_free_1.shp"
         #-->-->-->--> TU_DATA
         class TU:
             FILE = "tus_hse_"
