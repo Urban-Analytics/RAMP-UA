@@ -92,7 +92,12 @@ class Constants:
         #<--<--<--<-- COMMUTING_DATA
         #<--<--<-- COUNTY_DATA
         #<--<--RAW_DATA
-        #<-- DATA:
+        #>-->--PROCESSED_DATA
+        class PROCESSED_DATA:
+            FOLDER = "processed_data"
+            FULL_PATH_FOLDER = os.path.join(DATA.FULL_PATH_FOLDER,FOLDER)
+        #<--<--PROCESSED_DATA
+        #<-- DATA
         
         # INIT_DATA_MSOAS_RISK = "initial_cases.csv"
         # INIT_DATA_CASES = "msoas.csv"

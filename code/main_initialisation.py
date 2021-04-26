@@ -3,12 +3,12 @@
 """
 Core RAMP-UA model initialisation.
 
-Created on Tue Apr 6
+Created on Tue Apr 6 2021
 
 @author: Anna on Nick's original version
 """
 import sys
-sys.path.append("microsim")
+# sys.path.append("microsim")
 import multiprocessing
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
@@ -86,7 +86,8 @@ def main(parameters_file):
             initialise = sim_params["initialise"]
             iterations = sim_params["iterations"]
             Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH = sim_params["project-dir-absolute-path"]
-            selected_region_folder_name = sim_params["selected-region-folder-name"]
+            study_area = sim_params["study-area"]
+            # selected_region_folder_name = sim_params["selected-region-folder-name"]
             output = sim_params["output"]
             output_every_iteration = sim_params["output-every-iteration"]
             debug = sim_params["debug"]
@@ -118,63 +119,33 @@ def main(parameters_file):
     ###### current_working_dir = os.getcwd()  # get current directory
     # TODO: change this working dir because it's not correct and had to add the ".." in the 2 paths under here
 
-    # Check that working directory is as expected
-    # path = os.path.join(current_working_dir, "..", Constants.Paths.DATA_FOLDER, Constants.Paths.REGIONAL_DATA_FOLDER)
-    # if not os.path.exists(os.path.join(current_working_dir, "..", Constants.Paths.DATA_FOLDER, Constants.Paths.REGIONAL_DATA_FOLDER)):
-    if not os.path.exists(os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
-                                       Constants.Paths.DATA_FOLDER,
-                                       Constants.Paths.REGIONAL_DATA_FOLDER)):
+    # Check that working directory is as expected, ie 'project/data/raw_data'
+    if not os.path.exists(Constants.Paths.RAW_DATA.FULL_PATH_FOLDER):
         raise Exception("Data folder structure not valid. Make sure you are running within correct working directory.")
 
-
-    # regional_data_dir_full_path = os.path.join(current_working_dir,
-    #                                            "..",
-    #                                            Constants.Paths.DATA_FOLDER,
-    #                                            Constants.Paths.REGIONAL_DATA_FOLDER,
-    #                                            regional_data_dir)
-    selected_region_folder_full_path = os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
-                                               Constants.Paths.DATA_FOLDER,
-                                               Constants.Paths.REGIONAL_DATA_FOLDER,
-                                               selected_region_folder_name)
-    common_data_dir_full_path = os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
-                                             Constants.Paths.DATA_FOLDER,
-                                             Constants.Paths.COMMON_DATA_FOLDER)
-    if not os.path.exists(selected_region_folder_full_path):
-        raise Exception("Regional data folder doesn't exist")
+    # selected_region_folder_full_path = # put here the TU file county name
+    # common_data_dir_full_path = os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
+    #                                          Constants.Paths.DATA_FOLDER,
+    #                                          Constants.Paths.COMMON_DATA_FOLDER)
+    # if not os.path.exists(selected_region_folder_full_path):
+    #     raise Exception("Regional data folder doesn't exist")
     
     # population_args = {"project_dir": project_dir, "regional_data_dir": regional_data_dir_full_path, "debug": debug}
-    population_args = {"common_data_dir": common_data_dir_full_path,
-                       "regional_data_dir": selected_region_folder_full_path,
-                       "debug": debug}
+    population_args = {"debug": debug}
 
 
-    # r_script_dir = os.path.join(current_working_dir, "R", "py_int")
-    r_script_dir = os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
-                                "R",
-                                "py_int")
-
-
-#     # args for Python/R Microsim. Use same arguments whether running 1 repetition or many
-    msim_args = {"data_dir": selected_region_folder_full_path,
-                 "r_script_dir": r_script_dir,
-                 "scen_dir": scenario,
-                 "output": output,
-                 "output_every_iteration": output_every_iteration}
-
-    msim_args.update(**calibration_params)  # python calibration parameters are unpacked now
-    # Also read the R calibration parameters (this is a separate section in the .yml file)
-    if disease_params is not None:
-        # (If the 'disease_params' section is included but has no calibration variables then we want to ignore it -
-        # it will be turned into an empty dictionary by the Microsim constructor)
-        msim_args["disease_params"] = disease_params  # R parameters kept as a dictionary and unpacked later
+# The disease parameters for the model were defined here, this part was removed as now it's done inside OpenCL
 
 #     # Temporarily use dummy data for testing
 #     # data_dir = os.path.join(base_dir, "dummy_data")
 #     # m = Microsim(data_dir=data_dir, testing=True, output=output)
 
 #     # cache to hold previously calculate population data
-    cache = InitialisationCache(cache_dir=os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
-                                                       Constants.Paths.CACHE_FOLDER))
+    study_area_folder_in_processed_data = os.path.join(Constants.Paths.PROCESSED_DATA.FULL_PATH_FOLDER,
+                                                       study_area) # this generates the folder name
+    if not os.path.exists(study_area_folder_in_processed_data):
+        os.makedirs(study_area_folder_in_processed_data)
+    cache = InitialisationCache(cache_dir = study_area_folder_in_processed_data)
 
 #     # generate new population dataframes if we aren't using the cache, or if the cache is empty
 #     if not use_cache or cache.is_empty():

@@ -9,12 +9,13 @@ Created on Wed Apr 29 19:59:25 2020
 """
 import sys
 
-sys.path.append("microsim")
-from microsim.activity_location import ActivityLocation
-from microsim.constants import ColumnNames
-from microsim.constants import Constants
-from microsim.utilities import Optimise, check_durations_sum_to_1
-from microsim.quant_api import QuantRampAPI
+# sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
+from activity_location import ActivityLocation
+from ..constants import ColumnNames
+from ..constants import Constants
+from model.microsim.utilities import Optimise, check_durations_sum_to_1
+from quant_api import QuantRampAPI
+from raw_data_handler import RawDataHandler
 
 import multiprocessing  # process based parallelism
 import pandas as pd
@@ -36,14 +37,12 @@ class PopulationInitialisation:
     """
 
     # Static variables:
-    COMMON_DATA_DIR = ""
-    REGIONAL_DATA_DIR = ""
+    REGIONAL_DATA_DIR = "" # leaving this here until we remove the remove devon_data stuff completely
     testing = False
     debug = False
 
     def __init__(self,
-                 common_data_dir: str = "",
-                 regional_data_dir: str = "",
+                #  regional_data_dir: str = "",
                  read_data: bool = True,
                  testing: bool = False,
                  debug = False,
@@ -60,8 +59,7 @@ class PopulationInitialisation:
         #:param quant_object: optional parameter to use QUANT data, don't specify if you want to use Devon data
         """
 
-        PopulationInitialisation.COMMON_DATA_DIR = common_data_dir
-        PopulationInitialisation.REGIONAL_DATA_DIR = regional_data_dir
+        # PopulationInitialisation.REGIONAL_DATA_DIR = regional_data_dir
         # TODO (minor) pass the data_dir to class functions directly so no need to have it defined at class level
         #self.DATA_DIR = data_dir
 
@@ -79,8 +77,8 @@ class PopulationInitialisation:
         if not read_data:  # Optionally can not do this, usually for debugging
             return
 
-        self.quant_object = QuantRampAPI(os.path.join(common_data_dir,
-                                                      Constants.Paths.QUANT.QUANT_FOLDER))
+        self.quant_object = QuantRampAPI(Constants.Paths.QUANT.FULL_PATH_FOLDER) #(os.path.join(common_data_dir,
+                                                      #Constants.Paths.QUANT.QUANT_FOLDER))
 
         # *********
         # Generate population and places dataframes
@@ -339,11 +337,12 @@ class PopulationInitialisation:
 # TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
 
         #filename = os.path.join(cls.DATA_DIR, "devon-tu_health", "Devon_simulated_TU_keyworker_health.csv")
-        #filename_withpath =
-        filename = os.path.join(PopulationInitialisation.REGIONAL_DATA_DIR,
-                                Constants.Paths.TU_FILE)
+        
+        # filename = os.path.join(PopulationInitialisation.REGIONAL_DATA_DIR,
+        #                         Constants.Paths.TU_FILE)
 
-        tuh = pd.read_csv(filename)  # , encoding = "ISO-8859-1")
+        # tuh = pd.read_csv(filename)  # , encoding = "ISO-8859-1")
+        tuh = RawDataHandler.getCombinedTUFile  # Calling file created from RadDataHandler that appends TU files
         tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.
 
         # Drop people that weren't matched to a household originally
@@ -710,13 +709,10 @@ class PopulationInitialisation:
             print("Reading school flow data...", )
 
             # Read the primary schools
-            # primary_schools = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-            #                                            "..",
-            #                                            Constants.Paths.QUANT.QUANT_FOLDER,
-            #                                            Constants.Paths.QUANT.PRIMARYSCHOOLS_FILE))
-            primary_schools = pd.read_csv(os.path.join(PopulationInitialisation.COMMON_DATA_DIR,
-                                                       Constants.Paths.QUANT.QUANT_FOLDER,
-                                                       Constants.Paths.QUANT.PRIMARYSCHOOLS_FILE))
+            # primary_schools = pd.read_csv(os.path.join(PopulationInitialisation.COMMON_DATA_DIR,
+            #                                              Constants.Paths.QUANT.QUANT_FOLDER,
+            #                                              Constants.Paths.QUANT.PRIMARYSCHOOLS_FILE))
+            primary_schools = pd.read_csv(Constants.Paths.PRIMARYSCHOOLS.FULL_PATH_FILE))
             # Add some standard columns that all locations need
             primary_school_ids = list(primary_schools.index)
             primary_school_names = primary_schools.URN  # unique ID for venue
@@ -724,13 +720,10 @@ class PopulationInitialisation:
                                            location_ids=primary_school_ids)
 
             # Read the secondary schools
-            # secondary_schools = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-            #                                              "..",
+            # secondary_schools = pd.read_csv(os.path.join(PopulationInitialisation.COMMON_DATA_DIR,
             #                                              Constants.Paths.QUANT.QUANT_FOLDER,
             #                                              Constants.Paths.QUANT.SECONDARYSCHOOLS_FILE))
-            secondary_schools = pd.read_csv(os.path.join(PopulationInitialisation.COMMON_DATA_DIR,
-                                                         Constants.Paths.QUANT.QUANT_FOLDER,
-                                                         Constants.Paths.QUANT.SECONDARYSCHOOLS_FILE))
+            secondary_schools = pd.read_csv(Constants.Paths.SECONDARYSCHOOLS.FULL_PATH_FILE)
             # Add some standard columns that all locations need
             secondary_school_ids = list(secondary_schools.index)
             secondary_school_names = secondary_schools.URN  # unique ID for venue
@@ -993,9 +986,7 @@ class PopulationInitialisation:
         else:
             print("Reading retail flow data...", )
             # Read the stores
-            stores = pd.read_csv(os.path.join(PopulationInitialisation.COMMON_DATA_DIR,
-                                              Constants.Paths.QUANT.QUANT_FOLDER,
-                                              Constants.Paths.QUANT.RETAIL_FILE))
+            stores = pd.read_csv(Constants.Paths.RETAIL.FULL_PATH_FILE)
             # Add some standard columns that all locations need
             stores_ids = list(stores.index)
             store_names = stores.id  # unique ID for venue

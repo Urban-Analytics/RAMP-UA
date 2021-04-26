@@ -12,7 +12,10 @@ Created on Thu Apr 22
 
 from code.constants import Constants
 
-class RawDataHandler:        
+class RawDataHandler:
+    _combined_TU_file = None
+    _combined_shp_file = None
+    
 
     @staticmethod
     def run():
@@ -58,6 +61,7 @@ class RawDataHandler:
                 temp = pd.read_csv(Constants.Paths.TU.FULL_PATH_FILE + x + ".csv")
             temp = temp[temp.MSOA11CD.isin(msoasList)]
             tus_hse = tus_hse.append(temp)
+        _combined_TU_file = tus_hse
             
         ### %%
         ### QUANT RAMP
@@ -135,7 +139,7 @@ class RawDataHandler:
             zip_file = zipfile.ZipFile(target_path)
             zip_file.extractall(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER + tus_hse_ref[0] # ("data/common_data/" + tus_hse_ref[0])
             
-        osmShp = gpd.read_file((Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER + tus_hse_ref[0] +"/" + Constants.Paths.OSM_FILE) 
+        osmShp = gpd.read_file((Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER + tus_hse_ref[0] + "/" + Constants.Paths.OSM_FILE) 
                                # ("data/common_data/" + tus_hse_ref[0] + "/gis_osm_buildings_a_free_1.shp")
 
         # If study area accross more than one County, dl other counties and combine shps into one
@@ -152,7 +156,7 @@ class RawDataHandler:
             zip_file.extractall(Constants.Paths.OSM_FOLDER + "/" + tus_hse_ref[x] ) #("data/common_data/" + tus_hse_ref[x])
             osmShp = pd.concat([
                     osmShp,
-                    gpd.read_file(Constants.Paths.OSM_FOLDER + "/" + tus_hse_ref[x] + "/gis_osm_buildings_a_free_1.shp") 
+                    gpd.read_file(Constants.Paths.OSM_FOLDER + "/" + tus_hse_ref[x] + Constants.Paths.OSM_FILE) 
                     #("data/common_data/" + tus_hse_ref[x] + "/gis_osm_buildings_a_free_1.shp")
                     ]).pipe(gpd.GeoDataFrame)
             
@@ -189,4 +193,14 @@ class RawDataHandler:
         tar_file = tarfile.open(archive)
         tar_file.extractall(data_dir) # ("data/common_data/")  ### extract all or not?
         
-        # checking commit
+    @staticmethod
+    def getCombinedTUFile:
+        if not _combined_TU_file:
+            raise Exception("TU file hasn't been created")
+        return _combined_TU_file
+        
+    @staticmethod
+    def getCombinedShpFile:
+        if not _combined_shp_file:
+            raise Exception("MSOA shp file hasn't been created")
+        return _combined_shp_file
