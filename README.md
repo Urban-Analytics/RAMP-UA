@@ -16,7 +16,6 @@ Further documentation on the OpenCL model can be found at [microsim/opencl/doc](
 
 Both models should be logically equivalent (with some minor differences). 
 
-My name is Fernando Benitez!!
 
 ## Main differences with RAMP-UA
 - The model doesn't use the same options in command line as offered in RAMP-UA, namely the only option is the `--parameters_file` that calls the `yml` where all the options are stored. This means that if you want to change them you have to edit this file only.
