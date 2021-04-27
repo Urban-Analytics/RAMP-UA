@@ -8,7 +8,7 @@ Created on Tue Apr 6 2021
 @author: Anna on Nick's original version
 """
 import sys
-# sys.path.append("microsim")
+# sys.path.append("code")
 import multiprocessing
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
@@ -24,6 +24,7 @@ import tarfile
 import zipfile
 import geopandas as gpd
 import numpy as np
+from constants import Constants
 # Packages as in the original model code
 from initialise.quant_api import QuantRampAPI
 from initialise.population_initialisation import PopulationInitialisation
@@ -33,7 +34,7 @@ from model.microsim.microsim_model import MicrosimModel
 # from microsim.opencl.ramp.snapshot import Snapshot
 # from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
 from initialise.initialisation_cache import InitialisationCache
-from constants import Constants
+
 from initalise.raw_data_handler import RawDataHandler
 
 # ********
