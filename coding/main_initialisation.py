@@ -26,15 +26,15 @@ import zipfile
 import geopandas as gpd
 import numpy as np
 # Packages as in the original model code
-from code.constants import Constants
+from coding.constants import Constants
 # from initialise.quant_api import QuantRampAPI
-from code.initalise.population_initialisation import PopulationInitialisation
+from coding.initalise.population_initialisation import PopulationInitialisation
 # from microsim.opencl.ramp.run import run_opencl
 # from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
 # from microsim.opencl.ramp.snapshot import Snapshot
 # from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
-from code.initalise.initialisation_cache import InitialisationCache
-from code.initalise.raw_data_handler import RawDataHandler
+from coding.initalise.initialisation_cache import InitialisationCache
+from coding.initalise.raw_data_handler import RawDataHandler
 
 # ********
 # PROGRAM ENTRY POINT

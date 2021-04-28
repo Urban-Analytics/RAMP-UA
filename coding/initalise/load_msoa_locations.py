@@ -6,8 +6,8 @@ from tqdm import tqdm
 import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
-from code.constants_old import Constants
-from code.initalise.raw_data_handler import RawDataHandler
+from coding.constants_old import Constants
+from coding.initalise.raw_data_handler import RawDataHandler
 
 # Functionality to create a lookup table of MSOA codes to a list of coordinates of all the buildings
 # in that MSOA area, this is stored to a JSON file and used in the OpenCL SnapshotConverter to allocate people's

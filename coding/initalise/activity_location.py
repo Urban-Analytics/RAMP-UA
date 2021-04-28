@@ -2,7 +2,7 @@ from typing import List
 
 import pandas as pd
 
-from code.constants import ColumnNames
+from coding.constants import ColumnNames
 
 
 class ActivityLocation():

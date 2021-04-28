@@ -18,7 +18,7 @@ import zipfile
 import geopandas as gpd
 import numpy as np
 
-from code.constants import Constants
+from coding.constants import Constants
 
 class RawDataHandler:
     _combined_TU_file = None
@@ -52,6 +52,7 @@ class RawDataHandler:
                                          Constants.Paths.LUT.FILE)
             lookUp = pd.read_csv(lookUp_path)
         else:
+            print("Reading Look up table")
             lookUp = pd.read_csv(Constants.Paths.LUT.FULL_PATH_FILE) #("data/common_data/lookUp.csv")
             
         ### %%
@@ -68,6 +69,7 @@ class RawDataHandler:
                                            Constants.Paths.TU.FILE + x + ".csv")
                 temp = pd.read_csv(temp_path)
             else:
+                print("Reading the TU files")
                 temp = pd.read_csv(Constants.Paths.TU.FULL_PATH_FILE + x + ".csv")
             temp = temp[temp.MSOA11CD.isin(msoasList)]
             print("Combining TU files")
@@ -76,7 +78,7 @@ class RawDataHandler:
             
         ### %%
         ### QUANT RAMP
-
+        print(Constants.Paths.QUANT.FULL_PATH_FOLDER)
         if not os.path.isdir(Constants.Paths.QUANT.FULL_PATH_FOLDER): #("data/common_data/QUANT_RAMP/")
             print("Downloading the QUANT files")
             QUANT_path = RawDataHandler.download_data("nationaldata",

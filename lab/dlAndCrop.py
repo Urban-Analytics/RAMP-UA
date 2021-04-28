@@ -53,7 +53,7 @@ for x in tus_hse_ref:
     tus_hse = tus_hse.append(temp)
 # %%
 """QUANT RAMP"""
-if not os.path.isdir("data/common_data/QUANT_RAMP/")
+if not os.path.isdir("data/common_data/QUANT_RAMP/"):
     QUANT_path = download_data("nationaldata","QUANT_RAMP.tar.gz")
     unpack_data(QUANT_path)
 # %%
@@ -98,10 +98,10 @@ msoas_risks = shp.risk[shp.MSOA11CD.isin(msoasList)]
 osm_ref = np.unique(lookUp.OSM[lookUp.MSOA11CD.isin(msoasList)])
 url = osm_ref[0]
 target_path = os.path.join("data/common_data",tus_hse_ref[0] + ".zip")
-    response = requests.get(url, stream=True)
-    if response.status_code == 200:
-        with open(target_path, 'wb') as f:
-            f.write(response.raw.read())
+response = requests.get(url, stream=True)
+if response.status_code == 200:
+    with open(target_path, 'wb') as f:
+        f.write(response.raw.read())
     zip_file = zipfile.ZipFile(target_path)
     zip_file.extractall("data/common_data/" + tus_hse_ref[0])
 osmShp = gpd.read_file("data/common_data/" + tus_hse_ref[0] + "/gis_osm_buildings_a_free_1.shp")

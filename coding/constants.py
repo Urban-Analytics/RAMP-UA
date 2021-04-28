@@ -1,0 +1,271 @@
+import os
+
+abspath = "/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/" #os.getcwd() # leave this empty, will inputted from the default.yml file
+code_folder = "code"
+data_folder = "data"
+raw_data_folder = "raw_data"
+reference_data_folder = "reference_data"
+national_data_folder = "national_data"
+quant_data_folder = "QUANT_RAMP"
+msoas_shp_folder = "MSOAS_shp"
+county_data_folder = "county_data"
+osm_data_folder = "OSM"
+
+class Constants:
+    """Used to reflect the folder structure expected by the code"""
+    class Paths:
+        AZURE_URL = "https://ramp0storage.blob.core.windows.net/"
+        PROJECT_FOLDER_ABSOLUTE_PATH = abspath
+        OUTPUT_FOLDER = ""
+        class LIST_MSOAS:
+            FILE ="test_msoalist.csv" ## better in parameters! (default.yml)  ## temporaneous
+            FILE_WITH_PARAMFOLDER = "model_parameters/test_msoalist.csv"
+            FULL_PATH_FILE = os.path.join(abspath,
+                                          FILE_WITH_PARAMFOLDER)
+        class CODE:
+            FOLDER = code_folder
+            FULL_PATH = os.path.join(abspath,
+                                     FOLDER)
+        class DATA:
+            FOLDER = data_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            FOLDER)
+        #--> DATA
+        class RAW_DATA:
+            FOLDER = raw_data_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            data_folder,
+                                            FOLDER)
+        #-->--> RAW_DATA
+        class REFERENCE_DATA:
+            FOLDER = reference_data_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            data_folder,
+                                            raw_data_folder,
+                                            FOLDER)
+        #-->-->--> REFERENCE_DATA
+        class LUT:
+            FILE = "lookUp.csv"
+            FULL_PATH_FILE = os.path.join(abspath,
+                                          data_folder,
+                                          raw_data_folder,
+                                          reference_data_folder,
+                                          FILE)
+        class SEEDING_FILE:
+            FILE = "england_initial_casesCTY_tbc.csv"
+            FULL_PATH_FILE = os.path.join(abspath,
+                                          data_folder,
+                                          raw_data_folder,
+                                          reference_data_folder,
+                                          FILE)
+        #<--<--<-- REFERENCE_DATA
+        #-->-->--> NATIONAL_DATA
+        class NATIONAL_DATA:
+            FOLDER = national_data_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            data_folder,
+                                            raw_data_folder,
+                                            FOLDER)
+        class TIME_AT_HOME:
+            FILE = "timeAtHomeIncreaseCTY.csv"
+            FULL_PATH_FILE= os.path.join(abspath,
+                                         data_folder,
+                                         raw_data_folder,
+                                         national_data_folder,
+                                         FILE)
+        class COMMUTING:
+            FILE = "commutingOD.csv"
+            FULL_PATH_FILE= os.path.join(abspath,
+                                         data_folder,
+                                         raw_data_folder,
+                                         national_data_folder,
+                                         FILE)
+        #-->-->-->-->QUANT
+        class QUANT:
+            FOLDER = quant_data_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            data_folder,
+                                            raw_data_folder,
+                                            national_data_folder,
+                                            FOLDER)
+        class PRIMARYSCHOOLS:
+            FILE = "primaryZones.csv"
+            FULL_PATH_FILE = os.path.join(abspath,
+                                          data_folder,
+                                          raw_data_folder,
+                                          national_data_folder,
+                                          quant_data_folder,
+                                          FILE)
+        class SECONDARYSCHOOLS:
+            FILE = "secondaryZones.csv"
+            FULL_PATH_FILE = os.path.join(abspath,
+                                          data_folder,
+                                          raw_data_folder,
+                                          national_data_folder,
+                                          quant_data_folder,
+                                          FILE)
+        class RETAIL:
+            FILE = "retailpointsZones.csv"
+            FULL_PATH_FILE = os.path.join(abspath,
+                                          data_folder,
+                                          raw_data_folder,
+                                          national_data_folder,
+                                          quant_data_folder,
+                                          FILE)
+        #<--<--<--<-- QUANT
+        #-->-->-->--> MSOAS_SHAPEFILE
+        class MSOAS_FOLDER:
+            FOLDER = msoas_shp_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            data_folder,
+                                            raw_data_folder,
+                                            national_data_folder,
+                                            FOLDER)
+        class MSOAS_SHP:
+            FILE = "bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp"
+            FULL_PATH_FILE = os.path.join(abspath,
+                                          data_folder,
+                                          raw_data_folder,
+                                          national_data_folder,
+                                          msoas_shp_folder,
+                                          FILE)
+        #<--<--<--<-- MSOAS_SHAPEFILE
+        #<--<--<-- NATIONAL_DATA
+        #-->-->--> COUNTY_DATA
+        class COUNTY_DATA:
+            FOLDER = "county_data"
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            data_folder,
+                                            raw_data_folder,
+                                            national_data_folder,
+                                            msoas_shp_folder,
+                                            FOLDER)
+        #-->-->-->-->OSM_DATA
+        class OSM_FOLDER:
+            FOLDER = "OSM"
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            data_folder,
+                                            raw_data_folder,
+                                            county_data_folder,
+                                            FOLDER)
+        class OSM_FILE:
+            FILE = "gis_osm_buildings_a_free_1.shp"
+            FULL_PATH_FILE = os.path.join(abspath,
+                                          data_folder,
+                                          raw_data_folder,
+                                          county_data_folder,
+                                          osm_data_folder,
+                                          FILE)
+        #-->-->-->--> TU_DATA
+        class TU:
+            FILE = "tus_hse_"
+            FULL_PATH_FILE = os.path.join(abspath,
+                                          data_folder,
+                                          raw_data_folder,
+                                          county_data_folder,
+                                          FILE)
+        #<--<--<--<-- TU_DATA
+        #-->-->-->--> COMMUTING_DATA
+        # will be developed in a second moment, not ready yet
+        #<--<--<--<-- COMMUTING_DATA
+        #<--<--<-- COUNTY_DATA
+        #<--<--RAW_DATA
+        #>-->--PROCESSED_DATA
+        class PROCESSED_DATA:
+            FOLDER = "processed_data"
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            FOLDER)
+        #<--<--PROCESSED_DATA
+        #<-- DATA
+
+        # INIT_DATA_MSOAS_RISK = "initial_cases.csv"
+        # INIT_DATA_CASES = "msoas.csv"
+        class INITIALISATION:
+            INITIALISE_FOLDER = "initialise"
+
+        class MODEL:
+            MODEL_FOLDER = "model"
+        class OPENCL:
+            OPENCL_FOLDER = "opencl"
+            OPENCL_FONTS_FOLDER = "fonts"
+            FONT_DROID = "DroidSans.ttf"
+            FONT_ROBOTO = "RobotoMono.ttf"
+            OPENCL_SOURCE_FOLDER = "ramp"
+        class SOURCE:
+            OPENCL_KERNELS_FOLDER = "kernels"
+            KERNEL_FILE = "ramp_ua.cl"
+            OPENCL_SHADERS_FOLDER = "shaders"
+            OPENCL_SNAPSHOTS_FOLDER = "snapshots"
+            OPENCL_CACHE_FILE = "cache.npz"
+
+
+
+    class OnlinePaths:
+        pass
+   
+        
+    class Thresholds:
+        SCHOOL = 5
+        SCHOOL_TYPE = "nr"
+        RETAIL = 10
+        RETAIL_TYPE = "nr"
+
+
+class ColumnNames:
+    """Used to record standard dataframe column names used throughout"""
+
+    LOCATION_DANGER = "Danger"  # Danger associated with a location
+    LOCATION_NAME = "Location_Name"  # Name of a location
+    LOCATION_ID = "ID"  # Unique ID for each location
+
+    # # Define the different types of activities/locations that the model can represent
+    class Activities:
+        RETAIL = "Retail"
+        PRIMARY = "PrimarySchool"
+        SECONDARY = "SecondarySchool"
+        HOME = "Home"
+        WORK = "Work"
+        ALL = [RETAIL, PRIMARY, SECONDARY, HOME, WORK]
+
+    ACTIVITY_VENUES = "_Venues"  # Venues an individual may visit. Appended to activity type, e.g. 'Retail_Venues'
+    ACTIVITY_FLOWS = "_Flows"  # Flows to a venue for an individual. Appended to activity type, e.g. 'Retail_Flows'
+    ACTIVITY_RISK = "_Risk"  # Risk associated with a particular activity for each individual. E.g. 'Retail_Risk'
+    ACTIVITY_DURATION = "_Duration" # Column to record proportion of the day that individuals do the activity
+    ACTIVITY_DURATION_INITIAL = "_Duration_Initial"  # Amount of time on the activity at the start (might change)
+
+    # Standard columns for time spent travelling in different modes
+    TRAVEL_CAR = "Car"
+    TRAVEL_BUS = "Bus"
+    TRAVEL_TRAIN = "Train"
+    TRAVEL_WALK = "Walk"
+
+    INDIVIDUAL_AGE = "DC1117EW_C_AGE" # Age column in the table of individuals
+    INDIVIDUAL_SEX = "DC1117EW_C_SEX"  # Sex column in the table of individuals
+    INDIVIDUAL_ETH = "DC2101EW_C_ETHPUK11"  # Ethnicity column in the table of individuals
+
+    # Columns for information about the disease. These are needed for estimating the disease status
+
+    # Disease status is one of the following:
+    class DiseaseStatuses:
+        SUSCEPTIBLE = 0
+        EXPOSED = 1
+        PRESYMPTOMATIC = 2
+        SYMPTOMATIC = 3
+        ASYMPTOMATIC = 4
+        RECOVERED = 5
+        DEAD = 6
+        ALL = [SUSCEPTIBLE, EXPOSED, PRESYMPTOMATIC, SYMPTOMATIC, ASYMPTOMATIC, RECOVERED, DEAD]
+        assert len(ALL) == 7
+
+    DISEASE_STATUS = "disease_status"  # Which one it is
+    DISEASE_STATUS_CHANGED = "status_changed"  # Whether it has changed between the current iteration and the last
+    DISEASE_PRESYMP = "presymp_days"
+    DISEASE_SYMP_DAYS = "symp_days"
+    DISEASE_EXPOSED_DAYS = "exposed_days"
+
+    #DAYS_WITH_STATUS = "Days_With_Status"  # The number of days that have elapsed with this status
+    CURRENT_RISK = "current_risk"  # This is the risk that people get when visiting locations.
+
+    # No longer update disease counts per MSOA etc. Not needed
+    MSOA_CASES = "MSOA_Cases"  # The number of cases per MSOA
+    HID_CASES = "HID_Cases"  # The number of cases in the individual's house

@@ -2,7 +2,7 @@
 import pandas as pd
 from typing import List
 
-from code.constants import ColumnNames
+from coding.constants import ColumnNames
 
 class Optimise:
     """

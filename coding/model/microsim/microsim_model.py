@@ -2,9 +2,9 @@ import sys
 
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
 # from code.model.microsim.r_interface import RInterface
-from code.constants import ColumnNames
-from code.constants import Constants
-from code.model.microsim.utilities import check_durations_sum_to_1
+from coding.constants import ColumnNames
+from coding.constants import Constants
+from coding.model.microsim.utilities import check_durations_sum_to_1
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
 # pd.set_option('display.width', 0)  # Automatically find the best width

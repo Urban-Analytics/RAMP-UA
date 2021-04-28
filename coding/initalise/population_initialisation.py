@@ -10,12 +10,12 @@ Created on Wed Apr 29 19:59:25 2020
 import sys
 
 # sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
-from code.initalise.activity_location import ActivityLocation
-from code.constants import ColumnNames
-from code.constants import Constants
-from code.model.microsim.utilities import Optimise, check_durations_sum_to_1
-from code.initalise.quant_api import QuantRampAPI
-from code.initalise.raw_data_handler import RawDataHandler
+from coding.initalise.activity_location import ActivityLocation
+from coding.constants import ColumnNames
+from coding.constants import Constants
+from coding.model.microsim.utilities import Optimise, check_durations_sum_to_1
+from coding.initalise.quant_api import QuantRampAPI
+from coding.initalise.raw_data_handler import RawDataHandler
 
 import multiprocessing  # process based parallelism
 import pandas as pd
