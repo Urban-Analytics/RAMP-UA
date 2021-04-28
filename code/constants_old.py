@@ -5,7 +5,7 @@ class Constants:
     
     class Paths:
         AZURE_URL = "https://ramp0storage.blob.core.windows.net/"
-        PROJECT_FOLDER_ABSOLUTE_PATH = "" # leave this empty, will inputted from the default.yml file
+        PROJECT_FOLDER_ABSOLUTE_PATH = "/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/" #os.getcwd() # leave this empty, will inputted from the default.yml file
         # SOURCE_FOLDER = "microsim"
         class LIST_MSOAS:
             FILE ="test_msoalist.csv" ## better in parameters! (default.yml)
