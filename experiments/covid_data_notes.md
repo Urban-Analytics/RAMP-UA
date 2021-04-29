@@ -12,7 +12,13 @@ At some point these should be integrated into the documentation properly
 
 The website allows for the creation of URLs that can be used to download the data automatically.
 
-E.g. [this url](https://api.coronavirus.data.gov.uk/v2/data?areaType=msoa&areaCode=E08000035&metric=newCasesBySpecimenDateRollingSum&metric=newCasesBySpecimenDateRollingRate&format=csv) will provide a CSV file with new cacses (`newCasesBySpecimenDateRollingRate`) at by MSOAs in Leeds starting in April 2020.
+E.g. [this url](https://api.coronavirus.data.gov.uk/v2/data?areaType=msoa&areaCode=E08000035&metric=newCasesBySpecimenDateRollingSum&metric=newCasesBySpecimenDateRollingRate&format=csv) will provide a CSV file with new cacses (`newCasesBySpecimenDateRollingRate`) at by MSOAs in Leeds starting in April 2020:
+
+| regionCode | regionName               | UtlaCode  | UtlaName | LtlaCode  | LtlaName | areaCode  | areaName    | areaType | date       | newCasesBySpecimenDateRollingRate | newCasesBySpecimenDateRollingSum |
+| ---------- | ------------------------ | --------- | -------- | --------- | -------- | --------- | ----------- | -------- | ---------- | --------------------------------- | -------------------------------- |
+| E12000003  | Yorkshire and The Humber | E08000035 | Leeds    | E08000035 | Leeds    | E02002332 | Otley North | msoa     | 22/04/2021 | 48.8                              | 3                                |
+| E12000003  | Yorkshire and The Humber | E08000035 | Leeds    | E08000035 | Leeds    | E02002333 | Otley South | msoa     | 22/04/2021 | 39.3                              | 3                                |
+
 
 ## Questions
 
