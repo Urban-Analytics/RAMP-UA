@@ -6,6 +6,28 @@ At some point these should be integrated into the documentation properly
 
 @spoonerf please could you add a few notes about how the seeding is done currently?
 
+## Goals
+
+The user would have to provide the number of initial cases per studied MSOA and a starting date as inputs.
+
+User would be given:
+* a csv with cases at MSOA level as close to true infection/symptomatic rates as possible for reference.
+* a list of theoretical MSOA risks to prepare data for 'what if' scenarios for reference (already exists).
+
+Code would have two options:
+* Use exactly the data provided (at MSOA level)
+* Use data provided as probability weights to introduce some randomness.
+
+## Data needed | Status
+
+* __Daily/weekly reported cases at MSOA level__ | weekly since 5th March 2020 at MSOA level for all of England: [gov](https://api.coronavirus.data.gov.uk/v2/data?areaType=msoa&metric=newCasesBySpecimenDateRollingSum&format=csv).
+* __Cases to infections__ | Check [link](https://www.medrxiv.org/content/medrxiv/early/2020/04/17/2020.04.13.20062760.full.pdf) for guidance?
+* __Cases to symptomatic__
+* __Alt: daily/weekly deaths__
+* __Alt: Deaths to infections__
+* __Alt: Deaths to symptomatic__
+* __Sick Population profile to distribute cases within population__ | By age [gov].(https://coronavirus.data.gov.uk/downloads/demographic/cases/specimenDate_ageDemographic-unstacked.csv) (haven't checked content yet). See how it's done currently and if there's need for improvement or not?
+
 ## More recent APIs
 
 [coronavirus.data.gov.uk](https://coronavirus.data.gov.uk/details/download) now provides access to quite detailed COVID test data.
