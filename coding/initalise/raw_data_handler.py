@@ -75,10 +75,10 @@ class RawDataHandler:
             print("Combining TU files")
             tus_hse = tus_hse.append(temp)
         _combined_TU_file = tus_hse
-            
+
         ### %%
         ### QUANT RAMP
-        print(Constants.Paths.QUANT.FULL_PATH_FOLDER)
+        # print(Constants.Paths.QUANT.FULL_PATH_FOLDER)
         if not os.path.isdir(Constants.Paths.QUANT.FULL_PATH_FOLDER): #("data/common_data/QUANT_RAMP/")
             print("Downloading the QUANT files")
             QUANT_path = RawDataHandler.download_data("nationaldata",
@@ -110,6 +110,7 @@ class RawDataHandler:
                                            Constants.Paths.TIME_AT_HOME.FILE) #"timeAtHomeIncreaseCTY.csv")
             lockdown = pd.read_csv(lockdown_path)
         else:
+            print("Reading the TimeAtHomeIncrease file (lockdown scenario)")
             lockdown = pd.read_csv(Constants.Paths.TIME_AT_HOME.FULL_PATH_FILE) #"data/common_data/timeAtHomeIncreaseCTY.csv")
         
         if not os.path.isdir(Constants.Paths.MSOAS_FOLDER.FULL_PATH_FOLDER): #"data/common_data/MSOAS_shp/"):
@@ -125,11 +126,15 @@ class RawDataHandler:
         change_ref = np.unique(lookUp.GoogleMob[lookUp.MSOA11CD.isin(msoasList)])
 
         # average change within study area weighted by MSOA11CD population 
-        cty_pop = np.repeat(0,len(change_ref))
-        change = np.repeat(0,np.max(lockdown.day)+1)
-        for x in range(0,len(change_ref)):
+        cty_pop = np.repeat(0, len(change_ref))
+        change = np.repeat(0, np.max(lockdown.day)+1)
+        for x in range(0, len(change_ref)):
             cty_pop[x] = np.nansum(msoas_pop[lookUp.GoogleMob[lookUp.MSOA11CD.isin(msoasList)] == change_ref[x]])
-            change = change + lockdown.change[lockdown.CTY20 == change_ref[x]]*cty_pop[x]
+            # match = lockdown.change[lockdown.CTY20 == change_ref[x]]   # error: wy repeats 6 times
+            # moltip = match * cty_pop[x]
+            # verif = change + moltip
+            # change = verif
+            change = change + lockdown.change[lockdown.CTY20 == change_ref[x]] * cty_pop[x]
         change = change/np.sum(cty_pop)
 
         # From extra time at home to less time away from home
@@ -149,20 +154,28 @@ class RawDataHandler:
 
         # Assumption: msoas.shp already loaded before
         # Assumption: tus_hse_ref already defined, see above
-
+        print("Downloading OSM data")
         osm_ref = np.unique(lookUp.OSM[lookUp.MSOA11CD.isin(msoasList)])
         url = osm_ref[0]
         target_path = os.path.join(Constants.Paths.COUNTY_DATA.FULL_PATH_FOLDER,
                                    tus_hse_ref[0] + ".zip") # ("data/common_data",tus_hse_ref[0] + ".zip")
         response = requests.get(url, stream=True)
-        if response.status_code == 200: # HTTP status code for "OK"
-            with open(target_path, 'wb') as f:
-                f.write(response.raw.read())
+
+        if not response.ok: # HTTP status code for "OK"
+            raise Exception("Error downloading OSM data")
+
+        with open(target_path, 'wb') as f:
+            f.write(response.raw.read())
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            if size == 0:
+                raise Exception("Error downloading OSM data: file is empty")
         zip_file = zipfile.ZipFile(target_path)
-        zip_file.extractall(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER + tus_hse_ref[0]) # ("data/common_data/" + tus_hse_ref[0])
-        
-        
-        osmShp = gpd.read_file(os.path.join(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER, tus_hse_ref[0], Constants.Paths.OSM_FILE))
+        print("Downloaded file, will now extract it...")
+        zip_file.extractall(os.path.join(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER, tus_hse_ref[0])) # ("data/common_data/" + tus_hse_ref[0])
+        print("extracted!")
+
+        osmShp = gpd.read_file(os.path.join(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER, tus_hse_ref[0], Constants.Paths.OSM_FILE.FILE))
                                # ("data/common_data/" + tus_hse_ref[0] + "/gis_osm_buildings_a_free_1.shp")
 
         # If study area accross more than one County, dl other counties and combine shps into one
@@ -177,6 +190,7 @@ class RawDataHandler:
                     f.write(response.raw.read())
             zip_file = zipfile.ZipFile(target_path)
             zip_file.extractall(os.path.join(Constants.Paths.OSM_FOLDER, tus_hse_ref[x])) #("data/common_data/" + tus_hse_ref[x])
+            print("Combining OSM shapefiles together")
             osmShp = pd.concat([
                     osmShp,
                     gpd.read_file(os.path.join(Constants.Paths.OSM_FOLDER, tus_hse_ref[x], Constants.Paths.OSM_FILE))
@@ -203,9 +217,15 @@ class RawDataHandler:
         target_path = os.path.join(Constants.Paths.DATA.FULL_PATH_FOLDER,
                                    file)
         response = requests.get(url, stream=True)
-        if response.status_code == 200:  # Ie checking that the HTTP status code is 'OK'
-            with open(target_path, 'wb') as f:
-                f.write(response.raw.read())
+        if not response.ok: # Ie checking that the HTTP status code is 'OK'
+            raise Exception(f"Error downloading file {file}")
+
+        with open(target_path, 'wb') as f:
+            f.write(response.raw.read())
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            if size == 0:
+                raise Exception(f"Error downloading {file}: file is empty")
         return target_path
 
     @staticmethod
@@ -220,14 +240,14 @@ class RawDataHandler:
         return
 
         
-    # @staticmethod
-    # def getCombinedTUFile():
-    #     if not _combined_TU_file:
-    #         raise Exception("TU file hasn't been created")
-    #     return _combined_TU_file
-    #
-    # @staticmethod
-    # def getCombinedShpFile():
-    #     if not _combined_shp_file:
-    #         raise Exception("MSOA shp file hasn't been created")
-    #     return _combined_shp_file
+    @staticmethod
+    def getCombinedTUFile():
+        if not RawDataHandler._combined_TU_file:
+            raise Exception("TU file hasn't been created")
+        return RawDataHandler._combined_TU_file
+
+    @staticmethod
+    def getCombinedShpFile():
+        if not RawDataHandler._combined_shp_file:
+            raise Exception("MSOA shp file hasn't been created")
+        return RawDataHandler._combined_shp_file

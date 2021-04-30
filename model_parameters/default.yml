@@ -5,7 +5,7 @@ microsim:
   project-dir-absolute-path: "/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/"
   # selected-region-folder-name: WestYorkshire # Name of a directory nested under data/regional_data/ that should be used
   study-area: "testWY" # WestYorkshire
-  list-of-msoas-location: "model_parameters/test_msoalist.csv"
+  list-of-msoas-location: "../model_parameters/test_msoalist.csv"
   scenario: "BaseScenario" # name for scenario directory
   initialise: FALSE
   iterations: 80 # Number of model iterations. 0 means just initialise the model and create caches and snapshots, don't run it

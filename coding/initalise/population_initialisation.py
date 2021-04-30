@@ -342,7 +342,7 @@ class PopulationInitialisation:
         #                         Constants.Paths.TU_FILE)
 
         # tuh = pd.read_csv(filename)  # , encoding = "ISO-8859-1")
-        tuh = RawDataHandler.getCombinedTUFile  # Calling file created from RadDataHandler that appends TU files
+        tuh = RawDataHandler.getCombinedTUFile()  # Calling file created from RadDataHandler that appends TU files
         tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.
 
         # Drop people that weren't matched to a household originally

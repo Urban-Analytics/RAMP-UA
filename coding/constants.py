@@ -137,8 +137,6 @@ class Constants:
             FULL_PATH_FOLDER = os.path.join(abspath,
                                             data_folder,
                                             raw_data_folder,
-                                            national_data_folder,
-                                            msoas_shp_folder,
                                             FOLDER)
         #-->-->-->-->OSM_DATA
         class OSM_FOLDER:
