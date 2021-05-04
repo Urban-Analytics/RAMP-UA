@@ -211,6 +211,7 @@ class Constants:
 
 class ColumnNames:
     """Used to record standard dataframe column names used throughout"""
+    MSOAsID = "MSOA11CD"
 
     LOCATION_DANGER = "Danger"  # Danger associated with a location
     LOCATION_NAME = "Location_Name"  # Name of a location

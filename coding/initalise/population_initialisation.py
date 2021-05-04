@@ -40,12 +40,14 @@ class PopulationInitialisation:
     REGIONAL_DATA_DIR = "" # leaving this here until we remove the remove devon_data stuff completely
     testing = False
     debug = False
+    raw_data_handler: RawDataHandler = None
 
     def __init__(self,
                 #  regional_data_dir: str = "",
+                 raw_data_handler_param: RawDataHandler,
                  read_data: bool = True,
                  testing: bool = False,
-                 debug = False,
+                 debug = False
                  #quant_object=None
                  ):
         """
@@ -80,6 +82,7 @@ class PopulationInitialisation:
         self.quant_object = QuantRampAPI(Constants.Paths.QUANT.FULL_PATH_FOLDER) #(os.path.join(common_data_dir,
                                                       #Constants.Paths.QUANT.QUANT_FOLDER))
 
+        self.raw_data_handler = raw_data_handler_param
         # *********
         # Generate population and places dataframes
         # *********
@@ -288,7 +291,7 @@ class PopulationInitialisation:
         assert "PID" in individuals.columns and "HID" in households.columns
         # Households in the msm are uniquely identified by [area,HID] combination.
         # Individuals are identified by [House_OA,HID,PID]
-        hids = households.set_index(["area", "HID"])  # Make a new dataset with a unique index for households
+        hids = households.set_index(["area", "HID"])  # Make a new dataset with a unique index for households # leave 'area' here ??? AZ
         # Find individuals who do not have a related entry in the households dataset
         homeless = [(area, hid, pid) for area, hid, pid in individuals.loc[:, ["House_OA", "HID", "PID"]].values if
                     (area, hid) not in hids.index]
@@ -317,7 +320,7 @@ class PopulationInitialisation:
         :param individuals:
         :return:
         """
-        areas = list(individuals.area.unique())
+        areas = list(individuals[ColumnNames.MSOAsID].unique()) #list(individuals.area.unique())
         areas.sort()
         return areas
 
@@ -342,7 +345,7 @@ class PopulationInitialisation:
         #                         Constants.Paths.TU_FILE)
 
         # tuh = pd.read_csv(filename)  # , encoding = "ISO-8859-1")
-        tuh = RawDataHandler.getCombinedTUFile()  # Calling file created from RadDataHandler that appends TU files
+        tuh = self.raw_data_handler.getCombinedTUFile()  # Calling file created from RawDataHandler that appends TU files
         tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.
 
         # Drop people that weren't matched to a household originally
@@ -383,29 +386,29 @@ class PopulationInitialisation:
         unique_individuals = []  # Also store all [Area, HID, PID] combinations to check they're are unique later
 
         # Maybe quicker to loop over 3 lists simultaneously than through a DataFrame
-        _areas = list(tuh["area"])
+        _areas = list(tuh[ColumnNames.MSOAsID]) #list(tuh["area"])  # MSOAs IDs name
         _hids = list(tuh["_hid"])
         _pids = list(tuh["_pid"])
 
-        for i, (area, hid, pid) in enumerate(zip(_areas, _hids, _pids)):
+        for i, (ColumnNames.MSOAsID, hid, pid) in enumerate(zip(_areas, _hids, _pids)):
             # print(i, area, hid, pid)
-            unique_individuals.append((area, hid, pid))
-            house_key = (area, hid)  # Uniquely identifies a household
+            unique_individuals.append((ColumnNames.MSOAsID, hid, pid))
+            house_key = (ColumnNames.MSOAsID, hid)  # Uniquely identifies a household
             house_id_number = -1
             try:  # If this lookup works then we've seen this house before. Get it's ID number and increase num people in it
                 house_info = house_ids_dict[house_key]
                 # Check the area and hid are the same as the one previously stored in the dictionary
-                assert area == house_info[2] and hid == house_info[3]
+                assert ColumnNames.MSOAsID == house_info[2] and hid == house_info[3]
                 # Also check that the house key (Area, HID) matches the area and HID
                 assert house_key[0] == house_info[2] and house_key[1] == house_info[3]
                 # We need the ID number to tell the individual which their house is
                 house_id_number = house_info[0]
                 # Increase the number of people in the house and create a new list of info for this house
                 people_per_house = house_info[1] + 1
-                house_ids_dict[house_key] = [house_id_number, people_per_house, area, hid]
+                house_ids_dict[house_key] = [house_id_number, people_per_house, ColumnNames.MSOAsID, hid]
             except KeyError:  # If the lookup failed then this is the first time we've seen this house. Make a new ID.
                 house_id_number = house_id_counter
-                house_ids_dict[house_key] = [house_id_number, 1, area,
+                house_ids_dict[house_key] = [house_id_number, 1, ColumnNames.MSOAsID,
                                              hid]  # (1 is because 1 person so far in the house)
                 house_id_counter += 1
             assert house_id_number > -1
@@ -421,7 +424,7 @@ class PopulationInitialisation:
             warnings.warn(f"There are {len(tuh) - len(set(unique_individuals))} / {len(tuh)} non-unique individuals.")
 
         # Done! Now can create the households dataframe
-        households_df = pd.DataFrame(house_ids_dict.values(), columns=['House_ID', 'Num_People', 'area', '_hid'])
+        households_df = pd.DataFrame(house_ids_dict.values(), columns=['House_ID', 'Num_People', ColumnNames.MSOAsID, 'hid']) #'area', '_hid'])
 # TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
         households_df = Optimise.optimize(households_df)
 
@@ -430,7 +433,7 @@ class PopulationInitialisation:
 
         # Check all house IDs are unique and have same number as in TUH data
         assert len(frozenset(households_df.House_ID.unique())) == len(households_df)
-        assert len(tuh.area.unique()) == len(tuh.area.unique())
+        assert len(tuh[ColumnNames.MSOAsID].unique()) == len(tuh[ColumnNames.MSOAsID].unique())
         # Check that the area that the individual lives in is the same as the area their house is in
         temp_merge = tuh.merge(households_df, how="left", on=["House_ID"], validate="many_to_one")
         assert len(temp_merge) == len(tuh)
@@ -510,7 +513,7 @@ class PopulationInitialisation:
         tuh[f"{home_name}{ColumnNames.ACTIVITY_RISK}"] = [-1] * len(tuh)
 
         print(f"... finished reading TU&H data. There are {len(tuh)} individuals in {len(households_df)} houses "
-              f"over {len(tuh.area.unique())} MSOAs")
+              f"over {len(tuh[ColumnNames.MSOAsID].unique())} MSOAs")
 
         return tuh, households_df
 
@@ -815,9 +818,9 @@ class PopulationInitialisation:
         with multiprocessing.Pool(processes=int(os.cpu_count() / 2)) as pool:
 
             # Do all individuals in an MSOA at once
-            for msoa in tqdm(pd.unique(individuals.area), desc="Assigning work flows"):
+            for msoa in tqdm(pd.unique(individuals[ColumnNames.MSOAsID]), desc="Assigning work flows"):
                 # Get the indices of the individuals in this msoa
-                individuals_idx = individuals.index[individuals.area == msoa]
+                individuals_idx = individuals.index[individuals[ColumnNames.MSOAsID] == msoa]
 
                 # Destinations with positive flows and the flows themselves.
                 dests_and_flows = commuting_flows.loc[
@@ -1063,10 +1066,10 @@ class PopulationInitialisation:
         """
 
         # Check that there aren't any individuals who wont be given any flows
-        if len(individuals.loc[-individuals.area.isin(flow_matrix.Area_Code)]) > 0:
+        if len(individuals.loc[-individuals[ColumnNames.MSOAsID].isin(flow_matrix.Area_Code)]) > 0:
             raise Exception(f"Some individuals will not be assigned any flows to: '{flow_type}' because their"
                             f"MSOA is not in the flow matrix: "
-                            f"{individuals.loc[-individuals.area.isin(flow_matrix.Area_Code)]}.")
+                            f"{individuals.loc[-individuals[ColumnNames.MSOAsID].isin(flow_matrix.Area_Code)]}.")
 
         # Check that there aren't any duplicate flows
         if len(flow_matrix) != len(flow_matrix.Area_Code.unique()):
@@ -1086,7 +1089,7 @@ class PopulationInitialisation:
 
         # Use a hierarchical index on the Area to speed up finding all individuals in an area
         # (not sure this makes much difference).
-        individuals.set_index(["area", "ID"], inplace=True, drop=False)
+        individuals.set_index([[ColumnNames.MSOAsID], "ID"], inplace=True, drop=False)
 
         for area in tqdm(flow_matrix.values,
                          desc=f"Assigning individual flows for {flow_type}"):  # Easier to operate over a 2D matrix rather than a dataframe

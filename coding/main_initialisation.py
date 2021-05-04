@@ -41,10 +41,7 @@ from coding.initalise.raw_data_handler import RawDataHandler
 # Uses 'click' library so that it can be run from the command line
 # ********
 
-"""
-Download and Unpack raw data files from the www
-"""
-RawDataHandler.run()
+
 
 """
 Actual initialisation process
@@ -94,7 +91,7 @@ def main(parameters_file):
             repetitions = sim_params["repetitions"]
             lockdown_file = sim_params["lockdown-file"]
             #quant_dir = sim_params["quant-dir"]
-            # use_cache = sim_params["use-cache"]
+            use_cache = sim_params["use-cache"]
             # open_cl_model = sim_params["opencl-model"]
             # opencl_gui = sim_params["opencl-gui"]
             # opencl_gpu = sim_params["opencl-gpu"]
@@ -123,6 +120,11 @@ def main(parameters_file):
     if not os.path.exists(Constants.Paths.RAW_DATA.FULL_PATH_FOLDER):
         raise Exception("Data folder structure not valid. Make sure you are running within correct working directory.")
 
+    """
+    Download and Unpack raw data files from the www
+    """
+    raw_data_handler = RawDataHandler()
+
     # selected_region_folder_full_path = # put here the TU file county name
     # common_data_dir_full_path = os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
     #                                          Constants.Paths.DATA_FOLDER,
@@ -131,8 +133,7 @@ def main(parameters_file):
     #     raise Exception("Regional data folder doesn't exist")
     
     # population_args = {"project_dir": project_dir, "regional_data_dir": regional_data_dir_full_path, "debug": debug}
-    population_args = {"debug": debug}
-
+    population_args = {"debug": debug, "raw_data_handler_param": raw_data_handler}
 
 # The disease parameters for the model were defined here, this part was removed as now it's done inside OpenCL
 
@@ -162,16 +163,18 @@ def main(parameters_file):
     ### SEPARATE HERE!!! ###
     
     else:  # load from cache
-        print("Loading data from previous cache")
-        individuals, activity_locations = cache.read_from_cache()
+        # print("Loading data from previous cache")
+        # individuals, activity_locations = cache.read_from_cache()
+        print("A cache of the processed data already exists for the area you selected, you can run the model already")
 
 #     # Calculate the time-activity multiplier (this is for implementing lockdown)
     time_activity_multiplier = None
     if lockdown_file != "":
         print(f"Implementing a lockdown with time activities from {lockdown_file}")
         time_activity_multiplier: pd.DataFrame = \
-            PopulationInitialisation.read_time_activity_multiplier(os.path.join(selected_region_folder_full_path,
-                                                                                lockdown_file))
+            PopulationInitialisation.read_time_activity_multiplier(raw_data_handler.getLockdownFile())
+            # PopulationInitialisation.read_time_activity_multiplier(os.path.join(selected_region_folder_full_path,
+            #                                                                     lockdown_file))
 
 
 if __name__ == "__main__":
