@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Core RAMP-UA model.
+Core part to initialise the RAMP-UA model.
 
 Created on Wed Apr 29 19:59:25 2020
+Edited on April 2021
 
-@author: nick
+@authors: nick, Anna for the national up-scaling
 """
 import sys
 
@@ -28,6 +29,8 @@ from collections.abc import Iterable  # drop `.abc` with Python 2.7 or lower
 from typing import List, Dict
 from tqdm import tqdm  # For a progress bar
 
+name = ColumnNames.MSOAsID
+print(f"this is number 1 {name}")
 
 class PopulationInitialisation:
 
@@ -96,7 +99,8 @@ class PopulationInitialisation:
 
         # Extract a list of all MSOAs in the study area. Will need this for the new SIMs
         self.all_msoas = PopulationInitialisation.extract_msoas_from_individuals(self.individuals)
-
+        name = ColumnNames.MSOAsID
+        print(f"this is number 2 {name}")
         #
         # ********** How to assign activities for the population **********
         #
@@ -156,13 +160,17 @@ class PopulationInitialisation:
 
         # Read Retail flows data
         retail_name = ColumnNames.Activities.RETAIL  # How to refer to this in data frame columns etc.
-        stores, stores_flows = PopulationInitialisation.read_retail_flows_data(self, self.all_msoas)  # (list of shops and a flow matrix)
+        stores, stores_flows = PopulationInitialisation.read_retail_flows_data(self,
+                                                                               self.all_msoas)  # (list of shops and a flow matrix)
         PopulationInitialisation.check_sim_flows(stores, stores_flows)
         # Assign Retail flows data to the individuals
-        self.individuals = PopulationInitialisation.add_individual_flows(retail_name, self.individuals, stores_flows)
+        self.individuals = PopulationInitialisation.add_individual_flows(retail_name,
+                                                                         self.individuals,
+                                                                         stores_flows)
         self.activity_locations[retail_name] = \
             ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
-
+        name = ColumnNames.MSOAsID
+        print(f"this is number 2 {name}")
         # Read Schools (primary and secondary)
         primary_name = ColumnNames.Activities.PRIMARY
         secondary_name = ColumnNames.Activities.SECONDARY
@@ -205,7 +213,8 @@ class PopulationInitialisation:
                 workplace_names.append(msoa + "-" + soc)
         assert len(workplace_names) == len(self.all_msoas) * len(possible_jobs)
         assert len(pd.unique(workplace_names)) == len(workplace_names)  # Each name should be unique
-
+        name = ColumnNames.MSOAsID
+        print(f"this is number 4 {name}")
         workplaces = pd.DataFrame({
             'ID': range(0, len(workplace_names)),
             'MSOA': workplace_msoas,
@@ -250,7 +259,8 @@ class PopulationInitialisation:
             self.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = \
                 self.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"].apply(lambda x: round(x, 5))
 #TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
-
+        name = ColumnNames.MSOAsID
+        print(f"this is number 5 {name}")
         # Some people's activity durations will not add up to 1.0 because we don't model all their activities.
         # Extend the amount of time at home to make up for this
         self.individuals = PopulationInitialisation.pad_durations(self.individuals, self.activity_locations)
@@ -296,7 +306,8 @@ class PopulationInitialisation:
         homeless = [(area, hid, pid) for area, hid, pid in individuals.loc[:, ["House_OA", "HID", "PID"]].values if
                     (area, hid) not in hids.index]
 # TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
-
+        name = ColumnNames.MSOAsID
+        print(f"this is number 6 {name}")
         # (version using apply isn't quicker)
         # h2 = individuals.reset_index().loc[:, ["House_OA", "HID", "PID"]].swifter.apply(
         #    lambda x: x[2] if (x[0], x[1]) in hids.index else None, axis=1)
@@ -322,6 +333,8 @@ class PopulationInitialisation:
         """
         areas = list(individuals[ColumnNames.MSOAsID].unique()) #list(individuals.area.unique())
         areas.sort()
+        name = ColumnNames.MSOAsID
+        print(f"this is number 7 {name}")
         return areas
 
 
@@ -354,7 +367,8 @@ class PopulationInitialisation:
             warnings.warn(f"{nohh} / {len(tuh)} individuals in the TUH data had not originally been matched "
                           f"to a household. They're being removed")
         tuh = tuh.loc[tuh.hid != -1]
-
+        name = ColumnNames.MSOAsID
+        print(f"this is number 8 {name}")
         # Indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
         # identify individuals / households in this health data
         tuh = tuh.rename(columns={'hid': '_hid', 'pid': '_pid'})
@@ -389,26 +403,34 @@ class PopulationInitialisation:
         _areas = list(tuh[ColumnNames.MSOAsID]) #list(tuh["area"])  # MSOAs IDs name
         _hids = list(tuh["_hid"])
         _pids = list(tuh["_pid"])
-
-        for i, (ColumnNames.MSOAsID, hid, pid) in enumerate(zip(_areas, _hids, _pids)):
+        name = ColumnNames.MSOAsID
+        print(f"this is number 9 {name}")
+        for i, (area, hid, pid) in enumerate(zip(_areas, _hids, _pids)):
             # print(i, area, hid, pid)
-            unique_individuals.append((ColumnNames.MSOAsID, hid, pid))
-            house_key = (ColumnNames.MSOAsID, hid)  # Uniquely identifies a household
+            unique_individuals.append((area, hid, pid))
+            house_key = (area, hid)  # Uniquely identifies a household
+            # print("***")
+            # print(house_key)
             house_id_number = -1
+            # print(house_id_number)
             try:  # If this lookup works then we've seen this house before. Get it's ID number and increase num people in it
                 house_info = house_ids_dict[house_key]
                 # Check the area and hid are the same as the one previously stored in the dictionary
-                assert ColumnNames.MSOAsID == house_info[2] and hid == house_info[3]
+                assert area == house_info[2] and hid == house_info[3]
                 # Also check that the house key (Area, HID) matches the area and HID
+                # print(f"{house_key[0]}")
+                # print(f"{house_info[2]}")
+                # print(f"{house_key[1]}")
+                # print(f"{house_info[3]}")
                 assert house_key[0] == house_info[2] and house_key[1] == house_info[3]
                 # We need the ID number to tell the individual which their house is
                 house_id_number = house_info[0]
                 # Increase the number of people in the house and create a new list of info for this house
                 people_per_house = house_info[1] + 1
-                house_ids_dict[house_key] = [house_id_number, people_per_house, ColumnNames.MSOAsID, hid]
+                house_ids_dict[house_key] = [house_id_number, people_per_house, area, hid]
             except KeyError:  # If the lookup failed then this is the first time we've seen this house. Make a new ID.
                 house_id_number = house_id_counter
-                house_ids_dict[house_key] = [house_id_number, 1, ColumnNames.MSOAsID,
+                house_ids_dict[house_key] = [house_id_number, 1, area,
                                              hid]  # (1 is because 1 person so far in the house)
                 house_id_counter += 1
             assert house_id_number > -1
@@ -424,7 +446,7 @@ class PopulationInitialisation:
             warnings.warn(f"There are {len(tuh) - len(set(unique_individuals))} / {len(tuh)} non-unique individuals.")
 
         # Done! Now can create the households dataframe
-        households_df = pd.DataFrame(house_ids_dict.values(), columns=['House_ID', 'Num_People', ColumnNames.MSOAsID, 'hid']) #'area', '_hid'])
+        households_df = pd.DataFrame(house_ids_dict.values(), columns=['House_ID', 'Num_People', ColumnNames.MSOAsID, '_hid'])
 # TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
         households_df = Optimise.optimize(households_df)
 
@@ -433,11 +455,13 @@ class PopulationInitialisation:
 
         # Check all house IDs are unique and have same number as in TUH data
         assert len(frozenset(households_df.House_ID.unique())) == len(households_df)
-        assert len(tuh[ColumnNames.MSOAsID].unique()) == len(tuh[ColumnNames.MSOAsID].unique())
+        # assert len(tuh[ColumnNames.MSOAsID].unique()) == len(tuh[ColumnNames.MSOAsID].unique())
         # Check that the area that the individual lives in is the same as the area their house is in
         temp_merge = tuh.merge(households_df, how="left", on=["House_ID"], validate="many_to_one")
         assert len(temp_merge) == len(tuh)
-        assert (temp_merge['area_x'] == temp_merge['area_y']).all()  # (all says 'all are true')
+        name = ColumnNames.MSOAsID
+        print(f"this is number 10 {name}")
+        assert (temp_merge[ColumnNames.MSOAsID + '_x'] == temp_merge[ColumnNames.MSOAsID + '_y']).all()  # (all says 'all are true')
 
         # Check that NumPeople in the house dataframe is the same as number of people in the individuals dataframe
         # with this house id
@@ -759,8 +783,7 @@ class PopulationInitialisation:
         :return: A dataframe with origin and destination flows in all MSOAs in the study area
         """
         print("Reading commuting flow data for the selected region...", )
-        commuting_flows = pd.read_csv(os.path.join(PopulationInitialisation.REGIONAL_DATA_DIR,
-                                                   Constants.Paths.COMMUTING_FILE),
+        commuting_flows = pd.read_csv(Constants.Paths.COMMUTING.FULL_PATH_FILE,
                                       dtype={'HomeMSOA': str,
                                              'DestinationMSOA': str,
                                              'Total_Flow': int})
@@ -768,7 +791,7 @@ class PopulationInitialisation:
         # Need to append the devon code to the areas (they're integers in the csv file)
         commuting_flows["Orig"] = commuting_flows["HomeMSOA"] # .apply(lambda x: "E0" + x)
         commuting_flows["Dest"] = commuting_flows["DestinationMSOA"] # .apply(lambda x: "E0" + x)
-        print(f"\tRead {len(pd.unique(commuting_flows['Orig']))} orgins and {len(pd.unique(commuting_flows['Dest']))} "
+        print(f"\tRead {len(pd.unique(commuting_flows['Orig']))} origins and {len(pd.unique(commuting_flows['Dest']))} "
               f"destinations (MSOAs in the study area: {len(study_msoas)})")
 
         # TEMP: remove areas outside the study area (just while the correct files are being prepared)
@@ -1053,7 +1076,7 @@ class PopulationInitialisation:
         """
         Take a flow matrix from MSOAs to (e.g. retail) locations and assign flows to individuals.
 
-        It a assigns the id of the destination of the flow according to its column in the matrix. So the first column
+        It assigns the id of the destination of the flow according to its column in the matrix. So the first column
         that has flows for a destination is given index 0, the second is index 1, etc. This is probably not the same as
         the ID of the venue that they point to (e.g. the first store probably has ID 1, but will be given the index 0)
         so it is important that when the activity_locations are created, they are created in the same order as the
@@ -1089,7 +1112,9 @@ class PopulationInitialisation:
 
         # Use a hierarchical index on the Area to speed up finding all individuals in an area
         # (not sure this makes much difference).
-        individuals.set_index([[ColumnNames.MSOAsID], "ID"], inplace=True, drop=False)
+        name = ColumnNames.MSOAsID
+        print(f"this is number 11 {name}")
+        individuals.set_index([ColumnNames.MSOAsID, "ID"], inplace=True, drop=False)
 
         for area in tqdm(flow_matrix.values,
                          desc=f"Assigning individual flows for {flow_type}"):  # Easier to operate over a 2D matrix rather than a dataframe
@@ -1160,23 +1185,6 @@ class PopulationInitialisation:
 
         return individuals
 
-    @staticmethod
-    def read_time_activity_multiplier(lockdown_file) -> pd.DataFrame:
-        """
-        Some times people should spend more time at home than normal. E.g. after lockdown. This function
-        reads a file that tells us how much more time should be spent at home on each day.
-        :param lockdown_file: Where to read the mobility data from (assume it's within the DATA_DIR).
-        :return: A dataframe with 'day' and 'timeout_multiplier' columns
-        """
-        assert lockdown_file != "", \
-            "read_time_activity_multiplier should not have been called if lockdown_file is empty"
-        print(f"Reading time activity multiplier data from {lockdown_file}...", )
-        time_activity = pd.read_csv(lockdown_file)
-        # Cap at 1.0 (it's a curve so some times peaks above 1.0)=
-        time_activity["timeout_multiplier"] = time_activity.loc[:, "timeout_multiplier"]. \
-            apply(lambda x: 1.0 if x > 1.0 else x)
-
-        return time_activity
 
     @staticmethod
     def _normalise(l: List[float], decimals=3) -> List[float]:

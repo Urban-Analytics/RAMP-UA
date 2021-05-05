@@ -172,6 +172,7 @@ class Constants:
         class PROCESSED_DATA:
             FOLDER = "processed_data"
             FULL_PATH_FOLDER = os.path.join(abspath,
+                                            data_folder,
                                             FOLDER)
         #<--<--PROCESSED_DATA
         #<-- DATA

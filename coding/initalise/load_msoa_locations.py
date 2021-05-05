@@ -6,7 +6,7 @@ from tqdm import tqdm
 import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
-from coding.constants_old import Constants
+from coding.constants import Constants
 from coding.initalise.raw_data_handler import RawDataHandler
 
 # Functionality to create a lookup table of MSOA codes to a list of coordinates of all the buildings
@@ -25,8 +25,8 @@ class MapsHandler:
     """
     base_dir = Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH # os.getcwd()
     # data_dir = os.path.join(base_dir,
-                            Constants.Paths.DATA_FOLDER,
-                            Constants.Paths.COMMON_DATA_FOLDER) #"devon_data")
+    #                         Constants.Paths.DATA_FOLDER,
+    #                         Constants.Paths.COMMON_DATA_FOLDER) #"devon_data")
     data_dir = Constants.Paths.DATA.FULL_PATH_FOLDER
 
     osm_buildings = load_osm_shapefile(RawDataHandler._combined_shp_file) #("/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/data/regional_data/WestYorkshire/")

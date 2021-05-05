@@ -1,7 +1,7 @@
 import numpy as np
 
-from microsim.opencl.ramp.buffers import Buffers
-from microsim.opencl.ramp.params import Params
+from coding.model.opencl.ramp.buffers import Buffers
+from coding.model.opencl.ramp.params import Params
 
 
 class Snapshot:

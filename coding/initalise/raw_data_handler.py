@@ -250,5 +250,5 @@ class RawDataHandler:
 
     def getLockdownFile(self):
         if self._lockdown_file is None:
-            raise Exception("Lockdwon file not found")
+            raise Exception("Lockdown file not found")
         return self._lockdown_file

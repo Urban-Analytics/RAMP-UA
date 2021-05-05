@@ -5,7 +5,7 @@ import json
 from tqdm import tqdm
 from convertbng.util import convert_lonlat
 
-from microsim.opencl.ramp.snapshot import Snapshot
+from coding.model.opencl.ramp.snapshot import Snapshot
 
 sentinel_value = (1 << 31) - 1
 

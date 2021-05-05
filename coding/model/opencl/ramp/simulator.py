@@ -1,12 +1,12 @@
 import numpy as np
 import pyopencl as cl
 import os
-from microsim.opencl.ramp.buffers import Buffers
-from microsim.opencl.ramp.kernels import Kernels
-from microsim.opencl.ramp.params import Params
-from microsim.opencl.ramp.snapshot import Snapshot
-from microsim.opencl.ramp.initial_cases import InitialCases
-from microsim.constants import Constants
+from coding.model.opencl.ramp.buffers import Buffers
+from coding.model.opencl.ramp.kernels import Kernels
+from coding.model.opencl.ramp.params import Params
+from coding.model.opencl.ramp.snapshot import Snapshot
+from coding.model.opencl.ramp.initial_cases import InitialCases
+from coding.constants import Constants
 
 
 class Simulator:

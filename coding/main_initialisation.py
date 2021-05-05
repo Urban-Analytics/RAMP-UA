@@ -29,10 +29,6 @@ import numpy as np
 from coding.constants import Constants
 # from initialise.quant_api import QuantRampAPI
 from coding.initalise.population_initialisation import PopulationInitialisation
-# from microsim.opencl.ramp.run import run_opencl
-# from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
-# from microsim.opencl.ramp.snapshot import Snapshot
-# from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
 from coding.initalise.initialisation_cache import InitialisationCache
 from coding.initalise.raw_data_handler import RawDataHandler
 
@@ -144,6 +140,7 @@ def main(parameters_file):
 #     # cache to hold previously calculate population data
     study_area_folder_in_processed_data = os.path.join(Constants.Paths.PROCESSED_DATA.FULL_PATH_FOLDER,
                                                        study_area) # this generates the folder name
+    print(f"study area folder {study_area_folder_in_processed_data}")
     if not os.path.exists(study_area_folder_in_processed_data):
         os.makedirs(study_area_folder_in_processed_data)
     cache = InitialisationCache(cache_dir = study_area_folder_in_processed_data)
@@ -165,7 +162,9 @@ def main(parameters_file):
     else:  # load from cache
         # print("Loading data from previous cache")
         # individuals, activity_locations = cache.read_from_cache()
-        print("A cache of the processed data already exists for the area you selected, you can run the model already")
+        print("***\n"
+              "A cache of the processed data already exists for the area you selected, you can run the model modul.\n"
+              "***")
 
 #     # Calculate the time-activity multiplier (this is for implementing lockdown)
     time_activity_multiplier = None
