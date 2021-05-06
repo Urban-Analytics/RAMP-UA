@@ -7,14 +7,14 @@ import copy
 from imgui.integrations.glfw import GlfwRenderer
 from OpenGL.GL import *
 
-from microsim.opencl.ramp.activity import Activity
-from microsim.opencl.ramp.params import Params
-from microsim.opencl.ramp.projections import latlon_to_km
-from microsim.opencl.ramp.shader import load_shader
-from microsim.opencl.ramp.snapshot import Snapshot
-from microsim.opencl.ramp.style import set_styles
-from microsim.opencl.ramp.summary import Summary
-from microsim.constants import Constants
+from coding.model.opencl.ramp.activity import Activity
+from coding.model.opencl.ramp.params import Params
+from coding.model.opencl.ramp.projections import latlon_to_km
+from coding.model.opencl.ramp.shader import load_shader
+from coding.model.opencl.ramp.snapshot import Snapshot
+from coding.model.opencl.ramp.style import set_styles
+from coding.model.opencl.ramp.summary import Summary
+from coding.constants import Constants
 
 default_flags = imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_COLLAPSE
 
@@ -24,11 +24,7 @@ class Inspector:
 
     def __init__(self, simulator, snapshot, nlines, window_name, width, height,
                  # font_path="microsim/opencl/fonts/RobotoMono.ttf"):
-                 font_path=os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
-                                        Constants.Paths.SOURCE_FOLDER,
-                                        Constants.Paths.OPENCL.OPENCL_FOLDER,
-                                        Constants.Paths.OPENCL.OPENCL_FONTS_FOLDER,
-                                        Constants.Paths.OPENCL.FONT_ROBOTO)):
+                 font_path=os.path.join(Constants.Paths.OPENCL_FONTS.FULL_PATH_FOLDER)):
                  # font_path="/Users/azanchetta/EcoTwins/microsim/opencl/fonts/RobotoMono.ttf"):
         """Create the window, imgui renderer, and all background renderers.
 

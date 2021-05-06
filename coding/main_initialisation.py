@@ -28,9 +28,9 @@ import numpy as np
 # Packages as in the original model code
 from coding.constants import Constants
 # from initialise.quant_api import QuantRampAPI
-from coding.initalise.population_initialisation import PopulationInitialisation
-from coding.initalise.initialisation_cache import InitialisationCache
-from coding.initalise.raw_data_handler import RawDataHandler
+from coding.initialise.population_initialisation import PopulationInitialisation
+from coding.initialise.initialisation_cache import InitialisationCache
+from coding.initialise.raw_data_handler import RawDataHandler
 
 # ********
 # PROGRAM ENTRY POINT
@@ -98,7 +98,7 @@ def main(parameters_file):
     # Check the parameters are sensible
     if iterations < 1:
         raise ValueError("Iterations must be > 1. If you want to just initialise the model and then exit,"
-                        "set initalise : true")
+                        "set initialise : true")
     if repetitions < 1:
         raise ValueError("Repetitions must be greater than 0")
     if (not output) and output_every_iteration:
@@ -163,7 +163,7 @@ def main(parameters_file):
         # print("Loading data from previous cache")
         # individuals, activity_locations = cache.read_from_cache()
         print("***\n"
-              "A cache of the processed data already exists for the area you selected, you can run the model modul.\n"
+              "A cache of the processed data already exists for the area you selected, you can run the model module.\n"
               "***")
 
 #     # Calculate the time-activity multiplier (this is for implementing lockdown)

@@ -13,7 +13,7 @@ microsim:
   output-every-iteration: FALSE # Can optionally write output at every iteration, not just at the end
   debug: FALSE # Whether to run some more expensive checks
   repetitions: 1 # How many times to run the model
-  lockdown-file: "google_mobility_lockdown_daily_14_day_moving_average.csv" # Read lockdown mobility data from a file? (Empty string means no lockdown)
+  lockdown-file: "timeAtHomeIncreaseCTY.csv" # "google_mobility_lockdown_daily_14_day_moving_average.csv" # Read lockdown mobility data from a file? (Empty string means no lockdown)
   #   quant-dir: QUANT_RAMP # Directory to QUANT data
   use-cache: TRUE # Whether to cache the population data initialisation
   opencl-model: TRUE # Run the OpenCL model

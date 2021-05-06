@@ -1,7 +1,7 @@
 import numpy as np
 import imgui
 import pandas as pd
-from microsim.opencl.ramp.disease_statuses import DiseaseStatus
+from coding.model.opencl.ramp.disease_statuses import DiseaseStatus
 
 
 class Summary:

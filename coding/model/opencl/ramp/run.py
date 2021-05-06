@@ -6,15 +6,15 @@ import csv
 import numpy as np
 
 
-from microsim.opencl.ramp.inspector import Inspector
-from microsim.opencl.ramp.params import Params
-from microsim.opencl.ramp.simulator import Simulator
-from microsim.opencl.ramp.summary import Summary
-from microsim.opencl.ramp.disease_statuses import DiseaseStatus
-from microsim.constants import Constants
+from coding.model.opencl.ramp.inspector import Inspector
+from coding.model.opencl.ramp.params import Params
+from coding.model.opencl.ramp.simulator import Simulator
+from coding.model.opencl.ramp.summary import Summary
+from coding.model.opencl.ramp.disease_statuses import DiseaseStatus
+from coding.constants import Constants
 
 def run_opencl(snapshot,
-               selected_region_folder_full_path,
+               study_area,
                iterations=100,
                use_gui=True,
                use_gpu=False,
@@ -25,15 +25,18 @@ def run_opencl(snapshot,
     Entry point for running the OpenCL simulation either with the UI or in headless mode.
     NB: in order to write output data for the OpenCL dashboard you must run in headless mode.
     """
-
+    study_area_folder_in_processed_data = os.path.join(Constants.Paths.PROCESSED_DATA.FULL_PATH_FOLDER,
+                                                       study_area)
+    study_area_folder_in_output = os.path.join(Constants.Paths.OUTPUT_FOLDER.FULL_PATH_FOLDER,
+                                               study_area)
     if not quiet:
         print(f"\nSnapshot Size:\t{int(snapshot.num_bytes() / 1000000)} MB\n")
         print(f"snapshot file is: \t{snapshot}\n")
-        print(f"in: \t{selected_region_folder_full_path}\n")
+        print(f"in: \t{study_area_folder_in_processed_data}\n")
 
     # Create a simulator and upload the snapshot data to the OpenCL device
     simulator = Simulator(snapshot,
-                          selected_region_folder_full_path=selected_region_folder_full_path,
+                          selected_region_folder_full_path=study_area_folder_in_processed_data,
                           gpu=use_gpu,
                           num_seed_days=num_seed_days
                           )
@@ -51,7 +54,7 @@ def run_opencl(snapshot,
                                             quiet)
         store_summary_data(summary,
                            store_detailed_counts=True,
-                           data_dir=selected_region_folder_full_path)
+                           data_dir=study_area_folder_in_output)
 
 
 def run_with_gui(simulator, snapshot):
@@ -63,7 +66,7 @@ def run_with_gui(simulator, snapshot):
     inspector = Inspector(simulator,
                           snapshot,
                           nlines,
-                          "Ramp UA",
+                          "Ramp UA", # ??
                           width,
                           height)
 
@@ -127,8 +130,8 @@ def store_summary_data(summary,
     for status, timeseries in enumerate(summary.total_counts):
         total_counts_dict[DiseaseStatus(status).name.lower()] = pd.Series(timeseries)
 
-    output_dir = os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
-                              Constants.Paths.OUTPUT_FOLDER)
+    output_dir = data_dir
+    print(f"output area folder {output_dir}")
     # output_dir = data_dir + "/output/OpenCL/"
     # create output directory if it doesn't exist
     if not os.path.exists(output_dir):

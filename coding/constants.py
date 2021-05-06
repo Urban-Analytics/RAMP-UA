@@ -1,15 +1,28 @@
 import os
 
 abspath = "/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/" #os.getcwd() # leave this empty, will inputted from the default.yml file
-code_folder = "code"
+# /coding/
+code_folder = "coding"
+initialise_folder = "initialise"
+model_folder = "model"
+r_python_model_folder = "microsim"
+opencl_model_folder = "opencl"
+opencl_fonts_folder = "fonts"
+opencl_source_folder = "ramp"
+opencl_kernels_folder = "kernels"
+opencl_shaders_folder = "shaders"
+# /data/
 data_folder = "data"
 raw_data_folder = "raw_data"
+processed_data_folder = "processed_data"
 reference_data_folder = "reference_data"
 national_data_folder = "national_data"
 quant_data_folder = "QUANT_RAMP"
 msoas_shp_folder = "MSOAS_shp"
 county_data_folder = "county_data"
 osm_data_folder = "OSM"
+# /output/
+output_folder = "output"
 
 class Constants:
     """Used to reflect the folder structure expected by the code"""
@@ -170,34 +183,119 @@ class Constants:
         #<--<--RAW_DATA
         #>-->--PROCESSED_DATA
         class PROCESSED_DATA:
-            FOLDER = "processed_data"
+            FOLDER = processed_data_folder
             FULL_PATH_FOLDER = os.path.join(abspath,
                                             data_folder,
                                             FOLDER)
+            CACHE_FILE = "cache.npz"
+        class SNAPSHOTS:
+            FOLDER = "snapshots"
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            data_folder,
+                                            processed_data_folder,
+                                            FOLDER)
         #<--<--PROCESSED_DATA
         #<-- DATA
-
+        class MSOAS_RISK_FILE:
+            FILE = "msoas_risk_west-yorskhire.csv"
+            FULL_PATH_FILE = os.path.join(abspath,
+                                          data_folder,
+                                          raw_data_folder,
+                                          county_data_folder,
+                                          FILE)
         # INIT_DATA_MSOAS_RISK = "initial_cases.csv"
         # INIT_DATA_CASES = "msoas.csv"
+
+        #--> CODE
+        class CODING:
+            FOLDER = code_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            FOLDER)
+        #-->--> INITIALISE
         class INITIALISATION:
-            INITIALISE_FOLDER = "initialise"
-
+            FOLDER = initialise_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            code_folder,
+                                            FOLDER)
+        #<--<-- INITIALISE
+        #-->--> MODEL
         class MODEL:
-            MODEL_FOLDER = "model"
-        class OPENCL:
-            OPENCL_FOLDER = "opencl"
-            OPENCL_FONTS_FOLDER = "fonts"
+            FOLDER = model_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            code_folder,
+                                            FOLDER)
+        #-->-->--> R/PYTHon
+        class RPTYHON_MODEL:
+            FOLDER = r_python_model_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            code_folder,
+                                            model_folder,
+                                            FOLDER)
+        #<--<--<-- R/PYTHon
+        #-->-->--> OPENCL
+        class OPENCL_MODEL:
+            FOLDER = opencl_model_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            code_folder,
+                                            model_folder,
+                                            FOLDER)
+        class OPENCL_FONTS:
+            FOLDER = opencl_fonts_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            code_folder,
+                                            model_folder,
+                                            opencl_model_folder,
+                                            FOLDER)
             FONT_DROID = "DroidSans.ttf"
+            FULL_PATH_DROID = os.path.join(abspath,
+                                           code_folder,
+                                           model_folder,
+                                           opencl_model_folder,
+                                           FOLDER,
+                                           FONT_DROID)
             FONT_ROBOTO = "RobotoMono.ttf"
-            OPENCL_SOURCE_FOLDER = "ramp"
-        class SOURCE:
-            OPENCL_KERNELS_FOLDER = "kernels"
+            FULL_PATH_ROBOTO = os.path.join(abspath,
+                                            code_folder,
+                                            model_folder,
+                                            opencl_model_folder,
+                                            FOLDER,
+                                            FONT_ROBOTO)
+        class OPENCL_SOURCE:
+            SOURCE_FOLDER = opencl_source_folder
+            FULL_PATH_SOURCE = os.path.join(abspath,
+                                            code_folder,
+                                            model_folder,
+                                            opencl_model_folder,
+                                            SOURCE_FOLDER)
+            KERNELS_FOLDER = opencl_kernels_folder
+            FULL_PATH_KERNEL_FOLDER = os.path.join(abspath,
+                                                   code_folder,
+                                                   model_folder,
+                                                   opencl_model_folder,
+                                                   KERNELS_FOLDER)
             KERNEL_FILE = "ramp_ua.cl"
-            OPENCL_SHADERS_FOLDER = "shaders"
-            OPENCL_SNAPSHOTS_FOLDER = "snapshots"
-            OPENCL_CACHE_FILE = "cache.npz"
+            FULL_PATH_KERNEL_FILE = os.path.join(abspath,
+                                                 code_folder,
+                                                 model_folder,
+                                                 opencl_model_folder,
+                                                 KERNELS_FOLDER,
+                                                 KERNEL_FILE)
+            SHADERS_FOLDER = opencl_shaders_folder
+            FULL_PATH_SHADERS_FOLDER = os.path.join(abspath,
+                                                    code_folder,
+                                                    model_folder,
+                                                    opencl_model_folder,
+                                                    )
 
-
+        #<--<--<-- OPENCL
+        #<-<-- MODEL
+        #<-- DATA
+        #--> OUTPUT
+        class OUTPUT_FOLDER:
+            FOLDER = output_folder
+            FULL_PATH_FOLDER = os.path.join(abspath,
+                                            FOLDER)
+        #<-- OUTPUT
 
     class OnlinePaths:
         pass

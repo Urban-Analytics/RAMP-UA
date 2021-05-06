@@ -95,7 +95,7 @@ def main(parameters_file):
     # Check the parameters are sensible
     if iterations < 1:
         raise ValueError("Iterations must be > 1. If you want to just initialise the model and then exit,"
-                        "set initalise : true")
+                        "set initialise : true")
     if repetitions < 1:
         raise ValueError("Repetitions must be greater than 0")
     if (not output) and output_every_iteration:

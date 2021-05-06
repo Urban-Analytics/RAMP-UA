@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
-from microsim.constants import Constants
+from coding.constants import Constants
 
 
 class InitialCases:
@@ -17,11 +17,9 @@ class InitialCases:
         """
 
         # load initial case data
-        self.initial_cases = pd.read_csv(os.path.join(selected_region_folder_full_path,
-                                                      Constants.Paths.INITIAL_CASES_FILE))
+        self.initial_cases = pd.read_csv(Constants.Paths.SEEDING_FILE.FULL_PATH_FILE) #(os.path.join(selected_region_folder_full_path,Constants.Paths.INITIAL_CASES_FILE))
 
-        msoa_risks_df = pd.read_csv(os.path.join(selected_region_folder_full_path,
-                                                      Constants.Paths.MSOAS_RISK_FILE),
+        msoa_risks_df = pd.read_csv(Constants.Paths.MSOAS_RISK_FILE.FULL_PATH_FILE, #(os.path.join(selected_region_folder_full_path,Constants.Paths.MSOAS_RISK_FILE),
                                     usecols=[1, 2])
         # TODO: assign here not hard-coded columns names!
 
