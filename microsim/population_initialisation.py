@@ -133,7 +133,7 @@ class PopulationInitialisation:
                     "pmpublic", "pmunknown"]:
             self.individuals[col].fillna(0, inplace=True)
 
-        # Read Retail flows data
+        #####1. Read Retail flows data
         retail_name = ColumnNames.Activities.RETAIL  # How to refer to this in data frame columns etc.
         stores, stores_flows = PopulationInitialisation.read_retail_flows_data(self.all_msoas, quant_object)  # (list of shops and a flow matrix)
         PopulationInitialisation.check_sim_flows(stores, stores_flows)
@@ -142,7 +142,21 @@ class PopulationInitialisation:
         self.activity_locations[retail_name] = \
             ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
 
-        # Read Schools (primary and secondary)
+
+        #####****** May2021 -- Adding Nightclubs as part of the Pop Initialization ********#######
+        ######2. Read Nightclubs flow data based on Read Retails above.
+        nightclub_name = ColumnNames.Activities.NIGHTCLUBS
+        nightclubs, nightclub_flows = PopulationInitialisation.read_retail_flows_data(self.all_msoas,quant_object)
+        PopulationInitialisation.check_sim_flows(nightclubs, nightclub_flows)
+        # Assign nightclubs flows data to the individuals
+        self.individuals = PopulationInitialisation.add_individual_flows(nightclub_name, self.individuals, nightclub_flows)
+        self.activity_locations[nightclub_name] = \
+            ActivityLocation(nightclub_name, nightclubs, nightclub_flows, self.individuals, "pshop")
+
+
+
+
+        #######3. Read Schools (primary and secondary)
         primary_name = ColumnNames.Activities.PRIMARY
         secondary_name = ColumnNames.Activities.SECONDARY
         primary_schools, secondary_schools, primary_flows, secondary_flows = \
