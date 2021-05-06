@@ -288,7 +288,7 @@ def create_params(calibration_params, disease_params):
     # NB: OpenCL model incorporates the current risk beta by pre-multiplying the hazard multipliers with it
     location_hazard_multipliers = LocationHazardMultipliers(
         retail=calibration_params["hazard_location_multipliers"]["Retail"] * current_risk_beta,
-        nightclub=calibration_params["hazard_location_multipliers"]["Nightclubs"] * current_risk_beta,
+        nightclub=calibration_params["hazard_location_multipliers"]["Nightclubs"] * current_risk_beta, ###**** The NC were added. ***######
         primary_school=calibration_params["hazard_location_multipliers"]["PrimarySchool"] * current_risk_beta,
         secondary_school=calibration_params["hazard_location_multipliers"]["SecondarySchool"] * current_risk_beta,
         home=calibration_params["hazard_location_multipliers"]["Home"] * current_risk_beta,

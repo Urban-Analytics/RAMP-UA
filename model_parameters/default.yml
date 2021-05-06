@@ -25,6 +25,7 @@ microsim_calibration:
     SecondarySchool: 1.0
     Home: 1.0
     Work: 1.0
+    Nightclubs: 1.0
   # This multiplies the risk received as individuals visit shops etc.
   risk_multiplier: 1.0
 

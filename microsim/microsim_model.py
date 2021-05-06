@@ -561,7 +561,7 @@ class Microsim:
         hazard_activities = set(hazard_location_multipliers.keys())
         all_activities = set(ColumnNames.Activities.ALL)
         if hazard_activities != all_activities:
-            raise Exception(f"The hzard location multipliers: '{hazard_activities} don't match the "
+            raise Exception(f"The hazard location multipliers: '{hazard_activities} don't match the "
                             f"activities in the model: {all_activities}")
 
     @staticmethod

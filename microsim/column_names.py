@@ -12,8 +12,8 @@ class ColumnNames:
         SECONDARY = "SecondarySchool"
         HOME = "Home"
         WORK = "Work"
-        NIGHTCLUBS = "Nightclubs" 
-        ALL = [RETAIL, PRIMARY, SECONDARY, HOME, WORK, NIGHTCLUBS]
+        NIGHTCLUBS = "Nightclubs"  ###**** The NC were added. ***######
+        ALL = [RETAIL, PRIMARY, SECONDARY, HOME, WORK, NIGHTCLUBS]###**** The NC were added. ***######
 
     ACTIVITY_VENUES = "_Venues"  # Venues an individual may visit. Appended to activity type, e.g. 'Retail_Venues'
     ACTIVITY_FLOWS = "_Flows"  # Flows to a venue for an individual. Appended to activity type, e.g. 'Retail_Flows'
