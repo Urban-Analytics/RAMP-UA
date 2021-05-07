@@ -9,7 +9,7 @@ class InitialCases:
                  area_codes,
                  not_home_probs,
                  # data_dir="microsim/opencl/data/"):
-                 selected_region_folder_full_path):
+                 selected_region_folder_full_path=str):
         """
         This class loads the initial cases data for seeding infections in the model.
         Once the data is loaded it selects the people from higher risk area codes who
@@ -17,7 +17,10 @@ class InitialCases:
         """
 
         # load initial case data
-        self.initial_cases = pd.read_csv(Constants.Paths.SEEDING_FILE.FULL_PATH_FILE) #(os.path.join(selected_region_folder_full_path,Constants.Paths.INITIAL_CASES_FILE))
+        path_to_seeding_file_in_study_area = os.path.join(selected_region_folder_full_path,
+                                                          Constants.Paths.SEEDING_FILE.FILE)
+        self.initial_cases = pd.read_csv(path_to_seeding_file_in_study_area)
+            # pd.read_csv(Constants.Paths.SEEDING_FILE.FULL_PATH_FILE) #(os.path.join(selected_region_folder_full_path,Constants.Paths.INITIAL_CASES_FILE))
 
         msoa_risks_df = pd.read_csv(Constants.Paths.MSOAS_RISK_FILE.FULL_PATH_FILE, #(os.path.join(selected_region_folder_full_path,Constants.Paths.MSOAS_RISK_FILE),
                                     usecols=[1, 2])

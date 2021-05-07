@@ -11,6 +11,8 @@ import sys
 from coding.constants import ColumnNames
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrame
+from coding.constants import Constants
+from coding.constants import ColumnNames
 
 class TimeActivityMultiplier:
 
@@ -31,7 +33,7 @@ class TimeActivityMultiplier:
         print(f"Reading time activity multiplier data from {lockdown_file}...", )
         time_activity = pd.read_csv(lockdown_file)
         # Cap at 1.0 (it's a curve so some times peaks above 1.0)=
-        time_activity["timeout_multiplier"] = time_activity.loc[:, "timeout_multiplier"]. \
+        time_activity[ColumnNames.TIME_ACTIVITY_MULTIPLIER] = time_activity.loc[:, ColumnNames.TIME_ACTIVITY_MULTIPLIER]. \
             apply(lambda x: 1.0 if x > 1.0 else x)
 
         return time_activity

@@ -65,12 +65,12 @@ class Constants:
                                           reference_data_folder,
                                           FILE)
         class SEEDING_FILE:
-            FILE = "england_initial_casesCTY_tbc.csv"
-            FULL_PATH_FILE = os.path.join(abspath,
-                                          data_folder,
-                                          raw_data_folder,
-                                          reference_data_folder,
-                                          FILE)
+            FILE = "initial_cases.csv" #"england_initial_casesCTY_tbc.csv"  # at the moment is not in reference data !!!!!!!!!!!!
+            # FULL_PATH_FILE = os.path.join(abspath,
+            #                               data_folder,
+            #                               raw_data_folder,
+            #                               reference_data_folder,
+            #                               FILE)
         #<--<--<-- REFERENCE_DATA
         #-->-->--> NATIONAL_DATA
         class NATIONAL_DATA:
@@ -244,6 +244,7 @@ class Constants:
             FULL_PATH_FOLDER = os.path.join(abspath,
                                             code_folder,
                                             model_folder,
+
                                             opencl_model_folder,
                                             FOLDER)
             FONT_DROID = "DroidSans.ttf"
@@ -272,12 +273,22 @@ class Constants:
                                                    code_folder,
                                                    model_folder,
                                                    opencl_model_folder,
+                                                   SOURCE_FOLDER,
                                                    KERNELS_FOLDER)
+            # The following variable is used only by Simulator module
+            # OpenCL kernels are really sensible to the path provided
+            # Specifically, you have to start from the current working directory
+            # that currently is abspath/project_folder/coding/ (see configurations)
+            FOLDER_PATH_FOR_KERNEL = os.path.join(model_folder,
+                                                  opencl_model_folder,
+                                                  SOURCE_FOLDER,
+                                                  KERNELS_FOLDER)
             KERNEL_FILE = "ramp_ua.cl"
             FULL_PATH_KERNEL_FILE = os.path.join(abspath,
                                                  code_folder,
                                                  model_folder,
                                                  opencl_model_folder,
+                                                 SOURCE_FOLDER,
                                                  KERNELS_FOLDER,
                                                  KERNEL_FILE)
             SHADERS_FOLDER = opencl_shaders_folder
@@ -311,6 +322,7 @@ class Constants:
 class ColumnNames:
     """Used to record standard dataframe column names used throughout"""
     MSOAsID = "MSOA11CD"
+    TIME_ACTIVITY_MULTIPLIER = "change"
 
     LOCATION_DANGER = "Danger"  # Danger associated with a location
     LOCATION_NAME = "Location_Name"  # Name of a location
