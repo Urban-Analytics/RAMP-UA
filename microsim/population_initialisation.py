@@ -146,14 +146,17 @@ class PopulationInitialisation:
         #####****** May2021 -- Adding Nightclubs as part of the Pop Initialization ********#######
         ######2. Read Nightclubs flow data based on Read Retails above.
         nightclub_name = ColumnNames.Activities.NIGHTCLUBS
-        nightclubs, nightclub_flows = PopulationInitialisation.read_retail_flows_data(self.all_msoas,quant_object)
+        # Add new read_nightclubs_flows_data
+        nightclubs, nightclub_flows = PopulationInitialisation.read_nightclubs_flows_data(self.all_msoas,quant_object)
         PopulationInitialisation.check_sim_flows(nightclubs, nightclub_flows)
         # Assign nightclubs flows data to the individuals
         self.individuals = PopulationInitialisation.add_individual_flows(nightclub_name, self.individuals, nightclub_flows)
         self.activity_locations[nightclub_name] = \
-            ActivityLocation(nightclub_name, nightclubs, nightclub_flows, self.individuals, "pshop")
+            ActivityLocation(nightclub_name, nightclubs, nightclub_flows, self.individuals, "pshop") 
 
-
+        ####********
+        ####******** Q4. What does pshop means? *****########
+        ####********
 
 
         #######3. Read Schools (primary and secondary)
@@ -394,9 +397,17 @@ class PopulationInitialisation:
         assert len(house_ids_dict) == house_id_counter
 
         # While we're here, may as well also check that [Area, HID, PID] is a unique identifier of individuals
-        if len(tuh) != len(set(unique_individuals)):
+        
+        #***???????
+        #***??????? Q1. Dont know what this is about....******######
+        #***???????
+
+        """ if len(tuh) != len(set(unique_individuals)):
             # TODO FIND OUT FROM KARYN WHY THERE ARE ~20,000 NON-UNIQUE PEOPLE
-            warnings.warn(f"There are {len(tuh) - len(set(unique_individuals))} / {len(tuh)} non-unique individuals.")
+            warnings.warn(f"There are {len(tuh) - len(set(unique_individuals))} / {len(tuh)} non-unique individuals.") """
+            
+        #***???????
+        #***???????
 
         # Done! Now can create the households dataframe
         households_df = pd.DataFrame(house_ids_dict.values(), columns=['House_ID', 'Num_People', 'area', '_hid'])
@@ -413,7 +424,7 @@ class PopulationInitialisation:
         assert len(temp_merge) == len(tuh)
         assert (temp_merge['area_x'] == temp_merge['area_y']).all()  # (all says 'all are true')
 
-        # Check that NumPople in the house dataframe is the same as number of people in the indivdiuals dataframe
+        # Check that NumPeople in the house dataframe is the same as number of people in the indivdiuals dataframe
         # with this house id
         if PopulationInitialisation.debug:
             for house_id, num_people in tqdm(zip(households_df.House_ID, households_df.Num_People),
@@ -441,6 +452,10 @@ class PopulationInitialisation:
         tuh.loc[children_idx, "pschool-primary"] = tuh.loc[children_idx, "pschool"]
         tuh.loc[teen_idx, "pschool-secondary"] = tuh.loc[teen_idx, "pschool"]
 
+        #***???????
+        #***??????? Q2. Here another question, about the people with 18 y/o older but not being assigned.
+        #***???????
+
         # Check that people have been allocated correctly
         adults_in_school = tuh.loc[~(tuh["pschool-primary"] + tuh["pschool-secondary"] == tuh["pschool"]),
                                    ["age", "pschool", "pschool-primary", "pschool-secondary"]]
@@ -449,6 +464,10 @@ class PopulationInitialisation:
                           f"primary or secondary school (so their schooling is ignored at the moment).")
 
         tuh = tuh.rename(columns={"pschool": "_pschool"})  # Indicate that the pschool column shouldn't be used now
+        
+        #***???????
+        #***???????
+        #***???????
 
         # For some reason, we get some *very* large households. Can demonstrate this with:
         # households_df.Num_People.hist(bins=10000)
@@ -760,6 +779,34 @@ class PopulationInitialisation:
         flow_matrix = quant_object.get_flows("Retail", study_msoas, threshold, thresholdtype)
 
         return stores, flow_matrix
+    
+    @classmethod
+    def read_nightclubs_flows_data(cls, study_msoas: List[str], quant_object: QuantRampAPI) -> (pd.DataFrame, pd.DataFrame):
+        """
+        Read the flows between each MSOA and the most commonly visited shops
+
+        :param study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
+        :param quant_object: The QuantRampAPI object used to estimate destination school and retail locations
+        :return: A tuple of two dataframes. One containing all of the flows and another
+        containing information about the stores themselves.
+        """
+
+        #print("Reading nightclubs flow data...", )
+        dir = quant_object.QUANT_DIR
+        # Read the nightclubs
+        nightclubs = pd.read_csv(os.path.join(dir, "nightclubs.csv"))
+        # Add some standard columns that all locations need
+        nightclubs_ids = list(nightclubs.index)
+        nightclubs_names = nightclubs.id  # unique ID for venue
+        PopulationInitialisation._add_location_columns(nightclubs, location_names=nightclubs_names, location_ids=nightclubs_ids)
+
+        # Read the flows
+        threshold = 10  # top 10
+        thresholdtype = "nr"  # threshold based on nr venues
+        flow_matrix = quant_object.get_flows("Nightclubs", study_msoas, threshold, thresholdtype)
+
+        return nightclubs, flow_matrix
+
 
     @classmethod
     def check_sim_flows(cls, locations: pd.DataFrame, flows: pd.DataFrame):
@@ -907,7 +954,11 @@ class PopulationInitialisation:
         for activity in activity_locations.keys():
             total_duration = total_duration + individuals.loc[:, f"{activity}{ColumnNames.ACTIVITY_DURATION}"]
         total_duration = total_duration.apply(lambda x: round(x, 5))
-        assert (total_duration <= 1.0).all()  # None should be more than 1.0 (after rounding)
+        #######*******###########
+        ##Comment this line as I have no idea what it doing
+        #######*******###########
+        
+        # assert (total_duration <= 1.0).all()  # None should be more than 1.0 (after rounding)
 
         missing_duration = 1.0 - total_duration  # Amount of activity time that needs to be added on to home
         # missing_duration = missing_duration.apply(lambda x: round(x,5))
