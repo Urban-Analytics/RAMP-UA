@@ -274,6 +274,9 @@ class Microsim:
             #
 
             print(f"\t\t{activty_name} activity")
+            #It seems this index hasnt been restarted. So this an attemtp to do it. 
+            
+            #print(f"\t\tTHIS IS THE CURRENT VENUE_IDX____"+ venue_idx+"___at the activity__:"+activty_name)
             # Get the details of the location activity
             activity_location = self.activity_locations[activty_name]  # Pointer to the ActivityLocation object
             # Create a list to store the dangers associated with each location for this activity.
@@ -293,6 +296,11 @@ class Microsim:
             flows = self.individuals.loc[:, flows_col]
             durations = self.individuals.loc[:, durations_col]
             assert len(venues) == len(flows) and len(venues) == len(statuses)
+
+            ######
+            ###### ***** 1 Loop can be improved TOdo by FB
+            ######
+
             for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)):  # For each individual
                 # Only people with the disease who are infectious will add danger to a place
                 if s == ColumnNames.DiseaseStatuses.PRESYMPTOMATIC \
@@ -322,8 +330,14 @@ class Microsim:
                     assert location_hazard_multiplier is not None
 
                     # v and f are lists of flows and venues for the individual. Go through each one
+                    
+                    ######
+                    ##**** 2 Loop can be improved Todo by FB
+                    ######
+
+
                     for venue_idx, flow in zip(v, f):
-                        # print(i, venue_idx, flow, duration)
+                        #print (f"\t\tValues for First Iteration. this is the i :"+i+"This is venue_idx: "+venue_idx+"This is flow: "+flow+"This is duration: "+duration)
                         # Increase the danger by the flow multiplied by some disease risk
                         danger_increase = (flow * duration * individual_hazard_multiplier * location_hazard_multiplier)
                         # if activty_name == ColumnNames.Activities.WORK:
@@ -332,6 +346,7 @@ class Microsim:
                         #    loc_dangers[venue_idx] += work_danger
                         # else:
                         loc_dangers[venue_idx] += danger_increase
+                        #print (loc_dangers, danger_increase)
 
             #
             # ***** 2 - risks for individuals who visit dangerous venues
@@ -340,14 +355,21 @@ class Microsim:
             # It's useful to report the specific risks associated with *this* activity for each individual
             activity_specific_risk = [0] * len(self.individuals)
 
+            ######
+            #***** 3 Loop can be improved TOdo by FB
+            ######
+
             for i, (v, f, s, duration) in enumerate(zip(venues, flows, statuses, durations)):  # For each individual
                 # v and f are lists of flows and venues for the individual. Go through each one
                 for venue_idx, flow in zip(v, f):
                     #  Danger associated with the location (we just created these updated dangers in the previous loop)
+                    #print (i,v,f,s,duration,venue_idx,flow)
+                    #print(i, v, f, s, duration, venue_idx, flow)
                     danger = loc_dangers[venue_idx]
                     risk_increase = flow * danger * duration * self.risk_multiplier
                     current_risk[i] += risk_increase
                     activity_specific_risk[i] += risk_increase
+                    #print (activity_specific_risk[i])
 
             # Remember the (rounded) risk for this activity
             if decimals is not None:
