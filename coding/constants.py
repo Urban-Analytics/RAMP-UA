@@ -1,5 +1,10 @@
 import os
 
+
+# INIT_DATA_MSOAS_RISK = "initial_cases.csv"
+# INIT_DATA_CASES = "msoas.csv"
+
+
 abspath = "/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/" #os.getcwd() # leave this empty, will inputted from the default.yml file
 # /coding/
 code_folder = "coding"
@@ -24,17 +29,31 @@ osm_data_folder = "OSM"
 # /output/
 output_folder = "output"
 
+
+
+
 class Constants:
     """Used to reflect the folder structure expected by the code"""
     class Paths:
         AZURE_URL = "https://ramp0storage.blob.core.windows.net/"
         PROJECT_FOLDER_ABSOLUTE_PATH = abspath
         OUTPUT_FOLDER = ""
+
+        # !!! HARD_CODED !!!
+        class MSOAS_RISK_FILE:
+            FILE = "msoas_risk.csv" #"msoas_risk_west-yorskhire.csv"
+            # FULL_PATH_FILE = os.path.join(abspath,
+            #                               data_folder,
+            #                               raw_data_folder,
+            #                               county_data_folder,
+            #                               FILE)
+        # !!!
         class LIST_MSOAS:
-            FILE ="test_msoalist.csv" ## better in parameters! (default.yml)  ## temporaneous
-            FILE_WITH_PARAMFOLDER = "model_parameters/test_msoalist.csv"
+            FILE = "wy_msoas_list.csv" #"test_msoalist.csv" #"devon_msoas_list.csv" #"test_msoalist.csv" ## better in parameters! (default.yml)  ## this is only temporaneous
+            PARAM_FOLDER = "model_parameters/"
             FULL_PATH_FILE = os.path.join(abspath,
-                                          FILE_WITH_PARAMFOLDER)
+                                          PARAM_FOLDER,
+                                          FILE)
         class CODE:
             FOLDER = code_folder
             FULL_PATH = os.path.join(abspath,
@@ -66,6 +85,7 @@ class Constants:
                                           FILE)
         class SEEDING_FILE:
             FILE = "initial_cases.csv" #"england_initial_casesCTY_tbc.csv"  # at the moment is not in reference data !!!!!!!!!!!!
+            # instead, we have a file initial_cases for Devon and one for WestYorkshire for trials
             # FULL_PATH_FILE = os.path.join(abspath,
             #                               data_folder,
             #                               raw_data_folder,
@@ -196,15 +216,6 @@ class Constants:
                                             FOLDER)
         #<--<--PROCESSED_DATA
         #<-- DATA
-        class MSOAS_RISK_FILE:
-            FILE = "msoas_risk_west-yorskhire.csv"
-            FULL_PATH_FILE = os.path.join(abspath,
-                                          data_folder,
-                                          raw_data_folder,
-                                          county_data_folder,
-                                          FILE)
-        # INIT_DATA_MSOAS_RISK = "initial_cases.csv"
-        # INIT_DATA_CASES = "msoas.csv"
 
         #--> CODE
         class CODING:
@@ -296,7 +307,16 @@ class Constants:
                                                     code_folder,
                                                     model_folder,
                                                     opencl_model_folder,
-                                                    )
+                                                    SOURCE_FOLDER,
+                                                    SHADERS_FOLDER)
+            # The following variable is used only by shader.py
+            # OpenCL kernels are really sensible to the path provided
+            # Specifically, you have to start from the current working directory
+            # that currently is abspath/project_folder/coding/ (see configurations)
+            FOLDER_PATH_FOR_SHADERS = os.path.join(model_folder,
+                                                  opencl_model_folder,
+                                                  SOURCE_FOLDER,
+                                                  SHADERS_FOLDER)
 
         #<--<--<-- OPENCL
         #<-<-- MODEL
@@ -322,7 +342,7 @@ class Constants:
 class ColumnNames:
     """Used to record standard dataframe column names used throughout"""
     MSOAsID = "MSOA11CD"
-    TIME_ACTIVITY_MULTIPLIER = "change"
+    TIME_ACTIVITY_MULTIPLIER = "timeout_multiplier" # for Devon data, "change" in the new data generated from raw_data_handler... check this to gove the correct old name!
 
     LOCATION_DANGER = "Danger"  # Danger associated with a location
     LOCATION_NAME = "Location_Name"  # Name of a location

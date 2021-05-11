@@ -6,6 +6,7 @@ from tqdm import tqdm
 from convertbng.util import convert_lonlat
 
 from coding.model.opencl.ramp.snapshot import Snapshot
+from coding.constants import ColumnNames
 
 sentinel_value = (1 << 31) - 1
 
@@ -26,7 +27,7 @@ class SnapshotConvertor:
             self.locations[activity_name] = activity_locations[activity_name]._locations
 
         if time_activity_multiplier is not None:
-            self.lockdown_multipliers = time_activity_multiplier.loc[:, "timeout_multiplier"].to_numpy()\
+            self.lockdown_multipliers = time_activity_multiplier.loc[:, ColumnNames.TIME_ACTIVITY_MULTIPLIER].to_numpy()\
                 .astype(np.float32)
         else:
             self.lockdown_multipliers = np.ones(100)
@@ -95,7 +96,7 @@ class SnapshotConvertor:
         return self.individuals['bloodpressure'].to_numpy(dtype=np.uint8)
 
     def get_people_area_codes(self):
-        return self.individuals['area'].to_numpy(dtype=np.object)
+        return self.individuals[ColumnNames.MSOAsID].to_numpy(dtype=np.object)
 
     def get_not_home_probs(self):
         return self.individuals['pnothome'].to_numpy(dtype=np.float32)
@@ -211,7 +212,7 @@ class SnapshotConvertor:
         with open(msoa_building_filepath) as f:
             msoa_buildings = json.load(f)
 
-        areas = home_locations_df.loc[:, "area"]
+        areas = home_locations_df.loc[:, ColumnNames.MSOAsID]
 
         num_locations = len(home_locations_df.index)
 

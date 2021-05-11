@@ -17,12 +17,15 @@ class InitialCases:
         """
 
         # load initial case data
-        path_to_seeding_file_in_study_area = os.path.join(selected_region_folder_full_path,
-                                                          Constants.Paths.SEEDING_FILE.FILE)
+        path_to_seeding_file_in_study_area = os.path.join(selected_region_folder_full_path, Constants.Paths.SEEDING_FILE.FILE)
         self.initial_cases = pd.read_csv(path_to_seeding_file_in_study_area)
             # pd.read_csv(Constants.Paths.SEEDING_FILE.FULL_PATH_FILE) #(os.path.join(selected_region_folder_full_path,Constants.Paths.INITIAL_CASES_FILE))
 
-        msoa_risks_df = pd.read_csv(Constants.Paths.MSOAS_RISK_FILE.FULL_PATH_FILE, #(os.path.join(selected_region_folder_full_path,Constants.Paths.MSOAS_RISK_FILE),
+        # msoa_risk_df = pd.read_csv(os.path.join(selected_region_folder_full_path,
+        #                                         Constants.Paths.MSOAS_RISK_FILE),
+        #                                         usecols=[1, 2])
+        path_to_risk_file_in_study_area = os.path.join(selected_region_folder_full_path, Constants.Paths.MSOAS_RISK_FILE.FILE)
+        msoa_risks_df = pd.read_csv(path_to_risk_file_in_study_area, #Constants.Paths.MSOAS_RISK_FILE.FULL_PATH_FILE, #(os.path.join(selected_region_folder_full_path,Constants.Paths.MSOAS_RISK_FILE),
                                     usecols=[1, 2])
         # TODO: assign here not hard-coded columns names!
 

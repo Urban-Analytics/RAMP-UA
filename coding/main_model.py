@@ -183,6 +183,8 @@ def run_opencl_model(individuals_df,
                                                time_activity_multiplier,
                                                study_area_folder_in_processed_data)
         snapshot = snapshot_converter.generate_snapshot()
+        if not os.path.exists(os.path.join(study_area_folder_in_processed_data, "snapshot")):
+            os.makedirs(os.path.join(study_area_folder_in_processed_data, "snapshot"))
         snapshot.save(snapshot_cache_filepath)  # store snapshot in cache so we can load later
     else:  # load cached snapshot
         snapshot = Snapshot.load_full_snapshot(path=snapshot_cache_filepath)
