@@ -122,6 +122,7 @@ def main(parameters_file):
     else:  # load from cache
         print("Loading data from previous cache")
         individuals, activity_locations = cache.read_from_cache()
+        lllll = ""
 
         #     # Calculate the time-activity multiplier (this is for implementing lockdown)
     time_activity_multiplier = None
