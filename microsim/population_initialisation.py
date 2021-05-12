@@ -20,7 +20,7 @@ import os
 import warnings
 from microsim.quant_api import QuantRampAPI
 from collections.abc import Iterable  # drop `.abc` with Python 2.7 or lower
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from tqdm import tqdm  # For a progress bar
 
 
@@ -582,7 +582,7 @@ class PopulationInitialisation:
         return individuals
 
     @classmethod
-    def read_school_flows_data(cls, study_msoas: List[str], quant_object: QuantRampAPI) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
+    def read_school_flows_data(cls, study_msoas: List[str], quant_object: QuantRampAPI) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
         Read the flows between each MSOA and the most likely schools attended by pupils in this area.
         All schools are initially read together, but flows are separated into primary and secondary
@@ -627,12 +627,12 @@ class PopulationInitialisation:
         return primary_schools, secondary_schools, primary_flow_matrix, secondary_flow_matrix
 
     @classmethod
-    def read_commuting_flows_data(cls, study_msoas: List[str]) -> (pd.DataFrame, pd.DataFrame):
+    def read_commuting_flows_data(cls, study_msoas: List[str]) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Read the commuting flows between each MSOA
 
         :param study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
-        :return: A dataframe with origin and destination flows in all MSOAs in the study area
+        :return: A Tuple of two dataframes with origin and destination flows in all MSOAs in the study area
         """
         print("Reading commuting flow data for Devon...", )
         commuting_flows = pd.read_csv(os.path.join(cls.DATA_DIR, "devon-commuting", "commuting_od.csv"),
@@ -754,7 +754,7 @@ class PopulationInitialisation:
         return workplaces.index[workplaces[ColumnNames.LOCATION_NAME] == job].values[0]
 
     @classmethod
-    def read_retail_flows_data(cls, study_msoas: List[str], quant_object: QuantRampAPI) -> (pd.DataFrame, pd.DataFrame):
+    def read_retail_flows_data(cls, study_msoas: List[str], quant_object: QuantRampAPI) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Read the flows between each MSOA and the most commonly visited shops
 
@@ -781,7 +781,7 @@ class PopulationInitialisation:
         return stores, flow_matrix
     
     @classmethod
-    def read_nightclubs_flows_data(cls, study_msoas: List[str], quant_object: QuantRampAPI) -> (pd.DataFrame, pd.DataFrame):
+    def read_nightclubs_flows_data(cls, study_msoas: List[str], quant_object: QuantRampAPI) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Read the flows between each MSOA and the most commonly visited shops
 
@@ -1022,4 +1022,4 @@ class PopulationInitialisation:
         individuals[ColumnNames.DISEASE_PRESYMP] = -1
         individuals[ColumnNames.DISEASE_SYMP_DAYS] = -1
         individuals[ColumnNames.DISEASE_EXPOSED_DAYS] = -1
-        return individuals
+        return individuals 
