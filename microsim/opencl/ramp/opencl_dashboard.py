@@ -244,6 +244,7 @@ def create_dashboard(parameters_file):
       "PrimarySchool": "PrimarySchool",
       "SecondarySchool": "SecondarySchool",
       "Retail": "Retail",
+      "Nightclubs": "Nightclubs",
       "Work": "Work",
       "Home": "Home",
     }
@@ -262,6 +263,7 @@ def create_dashboard(parameters_file):
       "recovered": "green",
       "dead": "black",
       "Retail": "blue",
+      "Nightclubs": "yellow",
       "PrimarySchool": "orange",
       "SecondarySchool": "red",
       "Work": "black",

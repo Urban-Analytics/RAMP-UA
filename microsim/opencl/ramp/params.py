@@ -2,10 +2,12 @@ import numpy as np
 from collections import namedtuple
 import warnings
 
+#### FB: I have add nightclubs as new LocationsHazard, followed by the same parameter than retail.
 LocationHazardMultipliers = namedtuple(
     "LocationHazardMultipliers",
     [
         "retail",
+        "nightclubs",
         "primary_school",
         "secondary_school",
         "home",
@@ -30,6 +32,7 @@ class Params:
     def __init__(self,
                  location_hazard_multipliers=LocationHazardMultipliers(
                         retail=0.0165,
+                        nightclubs=0.0167,
                         primary_school=0.0165,
                         secondary_school=0.0165,
                         home=0.0165,
@@ -66,6 +69,7 @@ class Params:
         self.infection_mode = 7.0
         self.lockdown_multiplier = 1.0
         self.place_hazard_multipliers = np.array([location_hazard_multipliers.retail,
+                                                  location_hazard_multipliers.nightclubs,
                                                   location_hazard_multipliers.primary_school,
                                                   location_hazard_multipliers.secondary_school,
                                                   location_hazard_multipliers.home,
@@ -124,15 +128,16 @@ class Params:
     def fromarray(cls, params_array):
         location_hazard_multipliers = LocationHazardMultipliers(
             retail=params_array[8],
-            primary_school=params_array[9],
-            secondary_school=params_array[10],
-            home=params_array[11],
-            work=params_array[12]
+            nightclubs=params_array[9],
+            primary_school=params_array[10],
+            secondary_school=params_array[11],
+            home=params_array[12],
+            work=params_array[13]
         )
         individual_hazard_multipliers = IndividualHazardMultipliers(
-            presymptomatic=params_array[13],
-            asymptomatic=params_array[14],
-            symptomatic=params_array[15]
+            presymptomatic=params_array[14],
+            asymptomatic=params_array[15],
+            symptomatic=params_array[16]
         )
         p = cls(location_hazard_multipliers, individual_hazard_multipliers)
         p.symptomatic_multiplier = params_array[0]
@@ -143,13 +148,13 @@ class Params:
         p.infection_log_scale = params_array[5]
         p.infection_mode = params_array[6]
         p.lockdown_multiplier = params_array[7]
-        p.mortality_probs = params_array[16:35]
-        p.obesity_multipliers = params_array[35:39]
-        p.symptomatic_probs = params_array[39:48]
-        p.cvd_multiplier = params_array[48]
-        p.diabetes_multiplier = params_array[49]
-        p.bloodpressure_multiplier = params_array[50]
-        p.overweight_sympt_mplier = params_array[51]
+        p.mortality_probs = params_array[17:35]
+        p.obesity_multipliers = params_array[36:39]
+        p.symptomatic_probs = params_array[40:48]
+        p.cvd_multiplier = params_array[49]
+        p.diabetes_multiplier = params_array[50]
+        p.bloodpressure_multiplier = params_array[51]
+        p.overweight_sympt_mplier = params_array[52]
         return p
 
     def set_lockdown_multiplier(self, lockdown_multipliers, timestep):

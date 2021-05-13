@@ -97,7 +97,7 @@ class MicrosimInit(Microsim):
             # Manually change people's activity durations after lockdown
             if i > 39:  # After day 39 - March 23RD in new cases
                 total_duration = 0.0
-                for colum_name in ['Retail', 'PrimarySchool', 'SecondarySchool', 'Work']:
+                for colum_name in ['Retail', 'Nightclubs','PrimarySchool', 'SecondarySchool', 'Work']:
                     new_duration = m.individuals.loc[:, colum_name+ ColumnNames.ACTIVITY_DURATION] * 0.33
                     # Round the new duration to prevent tiny numbers
                     new_duration = round(new_duration, 10)

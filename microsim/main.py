@@ -289,7 +289,7 @@ def create_params(calibration_params, disease_params):
     location_hazard_multipliers = LocationHazardMultipliers(
         retail=calibration_params["hazard_location_multipliers"]["Retail"] * current_risk_beta,
         ###**** The NC were added. ***######
-        nightclub=calibration_params["hazard_location_multipliers"]["Nightclubs"] * current_risk_beta, 
+        nightclubs=calibration_params["hazard_location_multipliers"]["Nightclubs"] * current_risk_beta, 
         primary_school=calibration_params["hazard_location_multipliers"]["PrimarySchool"] * current_risk_beta,
         secondary_school=calibration_params["hazard_location_multipliers"]["SecondarySchool"] * current_risk_beta,
         home=calibration_params["hazard_location_multipliers"]["Home"] * current_risk_beta,

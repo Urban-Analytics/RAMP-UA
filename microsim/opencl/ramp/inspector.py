@@ -443,6 +443,7 @@ class Inspector:
         imgui.text("Activity Hazard Multipliers")
 
         for i, activity in enumerate(list(Activity)):
+            print (activity)
             _, self.params.place_hazard_multipliers[i] = imgui.slider_float(
                 activity.name, self.params.place_hazard_multipliers[i], 0.0, 1.0, "%.4f")
 
