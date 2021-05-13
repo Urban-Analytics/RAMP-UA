@@ -4,7 +4,7 @@
 microsim:
   project-dir-absolute-path: "/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/"
   # selected-region-folder-name: WestYorkshire # Name of a directory nested under data/regional_data/ that should be used
-  study-area: "WestYorkshire" #"Devon" # "testWY" # WestYorkshire # Name of directory inside data/processed_data (will be created if doesn't exist)
+  study-area: "testWY" # "WestYorkshire" #"Devon" #  Name of directory inside data/processed_data (will be created if doesn't exist)
 #  list-of-msoas-location: "devon_msoas_list.csv" # "test_msoalist.csv"
   scenario: "BaseScenario" # name for scenario directory
   initialise: FALSE

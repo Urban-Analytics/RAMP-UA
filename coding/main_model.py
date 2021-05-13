@@ -122,16 +122,16 @@ def main(parameters_file):
     else:  # load from cache
         print("Loading data from previous cache")
         individuals, activity_locations = cache.read_from_cache()
-        lllll = ""
 
         #     # Calculate the time-activity multiplier (this is for implementing lockdown)
     time_activity_multiplier = None
     if lockdown_file != "":
         print(f"Implementing a lockdown with time activities from {lockdown_file}")
         time_activity_multiplier: pd.DataFrame = \
-            TimeActivityMultiplier.read_time_activity_multiplier(os.path.join(Constants.Paths.NATIONAL_DATA.FULL_PATH_FOLDER,
+            TimeActivityMultiplier.read_time_activity_multiplier(os.path.join(study_area_folder_in_processed_data,
                                                                               lockdown_file))
-
+            # TimeActivityMultiplier.read_time_activity_multiplier(os.path.join(Constants.Paths.NATIONAL_DATA.FULL_PATH_FOLDER,
+            #                                                                   lockdown_file))
     # if open_cl_model:
     run_opencl_model(individuals,
                      activity_locations,

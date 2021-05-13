@@ -39,7 +39,7 @@ class Constants:
         PROJECT_FOLDER_ABSOLUTE_PATH = abspath
         OUTPUT_FOLDER = ""
 
-        # !!! HARD_CODED !!!
+        # !!!
         class MSOAS_RISK_FILE:
             FILE = "msoas_risk.csv" #"msoas_risk_west-yorskhire.csv"
             # FULL_PATH_FILE = os.path.join(abspath,
@@ -48,12 +48,14 @@ class Constants:
             #                               county_data_folder,
             #                               FILE)
         # !!!
+        # !!! the parameter below is HARD_CODED !!!
         class LIST_MSOAS:
-            FILE = "wy_msoas_list.csv" #"test_msoalist.csv" #"devon_msoas_list.csv" #"test_msoalist.csv" ## better in parameters! (default.yml)  ## this is only temporaneous
+            FILE = "test_msoalist.csv" #"wy_msoalist.csv" #"devon_msoalist.csv" #"test_msoalist.csv" ## better in parameters! (default.yml)  ## this is only temporaneous
             PARAM_FOLDER = "model_parameters/"
             FULL_PATH_FILE = os.path.join(abspath,
                                           PARAM_FOLDER,
                                           FILE)
+        # !!!
         class CODE:
             FOLDER = code_folder
             FULL_PATH = os.path.join(abspath,
@@ -341,7 +343,7 @@ class Constants:
 
 class ColumnNames:
     """Used to record standard dataframe column names used throughout"""
-    MSOAsID = "MSOA11CD"
+    MSOAsID = "MSOA11CD" # "area" for West Yorkshire
     TIME_ACTIVITY_MULTIPLIER = "timeout_multiplier" # for Devon data, "change" in the new data generated from raw_data_handler... check this to gove the correct old name!
 
     LOCATION_DANGER = "Danger"  # Danger associated with a location

@@ -19,6 +19,7 @@ import geopandas as gpd
 import numpy as np
 
 from coding.constants import Constants
+from coding.constants import ColumnNames
 
 class RawDataHandler:
     _combined_TU_file = None
@@ -73,7 +74,9 @@ class RawDataHandler:
                 file_name = Constants.Paths.TU.FULL_PATH_FILE + x + ".csv"
                 temp = pd.read_csv(Constants.Paths.TU.FULL_PATH_FILE + x + ".csv")
                 print(f"File is {file_name}")
-            temp = temp[temp.MSOA11CD.isin(msoasList)]
+            # temp = temp[temp.MSOA11CD.isin(msoasList)]
+            # temp = temp[temp.area.isin(msoasList)]
+            temp = temp[temp[ColumnNames.MSOAsID].isin(msoasList)]
             print("Combining TU files")
             tus_hse = tus_hse.append(temp)
             self._combined_TU_file = tus_hse
