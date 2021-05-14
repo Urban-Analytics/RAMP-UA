@@ -23,7 +23,11 @@ Note that the name for the county (which the TU file pertain to depending on you
     - `study-area` the name for the folder in `processed_data` and `output` folders that pertains to your chosen study area, the name you assign here will be used throughout the whole process.
 5. the model now runs with only one parameter in input (in the command line), check 'Main difference with RAMP-UA' below, so be aware of this (IE if you want to choose whether to run the OpenCL or not, you change the parameter directly in `model_parameters/default.yml`, not by command line);
 in any case THIS VERSION ONLY RUNS with OPENCL and anyways NOT WITH THE GUI YET (see the todo list for the dashboard map).
-6. please come back to me (@ciupava) for any question
+6. once edited all the above, you have to run the model in two steps:
+    - first run the initialisation process via `python coding/main_initialisation.py -p ../model_parameters/default.yml`, this module will download the data (to `data/raw_data/`), process them and prepare the table/data for the model that will be stored in `data/processed_data/your-study-area-folder/`
+    - once the data are processed, you can run the model using `python coding/main_model.py -p ../model_parameters/default.yml`
+    not that for the moment the OpenCL caching (snapshot creation) is still in the model part but should be moved to the initialisation (see TO_DO list)
+7. please come back to me (@ciupava) for any question
 
 
 
@@ -93,3 +97,4 @@ Features that currently are not available, but are to be implemented on this ver
 - [ ] fix the `project-dir-absolute-path` variable (eliminate if possible)
 - [ ] import the snapshot creation for OpenCL version to the initialisation part: IE separate the opencl code (what is in now in `coding/model/opencl/ramp/`) and put the part that generates the opencl snapshot (`cache.npz`) into the initialisation part 
 - [ ] what happens when one uses the same study area name? (raise exception ... overwrite existing files, or use the already existing cache/processed data?)
+- [ ] think whether to separate the configuration file (`model_parameters/default.yml`) in two, one for the initialisation and one for the model
