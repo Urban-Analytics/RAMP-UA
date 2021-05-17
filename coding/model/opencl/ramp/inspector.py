@@ -22,9 +22,9 @@ default_flags = imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_
 class Inspector:
     """User Interface: manager for all user input and rendering for the application."""
 
-    def __init__(self, simulator, snapshot, nlines, window_name, width, height,
+    def __init__(self, simulator, snapshot, study_area_folder, nlines, window_name, width, height,
                  # font_path="microsim/opencl/fonts/RobotoMono.ttf"):
-                 font_path=os.path.join(Constants.Paths.OPENCL_FONTS.FULL_PATH_FOLDER)):
+                 font_path=os.path.join(Constants.Paths.OPENCL_FONTS.FULL_PATH_ROBOTO)):
                  # font_path="/Users/azanchetta/EcoTwins/microsim/opencl/fonts/RobotoMono.ttf"):
         """Create the window, imgui renderer, and all background renderers.
 
@@ -170,9 +170,8 @@ class Inspector:
         self.zoom_multiplier = 1.01
         self.position = position
         # self.snapshot_dir = "microsim/opencl/snapshots"
-        self.snapshot_dir = os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
-                                         Constants.Paths.CACHE_FOLDER,
-                                         Constants.Paths.OPENCL.OPENCL_SNAPSHOTS_FOLDER)
+        self.snapshot_dir = os.path.join(study_area_folder,
+                                         Constants.Paths.SNAPSHOTS.FOLDER)
         self.snapshots = [f for f in os.listdir(self.snapshot_dir) if f.endswith(".npz")]
         self.current_snapshot = self.snapshots.index(f"{snapshot.name}.npz")
         self.selected_snapshot = self.current_snapshot

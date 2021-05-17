@@ -46,7 +46,9 @@ def run_opencl(snapshot,
 
     if use_gui:
         run_with_gui(simulator,
-                     snapshot)
+                     snapshot,
+                     study_area_folder_in_processed_data,
+                     study_area)
     else:
         summary, final_state = run_headless(simulator,
                                             snapshot,
@@ -57,7 +59,7 @@ def run_opencl(snapshot,
                            data_dir=study_area_folder_in_output)
 
 
-def run_with_gui(simulator, snapshot):
+def run_with_gui(simulator, snapshot,study_area_folder_in_processed_data, study_area):
     width = 2560  # Initial window width in pixels
     height = 1440  # Initial window height in pixels
     nlines = 4  # Number of visualised connections per person
@@ -65,8 +67,9 @@ def run_with_gui(simulator, snapshot):
     # Create an inspector and upload static data
     inspector = Inspector(simulator,
                           snapshot,
+                          study_area_folder_in_processed_data,
                           nlines,
-                          "Ramp UA", # ??
+                          study_area, #"Ramp UA",
                           width,
                           height)
 

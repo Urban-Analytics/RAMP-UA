@@ -211,7 +211,7 @@ class Constants:
                                             FOLDER)
             CACHE_FILE = "cache.npz"
         class SNAPSHOTS:
-            FOLDER = "snapshots"
+            FOLDER = "snapshot"
             FULL_PATH_FOLDER = os.path.join(abspath,
                                             data_folder,
                                             processed_data_folder,
