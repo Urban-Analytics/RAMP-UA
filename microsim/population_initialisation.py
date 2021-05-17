@@ -184,8 +184,8 @@ class PopulationInitialisation:
         # Assign work. Use a flow matrix of general commuting flows. Assume one office for each different employment
         # type exists in each MSOA. An individual is assigned flows and office locations according to the general
         # flows from their home MSOA.
-        # Occupation is taken from column soc2010 in individuals df
-        self.individuals['soc2010'] = self.individuals['soc2010'].astype(str)  # These are integers but we need string
+        # Occupation is taken from column soc2010 in individuals df. Make it a string and replace empty cells with "NA" string
+        self.individuals['soc2010'] = self.individuals['soc2010'].astype(str).fillna("NA")
         possible_jobs = sorted(self.individuals.soc2010.unique())  # list of possible jobs in alphabetical order
         workplace_names = []  # Creat a list of workplace names, built from the MSOA code and the SOC
         workplace_msoas = []
