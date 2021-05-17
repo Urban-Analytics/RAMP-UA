@@ -96,5 +96,5 @@ Features that currently are not available, but are to be implemented on this ver
 - [ ] correct the hard-coded coordinates and MSOA code within `snapshot.py` add this to the initialisation process (@manluow)
 - [ ] fix the `project-dir-absolute-path` variable (eliminate if possible)
 - [ ] import the snapshot creation for OpenCL version to the initialisation part: IE separate the opencl code (what is in now in `coding/model/opencl/ramp/`) and put the part that generates the opencl snapshot (`cache.npz`) into the initialisation part 
-- [ ] what happens when one uses the same study area name? (raise exception ... overwrite existing files, or use the already existing cache/processed data?)
+- [ ] what happens when one uses a study area name that already exists? (Raise exception ... overwrite existing files, or use the already existing cache/processed data?)
 - [ ] think whether to separate the configuration file (`model_parameters/default.yml`) in two, one for the initialisation and one for the model

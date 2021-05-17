@@ -95,7 +95,7 @@ class Snapshot:
 
             params=Params().asarray(),
         )
-kkkk
+
         ids = np.reshape(np.tile(np.arange(nslots), npeople), (npeople, nslots))
         ids += np.reshape(np.arange(npeople), (npeople, 1))
         buffers.people_place_ids[:] = np.clip(ids, 0, nplaces).flatten().astype(np.uint32)

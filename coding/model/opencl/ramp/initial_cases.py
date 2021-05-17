@@ -37,7 +37,7 @@ class InitialCases:
                                     on="area_code")
 
         # get people_ids for people in high risk MSOAs and high not home probability
-        self.high_risk_ids = np.where((people_df["risk"] == "High") & (people_df["not_home_prob"] > 0.3))[0]
+        self.high_risk_ids = np.where((people_df["risk"] == "Medium") & (people_df["not_home_prob"] > 0.3))[0]
 
     def get_seed_people_ids_for_day(self, day):
         """Randomly choose a given number of people ids from the high risk people"""
