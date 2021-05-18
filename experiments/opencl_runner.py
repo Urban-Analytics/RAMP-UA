@@ -321,7 +321,7 @@ class OpenCLRunner:
     @staticmethod
     def run_opencl_model_multi(
             repetitions: int, iterations: int, params: Params,
-            use_gpu: bool = False, use_healthier_pop: bool = True, store_detailed_counts: bool = False,
+            use_gpu: bool = False, use_healthier_pop: bool = False, store_detailed_counts: bool = False,
             opencl_dir=os.path.join(".", "microsim", "opencl"),
             snapshot_filepath=os.path.join(".", "microsim", "opencl", "snapshots", "cache.npz"),
             multiprocess=False,

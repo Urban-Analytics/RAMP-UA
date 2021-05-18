@@ -29,11 +29,11 @@ class Params:
 
     def __init__(self,
                  location_hazard_multipliers=LocationHazardMultipliers(
-                        retail=0.0165,
-                        primary_school=0.0165,
-                        secondary_school=0.0165,
-                        home=0.0165,
-                        work=0.0
+                        retail=0.00655,
+                        primary_school=0.00655,
+                        secondary_school=0.00655,
+                        home=0.00655,
+                        work=0.00655
                     ),
                  individual_hazard_multipliers=IndividualHazardMultipliers(
                         presymptomatic=1.0,
@@ -44,7 +44,7 @@ class Params:
                  cvd_multiplier=1,
                  diabetes_multiplier=1,
                  bloodpressure_multiplier=1,
-                 overweight_sympt_mplier=1.46,
+                 overweight_sympt_mplier= 1,
                  warn=True  # Can surpress warnings about using default values
                  ):
 
