@@ -42,9 +42,10 @@ bool is_infectious(DiseaseStatus status) {
 typedef enum Activity {
   Home = 0,
   Retail = 1,
-  PrimarySchool = 2,
-  SecondarySchool = 3,
-  Work = 4,
+  Nightclubs = 2,
+  PrimarySchool = 3,
+  SecondarySchool = 4,
+  Work = 5,
 } Activity;
 
 
@@ -60,7 +61,7 @@ typedef struct Params {
   float infection_log_scale; // The std dev of the underlying normal distribution of the lognormal infected duration distribution
   float infection_mode; // The mode of the lognormal distribution of infected durations
   float lockdown_multiplier; // Increase in time at home due to lockdown
-  float place_hazard_multipliers[5]; // Hazard multipliers by activity
+  float place_hazard_multipliers[6]; // Hazard multipliers by activity
   float individual_hazard_multipliers[3]; // Hazard multipliers by activity
   float mortality_probs[19]; // mortality probabilities by age group
   float obesity_multipliers[4]; // mortality multipliers for obesity levels

@@ -75,7 +75,7 @@ class Snapshot:
         lockdown_multipliers = np.ones(100)
 
         buffers = Buffers(
-            place_activities=np.random.randint(5, size=nplaces, dtype=np.uint32),
+            place_activities=np.random.randint(6, size=nplaces, dtype=np.uint32),
             place_coords=np.random.randn(nplaces * 2).astype(np.float32),
             place_hazards=np.zeros(nplaces, dtype=np.uint32),
             place_counts=np.zeros(nplaces, dtype=np.uint32),

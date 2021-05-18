@@ -32,6 +32,7 @@ microsim_calibration:
   # Different locations can also have their own multipliers (e.g. to make it easier to pass the disease on to shops than schools)
   hazard_location_multipliers:
     Retail: 1.0
+    Nightclubs: 1.0
     PrimarySchool: 1.0
     SecondarySchool: 1.0
     Home: 1.0
