@@ -103,14 +103,21 @@ class Constants:
                                             FOLDER)
         class TIME_AT_HOME:
             FILE = "timeAtHomeIncreaseCTY.csv"
-            FULL_PATH_FILE= os.path.join(abspath,
+            FULL_PATH_FILE = os.path.join(abspath,
                                          data_folder,
                                          raw_data_folder,
                                          national_data_folder,
                                          FILE)
         class COMMUTING:
             FILE = "commutingOD.csv"
-            FULL_PATH_FILE= os.path.join(abspath,
+            FULL_PATH_FILE = os.path.join(abspath,
+                                         data_folder,
+                                         raw_data_folder,
+                                         national_data_folder,
+                                         FILE)
+        class NIGHTCLUBS:
+            FILE = "nightclubs.csv"
+            FULL_PATH_FILE = os.path.join(abspath,
                                          data_folder,
                                          raw_data_folder,
                                          national_data_folder,
@@ -339,6 +346,8 @@ class Constants:
         SCHOOL_TYPE = "nr"
         RETAIL = 10
         RETAIL_TYPE = "nr"
+        NIGHTCLUB = 10
+        NIGHTCLUB_TYPE = "nr"
 
 
 class ColumnNames:
@@ -357,7 +366,8 @@ class ColumnNames:
         SECONDARY = "SecondarySchool"
         HOME = "Home"
         WORK = "Work"
-        ALL = [RETAIL, PRIMARY, SECONDARY, HOME, WORK]
+        NIGHTCLUBS = "Nightclubs"
+        ALL = [RETAIL, PRIMARY, SECONDARY, HOME, WORK, NIGHTCLUBS]
 
     ACTIVITY_VENUES = "_Venues"  # Venues an individual may visit. Appended to activity type, e.g. 'Retail_Venues'
     ACTIVITY_FLOWS = "_Flows"  # Flows to a venue for an individual. Appended to activity type, e.g. 'Retail_Flows'

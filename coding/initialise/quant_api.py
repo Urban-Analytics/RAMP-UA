@@ -199,6 +199,12 @@ class QuantRampAPI:
                                                                     cls.retailpoints_probSij,
                                                                     m,
                                                                     0)
+            elif venue == "Nightclubs":
+                result_tmp = QuantRampAPI.getProbableRetailByMSOAIZ(cls.dfRetailPointsPopulation,
+                                                                    cls.dfRetailPointsZones,
+                                                                    cls.retailpoints_probSij,
+                                                                    m,
+                                                                    0)
             else:
                 raise Exception("unknown venue type")
             # keep only values that sum to at least the specified threshold
