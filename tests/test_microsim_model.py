@@ -9,14 +9,18 @@ import multiprocessing
 # ********************************************************
 # These tests run through a whole dummy model process
 # ********************************************************
+from quant_api import QuantRampAPI
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
+dummy_data_dir = os.path.join(test_dir, "dummy_data")
 
-# arguments used when calling the PopulationInitialisation constructor. Usually these are the same
-population_init_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
-                        "testing": True, "debug": True}
+# arguments used when calling the PopulationInitialisation constructor.
+population_init_args = {"data_dir": dummy_data_dir,
+                        "testing": True, "debug": True,
+                        "quant_object": QuantRampAPI(os.path.join(dummy_data_dir, "QUANT_RAMP"))
+                        }
 
-# arguments used when calling the Microsim constructor. Usually these are the same
+# arguments used when calling the Microsim constructor.
 microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
                  "r_script_dir": os.path.normpath(os.path.join(test_dir, "..", "R/py_int")),
                  "disable_disease_status": True}
@@ -27,6 +31,7 @@ microsim_args = {"data_dir": os.path.join(test_dir, "dummy_data"),
 # like `test_step()`.
 @pytest.fixture()
 def test_microsim():
+  
     population_init = PopulationInitialisation(**population_init_args)
 
     microsim = Microsim(
