@@ -151,8 +151,10 @@ class PopulationInitialisation:
         PopulationInitialisation.check_sim_flows(nightclubs, nightclub_flows)
         # Assign nightclubs flows data to the individuals
         self.individuals = PopulationInitialisation.add_individual_flows(nightclub_name, self.individuals, nightclub_flows)
+        #### the p values including for NC are gonna be the pleisure, consideing the same probability of being in a NC then the leisure activity. 
         self.activity_locations[nightclub_name] = \
-            ActivityLocation(nightclub_name, nightclubs, nightclub_flows, self.individuals, "pshop") 
+            ActivityLocation(nightclub_name, nightclubs, nightclub_flows, self.individuals, "pleisure")  
+
 
         ####********
         ####******** Q4. What does pshop means? *****########
@@ -954,11 +956,8 @@ class PopulationInitialisation:
         for activity in activity_locations.keys():
             total_duration = total_duration + individuals.loc[:, f"{activity}{ColumnNames.ACTIVITY_DURATION}"]
         total_duration = total_duration.apply(lambda x: round(x, 5))
-        #######*******###########
-        ##Comment this line as I have no idea what it doing
-        #######*******###########
-        
-        # assert (total_duration <= 1.0).all()  # None should be more than 1.0 (after rounding)
+             
+        assert (total_duration <= 1.0).all()  # None should be more than 1.0 (after rounding)
 
         missing_duration = 1.0 - total_duration  # Amount of activity time that needs to be added on to home
         # missing_duration = missing_duration.apply(lambda x: round(x,5))
