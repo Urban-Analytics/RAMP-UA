@@ -55,7 +55,7 @@ docs/build/*
 devon_data
 devon_data.tar.gz
 tests
-#regional_data
+data/regional_data
 #raw_data
 #processed_data
 
