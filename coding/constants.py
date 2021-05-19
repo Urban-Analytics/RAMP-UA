@@ -217,6 +217,7 @@ class Constants:
                                             data_folder,
                                             FOLDER)
             CACHE_FILE = "cache.npz"
+            BUILDINGS_SHP_FILE = "msoa_building_coordinates.json"
         class SNAPSHOTS:
             FOLDER = "snapshot"
             FULL_PATH_FOLDER = os.path.join(abspath,

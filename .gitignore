@@ -55,7 +55,9 @@ docs/build/*
 devon_data
 devon_data.tar.gz
 tests
-regional_data
+#regional_data
+#raw_data
+#processed_data
 
 # ignoring new folders
 data/**
