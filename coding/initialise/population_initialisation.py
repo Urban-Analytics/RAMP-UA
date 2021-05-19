@@ -29,8 +29,8 @@ from collections.abc import Iterable  # drop `.abc` with Python 2.7 or lower
 from typing import List, Dict, Tuple
 from tqdm import tqdm  # For a progress bar
 
-name = ColumnNames.MSOAsID
-print(f"this is number 1 {name}")
+# name = ColumnNames.MSOAsID
+# print(f"this is number 1 {name}")
 
 class PopulationInitialisation:
 
@@ -99,8 +99,8 @@ class PopulationInitialisation:
 
         # Extract a list of all MSOAs in the study area. Will need this for the new SIMs
         self.all_msoas = PopulationInitialisation.extract_msoas_from_individuals(self.individuals)
-        name = ColumnNames.MSOAsID
-        print(f"this is number 2 {name}")
+        # name = ColumnNames.MSOAsID
+        # print(f"this is number 2 {name}")
         #
         # ********** How to assign activities for the population **********
         #
@@ -169,8 +169,8 @@ class PopulationInitialisation:
                                                                          stores_flows)
         self.activity_locations[retail_name] = \
             ActivityLocation(retail_name, stores, stores_flows, self.individuals, "pshop")
-        name = ColumnNames.MSOAsID
-        print(f"this is number 2 {name}")
+        # name = ColumnNames.MSOAsID
+        # print(f"this is number 2 {name}")
         
         # Read Night clubs
         nightclub_name = ColumnNames.Activities.NIGHTCLUBS
@@ -182,10 +182,8 @@ class PopulationInitialisation:
         # Assign nightclubs flows data to the individuals
         self.individuals = PopulationInitialisation.add_individual_flows(nightclub_name, self.individuals, nightclub_flows)
         self.activity_locations[nightclub_name] = \
-            ActivityLocation(nightclub_name, nightclubs, nightclub_flows, self.individuals, "pshop") 
-
-        
-        
+            ActivityLocation(nightclub_name, nightclubs, nightclub_flows, self.individuals, "pleisure") # temporarily using column 'pleisure' for the nightclubs probability
+            # this assumption can be discussed and improved further
         
         
         # Read Schools (primary and secondary)
@@ -229,8 +227,8 @@ class PopulationInitialisation:
                 workplace_names.append(msoa + "-" + soc)
         assert len(workplace_names) == len(self.all_msoas) * len(possible_jobs)
         assert len(pd.unique(workplace_names)) == len(workplace_names)  # Each name should be unique
-        name = ColumnNames.MSOAsID
-        print(f"this is number 4 {name}")
+        # name = ColumnNames.MSOAsID
+        # print(f"this is number 4 {name}")
         workplaces = pd.DataFrame({
             'ID': range(0, len(workplace_names)),
             'MSOA': workplace_msoas,
@@ -275,8 +273,8 @@ class PopulationInitialisation:
             self.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"] = \
                 self.individuals[f"{name}{ColumnNames.ACTIVITY_DURATION}"].apply(lambda x: round(x, 5))
 #TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
-        name = ColumnNames.MSOAsID
-        print(f"this is number 5 {name}")
+        # name = ColumnNames.MSOAsID
+        # print(f"this is number 5 {name}")
         # Some people's activity durations will not add up to 1.0 because we don't model all their activities.
         # Extend the amount of time at home to make up for this
         self.individuals = PopulationInitialisation.pad_durations(self.individuals, self.activity_locations)
@@ -322,8 +320,8 @@ class PopulationInitialisation:
         homeless = [(area, hid, pid) for area, hid, pid in individuals.loc[:, ["House_OA", "HID", "PID"]].values if
                     (area, hid) not in hids.index]
 # TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
-        name = ColumnNames.MSOAsID
-        print(f"this is number 6 {name}")
+        # name = ColumnNames.MSOAsID
+        # print(f"this is number 6 {name}")
         # (version using apply isn't quicker)
         # h2 = individuals.reset_index().loc[:, ["House_OA", "HID", "PID"]].swifter.apply(
         #    lambda x: x[2] if (x[0], x[1]) in hids.index else None, axis=1)
@@ -349,8 +347,8 @@ class PopulationInitialisation:
         """
         areas = list(individuals[ColumnNames.MSOAsID].unique()) #list(individuals.area.unique())
         areas.sort()
-        name = ColumnNames.MSOAsID
-        print(f"this is number 7 {name}")
+        # name = ColumnNames.MSOAsID
+        # print(f"this is number 7 {name}")
         return areas
 
 
@@ -383,8 +381,8 @@ class PopulationInitialisation:
             warnings.warn(f"{nohh} / {len(tuh)} individuals in the TUH data had not originally been matched "
                           f"to a household. They're being removed")
         tuh = tuh.loc[tuh.hid != -1]
-        name = ColumnNames.MSOAsID
-        print(f"this is number 8 {name}")
+        # name = ColumnNames.MSOAsID
+        # print(f"this is number 8 {name}")
         # Indicate that HIDs and PIDs shouldn't be used as indices as they don't uniquely
         # identify individuals / households in this health data
         tuh = tuh.rename(columns={'hid': '_hid', 'pid': '_pid'})
@@ -419,8 +417,8 @@ class PopulationInitialisation:
         _areas = list(tuh[ColumnNames.MSOAsID]) #list(tuh["area"])  # MSOAs IDs name
         _hids = list(tuh["_hid"])
         _pids = list(tuh["_pid"])
-        name = ColumnNames.MSOAsID
-        print(f"this is number 9 {name}")
+        # name = ColumnNames.MSOAsID
+        # print(f"this is number 9 {name}")
         for i, (area, hid, pid) in enumerate(zip(_areas, _hids, _pids)):
             # print(i, area, hid, pid)
             unique_individuals.append((area, hid, pid))
@@ -475,8 +473,8 @@ class PopulationInitialisation:
         # Check that the area that the individual lives in is the same as the area their house is in
         temp_merge = tuh.merge(households_df, how="left", on=["House_ID"], validate="many_to_one")
         assert len(temp_merge) == len(tuh)
-        name = ColumnNames.MSOAsID
-        print(f"this is number 10 {name}")
+        # name = ColumnNames.MSOAsID
+        # print(f"this is number 10 {name}")
         assert (temp_merge[ColumnNames.MSOAsID + '_x'] == temp_merge[ColumnNames.MSOAsID + '_y']).all()  # (all says 'all are true')
 
         # Check that NumPeople in the house dataframe is the same as number of people in the individuals dataframe
@@ -839,7 +837,7 @@ class PopulationInitialisation:
         flow_matrix = self.quant_object.get_flows("Retail", study_msoas, threshold, thresholdtype)  ## get_flows is defined in file 'quant_api.py'
 
         return stores, flow_matrix
-    def read_nightclubs_flows_data(cls, study_msoas: List[str], quant_object: QuantRampAPI) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    def read_nightclubs_flows_data(self, study_msoas: List[str]) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Read the flows between each MSOA and the most commonly visited shops
 
@@ -860,7 +858,7 @@ class PopulationInitialisation:
         # Read the flows
         threshold = Constants.Thresholds.NIGHTCLUB  # top 10
         thresholdtype = Constants.Thresholds.NIGHTCLUB_TYPE #"nr"  # threshold based on nr venues
-        flow_matrix = quant_object.get_flows("Nightclubs", study_msoas, threshold, thresholdtype)
+        flow_matrix = self.quant_object.get_flows("Nightclubs", study_msoas, threshold, thresholdtype)
 
         return nightclubs, flow_matrix
     
@@ -951,8 +949,8 @@ class PopulationInitialisation:
 
         # Use a hierarchical index on the Area to speed up finding all individuals in an area
         # (not sure this makes much difference).
-        name = ColumnNames.MSOAsID
-        print(f"this is number 11 {name}")
+        # name = ColumnNames.MSOAsID
+        # print(f"this is number 11 {name}")
         individuals.set_index([ColumnNames.MSOAsID, "ID"], inplace=True, drop=False)
 
         for area in tqdm(flow_matrix.values,
