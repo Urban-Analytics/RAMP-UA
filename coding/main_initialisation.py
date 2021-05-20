@@ -10,7 +10,6 @@ import sys
 # sys.path.append("code")
 import multiprocessing
 import pandas as pd
-
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
 import os
 import click  # command-line interface
@@ -24,12 +23,15 @@ import tarfile
 import zipfile
 import geopandas as gpd
 import numpy as np
+#
+import json
 # Packages as in the original model code
 from coding.constants import Constants
 # from initialise.quant_api import QuantRampAPI
 from coding.initialise.population_initialisation import PopulationInitialisation
 from coding.initialise.initialisation_cache import InitialisationCache
 from coding.initialise.raw_data_handler import RawDataHandler
+from coding.initialise.load_msoa_locations import MapsHandler
 
 # ********
 # PROGRAM ENTRY POINT
@@ -129,16 +131,23 @@ def main(parameters_file):
     # population_args = {"project_dir": project_dir, "regional_data_dir": regional_data_dir_full_path, "debug": debug}
     population_args = {"debug": debug, "raw_data_handler_param": raw_data_handler}
 
-    # The disease parameters for the model were defined here, this part was removed as now it's done inside OpenCL
-
-    #     # Temporarily use dummy data for testing
-    #     # data_dir = os.path.join(base_dir, "dummy_data")
-    #     # m = Microsim(data_dir=data_dir, testing=True, output=output)
-
-    #     # cache to hold previously calculate population data
     study_area_folder_in_processed_data = os.path.join(Constants.Paths.PROCESSED_DATA.FULL_PATH_FOLDER,
                                                        study_area)  # this generates the folder name
     print(f"study area folder {study_area_folder_in_processed_data}")
+
+    # The disease parameters for the model were defined here, this part was removed as now it's done inside OpenCL
+
+    # Generate json file for the final dashboard map
+    msoa_buildings = MapsHandler()
+    print("Writing MSOA buildings to JSON file")
+    # output_filepath = os.path.join(data_dir, "msoa_building_coordinates.json") # correct this
+    output_filepath = os.path.join(study_area_folder_in_processed_data,
+                                   Constants.Paths.PROCESSED_DATA.BUILDINGS_SHP_FILE)
+
+    with open(output_filepath, 'w') as output_file:
+        json.dump(msoa_buildings, output_file)
+
+    #     # cache to hold previously calculate population data
     if not os.path.exists(study_area_folder_in_processed_data):
         os.makedirs(study_area_folder_in_processed_data)
     cache = InitialisationCache(cache_dir=study_area_folder_in_processed_data)

@@ -43,7 +43,7 @@ class RawDataHandler:
 
         # Note: this step needs to be improved by creating a formal way of introducing the list and checking its format is correct
         msoasList_file = pd.read_csv(Constants.Paths.LIST_MSOAS.FULL_PATH_FILE)  ### Needs to be put as initial parameter, for now in Constants
-        msoasList = msoasList_file["MSOA11CD"]      # should be ["area_code"] but the current test file has column name "MSOA11CD"
+        msoasList = msoasList_file[ColumnNames.MSOAsID]     # should be ["area_code"] but the current test file has column name "MSOA11CD"
         ### %%
         ###  Checking that look-up table exists and reading it in
 
@@ -58,7 +58,8 @@ class RawDataHandler:
 
         ### %%
         ### TU files
-        tus_hse_ref = np.unique(lookUp.NewTU[lookUp.MSOA11CD.isin(msoasList)])
+        # tus_hse_ref = np.unique(lookUp.NewTU[lookUp.MSOA11CD.isin(msoasList)])
+        tus_hse_ref = np.unique(lookUp.NewTU[lookUp[ColumnNames.MSOAsID].isin(msoasList)])
         tus_hse = pd.DataFrame()
         # initially only try with the WYtest TUH file (fake ad-hoc file)
         for x in tus_hse_ref:
@@ -123,15 +124,17 @@ class RawDataHandler:
 
         shp = gpd.read_file(Constants.Paths.MSOAS_FOLDER.FULL_PATH_FOLDER) #"data/common_data/MSOAS_shp/msoas.shp")
         msoas_pop = shp["pop"]
-        msoas_pop = msoas_pop[shp.MSOA11CD.isin(msoasList)]
+        # msoas_pop = msoas_pop[shp.MSOA11CD.isin(msoasList)]
+        msoas_pop = msoas_pop[shp[ColumnNames.MSOAsID].isin(msoasList)]
 
-        change_ref = np.unique(lookUp.GoogleMob[lookUp.MSOA11CD.isin(msoasList)])
+        # change_ref = np.unique(lookUp.GoogleMob[lookUp.MSOA11CD.isin(msoasList)])
+        change_ref = np.unique(lookUp.GoogleMob[lookUp[ColumnNames.MSOAsID].isin(msoasList)])
 
-        # average change within study area weighted by MSOA11CD population
+        # average change within study area weighted by msoa population
         cty_pop = np.repeat(0, len(change_ref))
         change = np.repeat(0, np.max(lockdown.day)+1)
         for x in range(0, len(change_ref)):
-            cty_pop[x] = np.nansum(msoas_pop[lookUp.GoogleMob[lookUp.MSOA11CD.isin(msoasList)] == change_ref[x]])
+            cty_pop[x] = np.nansum(msoas_pop[lookUp.GoogleMob[lookUp[ColumnNames.MSOAsID].isin(msoasList)] == change_ref[x]])
             # match = lockdown.change[lockdown.CTY20 == change_ref[x]]   # error: wy repeats 6 times
             # moltip = match * cty_pop[x]
             # verif = change + moltip
@@ -146,58 +149,62 @@ class RawDataHandler:
         ### %%
         ### Seeding
         # Assumption: shp already loaded before
-        msoas_risks = shp.risk[shp.MSOA11CD.isin(msoasList)]
-
+        # msoas_risks = shp.risk[shp.MSOA11CD.isin(msoasList)]
+        msoas_risks = shp.risk[shp[ColumnNames.MSOAsID].isin(msoasList)]
         # ### %%
         # ### Data for the OpenCL dashboard
         # Assumption: msoas.shp already loaded before
         # Assumption: tus_hse_ref already defined, see above
-        # print("Downloading OSM data")
-        # osm_ref = np.unique(lookUp.OSM[lookUp.MSOA11CD.isin(msoasList)])
-        # url = osm_ref[0]
-        # target_path = os.path.join(Constants.Paths.COUNTY_DATA.FULL_PATH_FOLDER,
-        #                            tus_hse_ref[0] + ".zip") # ("data/common_data",tus_hse_ref[0] + ".zip")
-        # response = requests.get(url, stream=True)
-        #
-        # if not response.ok: # HTTP status code for "OK"
-        #     raise Exception("Error downloading OSM data")
-        #
-        # with open(target_path, 'wb') as f:
-        #     f.write(response.raw.read())
-        #     f.seek(0, os.SEEK_END)
-        #     size = f.tell()
-        #     if size == 0:
-        #         raise Exception("Error downloading OSM data: file is empty")
-        # zip_file = zipfile.ZipFile(target_path)
-        # print("Downloaded file, will now extract it...")
-        # zip_file.extractall(os.path.join(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER, tus_hse_ref[0])) # ("data/common_data/" + tus_hse_ref[0])
-        # print("extracted!")
-        #
-        # osmShp = gpd.read_file(os.path.join(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER, tus_hse_ref[0], Constants.Paths.OSM_FILE.FILE))
-        #                        # ("data/common_data/" + tus_hse_ref[0] + "/gis_osm_buildings_a_free_1.shp")
-        #
-        # # If study area accross more than one County, dl other counties and combine shps into one
-        # if len(osm_ref)>1:
-        #     for x in range(1,len(osm_ref)):
-        #         url = osm_ref[x]
-        #         target_path = os.path.join(Constants.Paths.OSM_FOLDER, tus_hse_ref[x] + ".zip")
-        #         # ("data/common_data",tus_hse_ref[x] + ".zip")
-        #         response = requests.get(url, stream=True)
-        #     if response.status_code == 200: # HTTP status code for "OK"
-        #         with open(target_path, 'wb') as f:
-        #             f.write(response.raw.read())
-        #     zip_file = zipfile.ZipFile(target_path)
-        #     zip_file.extractall(os.path.join(Constants.Paths.OSM_FOLDER, tus_hse_ref[x])) #("data/common_data/" + tus_hse_ref[x])
-        #     print("Combining OSM shapefiles together")
-        #     osmShp = pd.concat([
-        #             osmShp,
-        #             gpd.read_file(os.path.join(Constants.Paths.OSM_FOLDER, tus_hse_ref[x], Constants.Paths.OSM_FILE))
-        #             #("data/common_data/" + tus_hse_ref[x] + "/gis_osm_buildings_a_free_1.shp")
-        #             ]).pipe(gpd.GeoDataFrame)
+        print("Downloading OSM data")
+        osm_ref = np.unique(lookUp.OSM[lookUp[ColumnNames.MSOAsID].isin(msoasList)])
+        url = osm_ref[0]
+        target_path = os.path.join(Constants.Paths.COUNTY_DATA.FULL_PATH_FOLDER,
+                                   tus_hse_ref[0] + ".zip") # ("data/common_data",tus_hse_ref[0] + ".zip")
+        response = requests.get(url, stream=True)
+
+        if not response.ok: # HTTP status code for "OK"
+            raise Exception("Error downloading OSM data")
+
+        with open(target_path, 'wb') as f:
+            f.write(response.raw.read())
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            if size == 0:
+                raise Exception("Error downloading OSM data: file is empty")
+        zip_file = zipfile.ZipFile(target_path)
+        print("Downloaded file, will now extract it...")
+        zip_file.extractall(os.path.join(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER,
+                                         tus_hse_ref[0])) # ("data/common_data/" + tus_hse_ref[0])
+        print("extracted!")
+
+        osmShp = gpd.read_file(os.path.join(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER,
+                                            tus_hse_ref[0],
+                                            Constants.Paths.OSM_FILE.FILE))
+                               # ("data/common_data/" + tus_hse_ref[0] + "/gis_osm_buildings_a_free_1.shp")
+
+        # If study area across more than one County, dl other counties and combine shps into one
+        if len(osm_ref)>1:
+            for x in range(1,len(osm_ref)):
+                url = osm_ref[x]
+                target_path = os.path.join(Constants.Paths.OSM_FOLDER, tus_hse_ref[x] + ".zip")
+                # ("data/common_data",tus_hse_ref[x] + ".zip")
+                response = requests.get(url, stream=True)
+            if response.status_code == 200: # HTTP status code for "OK"
+                with open(target_path, 'wb') as f:
+                    f.write(response.raw.read())
+            zip_file = zipfile.ZipFile(target_path)
+            zip_file.extractall(os.path.join(Constants.Paths.OSM_FOLDER, tus_hse_ref[x])) #("data/common_data/" + tus_hse_ref[x])
+            print("Combining OSM shapefiles together")
+            osmShp = pd.concat([
+                    osmShp,
+                    gpd.read_file(os.path.join(Constants.Paths.OSM_FOLDER, tus_hse_ref[x], Constants.Paths.OSM_FILE))
+                    #("data/common_data/" + tus_hse_ref[x] + "/gis_osm_buildings_a_free_1.shp")
+                    ]).pipe(gpd.GeoDataFrame)
+            self._combined_shp_file = osmShp
 
         # TO_DO
-        #  -> branch to load "load_msoa_locations.py" code
-        # Find centroid of intersected shp
+        #  branch to load "load_msoa_locations.py" code -> DONE
+        # Find centroid of intersected shp -> DONE
         # extract risks from shp dbf
         return
 
@@ -243,7 +250,6 @@ class RawDataHandler:
         if self._combined_TU_file is None:
             raise Exception("TU file hasn't been created")
         return self._combined_TU_file
-
 
     # @staticmethod
     def getCombinedShpFile(self):

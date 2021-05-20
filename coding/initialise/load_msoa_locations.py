@@ -1,12 +1,13 @@
 import os
 # import sys
 # sys.path.append("microsim") 
-import json
+# import json
 from tqdm import tqdm
 import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
 from coding.constants import Constants
+from coding.constants import ColumnNames
 from coding.initialise.raw_data_handler import RawDataHandler
 
 # Functionality to create a lookup table of MSOA codes to a list of coordinates of all the buildings
@@ -19,8 +20,7 @@ from coding.initialise.raw_data_handler import RawDataHandler
 class MapsHandler:
     # @staticmethod
     # def run():
-    def __init__(self,
-                 study_area_folder_in_processed_data):
+    def __init__(self):
         """
         Class that generates the JSON file for the OpenCL snapshot (final dashboard)
         """
@@ -33,19 +33,21 @@ class MapsHandler:
         osm_buildings = self.load_osm_shapefile(
             RawDataHandler._combined_shp_file)  # ("/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/data/regional_data/WestYorkshire/")
 
-        msoa_shapes = self.load_msoa_shapes(Constants.Paths.MSOAS_SHP.FULL_PATH_FILE,
+        msoa_shapes = self.load_msoa_shapes(shapefile=Constants.Paths.MSOAS_SHP.FULL_PATH_FILE,
+                                            msoa_list_with_path=Constants.Paths.LIST_MSOAS.FULL_PATH_FILE,
                                             visualize=False)
 
         msoa_buildings = self.calculate_msoa_buildings(osm_buildings,
                                                        msoa_shapes)
+        return msoa_buildings
 
-        print("Writing MSOA buildings to JSON file")
-        # output_filepath = os.path.join(data_dir, "msoa_building_coordinates.json") # correct this
-        output_filepath = os.path.join(study_area_folder_in_processed_data,
-                                       Constants.Paths.PROCESSED_DATA.BUILDINGS_SHP_FILE)  # TODO make this consistent with the processed data study area from the main_initalisation
-
-        with open(output_filepath, 'w') as output_file:
-            json.dump(msoa_buildings, output_file)
+        # print("Writing MSOA buildings to JSON file")
+        # # output_filepath = os.path.join(data_dir, "msoa_building_coordinates.json") # correct this
+        # output_filepath = os.path.join(study_area_folder_in_processed_data,
+        #                                Constants.Paths.PROCESSED_DATA.BUILDINGS_SHP_FILE)
+        #
+        # with open(output_filepath, 'w') as output_file:
+        #     json.dump(msoa_buildings, output_file)
 
     # @staticmethod
     def load_osm_shapefile(self, shapefile): # (data_dir):
@@ -60,33 +62,37 @@ class MapsHandler:
         return osm_buildings
 
     # @staticmethod
-    def load_studyarea_msoas(self, msoa_list_with_path): #(data_dir, msoa_filename="msoas_list.csv"):
+    def load_studyarea_msoas(self,
+                             msoa_list_with_path): #(data_dir, msoa_filename="msoas_list.csv"):
         # return pd.read_csv(os.path.join("/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/data/regional_data/WestYorkshire/",
         #                                 msoa_filename), header=None,
         #                 names=["Easting", "Northing", "Num", "Code", "Desc"])
-        return pd.read_csv(Constants.Paths.LIST_MSOAS.FULL_PATH_FILE,
+        # msoa_list_with_path = Constants.Paths.LIST_MSOAS.FULL_PATH_FILE
+        return pd.read_csv(msoa_list_with_path,
                            header=None,
-                           names=["MSOA11CD"])
+                           names=[ColumnNames.MSOAsID]) #["MSOA11CD"])
     # @staticmethod
-    def load_msoa_shapes(self, shapefile,
+    def load_msoa_shapes(self,
+                         shapefile,
+                         msoa_list_with_path,
                          visualize=False):
         # shape_dir = os.path.join(data_dir, "MSOAS_shp")
         # shape_file = os.path.join(shape_dir, "bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp")
         shape_file = shapefile
         all_msoa_shapes = gpd.read_file(shape_file)
-        all_msoa_shapes = all_msoa_shapes.rename(columns={"msoa11cd": "MSOA11CD"})
+        all_msoa_shapes = all_msoa_shapes.rename(columns={"msoa11cd":ColumnNames.MSOAsID}) #"MSOA11CD"})
         print(f"Loaded {len(all_msoa_shapes.index)} MSOA shapes with projection {all_msoa_shapes.crs}")
 
         # re-project coordinates from british national grid to WGS84 (lat/lon)
         all_msoa_shapes = all_msoa_shapes.to_crs("EPSG:4326")
 
-        # Filter to devon MSOAs
-        studyarea_msoas = self.load_studyarea_msoas() #(data_dir)
+        # Filter to the study area's MSOAs
+        studyarea_msoas = self.load_studyarea_msoas(msoa_list_with_path) #(data_dir)
         print(f"Loaded {len(studyarea_msoas.index)} study area MSOA codes")
 
         studyarea_msoa_shapes = pd.merge(all_msoa_shapes,
                                          studyarea_msoas,
-                                         on="MSOA11CD")
+                                         on=ColumnNames.MSOAsID) #"MSOA11CD")
         print(f"Filtered {len(studyarea_msoa_shapes.index)} study area MSOA shapes")
 
         if visualize:
