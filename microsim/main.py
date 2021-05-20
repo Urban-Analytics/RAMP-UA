@@ -240,7 +240,7 @@ def run_opencl_model(individuals_df, activity_locations, time_activity_multiplie
             print("Switching to healthier population")
             snapshot.switch_to_healthier_population()
     if initialise:
-        print("Have finished initialising model. -init flag is set so not running it. Exitting")
+        print("Have finished initialising model. -init flag is set so not running it. Exiting")
         return
 
     run_mode = "GUI" if use_gui else "headless"
