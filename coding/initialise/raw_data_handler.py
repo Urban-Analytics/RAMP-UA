@@ -63,17 +63,17 @@ class RawDataHandler:
         tus_hse = pd.DataFrame()
         # initially only try with the WYtest TUH file (fake ad-hoc file)
         for x in tus_hse_ref:
-            if not os.path.isfile(Constants.Paths.TU.FULL_PATH_FILE + x + ".csv"):
+            if not os.path.isfile(Constants.Paths.TU.FULL_PATH_FILE + x + ".gz"):
                 print("Downloading the TU files")
-                file_name = "countydata" + Constants.Paths.TU.FILE + x + ".csv"
+                file_name = "countydata" + Constants.Paths.TU.FILE + x + ".gz"
                 temp_path = RawDataHandler.download_data("countydata",
-                                           Constants.Paths.TU.FILE + x + ".csv")
+                                           Constants.Paths.TU.FILE + x + ".gz")
                 print(f"TU path {file_name}")
                 temp = pd.read_csv(temp_path)
             else:
                 print("Reading the TU files")
-                file_name = Constants.Paths.TU.FULL_PATH_FILE + x + ".csv"
-                temp = pd.read_csv(Constants.Paths.TU.FULL_PATH_FILE + x + ".csv")
+                file_name = Constants.Paths.TU.FULL_PATH_FILE + x + ".gz"
+                temp = pd.read_csv(Constants.Paths.TU.FULL_PATH_FILE + x + ".gz")
                 print(f"File is {file_name}")
             # temp = temp[temp.MSOA11CD.isin(msoasList)]
             # temp = temp[temp.area.isin(msoasList)]
@@ -158,7 +158,7 @@ class RawDataHandler:
         print("Downloading OSM data")
         osm_ref = np.unique(lookUp.OSM[lookUp[ColumnNames.MSOAsID].isin(msoasList)])
         url = osm_ref[0]
-        target_path = os.path.join(Constants.Paths.COUNTY_DATA.FULL_PATH_FOLDER,
+        target_path = os.path.join(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER,
                                    tus_hse_ref[0] + ".zip") # ("data/common_data",tus_hse_ref[0] + ".zip")
         response = requests.get(url, stream=True)
 
