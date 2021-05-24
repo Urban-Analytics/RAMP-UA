@@ -79,8 +79,9 @@ def main(parameters_file):
             scenario = sim_params["scenario"]
             initialise = sim_params["initialise"]
             iterations = sim_params["iterations"]
-            Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH = sim_params["project-dir-absolute-path"]
+            # Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH = sim_params["project-dir-absolute-path"]
             study_area = sim_params["study-area"]
+            list_of_msoas_file = sim_params["list-of-msoas"]
             # selected_region_folder_name = sim_params["selected-region-folder-name"]
             output = sim_params["output"]
             output_every_iteration = sim_params["output-every-iteration"]
@@ -116,45 +117,38 @@ def main(parameters_file):
     if not os.path.exists(Constants.Paths.RAW_DATA.FULL_PATH_FOLDER):
         raise Exception("Data folder structure not valid. Make sure you are running within correct working directory.")
 
-    """
-    Download and Unpack raw data files from the www
-    """
-    raw_data_handler = RawDataHandler()
-
-    # selected_region_folder_full_path = # put here the TU file county name
-    # common_data_dir_full_path = os.path.join(Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH,
-    #                                          Constants.Paths.DATA_FOLDER,
-    #                                          Constants.Paths.COMMON_DATA_FOLDER)
-    # if not os.path.exists(selected_region_folder_full_path):
-    #     raise Exception("Regional data folder doesn't exist")
-
-    # population_args = {"project_dir": project_dir, "regional_data_dir": regional_data_dir_full_path, "debug": debug}
-    population_args = {"debug": debug, "raw_data_handler_param": raw_data_handler}
-
+    #  If cache is already present, do not download raw data (from the www) and process them
     study_area_folder_in_processed_data = os.path.join(Constants.Paths.PROCESSED_DATA.FULL_PATH_FOLDER,
-                                                       study_area)  # this generates the folder name
+                                                       study_area)
     print(f"study area folder {study_area_folder_in_processed_data}")
-
-    # The disease parameters for the model were defined here, this part was removed as now it's done inside OpenCL
-
-    # Generate json file for the final dashboard map
-    msoa_buildings = MapsHandler()
-    print("Writing MSOA buildings to JSON file")
-    # output_filepath = os.path.join(data_dir, "msoa_building_coordinates.json") # correct this
-    output_filepath = os.path.join(study_area_folder_in_processed_data,
-                                   Constants.Paths.PROCESSED_DATA.BUILDINGS_SHP_FILE)
-
-    with open(output_filepath, 'w') as output_file:
-        json.dump(msoa_buildings, output_file)
-
-    #     # cache to hold previously calculate population data
+    #    cache to hold previously generated population data
     if not os.path.exists(study_area_folder_in_processed_data):
         os.makedirs(study_area_folder_in_processed_data)
     cache = InitialisationCache(cache_dir=study_area_folder_in_processed_data)
 
-    #     # generate new population dataframes if we aren't using the cache, or if the cache is empty
-    #     if not use_cache or cache.is_empty():
+    #     generate new population dataframes if we aren't using the cache, or if the cache is empty
     if not use_cache or cache.is_empty():
+        """
+        Download and Unpack raw data files from the www
+        """
+        list_of_msoas = os.path.join(Constants.Paths.PARAMETERS.FULL_PATH,
+                                     list_of_msoas_file)
+        raw_data_handler = RawDataHandler(list_of_msoas)
+
+        # population_args = {"project_dir": project_dir, "regional_data_dir": regional_data_dir_full_path, "debug": debug}
+        population_args = {"debug": debug, "raw_data_handler_param": raw_data_handler}
+
+        # The disease parameters for the model were defined here, this part was removed as now it's done inside OpenCL
+
+        # # Generate json file for the final dashboard map
+        # msoa_buildings = MapsHandler()
+        # print("Writing MSOA buildings to JSON file")
+        # # output_filepath = os.path.join(data_dir, "msoa_building_coordinates.json") # correct this
+        # output_filepath = os.path.join(study_area_folder_in_processed_data,
+        #                                Constants.Paths.PROCESSED_DATA.BUILDINGS_SHP_FILE)
+
+        # with open(output_filepath, 'w') as output_file:
+        #     json.dump(msoa_buildings, output_file)
         print(f'Reading population data because {"caching is disabled" if not use_cache else "the cache is empty"}')
         # args for population initialisation
         population = PopulationInitialisation(**population_args)
@@ -164,13 +158,14 @@ def main(parameters_file):
         # store in cache so we can load later
         cache.store_in_cache(individuals, activity_locations)
 
-    ### SEPARATE HERE!!! ###
 
     else:  # load from cache
         # print("Loading data from previous cache")
         # individuals, activity_locations = cache.read_from_cache()
         print("***\n"
               "A cache of the processed data already exists for the area you selected, you can run the model module.\n"
+              "In case you'd like to re-create the cache, eliminate the cache files from the processed data folder\n"
+              "(in the specific study area), IE the files 'activity_locations.pkl' and 'indoviduals.pkl' "
               "***")
 
 

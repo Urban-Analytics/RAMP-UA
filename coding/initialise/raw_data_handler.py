@@ -17,6 +17,7 @@ import tarfile
 import zipfile
 import geopandas as gpd
 import numpy as np
+import gzip # to open .gz files
 
 from coding.constants import Constants
 from coding.constants import ColumnNames
@@ -26,8 +27,8 @@ class RawDataHandler:
     _combined_shp_file = None
     _lockdown_file = None
 
-    # @staticmethod
-    def __init__(self):
+    def __init__(self,
+                 list_of_msoas):
 
         """
         Class that handles the data download and unpack
@@ -42,15 +43,18 @@ class RawDataHandler:
         # msoasList = msoasList["area_code"]
 
         # Note: this step needs to be improved by creating a formal way of introducing the list and checking its format is correct
-        msoasList_file = pd.read_csv(Constants.Paths.LIST_MSOAS.FULL_PATH_FILE)  ### Needs to be put as initial parameter, for now in Constants
-        msoasList = msoasList_file[ColumnNames.MSOAsID]     # should be ["area_code"] but the current test file has column name "MSOA11CD"
+        # msoasList_file = pd.read_csv(Constants.Paths.LIST_MSOAS.FULL_PATH_FILE)  ### Needs to be put as initial parameter, for now in Constants
+        msoasList_file = pd.read_csv(list_of_msoas)
+        msoasList = msoasList_file[ColumnNames.MSOAsID]     # some times "area_code" or "area", current test file has column name "MSOA11CD"
+
         ### %%
         ###  Checking that look-up table exists and reading it in
 
         if not os.path.isfile(Constants.Paths.LUT.FULL_PATH_FILE):  #("data/common_data/lookUp.csv"):
             print("Downloading Look up table")
-            lookUp_path = RawDataHandler.download_data("referencedata", # name of the folder online in Azure
-                                         Constants.Paths.LUT.FILE)
+            lookUp_path = RawDataHandler.download_data(remote_folder="referencedata", # name of the folder online in Azure
+                                                       local_folder=Constants.Paths.REFERENCE_DATA.FULL_PATH_FOLDER,
+                                                       file=Constants.Paths.LUT.FILE)
             lookUp = pd.read_csv(lookUp_path)
         else:
             print("Reading Look up table")
@@ -65,14 +69,23 @@ class RawDataHandler:
         for x in tus_hse_ref:
             if not os.path.isfile(Constants.Paths.TU.FULL_PATH_FILE + x + ".csv"):
                 print("Downloading the TU files")
-                file_name = os.path.join("countydata", Constants.Paths.TU.FILE + x + ".gz")
-                temp_path = RawDataHandler.download_data("countydata",
-                                           Constants.Paths.TU.FILE + x + ".gz")
-                print(f"TU path {file_name}")
+                # file_name = os.path.join("countydata", Constants.Paths.TU.FILE + x + ".gz")
+                temp_path = RawDataHandler.download_data(remote_folder="countydata", # name of the folder online in Azure
+                                                         local_folder=Constants.Paths.COUNTY_DATA.FULL_PATH_FOLDER,
+                                                         file=Constants.Paths.TU.FILE + x + ".gz")
+                print(f"TU path {temp_path}")
                 print("Unpacking TU files")
-                # unpack_path = Constants.Paths.TU.FILE + x + ".gz"
-                unpacked_file = RawDataHandler.unpack_data(temp_path)
-                temp = pd.read_csv(unpacked_file)
+                # unpack_path = Constants.Paths.TU.FULL_PATH_FILE + x + ".gz"
+                # unpacked_file = RawDataHandler.unpack_data(unpack_path)
+                # unpacked_file = gzip.open(temp_path, 'rb')
+                if not os.path.isfile(Constants.Paths.TU.FULL_PATH_FILE + x + ".csv"):
+                    print("there is no csv file")
+                RawDataHandler.unpack_data(packed_file=temp_path,
+                                           destination_folder=Constants.Paths.COUNTY_DATA.FULL_PATH_FOLDER)
+                # temp = pd.read_csv(unpacked_file)
+                temp = pd.read_csv(Constants.Paths.TU.FULL_PATH_FILE + x + ".csv")
+                # temp = pd.read_csv(temp_path, compression='gzip', sep=',')
+                # print(unpacked_file)
             else:
                 print("Reading the TU files")
                 file_name = Constants.Paths.TU.FULL_PATH_FILE + x + ".csv"
@@ -80,6 +93,8 @@ class RawDataHandler:
                 print(f"File is {file_name}")
             # temp = temp[temp.MSOA11CD.isin(msoasList)]
             # temp = temp[temp.area.isin(msoasList)]
+            # dirty_hack_name = 'tus_hse_west-yorkshire.csv'
+            # temp = temp[temp[dirty_hack_name].isin(msoasList)]
             temp = temp[temp[ColumnNames.MSOAsID].isin(msoasList)]
             print("Combining TU files")
             tus_hse = tus_hse.append(temp)
@@ -91,7 +106,8 @@ class RawDataHandler:
         if not os.path.isdir(Constants.Paths.QUANT.FULL_PATH_FOLDER): #("data/common_data/QUANT_RAMP/")
             print("Downloading the QUANT files")
             QUANT_path = RawDataHandler.download_data("nationaldata",
-                                        "QUANT_RAMP.tar.gz")
+                                                      local_folder="",
+                                                      file="QUANT_RAMP.tar.gz")
             print("Unpacking QUANT files")
             RawDataHandler.unpack_data(QUANT_path)
 
@@ -100,7 +116,8 @@ class RawDataHandler:
         if not os.path.isfile(Constants.Paths.COMMUTING.FULL_PATH_FILE): #("data/common_data/commutingOD.csv"):
             print("Downloading the CommutingOD file")
             OD_path = RawDataHandler.download_data("nationaldata",
-                                     Constants.Paths.COMMUTING.FILE) #"commutingOD.gz")
+                                                   local_folder="",
+                                                   file=Constants.Paths.COMMUTING.FILE) #"commutingOD.gz")
             print("Unpacking the CommutingOD file")
             RawDataHandler.unpack_data(OD_path)
         OD = pd.read_csv(Constants.Paths.COMMUTING.FULL_PATH_FILE) #("data/common_data/commutingOD.csv")
@@ -113,7 +130,8 @@ class RawDataHandler:
         if not os.path.isfile(Constants.Paths.TIME_AT_HOME.FULL_PATH_FILE): #"data/common_data/timeAtHomeIncreaseCTY.csv"):
             print("Downloading the TimeAtHomeIncrease file (lockdown scenario)")
             lockdown_path = RawDataHandler.download_data("nationaldata",
-                                           Constants.Paths.TIME_AT_HOME.FILE) #"timeAtHomeIncreaseCTY.csv")
+                                                         local_folder="",
+                                                         file=Constants.Paths.TIME_AT_HOME.FILE) #"timeAtHomeIncreaseCTY.csv")
             lockdown = pd.read_csv(lockdown_path)
         else:
             print("Reading the TimeAtHomeIncrease file (lockdown scenario)")
@@ -122,7 +140,8 @@ class RawDataHandler:
         if not os.path.isdir(Constants.Paths.MSOAS_FOLDER.FULL_PATH_FOLDER): #"data/common_data/MSOAS_shp/"):
             print("Downloading MSOAs shp for the GoogleMobility data")
             shp_path = RawDataHandler.download_data("nationaldata",
-                                      Constants.Paths.MSOAS_SHP + ".tar.gz") #"MSOAS_shp.tar.gz")
+                                                    local_folder="",
+                                                    file=Constants.Paths.MSOAS_SHP + ".tar.gz") #"MSOAS_shp.tar.gz")
             RawDataHandler.unpack_data(shp_path)
 
         shp = gpd.read_file(Constants.Paths.MSOAS_FOLDER.FULL_PATH_FOLDER) #"data/common_data/MSOAS_shp/msoas.shp")
@@ -211,18 +230,21 @@ class RawDataHandler:
         # extract risks from shp dbf
         return
 
+
     ### %%
     ### Defining functions to download data from Azure repository and unpack them right after
     @staticmethod
-    def download_data(folder: str, file: str):
+    def download_data(remote_folder: str,
+                      local_folder:str,
+                      file: str):
         """
         Download data utility function
         Args:
             folder (str): can be: nationaldata, countydata or referencedata.
             file (str): name of the file, must include the extension.
         """
-        url = os.path.join(Constants.Paths.AZURE_URL + folder, file)  # TO_DO: does this work written like this?
-        target_path = os.path.join(Constants.Paths.COUNTY_DATA.FULL_PATH_FOLDER,
+        url = os.path.join(Constants.Paths.AZURE_URL + remote_folder, file)  # TO_DO: does this work written like this?
+        target_path = os.path.join(local_folder,#Constants.Paths.COUNTY_DATA.FULL_PATH_FOLDER,
                                    file)
         response = requests.get(url, stream=True)
         if not response.ok: # Ie checking that the HTTP status code is 'OK'
@@ -237,14 +259,15 @@ class RawDataHandler:
         return target_path
 
     @staticmethod
-    def unpack_data(archive: str):
+    # def unpack_data(archive: str):
+    def unpack_data(packed_file: str, destination_folder: str):
         """
         Unpack tar data archive
         Args:
             archive (str): A string directory path to archive file using ## ???
         """
-        tar_file = tarfile.open(archive)
-        tar_file.extractall(archive)  # ("data/common_data/")  ### extract all or not? is it correct 'archive' here??
+        tar_file = tarfile.open(packed_file)
+        tar_file.extractall(destination_folder)  # ("data/common_data/")  ### extract all or not? is it correct 'archive' here??
         return
 
 

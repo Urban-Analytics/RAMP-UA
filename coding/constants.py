@@ -5,7 +5,9 @@ import os
 # INIT_DATA_CASES = "msoas.csv"
 
 
-abspath = "/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/" #os.getcwd() # leave this empty, will inputted from the default.yml file
+abspath = "/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins_dev/" #os.getcwd() # leave this empty, will inputted from the default.yml file
+# /paramteters_file/
+parameters_folder = "model_parameters"
 # /coding/
 code_folder = "coding"
 initialise_folder = "initialise"
@@ -40,6 +42,7 @@ class Constants:
         OUTPUT_FOLDER = ""
 
         # !!!
+
         class MSOAS_RISK_FILE:
             FILE = "msoas_risk.csv" #"msoas_risk_west-yorskhire.csv"
             # FULL_PATH_FILE = os.path.join(abspath,
@@ -49,13 +52,19 @@ class Constants:
             #                               FILE)
         # !!!
         # !!! the parameter below is HARD_CODED !!!
-        class LIST_MSOAS:
-            FILE = "test_msoalist.csv" #"wy_msoalist.csv" #"devon_msoalist.csv" #"test_msoalist.csv" ## better in parameters! (default.yml)  ## this is only temporaneous
-            PARAM_FOLDER = "model_parameters/"
-            FULL_PATH_FILE = os.path.join(abspath,
-                                          PARAM_FOLDER,
-                                          FILE)
+        # class LIST_MSOAS:
+        #     FILE = "test_msoalist.csv" #"wy_msoalist.csv" #"devon_msoalist.csv" #"test_msoalist.csv" ## better in parameters! (default.yml)  ## this is only temporaneous
+        #     PARAM_FOLDER = "model_parameters/"
+        #     FULL_PATH_FILE = os.path.join(abspath,
+        #                                   PARAM_FOLDER,
+        #                                   FILE)
         # !!!
+
+        class PARAMETERS:
+            FOLDER = parameters_folder
+            FULL_PATH = os.path.join(abspath,
+                                     FOLDER)
+
         class CODE:
             FOLDER = code_folder
             FULL_PATH = os.path.join(abspath,
