@@ -6,7 +6,7 @@ import os
 
 
 abspath = "/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins_dev/" #os.getcwd() # leave this empty, will inputted from the default.yml file
-# /paramteters_file/
+# /model_parameters/
 parameters_folder = "model_parameters"
 # /coding/
 code_folder = "coding"

@@ -164,8 +164,8 @@ def main(parameters_file):
         # individuals, activity_locations = cache.read_from_cache()
         print("***\n"
               "A cache of the processed data already exists for the area you selected, you can run the model module.\n"
-              "In case you'd like to re-create the cache, eliminate the cache files from the processed data folder\n"
-              "(in the specific study area), IE the files 'activity_locations.pkl' and 'indoviduals.pkl' "
+              "In case you'd like to re-create the cache, eliminate or rename the cache files from the processed data folder\n"
+              "(of the specific study area), IE the files 'activity_locations.pkl' and 'individuals.pkl' "
               "***")
 
 
