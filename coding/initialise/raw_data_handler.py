@@ -56,7 +56,8 @@ class RawDataHandler:
                                          local_folder=Constants.Paths.REFERENCE_DATA.FULL_PATH_FOLDER,
                                          file=Constants.Paths.LUT.FILE)
             # lut = pd.read_csv(lut_file_with_path)
-        # else:
+        else:
+            print(f"I'm not downloading the look-up table as {lut_file_with_path} already exists")
         print(f"Reading Look up table from {lut_file_with_path}")
         lut = pd.read_csv(lut_file_with_path) #("data/common_data/lookUp.csv")
 
@@ -86,6 +87,7 @@ class RawDataHandler:
                                            destination_folder=local_tus_folder)
                 temp = pd.read_csv(unpacked_tus_file_with_path)
             else:
+                print(f"I'm not downloading the TUS files as {unpacked_tus_file_with_path} already exists")
                 print("Reading the TU files")
                 file_name = unpacked_tus_file_with_path
                 temp = pd.read_csv(unpacked_tus_file_with_path)
@@ -113,19 +115,34 @@ class RawDataHandler:
             print("Unpacking QUANT files")
             RawDataHandler.unpack_data(packed_file=packed_quant_file_with_path,
                                        destination_folder=local_quant_folder)
-
+        else:
+            print(f"I'm not downloading the QUANT data as {unpacked_quant_folder_with_path} already exists")
         ### %%
         ###  commutingOD dl and selection
-        if not os.path.isfile(Constants.Paths.COMMUTING.FULL_PATH_FILE): #("data/common_data/commutingOD.csv"):
-            print("Downloading the CommutingOD file")
-            OD_path = RawDataHandler.download_data("nationaldata",
-                                                   local_folder="",
-                                                   file=Constants.Paths.COMMUTING.FILE) #"commutingOD.gz")
+        remote_commuting_folder = "nationaldata"
+        local_commuting_folder = Constants.Paths.NATIONAL_DATA.FULL_PATH_FOLDER
+        packed_commuting_file = "commutingOD.gz"
+        unpacked_commuting_file_with_path = Constants.Paths.COMMUTING.FULL_PATH_FILE
+        packed_commuting_file_with_path = os.path.join(local_commuting_folder,
+                                                   packed_commuting_file)
+        if not os.path.isfile(unpacked_commuting_file_with_path): #("data/common_data/commutingOD.csv"):
+            print("Downloading the CommutingOD file...")
+            RawDataHandler.download_data(remote_folder=remote_commuting_folder,
+                                         local_folder=local_commuting_folder,
+                                         file=packed_commuting_file)  # "commutingOD.gz")
+            print("... done!")
             print("Unpacking the CommutingOD file")
-            RawDataHandler.unpack_data(OD_path)
-        OD = pd.read_csv(Constants.Paths.COMMUTING.FULL_PATH_FILE) #("data/common_data/commutingOD.csv")
+            RawDataHandler.unpack_data(packed_file=packed_commuting_file_with_path,
+                                       destination_folder=local_commuting_folder)
+        OD = pd.read_csv(unpacked_commuting_file_with_path) #("data/common_data/commutingOD.csv")
         OD = OD[OD.HomeMSOA.isin(msoas_list)]
         OD = OD[OD.DestinationMSOA.isin(msoas_list)]
+
+        # Note: Add method like for other files to be able to get this variable inside the code?
+        # (see end of the script, where we do this for the tus and other files)
+
+        ### EDITED UNTIL HERE ### (AZ)
+
 
         ### %%
         ### Lockdown scenario
@@ -274,13 +291,11 @@ class RawDataHandler:
         return
 
 
-    # @staticmethod
     def getCombinedTUFile(self):
         if self._combined_TU_file is None:
             raise Exception("TU file hasn't been created")
         return self._combined_TU_file
 
-    # @staticmethod
     def getCombinedShpFile(self):
         if self._combined_shp_file is None:
             raise Exception("MSOA shp file hasn't been created")
