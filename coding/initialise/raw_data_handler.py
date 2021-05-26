@@ -33,10 +33,11 @@ class RawDataHandler:
         """
         Class that handles the data download and unpack
         """
-        # (Hadrien's code)
 
-        ### %%
-        ### Reading in msoas list
+        """
+        MSOAs list
+        """
+        # Reading in msoas list
         # assumption: msoas_list variable read from input provided by the user
         # os.chdir("/Users/hsalat/MiscPython")
         # msoas_list = pd.read_csv("/Users/hsalat/West_Yorkshire/Seeding/msoas.csv")
@@ -47,8 +48,10 @@ class RawDataHandler:
         msoas_list_file = pd.read_csv(list_of_msoas)
         msoas_list = msoas_list_file[ColumnNames.MSOAsID]     # some times "area_code" or "area", current test file has column name "MSOA11CD"
 
-        ### %%
-        ###  Checking that look-up table exists and reading it in
+        """
+        Look-up table
+        """
+        # Checking that look-up table exists and reading it in
         lut_file_with_path = Constants.Paths.LUT.FULL_PATH_FILE
         if not os.path.isfile(lut_file_with_path):  #("data/common_data/lookUp.csv"):
             print("Downloading Look up table")
@@ -61,8 +64,9 @@ class RawDataHandler:
         print(f"Reading Look up table from {lut_file_with_path}")
         lut = pd.read_csv(lut_file_with_path) #("data/common_data/lookUp.csv")
 
-        ### %%
-        ### TU files
+        """
+        TUS files
+        """
         # tus_hse_ref = np.unique(lut.NewTU[lut.MSOA11CD.isin(msoas_list)])
         tus_hse_ref = np.unique(lut.NewTU[lut[ColumnNames.MSOAsID].isin(msoas_list)])
         tus_hse = pd.DataFrame()
@@ -85,20 +89,21 @@ class RawDataHandler:
                     print("Check: there is no csv file, I'm unpacking the gz file now")
                 RawDataHandler.unpack_data(packed_file=packed_tus_file_with_path,
                                            destination_folder=local_tus_folder)
+                print("... finished unpacking!")
                 temp = pd.read_csv(unpacked_tus_file_with_path)
             else:
                 print(f"I'm not downloading the TUS files as {unpacked_tus_file_with_path} already exists")
                 print("Reading the TU files")
-                file_name = unpacked_tus_file_with_path
                 temp = pd.read_csv(unpacked_tus_file_with_path)
-                print(f"File is {file_name}")
+                print("...done!")
             temp = temp[temp[ColumnNames.MSOAsID].isin(msoas_list)]
             print("Combining TU files")
             tus_hse = tus_hse.append(temp)
             self._combined_TU_file = tus_hse
 
-        ### %%
-        ### QUANT RAMP
+        """
+        QUANT RAMP
+        """
         # print(Constants.Paths.QUANT.FULL_PATH_FOLDER)
         remote_quant_folder = "nationaldata"
         local_quant_folder = Constants.Paths.NATIONAL_DATA.FULL_PATH_FOLDER
@@ -115,16 +120,19 @@ class RawDataHandler:
             print("Unpacking QUANT files")
             RawDataHandler.unpack_data(packed_file=packed_quant_file_with_path,
                                        destination_folder=local_quant_folder)
+            print("... finished unpacking!")
         else:
             print(f"I'm not downloading the QUANT data as {unpacked_quant_folder_with_path} already exists")
-        ### %%
-        ###  commutingOD dl and selection
+
+        """
+        CommutingOD
+        """
         remote_commuting_folder = "nationaldata"
         local_commuting_folder = Constants.Paths.NATIONAL_DATA.FULL_PATH_FOLDER
         packed_commuting_file = "commutingOD.gz"
         unpacked_commuting_file_with_path = Constants.Paths.COMMUTING.FULL_PATH_FILE
         packed_commuting_file_with_path = os.path.join(local_commuting_folder,
-                                                   packed_commuting_file)
+                                                       packed_commuting_file)
         if not os.path.isfile(unpacked_commuting_file_with_path): #("data/common_data/commutingOD.csv"):
             print("Downloading the CommutingOD file...")
             RawDataHandler.download_data(remote_folder=remote_commuting_folder,
@@ -134,40 +142,64 @@ class RawDataHandler:
             print("Unpacking the CommutingOD file")
             RawDataHandler.unpack_data(packed_file=packed_commuting_file_with_path,
                                        destination_folder=local_commuting_folder)
+            print("... finished unpacking!")
+        print(f"I'm not downloading the commutingOD file as {unpacked_commuting_file_with_path} already exists")
+        print("Reading the commutingOD file...")
         OD = pd.read_csv(unpacked_commuting_file_with_path) #("data/common_data/commutingOD.csv")
+        print("... done!")
         OD = OD[OD.HomeMSOA.isin(msoas_list)]
         OD = OD[OD.DestinationMSOA.isin(msoas_list)]
-
-        # Note: Add method like for other files to be able to get this variable inside the code?
+        self._origindestination_file = OD
+        # Note: Added method similar to other variables to be able to get this variable inside the code
         # (see end of the script, where we do this for the tus and other files)
 
-        ### EDITED UNTIL HERE ### (AZ)
-
-
-        ### %%
-        ### Lockdown scenario
+        """
+        Lockdown scenario
+        """
         # Assumption: look-up table already loaded before
-        if not os.path.isfile(Constants.Paths.TIME_AT_HOME.FULL_PATH_FILE): #"data/common_data/timeAtHomeIncreaseCTY.csv"):
-            print("Downloading the TimeAtHomeIncrease file (lockdown scenario)")
-            lockdown_path = RawDataHandler.download_data("nationaldata",
-                                                         local_folder="",
-                                                         file=Constants.Paths.TIME_AT_HOME.FILE) #"timeAtHomeIncreaseCTY.csv")
-            lockdown = pd.read_csv(lockdown_path)
+        remote_lockdown_folder = "nationaldata"
+        local_lockdown_folder = Constants.Paths.NATIONAL_DATA.FULL_PATH_FOLDER
+        unpacked_lockdown_file = Constants.Paths.TIME_AT_HOME.FILE
+        unpacked_lockdown_file_with_path = Constants.Paths.TIME_AT_HOME.FULL_PATH_FILE
+        if not os.path.isfile(unpacked_lockdown_file_with_path): #"data/common_data/timeAtHomeIncreaseCTY.csv"):
+            print("Downloading the TimeAtHomeIncrease file (lockdown scenario)...")
+            RawDataHandler.download_data(remote_folder=remote_lockdown_folder,
+                                         local_folder=local_lockdown_folder,
+                                         file=unpacked_lockdown_file) #"timeAtHomeIncreaseCTY.csv")
+            print("... done!")
         else:
-            print("Reading the TimeAtHomeIncrease file (lockdown scenario)")
-            lockdown = pd.read_csv(Constants.Paths.TIME_AT_HOME.FULL_PATH_FILE) #"data/common_data/timeAtHomeIncreaseCTY.csv")
+            print(f"I'm not downloading the TimeAtHomeIncrease file as {unpacked_lockdown_file_with_path} already exists")
+        print("Reading the TimeAtHomeIncrease file (lockdown scenario)")
+        lockdown = pd.read_csv(unpacked_lockdown_file_with_path) #"data/common_data/timeAtHomeIncreaseCTY.csv")
+        self._lockdown_file = lockdown
+        # Note: Added method similar to other variables to be able to get this variable inside the code
+        # (see end of the script, where we do this for the tus and other files)
 
-        if not os.path.isdir(Constants.Paths.MSOAS_FOLDER.FULL_PATH_FOLDER): #"data/common_data/MSOAS_shp/"):
-            print("Downloading MSOAs shp for the GoogleMobility data")
-            shp_path = RawDataHandler.download_data("nationaldata",
-                                                    local_folder="",
-                                                    file=Constants.Paths.MSOAS_SHP + ".tar.gz") #"MSOAS_shp.tar.gz")
-            RawDataHandler.unpack_data(shp_path)
+        remote_shp_folder = "nationaldata"
+        local_shp_folder = Constants.Paths.NATIONAL_DATA.FULL_PATH_FOLDER
+        packed_shp_file = "MSOAS_shp.tar.gz"
+        unpacked_shp_folder_with_path = Constants.Paths.MSOAS_FOLDER.FULL_PATH_FOLDER
+        packed_shp_file_with_path = os.path.join(local_shp_folder,
+                                                 packed_shp_file)
+        unpacked_shp_file_with_path = Constants.Paths.MSOAS_SHP.FULL_PATH_FILE
 
-        shp = gpd.read_file(Constants.Paths.MSOAS_FOLDER.FULL_PATH_FOLDER) #"data/common_data/MSOAS_shp/msoas.shp")
-        msoas_pop = shp["pop"]
+        if not os.path.isdir(unpacked_shp_folder_with_path): #"data/common_data/MSOAS_shp/"):
+            print("Downloading MSOAs shp for the GoogleMobility data...")
+            RawDataHandler.download_data(remote_folder=remote_shp_folder,
+                                         local_folder=local_shp_folder,
+                                         file=packed_shp_file) #"MSOAS_shp.tar.gz")
+            print("... done!")
+            print("Unpacking the MSOAs shapefile")
+            RawDataHandler.unpack_data(packed_file=packed_shp_file_with_path,
+                                       destination_folder=local_shp_folder)
+            print("... finished unpacking!")
+        else:
+            print(f"I'm not downloading the MSOAs shapefile as {unpacked_shp_folder_with_path} already exists")
+        print("Dealing with the TimeAtHomeIncrease data...")
+        shp = gpd.read_file(unpacked_shp_file_with_path) #"data/common_data/MSOAS_shp/msoas.shp")
+        msoas_pop = shp[ColumnNames.MSOAS_SHP_POP]  # "pop"
         # msoas_pop = msoas_pop[shp.MSOA11CD.isin(msoas_list)]
-        msoas_pop = msoas_pop[shp[ColumnNames.MSOAsID].isin(msoas_list)]
+        msoas_pop = msoas_pop[shp[ColumnNames.MSOAsID].isin(msoas_list)]  # MSOA11CD
 
         # change_ref = np.unique(lut.GoogleMob[lut.MSOA11CD.isin(msoas_list)])
         change_ref = np.unique(lut.GoogleMob[lut[ColumnNames.MSOAsID].isin(msoas_list)])
@@ -177,82 +209,105 @@ class RawDataHandler:
         change = np.repeat(0, np.max(lockdown.day)+1)
         for x in range(0, len(change_ref)):
             cty_pop[x] = np.nansum(msoas_pop[lut.GoogleMob[lut[ColumnNames.MSOAsID].isin(msoas_list)] == change_ref[x]])
-            # match = lockdown.change[lockdown.CTY20 == change_ref[x]]   # error: wy repeats 6 times
-            # moltip = match * cty_pop[x]
-            # verif = change + moltip
-            # change = verif
-            change = change + lockdown.change[lockdown.CTY20 == change_ref[x]] * cty_pop[x]
+            match = lockdown.change[lockdown[ColumnNames.LOCKDOWN_CTY_NAME] == change_ref[x]]   # error: wy repeats 6 times # CTY20
+            moltip = match * cty_pop[x]
+            verif = change + moltip
+            change = verif
+            change = change + lockdown.change[lockdown[ColumnNames.LOCKDOWN_CTY_NAME] == change_ref[x]] * cty_pop[x]  # CTY20
         change = change/np.sum(cty_pop)
-
+        print("... done!")
         # From extra time at home to less time away from home
         lockdown = (1 - (np.mean(tus_hse.phome) * change))/np.mean(tus_hse.phome)
         self._lockdown_file = lockdown
 
-        ### %%
-        ### Seeding
+        """
+        Seeding
+        """
         # Assumption: shp already loaded before
         # msoas_risks = shp.risk[shp.MSOA11CD.isin(msoas_list)]
         msoas_risks = shp.risk[shp[ColumnNames.MSOAsID].isin(msoas_list)]
-        # ### %%
-        # ### Data for the OpenCL dashboard
+        self._msoas_risk_list = msoas_risks
+        # Note: Added method similar to other variables to be able to get this variable inside the code
+        # (see end of the script, where we do this for the tus and other files)
+
+        """
+        Data for the OpenCL dashboard
+        """
         # Assumption: msoas.shp already loaded before
         # Assumption: tus_hse_ref already defined, see above
-        print("Downloading OSM data")
         osm_ref = np.unique(lut.OSM[lut[ColumnNames.MSOAsID].isin(msoas_list)])
         url = osm_ref[0]
-        target_path = os.path.join(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER,
-                                   tus_hse_ref[0] + ".zip") # ("data/common_data",tus_hse_ref[0] + ".zip")
-        response = requests.get(url, stream=True)
+        local_osm_folder = Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER
+        packed_osm_file = tus_hse_ref[0] + ".zip"
+        packed_osm_folder_with_path = os.path.join(local_osm_folder,
+                                                   packed_osm_file)
+        unpacked_osm_folder_with_path = os.path.join(local_osm_folder,
+                                                     tus_hse_ref[0])
+        if not os.path.isdir(unpacked_osm_folder_with_path):
+            print("Downloading OSM data...")
+            target_path = packed_osm_folder_with_path # ("data/common_data",tus_hse_ref[0] + ".zip")
+            response = requests.get(url, stream=True)
 
-        if not response.ok: # HTTP status code for "OK"
-            raise Exception("Error downloading OSM data")
+            if not response.ok: # HTTP status code for "OK"
+                raise Exception("Error downloading OSM data")
 
-        with open(target_path, 'wb') as f:
-            f.write(response.raw.read())
-            f.seek(0, os.SEEK_END)
-            size = f.tell()
-            if size == 0:
-                raise Exception("Error downloading OSM data: file is empty")
-        zip_file = zipfile.ZipFile(target_path)
-        print("Downloaded file, will now extract it...")
-        zip_file.extractall(os.path.join(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER,
-                                         tus_hse_ref[0])) # ("data/common_data/" + tus_hse_ref[0])
-        print("extracted!")
+            with open(target_path, 'wb') as f:
+                f.write(response.raw.read())
+                f.seek(0, os.SEEK_END)
+                size = f.tell()
+                if size == 0:
+                    raise Exception("Error downloading OSM data: file is empty")
+            zip_file = zipfile.ZipFile(target_path)
+            print("Downloaded file, will now extract it...")
+            zip_file.extractall(unpacked_osm_folder_with_path) # ("data/common_data/" + tus_hse_ref[0])
+            print("extracted!")
 
-        osmShp = gpd.read_file(os.path.join(Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER,
-                                            tus_hse_ref[0],
-                                            Constants.Paths.OSM_FILE.FILE))
+        osm_shp = gpd.read_file(os.path.join(unpacked_osm_folder_with_path,
+                                             Constants.Paths.OSM_FILE.FILE))
                                # ("data/common_data/" + tus_hse_ref[0] + "/gis_osm_buildings_a_free_1.shp")
 
-        # If study area across more than one County, dl other counties and combine shps into one
-        if len(osm_ref)>1:
-            for x in range(1,len(osm_ref)):
+        # If study area across more than one County, download other counties and combine shapefiles into one
+        if len(osm_ref) > 1:
+            for x in range(1, len(osm_ref)):
                 url = osm_ref[x]
-                target_path = os.path.join(Constants.Paths.OSM_FOLDER, tus_hse_ref[x] + ".zip")
+                packed_osm_file = tus_hse_ref[x] + ".zip"
+                local_osm_folder = Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER
+                packed_osm_file = tus_hse_ref[0] + ".zip"
+                packed_osm_folder_with_path = os.path.join(local_osm_folder,
+                                                           packed_osm_file)
+                unpacked_osm_folder_with_path = os.path.join(local_osm_folder,
+                                                             tus_hse_ref[0])
+
+                target_path = packed_osm_folder_with_path
                 # ("data/common_data",tus_hse_ref[x] + ".zip")
                 response = requests.get(url, stream=True)
-            if response.status_code == 200: # HTTP status code for "OK"
-                with open(target_path, 'wb') as f:
-                    f.write(response.raw.read())
-            zip_file = zipfile.ZipFile(target_path)
-            zip_file.extractall(os.path.join(Constants.Paths.OSM_FOLDER, tus_hse_ref[x])) #("data/common_data/" + tus_hse_ref[x])
+                if response.ok: #status_code == 200: # HTTP status code for "OK"
+                    with open(target_path, 'wb') as f:
+                        f.write(response.raw.read())
+                        f.seek(0, os.SEEK_END)
+                        size = f.tell()
+                        if size == 0:
+                            raise Exception("Error downloading OSM data: file is empty")
+
+                zip_file = zipfile.ZipFile(target_path)
+                zip_file.extractall(unpacked_osm_folder_with_path) #("data/common_data/" + tus_hse_ref[x])
             print("Combining OSM shapefiles together")
-            osmShp = pd.concat([
-                    osmShp,
-                    gpd.read_file(os.path.join(Constants.Paths.OSM_FOLDER, tus_hse_ref[x], Constants.Paths.OSM_FILE))
+            osm_shp = pd.concat([
+                    osm_shp,
+                    gpd.read_file(os.path.join(unpacked_osm_folder_with_path,
+                                               Constants.Paths.OSM_FILE.FILE))
                     #("data/common_data/" + tus_hse_ref[x] + "/gis_osm_buildings_a_free_1.shp")
                     ]).pipe(gpd.GeoDataFrame)
-            self._combined_shp_file = osmShp
+            self._combined_shp_file = osm_shp
 
         # TO_DO
         #  branch to load "load_msoa_locations.py" code -> DONE
         # Find centroid of intersected shp -> DONE
-        # extract risks from shp dbf
+        # extract risks from shp dbf -> DONE
+        # add the "get..." variables (se bottom of the script) in the rest of code when they are called
         return
 
-
-    ### %%
-    ### Defining functions to download data from Azure repository and unpack them right after
+    # Defining functions to download data from Azure repository and unpack them right after
     @staticmethod
     def download_data(remote_folder: str,
                       local_folder:str,
@@ -290,7 +345,7 @@ class RawDataHandler:
         tar_file.extractall(destination_folder)  # ("data/common_data/")  ### extract all or not? is it correct 'archive' here??
         return
 
-
+    # Store variables internally to be able to call them later
     def getCombinedTUFile(self):
         if self._combined_TU_file is None:
             raise Exception("TU file hasn't been created")
@@ -305,3 +360,13 @@ class RawDataHandler:
         if self._lockdown_file is None:
             raise Exception("Lockdown file not found")
         return self._lockdown_file
+
+    def getOriginDestinationFile(self):
+        if self._origindestination_file is None:
+            raise Exception("Lockdown file not found")
+        return self._origindestination_file
+
+    def getMsoasRiskList(self):
+        if self._msoas_risk_list is None:
+            raise Exception("Lockdown file not found")
+        return self._msoas_risk_list

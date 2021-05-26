@@ -173,7 +173,7 @@ class Constants:
                                             national_data_folder,
                                             FOLDER)
         class MSOAS_SHP:
-            FILE = "bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp"
+            FILE = "msoas.shp" #"bcc21fa2-48d2-42ca-b7b7-0d978761069f2020412-1-12serld.j1f7i.shp"
             FULL_PATH_FILE = os.path.join(abspath,
                                           data_folder,
                                           raw_data_folder,
@@ -364,7 +364,8 @@ class ColumnNames:
     """Used to record standard dataframe column names used throughout"""
     MSOAsID = "MSOA11CD" # "area" for West Yorkshire
     TIME_ACTIVITY_MULTIPLIER = "timeout_multiplier" # for Devon data, "change" in the new data generated from raw_data_handler... check this to gove the correct old name!
-
+    MSOAS_SHP_POP = "pop"
+    LOCKDOWN_CTY_NAME = "CTY20"
     LOCATION_DANGER = "Danger"  # Danger associated with a location
     LOCATION_NAME = "Location_Name"  # Name of a location
     LOCATION_ID = "ID"  # Unique ID for each location
