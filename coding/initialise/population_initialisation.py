@@ -690,10 +690,11 @@ class PopulationInitialisation:
         :return: A dataframe with origin and destination flows in all MSOAs in the study area
         """
         print("Reading commuting flow data for the selected region...", )
-        commuting_flows = pd.read_csv(Constants.Paths.COMMUTING.FULL_PATH_FILE,
-                                      dtype={'HomeMSOA': str,
-                                             'DestinationMSOA': str,
-                                             'Total_Flow': int})
+        # commuting_flows = pd.read_csv(Constants.Paths.COMMUTING.FULL_PATH_FILE,
+        #                               dtype={'HomeMSOA': str,
+        #                                      'DestinationMSOA': str,
+        #                                      'Total_Flow': int})
+        commuting_flows = self.raw_data_handler.getOriginDestinationFile() # Calling file created from RawDataHandler that contains ODcommuting data
 # TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
         # Need to append the devon code to the areas (they're integers in the csv file)
         commuting_flows["Orig"] = commuting_flows["HomeMSOA"] # .apply(lambda x: "E0" + x)
