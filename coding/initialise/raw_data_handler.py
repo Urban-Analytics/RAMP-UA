@@ -363,10 +363,10 @@ class RawDataHandler:
 
     def getOriginDestinationFile(self):
         if self._origindestination_file is None:
-            raise Exception("Lockdown file not found")
+            raise Exception("Origin-Destination commuting file not found")
         return self._origindestination_file
 
     def getMsoasRiskList(self):
         if self._msoas_risk_list is None:
-            raise Exception("Lockdown file not found")
+            raise Exception("MSOAs risk file not found")
         return self._msoas_risk_list
