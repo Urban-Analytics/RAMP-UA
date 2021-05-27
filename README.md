@@ -4,31 +4,25 @@
 
 ## Notes for first time users (temporarily needed to have the model run)
 The model is in a trial phase still, you can see the description and the main differences with RAMP-UA model hereafter. You can have it run though taking into account a few assumptions:
-[spoiler: long list but please take the time to pass through all the points]
-1. Change in the file `coding/constants.py` some variables names depending on the file you have, namely:
-    - `abspath` = "path_to_where_the_project_folder_is_located_in_your_computer"
-    - `class MSOAS_RISK_FILE` = name os the csv file that contains the risk for the MSOAS (in RAMP-UA it was called `msoas.csv` in `microsim/opencl/data/`, `msoa_danger_fn.csv` in `init_data/`, `msoas.rda` in `microsim/R/py_int/data/`);
-    to have the model run, this file must be located (for now) in `data/processed_data/your_study_area_folder/`, when all ready it will go in the `raw_data` folder, and it will be inputted probably from the MSOAs shp (national file);
-    the file contains a table where: the first column is a counter (1,2, ...) with no name, second column is called 'area_code' and has the MSOAs ids, third columns is 'risk' and contains strings values ('low, medium, high').
-    - `class INITIAL_CASES` = name of the csv file that contains the seeding/initial cases (in RAMP-UA it was called `devon_initial_cases.csv` in `microsim/opencl/data/`, `devon_cases_fn.csv` in `init_data/`, `gam_cases.rda` in `microsim/R/py_int/data/`);
-    similarly to `msoas_risk` file, this is temporarily located in `data/processed_data/your_study_area_folder/` but eventually there will be one singular national file located in `raw_data/reference_data/`;
-    the file contains a table where: the first column is a counter (1,2, ...) with no name, second column is called 'um_cases' and is of type integer.
-    - `class LIST_MSOAS` = this files contains the list of MSOAs that make your study area, it is made only of one column called `MSOA11CD`, if you have a different column name then change accordingly the constant variable that refers to it (IE the class `MSOAsID` inside `Class ColumnNames` inside the same module);
-    the list of msoas file is a csv file and must be located in `model_parameters/`.
-2. the TU file is located in `data/raw_data/county_data/` and must be named `tus_hse-[county where MSOAS are located].csv` ... this is temporary, in fact if you don't have the TU file it will be downloaded from Azure on the correct repository, though if you want to try the Test-West_Yorkshire MSOAs you will need to call the corresponding TU file like this, or the model will try to download the data for West Yorskshire that is 10 times bigger (and not needed) - ignore this point if you use Devon.
-Note that the name for the county (which the TU file pertain to depending on your chosen MSOAs) is automatically detected by the model from the list of MSOAS using the look-up table, that is in `raw_data/reference_data/`.
-3. also the lockdown file (Google mobility `google_mobility_lockdown_daily_14_day_moving_average.csv`) is temporary, use the old Devon one for Devon (ask me for the West Yorkshire one in case you run the test) and must be located in `data/processed_data/your_study_area_folder/`, I have to ask better Hadrien what he would like to do with this file, because he generated a `timeAtHomeIncreaseCTY.csv` file that is a national file (separated by counties) and is automatically downloaded and processed in the initialisation phase (see `coding/initialise/raw_data_handler/`), though I didn't manage to have this file work yet (or the code needs to be adapted to this new version).
-4. inside `parameters_file/default.yml` edit:
-    - `project-dir-absolute-path` this is really not optimal (I know!) and must be edited together with the same constant variable within 'coding/constants.py
-    - `study-area` the name for the folder in `processed_data` and `output` folders that pertains to your chosen study area, the name you assign here will be used throughout the whole process.
-5. the model now runs with only one parameter in input (in the command line), check 'Main difference with RAMP-UA' below, so be aware of this (IE if you want to choose whether to run the OpenCL or not, you change the parameter directly in `model_parameters/default.yml`, not by command line);
-in any case THIS VERSION ONLY RUNS with OPENCL and anyways NOT WITH THE GUI YET (see the todo list for the dashboard map).
-6. once edited all the above, you have to run the model in two steps:
-    - first run the initialisation process via `python coding/main_initialisation.py -p ../model_parameters/default.yml`, this module will download the data (to `data/raw_data/`), process them and prepare the table/data for the model that will be stored in `data/processed_data/your-study-area-folder/`
-    - once the data are processed, you can run the model using `python coding/main_model.py -p ../model_parameters/default.yml`
-    not that for the moment the OpenCL caching (snapshot creation) is still in the model part but should be moved to the initialisation (see TO_DO list)
-7. please come back to me (@ciupava) for any question
+[spoiler: some steps are temporary, at least until all the data dependencies are checked]
+1. Edit in `coding/constants.py` the variable `abspath` = "path_to_where_the_project_folder_is_located_in_your_computer"
+2. inside `parameters_file/default.yml` edit:
+    - `study-area` the name for the folder in `processed_data` and `output` folders that pertains to your chosen study area, the name you assign here will be used throughout the whole process;
+    - `list-of-msoas` the name of the file containing the list of the MSOAs IDs for your study area
+   
+Once edited all the above, you have to run the model using the two `main` modules:
+- first run the initialisation process via `python coding/main_initialisation.py -p ../model_parameters/default.yml`, this module will download the data (to `data/raw_data/`), process them and prepare the table/data for the model that will be stored in `data/processed_data/your-study-area-folder/`
+- in this folder TEMPORARILY you shall add also these 4 files, that have not yet been completely implemented:
+    1. `google_mobility_lockdown_daily_14_day_moving_average.csv`
+    2. `initial_cases.csv`
+    3. `msoas_risk.csv`
+    4. `msoa_building_coordinates.json`
+    - (these files are available for Devon and West Yorksire)
+- finally you can run the OpenCL model using `python coding/main_model.py -p ../model_parameters/default.yml`.
 
+
+NOTE: the model now runs with only one parameter in input, check 'Main difference with RAMP-UA' below, so be aware of this (IE if you want to choose whether to run the OpenCL or not, you change the parameter directly in `model_parameters/default.yml`, not by command line);
+The current version only runs the OpenCL model and the GUI is on its way (see the todo list for the dashboard map).
 
 
 ## Description
@@ -93,8 +87,8 @@ Features that currently are not available, but are to be implemented on this ver
 - [ ] implement R model compatibility
 - [ ] run tests
 - [X] understand where/when the `msoa_building_coordinates.json` is created (see `load_msoa_locations.py`)
-- [ ] correct the hard-coded coordinates and MSOA code within `snapshot.py` add this to the initialisation process (@manluow)
-- [ ] fix the `project-dir-absolute-path` variable (eliminate if possible)
+- [X] correct the hard-coded coordinates and MSOA code within `snapshot.py` add this to the initialisation process (@manluow)
+- [ ] fix the `abspath` variable (eliminate if possible)
 - [ ] import the snapshot creation for OpenCL version to the initialisation part: IE separate the opencl code (what is in now in `coding/model/opencl/ramp/`) and put the part that generates the opencl snapshot (`cache.npz`) into the initialisation part 
 - [ ] what happens when one uses a study area name that already exists? (Raise exception ... overwrite existing files, or use the already existing cache/processed data?)
 - [ ] think whether to separate the configuration file (`model_parameters/default.yml`) in two, one for the initialisation and one for the model
