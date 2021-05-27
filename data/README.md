@@ -1,4 +1,8 @@
 # Data to run the microsim model on different regions.
+
+*TO BE UPDATED !!*
+
+
 The data folder structure currently has a 'common data' folder (data at national level) and can have several regional data folders which are named according to the user.
 
 The national data folder contains:
