@@ -645,8 +645,6 @@ def test_seed_initial_infections_most_people_low_risk():
 
     num_people_infected = np.count_nonzero(people_statuses_after)
 
-    print(f"\nnum infected: {num_people_infected}\n")
-
     assert num_people_infected == expected_num_infections
 
 _devon_initial_cases = None
