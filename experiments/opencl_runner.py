@@ -342,9 +342,6 @@ class OpenCLRunner:
         l_store_detailed_counts = [store_detailed_counts] * repetitions
         l_quiet = [False] * repetitions  # Don't print info
 
-
-        args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_use_gpu, 
-                   l_store_detailed_counts, l_quiet)            #print(params[0])
         args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_use_gpu, l_use_healthier_pop, l_store_detailed_counts, l_quiet)
         to_return = None
         start_time = time.time()
