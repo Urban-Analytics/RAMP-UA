@@ -28,7 +28,7 @@ class OpenCLRunner:
 
     @classmethod
     def init(cls, iterations: int, repetitions: int, observations: pd.DataFrame, use_gpu: bool,
-             store_detailed_counts: bool, parameters_file: str, opencl_dir: str, snapshot_filepath: str):
+             use_healthier_pop: bool, store_detailed_counts: bool, parameters_file: str, opencl_dir: str, snapshot_filepath: str):
         """
         The class variables determine how the model should run. They need to be class variables
         because the 'run_model_with_params' function, which is called by calibration libraries, can only take
@@ -48,6 +48,7 @@ class OpenCLRunner:
         cls.REPETITIONS = repetitions
         cls.OBSERVATIONS = observations
         cls.USE_GPU = use_gpu
+        cls.USE_HEALTHIER_POP = use_healthier_pop
         cls.STORE_DETAILED_COUNTS = store_detailed_counts
         cls.PARAMETERS_FILE = parameters_file
         cls.OPENCL_DIR = opencl_dir
@@ -57,7 +58,7 @@ class OpenCLRunner:
 
     @classmethod
     def update(cls, iterations: int = None, repetitions: int = None, observations: pd.DataFrame = None,
-               use_gpu: bool = None, store_detailed_counts: bool = None, parameters_file: str = None,
+               use_gpu: bool = None, use_healthier_pop = None, store_detailed_counts: bool = None, parameters_file: str = None,
                opencl_dir: str = None, snapshot_filepath: str = None):
         """
         Update any of the variables that have already been initialised
@@ -72,6 +73,8 @@ class OpenCLRunner:
             cls.OBSERVATIONS = observations
         if use_gpu is not None:
             cls.USE_GPU = use_gpu
+        if use_healthier_pop is not None:
+            cls.USE_HEALTHIER_POP = use_healthier_pop
         if store_detailed_counts is not None:
             cls.STORE_DETAILED_COUNTS = store_detailed_counts
         if parameters_file is not None:
@@ -216,6 +219,13 @@ class OpenCLRunner:
 
         # Some parameters are set in the default.yml file and can be overridden
         pass  # None here yet
+        
+        obesity_multipliers = np.array([disease_params["overweight"], disease_params["obesity_30"],disease_params["obesity_35"], disease_params["obesity_40"]])
+
+        cvd = disease_params["cvd"]
+        diabetes = disease_params["diabetes"]
+        bloodpressure = disease_params["bloodpressure"]
+        overweight_sympt_mplier = disease_params["overweight_sympt_mplier"]
 
         p = Params(
             location_hazard_multipliers=location_hazard_multipliers,
@@ -227,7 +237,13 @@ class OpenCLRunner:
             p.infection_log_scale = infection_log_scale
         if infection_mode is not None:
             p.infection_mode = infection_mode
-
+            
+        p.obesity_multipliers = obesity_multipliers
+        p.cvd_multiplier = cvd
+        p.diabetes_multiplier = diabetes
+        p.bloodpressure_multiplier = bloodpressure
+        p.overweight_sympt_mplier = overweight_sympt_mplier
+        
         return p
 
     @classmethod
@@ -249,6 +265,7 @@ class OpenCLRunner:
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
                          opencl_dir: str, use_gpu: bool,
+                         use_healthier_pop: bool,
                          store_detailed_counts: bool = True, quiet=False) -> (np.ndarray, np.ndarray):
         """
         Run the OpenCL model.
@@ -268,6 +285,15 @@ class OpenCLRunner:
 
         # load snapshot
         snapshot = Snapshot.load_full_snapshot(path=snapshot_filepath)
+        prev_obesity = np.copy(snapshot.buffers.people_obesity)
+        if use_healthier_pop:
+            snapshot.switch_to_healthier_population()
+        
+        print("testing obesity arrays not equal")
+        print(np.mean(prev_obesity))
+        print(np.mean(snapshot.buffers.people_obesity))
+       # assert not np.array_equal(prev_obesity, snapshot.buffers.people_obesity)
+       # print("arrays not equal")
 
         # set params
         snapshot.update_params(params)
@@ -295,7 +321,7 @@ class OpenCLRunner:
     @staticmethod
     def run_opencl_model_multi(
             repetitions: int, iterations: int, params: Params,
-            use_gpu: bool = False, store_detailed_counts: bool = False,
+            use_gpu: bool = False, use_healthier_pop: bool = False, store_detailed_counts: bool = False,
             opencl_dir=os.path.join(".", "microsim", "opencl"),
             snapshot_filepath=os.path.join(".", "microsim", "opencl", "snapshots", "cache.npz"),
             multiprocess=False,
@@ -312,11 +338,11 @@ class OpenCLRunner:
         l_params = [params] * repetitions
         l_opencl_dir = [opencl_dir] * repetitions
         l_use_gpu = [use_gpu] * repetitions
+        l_use_healthier_pop = [use_healthier_pop] * repetitions
         l_store_detailed_counts = [store_detailed_counts] * repetitions
-        l_quiet = [True] * repetitions  # Don't print info
+        l_quiet = [False] * repetitions  # Don't print info
 
-        args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_use_gpu,
-                   l_store_detailed_counts, l_quiet)
+        args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_use_gpu, l_use_healthier_pop, l_store_detailed_counts, l_quiet)
         to_return = None
         start_time = time.time()
         if multiprocess:
