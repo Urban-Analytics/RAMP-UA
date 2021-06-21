@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+import os
 from matplotlib import pyplot as plt
 import scipy.stats
 from microsim.opencl.ramp.params import Params
@@ -570,7 +572,7 @@ def test_infection_transition_times_distribution(visualize=False):
 
 def test_seed_initial_infections_all_high_risk():
     npeople = 200
-    snapshot = Snapshot.random(nplaces, npeople, nslots)
+    snapshot = Snapshot.zeros(nplaces, npeople, nslots)
 
     # set all people as high risk
     snapshot.area_codes = np.full(npeople, "E02004143")  # high risk area code
@@ -591,7 +593,7 @@ def test_seed_initial_infections_all_high_risk():
     people_statuses_after = np.zeros(snapshot.npeople, dtype=np.uint32)
     simulator.download("people_statuses", people_statuses_after)
 
-    expected_num_infections = 37  # taken from devon_initial_cases.csv file
+    expected_num_infections = _get_cases(1)  # taken from devon_initial_cases.csv file
 
     num_people_infected = np.count_nonzero(people_statuses_after)
 
@@ -603,21 +605,23 @@ def test_seed_initial_infections_all_high_risk():
     people_statuses_after = np.zeros(snapshot.npeople, dtype=np.uint32)
     simulator.download("people_statuses", people_statuses_after)
 
-    expected_num_infections += 38  # taken from devon_initial_cases.csv file
+    expected_num_infections += _get_cases(2)  # taken from devon_initial_cases.csv file
 
     num_people_infected = np.count_nonzero(people_statuses_after)
 
     assert num_people_infected == expected_num_infections
 
 
-def test_seed_initial_infections_some_low_risk():
+def test_seed_initial_infections_most_people_low_risk():
     npeople = 200
-    snapshot = Snapshot.random(nplaces, npeople, nslots)
+    snapshot = Snapshot.zeros(nplaces, npeople, nslots)
 
-    # set all people as high risk
+    # set all people as low risk
     snapshot.area_codes = np.full(npeople, "E02004187")  # low risk area code
-    snapshot.area_codes[1:4] = "E02004143"  # high risk area code
     snapshot.not_home_probs = np.full(npeople, 0.0)
+
+    # set 3 people to be high risk
+    snapshot.area_codes[1:4] = "E02004143"  # high risk area code
     snapshot.not_home_probs[1:4] = 0.8
 
     num_seed_days = 5
@@ -635,8 +639,20 @@ def test_seed_initial_infections_some_low_risk():
     people_statuses_after = np.zeros(snapshot.npeople, dtype=np.uint32)
     simulator.download("people_statuses", people_statuses_after)
 
-    expected_num_infections = 3  # taken from devon_initial_cases.csv file
+    # only high risk people will get infected (eg. in a high risk area code and with a high not_home_prob)
+    # so only the 3 high risk people should be infected by the seeding
+    expected_num_infections = 3
 
     num_people_infected = np.count_nonzero(people_statuses_after)
 
     assert num_people_infected == expected_num_infections
+
+_devon_initial_cases = None
+def _get_cases(day):
+    """Read the intial cases file (devon_initial_cases.csv) so we can check our seeding numbers
+    against those in the file. Start counting from 1 (first day is day 1)"""
+    global _devon_initial_cases
+    if _devon_initial_cases is None:
+        _devon_initial_cases = pd.read_csv(os.path.join("microsim", "opencl", "data", "devon_initial_cases.csv"))
+    return _devon_initial_cases.at[day-1, 'num_cases']
+

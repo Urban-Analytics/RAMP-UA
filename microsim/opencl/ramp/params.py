@@ -29,22 +29,22 @@ class Params:
 
     def __init__(self,
                  location_hazard_multipliers=LocationHazardMultipliers(
-                        retail=0.0165,
-                        primary_school=0.0165,
-                        secondary_school=0.0165,
-                        home=0.0165,
-                        work=0.0
+                        retail=0.00655,
+                        primary_school=0.00655,
+                        secondary_school=0.00655,
+                        home=0.00655,
+                        work=0.00655
                     ),
                  individual_hazard_multipliers=IndividualHazardMultipliers(
                         presymptomatic=1.0,
-                        asymptomatic=0.75,
+                        asymptomatic=0.25,
                         symptomatic=1.0
                     ),
-                 obesity_multipliers=[1, 1, 1, 1],
+                 obesity_multipliers=[1, 1.48, 1.48, 1.48],
                  cvd_multiplier=1,
                  diabetes_multiplier=1,
                  bloodpressure_multiplier=1,
-                 overweight_sympt_mplier=1.46,
+                 overweight_sympt_mplier= 1,
                  warn=True  # Can surpress warnings about using default values
                  ):
 
@@ -56,14 +56,14 @@ class Params:
                           "not those in the parameters file.")
 
         if obesity_multipliers is None:
-            obesity_multipliers = [1, 1, 1, 1]
-        self.symptomatic_multiplier = 0.5
+            obesity_multipliers = [1, 1.48, 1.48, 1.48]
+        self.symptomatic_multiplier = 0.1
         self.exposed_scale = 2.82
         self.exposed_shape = 3.99
         self.presymptomatic_scale = 2.45
         self.presymptomatic_shape = 7.79
-        self.infection_log_scale = 0.35
-        self.infection_mode = 7.0
+        self.infection_log_scale = 0.17
+        self.infection_mode = 8.0
         self.lockdown_multiplier = 1.0
         self.place_hazard_multipliers = np.array([location_hazard_multipliers.retail,
                                                   location_hazard_multipliers.primary_school,
@@ -79,7 +79,7 @@ class Params:
         0.0231, 0.0361, 0.0566, 0.0886, 0.1737],
                                         dtype=np.float32)
         self.obesity_multipliers = np.array(obesity_multipliers, dtype=np.float32)
-        self.symptomatic_probs = np.array([0.21, 0.21, 0.45, 0.45,
+        self.symptomatic_probs = np.array([0.21, 0.21, 0.45, 0.45,    
                                            0.45, 0.45, 0.45, 0.69, 0.69],
                                            dtype = np.float32)
         self.cvd_multiplier = cvd_multiplier
