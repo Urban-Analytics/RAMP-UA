@@ -508,7 +508,7 @@ class OpenCLWrapper(object):
         if self.parameters_file is None:
             self.params = OpenCLRunner.create_parameters(**final_params)
         else:
-            self.params = OpenCLRunner.create_parameters(parameters_file=parameters_file, **final_params)
+            self.params = OpenCLRunner.create_parameters(parameters_file=self.parameters_file, **final_params)
 
     def __call__(self, random_params_dict):
         """This function is used by pyABC to run the model and pass in random variables.
