@@ -464,3 +464,41 @@ class OpenCLRunner:
             return fitness, sim, obs, params, summaries
         else:  # Return the expected counts in a dictionary
             return {"data": sim}
+
+
+class OpenCLWrapper(object):
+    """A simplified version of the OpenCLRunner designed specifically to support using ABC as a day to do
+    data assimilation. Uses some features of OpenCLRunner but isn't intended to run a model from start to
+    finish."""
+
+
+    def __init__(self, const_params_dict, random_params_dict=None):
+        """Pass constant parameters that the model needs through this constructor.
+
+        Random variables should not be passed directly to the constructor, they should be passed via
+        the __call__  function by instantiating an instance of OpenCLWrapper and then calling that
+        object directly. E.g. like this:
+        ``m = OpenCLWrapper(const_params_dict={"const_param1":1.0, "const_param2":0.1})
+        m(random_variables_dict)``
+        """
+        self.const_params_dict = const_params_dict
+        if random_params_dict is None:  # Only have constant params
+            self.params = OpenCLRunner.create_parameters(**const_params_dict)
+        else:  # Have constants *and* random variables
+            # Check the parameters are distinct
+            for key in const_params_dict:
+                if key in random_params_dict:
+                    raise Exception(
+                        f"Parameter {key} in the constants dict is also in the random variables dict {random_params_dict}")
+            merge = {**const_params_dict, **random_params_dict}
+            self.params = OpenCLRunner.create_parameters(**merge)
+
+    def __call__(self, random_params_dict):
+        """This function is used by pyABC to run the model and pass in random variables.
+
+        :param input_params_dict: Dictionary with random variable values that should be used
+        to run the model"""
+
+        m = OpenCLWrapper(const_params_dict=self.const_params_dict, random_params_dict=random_params_dict)
+
+        # TODO Run the model and return results

@@ -4,7 +4,7 @@ import os
 import warnings
 import numpy as np
 import pandas as pd
-from experiments.opencl_runner import OpenCLRunner # Some additional notebook-specific functions required (functions.py)
+from experiments.opencl_runner import OpenCLRunner, OpenCLWrapper # Some additional notebook-specific functions required (functions.py)
 from opencl.ramp.disease_statuses import DiseaseStatus
 
 # ********************************************************
@@ -209,3 +209,22 @@ def test_get_cumulative_new_infections(setup_results):
             num_infected_at_end += OpenCLRunner.get_mean_total_counts(summaries, d)[-1]
     assert num_infected_at_end == cumulative_infections[-1]
 
+def test_OpenCLWrapper():
+    # Check parameters assigned correctly (uses OpenCLRunner.create_params() which is already tested anyway)
+    const_params = {'current_risk_beta': 1, 'presymptomatic': 2, 'asymptomatic': 3, 'symptomatic': 4}
+    m1 = OpenCLWrapper(const_params_dict=const_params)
+    for index, param_name in zip([0, 1, 2], ["presymptomatic", "asymptomatic", "symptomatic"]):
+        assert np.isclose(m1.params.individual_hazard_multipliers[index], const_params[param_name])
+
+    # Now check constant and random parameters behave correctly (should both be used to create parameters)
+    const_params = {'current_risk_beta': 1, 'presymptomatic': 2, }
+    rand_params = {'asymptomatic': 3, 'symptomatic': 4}
+    merged_params = {**const_params, **rand_params}
+    m1 = OpenCLWrapper(const_params_dict=const_params, random_params_dict=rand_params)
+    for index, param_name in zip([0, 1, 2], ["presymptomatic", "asymptomatic", "symptomatic"]):
+        assert np.isclose(m1.params.individual_hazard_multipliers[index], merged_params[param_name])
+
+    # If params duplicated then throw error
+    with pytest.raises(Exception):
+        OpenCLWrapper(const_params_dict={'current_risk_beta': 1, 'presymptomatic': 2},
+                      random_params_dict={'presymptomatic': 3, 'symptomatic': 4})
