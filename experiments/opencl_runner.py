@@ -473,24 +473,35 @@ class OpenCLWrapper(object):
 
 
     def __init__(self, const_params_dict,
-                 quiet, use_gpu, store_detailed_counts,
-                 start_day, run_length, parameters_file=None,
+                 quiet, use_gpu, store_detailed_counts, start_day, run_length,
+                 current_particle_pop_df, parameters_file,
                  random_params_dict=None):
-        """Pass constant parameters that the model needs through this constructor (the `const_params+_dict`)
-        argument, as well as any administrative parameters (not used in the model logic).
-        Random variables should not be passed directly to the constructor, they should be passed via
-        the __call__  function by instantiating an instance of OpenCLWrapper first and then calling that
+        """The constructor accepts the following:
+
+         - `const_params_dict`: a dictionary of constant model parameters (e.g. hazard coefficients) that are
+         not known about by pyabc
+         - `current_particle_pop_df`: a dictionary containing the current pyABC population of particles. These
+         can be used to re-start previous particles from previous data assimilation windows. If 'None' then
+         the model is just starting so there is no previous population.
+         - A load of administrative parameters (not used in the model logic).
+         - The location of a `parameters_file`, that has default values for parameters (if None then then
+         a default location is assumed, see `OpenCLRunner.create_parameters`).
+
+        Random variables (in `random_params_dict`) should not be passed directly to the constructor, they should be
+        passed via the __call__  function by instantiating an instance of OpenCLWrapper first and then calling that
         object directly. E.g. like this:
         ``m = OpenCLWrapper(const_params_dict={"const_param1":1.0, "const_param2":0.1})
         m(random_variables_dict=={"random_param1":2.0, "random_param2":0.5})``
+        That method was suggested here: https://github.com/ICB-DCM/pyABC/issues/446
         """
-        # Set utility parameters
+        # Set administrative parameters
         self.quiet = quiet
         self.use_gpu = use_gpu
         self.store_detailed_counts = store_detailed_counts
         self.start_day = start_day
         self.run_length = run_length
         self.parameters_file = parameters_file
+        self.current_particle_pop_df = current_particle_pop_df
 
         # Now deal with the model parameters
         self.const_params_dict = const_params_dict
@@ -510,17 +521,56 @@ class OpenCLWrapper(object):
         else:
             self.params = OpenCLRunner.create_parameters(parameters_file=self.parameters_file, **final_params)
 
-    def __call__(self, random_params_dict):
+    def __call__(self, random_params_dict) -> dict:
         """This function is used by pyABC to run the model and pass in random variables.
 
-        :param input_params_dict: Dictionary with random variable values that should be used
-        to run the model"""
+        :param random_params_dict: Dictionary with random variable values that should be used
+        to run the model.
+
+        :return: a dictionary containing model results and other useful pieces of information,
+        like the current model state."""
 
         # Create a new model with previously created constant parameters (set through the constructor)
         # and random variables passed here
         m = OpenCLWrapper(const_params_dict=self.const_params_dict,
                           quiet=self.quiet, use_gpu=self.use_gpu, store_detailed_counts=self.store_detailed_counts,
-                          start_day=self.start_day, run_length=self.run_length, parameters_file=self.parameters_file,
+                          start_day=self.start_day, run_length=self.run_length,
+                          current_particle_pop_df=self.current_particle_pop_df,
+                          parameters_file=self.parameters_file,
                           random_params_dict=random_params_dict)
 
+        # If this is the first data assimilation window, we can just run the model
+        if m.start_day==0:
+            assert m.current_particle_pop_df is None
+            pass
+        else:  # Otherwise we need to restart previous models stored in the current_particle_pop_df
+            # XXXX CAN GET OLD MODEL STATES, WITH ALL DISEASE STATUSES, FROM THE DF. BUT HOW TO
+            # UPDATE THESE IN RESPONSE TO THE NEW ESTIMATES OF THE NUMBER OF CASES (in random_params_dict)
+            pass
+
+
+
         # TODO Run the model and return results
+
+
+
+    @staticmethod
+    def summary_stats(raw_model_results: dict) -> dict:
+        """Takes raw model results, as output from `__call__` and passed them on to the
+        `distance` function. This doesn't actually calculate summary statistics, but is
+        useful because anything returned in the dictionary is added to the results database,
+        so we can recover a model state, not just it's results.
+
+        :param raw_model_results: dictionary of model results as output from __call__.
+        :return: processed model results.
+        """
+
+    @staticmethod
+    def distance(sim, obs):
+        """Calculate the difference (error) between simulated and observed data.
+
+        :param sim: a dictionary containing the simulated data
+        :param obs: a dictionary containing the observed (real) data
+        :return: a single distance measure (float). Lower is better."""
+        return 1
+

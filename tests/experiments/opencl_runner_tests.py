@@ -211,8 +211,8 @@ def test_get_cumulative_new_infections(setup_results):
 
 def test_OpenCLWrapper():
     admin_params = {  # Not important, needed to instantiate the class
-        "quiet":True, "use_gpu": False, "store_detailed_counts": True, "start_day": 0,
-                       "run_length": 10, "parameters_file": None}
+        "quiet": True, "use_gpu": False, "store_detailed_counts": True, "start_day": 0,
+        "run_length": 10, "parameters_file": None, "current_particle_pop_df": None}
     # Check parameters assigned correctly (uses OpenCLRunner.create_params() which is already tested anyway)
     const_params = {'current_risk_beta': 1, 'presymptomatic': 2, 'asymptomatic': 3, 'symptomatic': 4}
     m1 = OpenCLWrapper(const_params_dict=const_params, **admin_params)
