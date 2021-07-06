@@ -58,7 +58,7 @@ def main(parameters_file):
             scenario = sim_params["scenario"]
             initialise = sim_params["initialise"]
             iterations = sim_params["iterations"]
-            Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH = sim_params["project-dir-absolute-path"]
+#            Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH = sim_params["project-dir-absolute-path"]
             study_area = sim_params["study-area"]
             # selected_region_folder_name = sim_params["selected-region-folder-name"]
             output = sim_params["output"]
