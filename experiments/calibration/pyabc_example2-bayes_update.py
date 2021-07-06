@@ -4,8 +4,6 @@
 
 import pyabc
 import numpy as np
-import pandas as pd
-import random
 import matplotlib.pyplot as plt
 from typing import Union
 from pyabc.transition.multivariatenormal import MultivariateNormalTransition  # For drawing from the posterior
@@ -14,6 +12,7 @@ from pyabc.parameters import Parameter
 
 pyabc.settings.set_figure_params('pyabc')  # for beautified plots
 
+
 class ArbitraryDistribution(Distribution):
     """
     Define an arbitrary distribution. Used so that the posterior from an ABC run can be re-used
@@ -21,29 +20,25 @@ class ArbitraryDistribution(Distribution):
     ABC run) and generating a MultivariateNormalTransition (KDE) that can be sampled
     """
 
-    def __init__(self, abc_history, N_samples = 1000):
+    def __init__(self, abc_history, N_samples=1000):
         # Get the dataframe of particles (parameter point estimates) and associated weights
         self.abc_history = abc_history
-        self.dist_df, self.dist_w = self.abc_history.get_distribution(m=0, t=abc_history.max_t)
+        dist_df, dist_w = self.abc_history.get_distribution(m=0, t=abc_history.max_t)
         # Create a KDE using the particles
         self.kde = MultivariateNormalTransition(scaling=1)
-        self.kde.fit(self.dist_df, self.dist_w)
-        #self.samples = self.kde.rvs(N_samples)
+        self.kde.fit(dist_df, dist_w)
 
     def rvs(self) -> Parameter:
         """Sample from the joint distribution, returning a Parameter object.
            Just calls rvs() on the underlying kde"""
 
         return self.kde.rvs()
-        ## Pick a row at random from our samples,
-        #_sample = self.samples.sample()
-        ## Return the parameter values as a dictioary of param:value, wrapped in a Parameter object
-        #return Parameter(**{_param: _sample[param] for _param in _sample.columns})
 
     def pdf(self, x: Union[Parameter, dict]):
         """Get probability density at point `x` (product of marginals).
         Just calls pdf(x) on the underlying kde"""
         return self.kde.pdf(x)
+
 
 # Define our 'model'.
 def my_model(input_params_dict: dict) -> dict:
@@ -52,7 +47,7 @@ def my_model(input_params_dict: dict) -> dict:
       The 'model' just plugs these into a quadratic equation and returns the result.
       Note that the result is returned as an entry in a dictionary."""
     # Uncomment to see what parameters the model is receiving (useful for debugging)
-    #print(f"Model received parameters: {input_params_dict}")
+    # print(f"Model received parameters: {input_params_dict}")
     if "param_a" not in input_params_dict:
         raise Exception(f"Error: the model is expecting an input called 'param_a, but got: {input_params_dict}")
     if "param_b" not in input_params_dict:
@@ -62,13 +57,14 @@ def my_model(input_params_dict: dict) -> dict:
     b = input_params_dict["param_b"]
 
     x = 5  # Arbitrary value for the quadratic
-    result = a*x + b*x**2
+    result = a * x + b * x ** 2
 
     # Return the result as a dictionary. We can put anything that we want in here.
     # I'm returning the result of the equation associated with a dictionary key 'model_result'
     # We could have more than one thing in the dictionary in case your distance function
     # calculates the distance based on lots of different pieces of information
     return {"model_result": result}
+
 
 # Summary statistics convert raw model output into a statistical summary
 def summary_stats(model_result_dict: dict) -> dict:
@@ -84,6 +80,7 @@ def summary_stats(model_result_dict: dict) -> dict:
     model_result_summary = model_result_dict['model_result']
     return {"model_summary": model_result_summary, "test": "SUMMARY_TEST"}
 
+
 # Define the distance function (how close is the model result to some observations).
 # This takes the output from the summary_stats() function as well as observations
 def distance(model_result_summary_dict: dict, observations_dict: dict) -> float:
@@ -92,8 +89,10 @@ def distance(model_result_summary_dict: dict, observations_dict: dict) -> float:
     Note that these inputs are dictionaries."""
     # 'model_summary' was the key in the dict that is returned by summary_stats
     model_summary = model_result_summary_dict['model_summary']
-    observation = observations_dict['observation']  # Later we will create a dictionary of results and use the key 'observation' (they key could be anything)
+    observation = observations_dict[
+        'observation']  # Later we will create a dictionary of results and use the key 'observation' (they key could be anything)
     return abs(model_summary - observation)
+
 
 # ** Lets check the model and distance function work **
 
@@ -111,8 +110,8 @@ obs = truth_model['model_result']  # (Rememmber the model retuns a dictionary. W
 print(f"Assuming 'truth' parameters are {PARAM_A} and {PARAM_B}. They give a model result of {obs}.")
 
 # Check that the distance function gives a larger distance for models that are worse
-good_result = my_model({"param_a": PARAM_A+0.3, "param_b": PARAM_B-0.2})
-bad_result = my_model({"param_a": PARAM_A+7.5, "param_b": PARAM_B-3.8})
+good_result = my_model({"param_a": PARAM_A + 0.3, "param_b": PARAM_B - 0.2})
+bad_result = my_model({"param_a": PARAM_A + 7.5, "param_b": PARAM_B - 3.8})
 
 # (Remember that the distance function wants the simulation result and observations in dictionaries,
 # and the model results need to be passed through the summary_stats() function first before
@@ -125,17 +124,17 @@ assert good_result_distance < bad_result_distance
 
 # Now lets see if pyabc can work out what those original parameter values were, but we only give it the observation
 
-# Define proiors
+# Define priors
 # Assume both paramerers are normally distributed around 5 and 6 respectivly (mostly arbitrary)
 param_a_rv = pyabc.RV("norm", 5, 1)
 param_b_rv = pyabc.RV("norm", 6, 1)
 
 # Plot them to check they look OK
-x = np.linspace(-0 ,10, 1000)
-lines = plt.plot(x, pyabc.Distribution(param=param_a_rv).pdf({"param": x}), '--',
-                 label = "Paremter A", lw = 3, )
-lines = plt.plot(x, pyabc.Distribution(param=param_b_rv).pdf({"param": x}), ':',
-                 label = "Parameter B", lw = 3)
+X = np.linspace(-0, 10, 1000)
+plt.plot(X, pyabc.Distribution(param=param_a_rv).pdf({"param": X}), '--',
+         label="Paremter A", lw=3)
+plt.plot(X, pyabc.Distribution(param=param_b_rv).pdf({"param": X}), ':',
+         label="Parameter B", lw=3)
 plt.autoscale(tight=True)
 plt.legend(title=r"Model parameters");
 plt.show()
@@ -158,7 +157,7 @@ abc = pyabc.ABCSMC(
     summary_statistics=summary_stats,  # Function takes raw model output and calculates a summary
     sampler=pyabc.sampler.SingleCoreSampler()  # Single core for testing (optional)
     # sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
-    )
+)
 
 # The results are stored in a database. We use a simple file database (sqlite) that creates a database
 # file in the current directory
@@ -205,7 +204,6 @@ fig.show()
 pyabc.visualization.plot_histogram_matrix(abc_history, size=(12, 10))
 plt.show()
 
-
 # *********************************************************
 # Now try running again, using the posterior as a new prior
 # *********************************************************
@@ -219,8 +217,8 @@ abc = pyabc.ABCSMC(
     distance_function=distance,  # Distance function defined earlier
     summary_statistics=summary_stats,  # Function takes raw model output and calculates a summary
     sampler=pyabc.sampler.SingleCoreSampler()  # Single core for testing (optional)
-    # sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
-    )
+    #sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
+)
 
 # The results are stored in a database. We use a simple file database (sqlite) that creates a database
 # file in the current directory
