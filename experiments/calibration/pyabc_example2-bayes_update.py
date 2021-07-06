@@ -1,12 +1,49 @@
 # Very simple pyabc model, used for experimenting with the pyabc library
+# This extends the pyabc_example-basic.py script by implementing Bayesian updating,
+# i.e. taking the posterior from one run and using it as the prior for the next run.
 
 import pyabc
 import numpy as np
 import pandas as pd
+import random
 import matplotlib.pyplot as plt
+from typing import Union
 from pyabc.transition.multivariatenormal import MultivariateNormalTransition  # For drawing from the posterior
+from pyabc.random_variables import Distribution
+from pyabc.parameters import Parameter
 
 pyabc.settings.set_figure_params('pyabc')  # for beautified plots
+
+class ArbitraryDistribution(Distribution):
+    """
+    Define an arbitrary distribution. Used so that the posterior from an ABC run can be re-used
+    as the prior in a new run. Does this by taking the abc_history object (output from an
+    ABC run) and generating a MultivariateNormalTransition (KDE) that can be sampled
+    """
+
+    def __init__(self, abc_history, N_samples = 1000):
+        # Get the dataframe of particles (parameter point estimates) and associated weights
+        self.abc_history = abc_history
+        self.dist_df, self.dist_w = self.abc_history.get_distribution(m=0, t=abc_history.max_t)
+        # Create a KDE using the particles
+        self.kde = MultivariateNormalTransition(scaling=1)
+        self.kde.fit(self.dist_df, self.dist_w)
+        #self.samples = self.kde.rvs(N_samples)
+
+    def rvs(self) -> Parameter:
+        """Sample from the joint distribution, returning a Parameter object.
+           Just calls rvs() on the underlying kde"""
+
+        return self.kde.rvs()
+        ## Pick a row at random from our samples,
+        #_sample = self.samples.sample()
+        ## Return the parameter values as a dictioary of param:value, wrapped in a Parameter object
+        #return Parameter(**{_param: _sample[param] for _param in _sample.columns})
+
+    def pdf(self, x: Union[Parameter, dict]):
+        """Get probability density at point `x` (product of marginals).
+        Just calls pdf(x) on the underlying kde"""
+        return self.kde.pdf(x)
 
 # Define our 'model'.
 def my_model(input_params_dict: dict) -> dict:
@@ -133,8 +170,8 @@ db_path = ("sqlite:///" + "pyabc_example.db")
 run_id = abc.new(db_path, {'observation': obs})
 print(f"Running new ABC with id {run_id}.... ", flush=True)
 
-# Run the algorithm! (you can look up the max_nr_populations and minimum_epsilon arguments).
-abc_history = abc.run(max_nr_populations=10, minimum_epsilon=1.0)
+# Run the algorithm!
+abc_history = abc.run(max_nr_populations=3, minimum_epsilon=0.05)
 
 # Algorithm diagnostics. I copied most of this from the docs
 _, arr_ax = plt.subplots(2, 2)
@@ -168,46 +205,64 @@ fig.show()
 pyabc.visualization.plot_histogram_matrix(abc_history, size=(12, 10))
 plt.show()
 
-# Analyse the posterior
-# Look at the particles in the last iteration (i.e. the best particles), ordered by weight
-_df, _w = abc_history.get_distribution(m=0, t=abc_history.max_t)
-# Merge dataframe and weights and sort by weight (highest weight at the top)
-_df['weight'] = _w
-posterior_df = _df.sort_values('weight', ascending=False).reset_index()
-print(posterior_df.to_markdown())
 
-# %% Sample from the posterior
-# Sample from the distribution of parameter posteriors to generate a distribution over the
-# most likely model results. Use kernel density approximation to randomly draw some equally
-# weighted samples.
-print("Sampling from the posterior...", end="", flush=True)
-N_samples = 100
-dist_df, dist_w = abc_history.get_distribution(m=0, t=abc_history.max_t)
+# *********************************************************
+# Now try running again, using the posterior as a new prior
+# *********************************************************
 
-# Sample from the dataframe of posteriors using KDE
-kde = MultivariateNormalTransition(scaling=1)
-kde.fit(dist_df, dist_w)
-samples = kde.rvs(N_samples)
+new_priors = ArbitraryDistribution(abc_history)
 
-# Now run N models and store the results of each one
-sample_histories = []
+# Prepare the ABC model
+abc = pyabc.ABCSMC(
+    models=my_model,  # Model (could be a list of models)
+    parameter_priors=new_priors,  # Priors (again could be a list if we have different priors for different models)
+    distance_function=distance,  # Distance function defined earlier
+    summary_statistics=summary_stats,  # Function takes raw model output and calculates a summary
+    sampler=pyabc.sampler.SingleCoreSampler()  # Single core for testing (optional)
+    # sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
+    )
 
-for i, sample in samples.iterrows():
+# The results are stored in a database. We use a simple file database (sqlite) that creates a database
+# file in the current directory
+db_path = ("sqlite:///" + "pyabc_example.db")
 
-    # Check for negatives. May need to resample
-    if True in [param < 0 for param in sample]:
-        print(f"WARNING Found negatives in sample {i}: \n{sample}")
-        continue
-        # sample = kde.rvs()
+# Each time you run it you get a new 'ID' (useful if you want to look up runs in the database)
+# Note that this is where we give it the observations as well. Our distance function is expecting
+# a dictionary with an 'observation' key in it, so we create a dictionary on the fly with { .. }
+run_id = abc.new(db_path, {'observation': obs})
+print(f"Running new ABC with id {run_id}.... ", flush=True)
 
-    # Create a dictionary with the parameters and their values for this sample
-    param_values = {param: sample[str(param)] for param in priors}
+# Run the algorithm! (you can look up the max_nr_populations and minimum_epsilon arguments).
+abc_history = abc.run(max_nr_populations=20, minimum_epsilon=0.05)
 
-    # Run the model. Create a template again (same as before but this time with history)
-    model_hist = my_model(param_values)
-    sample_histories.append(model_hist)
-print("... finished sampling.")
+# Re-do the Algorithm diagnostics. I copied most of this from the docs
+_, arr_ax = plt.subplots(2, 2)
+pyabc.visualization.plot_sample_numbers(abc_history, ax=arr_ax[0][0])
+pyabc.visualization.plot_epsilons(abc_history, ax=arr_ax[0][1])
+pyabc.visualization.plot_effective_sample_sizes(abc_history, ax=arr_ax[1][1])
 
-# %% Plot the sampling results
+plt.gcf().set_size_inches((12, 8))
+plt.gcf().tight_layout()
+plt.show()
 
-# .. Execrcise for the reader
+# Marginal posteriors. These are the *marginal* estimates of the individual parameters.
+fig, axes = plt.subplots(2, int(len(priors) / 2) + 1, figsize=(12, 8))
+
+for i, param in enumerate(priors.keys()):
+    ax = axes.flat[i]
+    for t in range(abc_history.max_t + 1):
+        df_raw_, w = abc_history.get_distribution(m=0, t=t)
+        pyabc.visualization.plot_kde_1d(df_raw_, w, x=param, ax=ax,
+                                        label=f"{param} PDF t={t}",
+                                        alpha=1.0 if t == 0 else float(t) / abc_history.max_t,
+                                        # Make earlier populations transparent
+                                        color="black" if t == abc_history.max_t else None  # Make the last one black
+                                        )
+        ax.legend()
+        ax.set_title(f"{param}")
+fig.tight_layout()
+fig.show()
+
+# %% 2D correlations
+pyabc.visualization.plot_histogram_matrix(abc_history, size=(12, 10))
+plt.show()
