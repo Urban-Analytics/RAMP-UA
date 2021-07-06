@@ -11,14 +11,14 @@ The model is in a trial phase still, you can see the description and the main di
     - `list-of-msoas` the name of the file containing the list of the MSOAs IDs for your study area
    
 Once edited all the above, you have to run the model using the two `main` modules:
-- first run the initialisation process via `python coding/main_initialisation.py -p ../model_parameters/default.yml`, this module will download the data (to `data/raw_data/`), process them and prepare the table/data for the model that will be stored in `data/processed_data/your-study-area-folder/`
-- in this folder TEMPORARILY you shall add also these 4 files, that have not yet been completely implemented:
+1. Run the initialisation process via `python coding/main_initialisation.py -p model_parameters/default.yml`, this module will download the data (to `data/raw_data/`), process them and prepare the table/data for the model that will be stored in `data/processed_data/your-study-area-folder/`
+2. in this folder TEMPORARILY you shall add also these 4 files, that have not yet been completely implemented:
     1. `google_mobility_lockdown_daily_14_day_moving_average.csv`
     2. `initial_cases.csv`
     3. `msoas_risk.csv`
     4. `msoa_building_coordinates.json`
     - (these files are available for Devon and West Yorksire)
-- finally you can run the OpenCL model using `python coding/main_model.py -p ../model_parameters/default.yml`.
+3. finally you can run the OpenCL model using `python coding/main_model.py -p model_parameters/default.yml`.
 
 
 NOTE: the model now runs with only one parameter in input, check 'Main difference with RAMP-UA' below, so be aware of this (IE if you want to choose whether to run the OpenCL or not, you change the parameter directly in `model_parameters/default.yml`, not by command line);
