@@ -3,6 +3,7 @@
 # i.e. taking the posterior from one run and using it as the prior for the next run.
 
 import pyabc
+import copy
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -39,6 +40,20 @@ class ArbitraryDistribution(Distribution):
         """Get probability density at point `x` (product of marginals).
         Just calls pdf(x) on the underlying kde"""
         return self.kde.pdf(x)
+
+    def __repr__(self):
+        return f"<ArbitraryDistribution\n    " + \
+               ",\n    ".join(str(p) for p in self.kde.X.columns) + ">"
+
+    def copy(self) -> Distribution:
+        """Copy the distribution.
+
+        Returns
+        -------
+        copied_distribution: Distribution
+            A copy of the distribution.
+        """
+        return copy.deepcopy(self)
 
 
 # Define our 'model'.
