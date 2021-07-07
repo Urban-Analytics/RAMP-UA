@@ -4,8 +4,11 @@
 
 import pyabc
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from typing import Union
+
+from pyabc import History
 from pyabc.transition.multivariatenormal import MultivariateNormalTransition  # For drawing from the posterior
 from pyabc.random_variables import Distribution
 from pyabc.parameters import Parameter
@@ -20,10 +23,9 @@ class ArbitraryDistribution(Distribution):
     ABC run) and generating a MultivariateNormalTransition (KDE) that can be sampled
     """
 
-    def __init__(self, abc_history, N_samples=1000):
+    def __init__(self, abc_hist: History):
         # Get the dataframe of particles (parameter point estimates) and associated weights
-        self.abc_history = abc_history
-        dist_df, dist_w = self.abc_history.get_distribution(m=0, t=abc_history.max_t)
+        dist_df, dist_w = abc_hist.get_distribution(m=0, t=abc_history.max_t)
         # Create a KDE using the particles
         self.kde = MultivariateNormalTransition(scaling=1)
         self.kde.fit(dist_df, dist_w)
@@ -31,10 +33,9 @@ class ArbitraryDistribution(Distribution):
     def rvs(self) -> Parameter:
         """Sample from the joint distribution, returning a Parameter object.
            Just calls rvs() on the underlying kde"""
-
         return self.kde.rvs()
 
-    def pdf(self, x: Union[Parameter, dict]):
+    def pdf(self, x: Union[Parameter, pd.Series, pd.DataFrame]) -> Union[float, np.ndarray]:
         """Get probability density at point `x` (product of marginals).
         Just calls pdf(x) on the underlying kde"""
         return self.kde.pdf(x)
@@ -155,8 +156,8 @@ abc = pyabc.ABCSMC(
     parameter_priors=priors,  # Priors (again could be a list if we have different priors for different models)
     distance_function=distance,  # Distance function defined earlier
     summary_statistics=summary_stats,  # Function takes raw model output and calculates a summary
-    sampler=pyabc.sampler.SingleCoreSampler()  # Single core for testing (optional)
-    # sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
+    #sampler=pyabc.sampler.SingleCoreSampler()  # Single core for testing (optional)
+    sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
 )
 
 # The results are stored in a database. We use a simple file database (sqlite) that creates a database
@@ -216,8 +217,8 @@ abc = pyabc.ABCSMC(
     parameter_priors=new_priors,  # Priors (again could be a list if we have different priors for different models)
     distance_function=distance,  # Distance function defined earlier
     summary_statistics=summary_stats,  # Function takes raw model output and calculates a summary
-    sampler=pyabc.sampler.SingleCoreSampler()  # Single core for testing (optional)
-    #sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
+    #sampler=pyabc.sampler.SingleCoreSampler()  # Single core for testing (optional)
+    sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
 )
 
 # The results are stored in a database. We use a simple file database (sqlite) that creates a database
