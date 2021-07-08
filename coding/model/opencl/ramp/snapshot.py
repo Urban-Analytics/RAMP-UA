@@ -32,10 +32,10 @@ class Snapshot:
         npeople = np.uint32(npeople)
         nslots = np.uint32(nslots)
         time = np.uint32(0)
-        area_codes = np.full(npeople, "E02002371") # "E02004129")
+        area_codes = np.full(npeople, "E00000000") # "E02002371") # "E02004129")
         not_home_probs = np.zeros(npeople).astype(np.float32)
 
-        lockdown_multipliers = np.ones(100)
+        lockdown_multipliers = np.ones(1000) # Random high number that should be higher than the length of the lockdown file
 
         buffers = Buffers(
             place_activities=np.zeros(nplaces, dtype=np.uint32),
