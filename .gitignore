@@ -64,3 +64,5 @@ data/**
 !data/**/
 !data/README.md
 !data/**/.gitkeep
+
+!coding/**/requirements.txt
