@@ -209,10 +209,10 @@ class RawDataHandler:
         change = np.repeat(0, np.max(lockdown.day)+1)
         for x in range(0, len(change_ref)):
             cty_pop[x] = np.nansum(msoas_pop[lut.GoogleMob[lut[ColumnNames.MSOAsID].isin(msoas_list)] == change_ref[x]])
-            match = lockdown.change[lockdown[ColumnNames.LOCKDOWN_CTY_NAME] == change_ref[x]]   # error: wy repeats 6 times # CTY20
-            moltip = match * cty_pop[x]
-            verif = change + moltip
-            change = verif
+            # match = lockdown.change[lockdown[ColumnNames.LOCKDOWN_CTY_NAME] == change_ref[x]]   # CTY20
+            # moltip = match * cty_pop[x]
+            # verif = change + moltip
+            # change = verif
             change = change + lockdown.change[lockdown[ColumnNames.LOCKDOWN_CTY_NAME] == change_ref[x]] * cty_pop[x]  # CTY20
         change = change/np.sum(cty_pop)
         print("... done!")

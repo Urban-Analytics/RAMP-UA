@@ -33,6 +33,7 @@ from coding.initialise.initialisation_cache import InitialisationCache
 from coding.initialise.raw_data_handler import RawDataHandler
 from coding.initialise.load_msoa_locations import MapsHandler
 
+
 # ********
 # PROGRAM ENTRY POINT
 # Uses 'click' library so that it can be run from the command line
@@ -51,6 +52,7 @@ Actual initialisation process
               help="Parameters file to use to configure the model. This must be located in the working directory.")
 # @click.option('-ocl', '--opencl/--no-opencl', default=True, help="Run OpenCL model (runs in headless mode by default")
 def main(parameters_file):
+    #raw_data_handler_param: RawDataHandler
     """
     Main function which runs the population initialisation
     """
@@ -87,7 +89,7 @@ def main(parameters_file):
             output_every_iteration = sim_params["output-every-iteration"]
             debug = sim_params["debug"]
             repetitions = sim_params["repetitions"]
-            lockdown_file = sim_params["lockdown-file"]
+            # lockdown_file = sim_params["lockdown-file"]
             # quant_dir = sim_params["quant-dir"]
             use_cache = sim_params["use-cache"]
             # open_cl_model = sim_params["opencl-model"]
@@ -154,9 +156,10 @@ def main(parameters_file):
         population = PopulationInitialisation(**population_args)
         individuals = population.individuals
         activity_locations = population.activity_locations
+        lockdown = raw_data_handler.getLockdownFile()
 
         # store in cache so we can load later
-        cache.store_in_cache(individuals, activity_locations)
+        cache.store_in_cache(individuals, activity_locations, lockdown)
 
 
     else:  # load from cache

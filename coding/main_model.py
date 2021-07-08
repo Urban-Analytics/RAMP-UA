@@ -11,7 +11,6 @@ import sys
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
 import multiprocessing
 import pandas as pd
-
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
 # pd.set_option('display.width', 0)  # Automatically find the best width
 import os
@@ -22,13 +21,12 @@ from shutil import copyfile
 
 # from model.microsim.microsim_model import MicrosimModel # are we keeping the R/Python model or not?
 from coding.model.opencl.ramp.run import run_opencl
-from coding.model.time_activity_multiplier import TimeActivityMultiplier
 from coding.model.opencl.ramp.snapshot_convertor import SnapshotConvertor
 from coding.model.opencl.ramp.snapshot import Snapshot
 from coding.model.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
 from coding.initialise.initialisation_cache import InitialisationCache
-from coding.initialise.population_initialisation import PopulationInitialisation
 from coding.constants import Constants
+from coding.constants import ColumnNames
 
 @click.command()
 @click.option('-p',
@@ -40,6 +38,7 @@ def main(parameters_file):
     Main function which runs the population initialisation, then chooses which model to run, either the Python/R
     model or the OpenCL model
     """
+
     print(f"--\nReading parameters file: {parameters_file}\n--")
 
     try:
@@ -65,7 +64,7 @@ def main(parameters_file):
             output_every_iteration = sim_params["output-every-iteration"]
             debug = sim_params["debug"]
             repetitions = sim_params["repetitions"]
-            lockdown_file = sim_params["lockdown-file"]
+            use_lockdown = sim_params["use-lockdown"]
             # quant_dir = sim_params["quant-dir"]
             use_cache = sim_params["use-cache"]
             open_cl_model = sim_params["opencl-model"]
@@ -121,17 +120,17 @@ def main(parameters_file):
         # cache.store_in_cache(individuals, activity_locations)
     else:  # load from cache
         print("Loading data from previous cache")
-        individuals, activity_locations = cache.read_from_cache()
+        individuals, activity_locations, lockdown_file = cache.read_from_cache()
 
         #     # Calculate the time-activity multiplier (this is for implementing lockdown)
-    time_activity_multiplier = None
-    if lockdown_file != "":
-        print(f"Implementing a lockdown with time activities from {lockdown_file}")
-        time_activity_multiplier: pd.DataFrame = \
-            TimeActivityMultiplier.read_time_activity_multiplier(os.path.join(study_area_folder_in_processed_data,
-                                                                              lockdown_file))
-            # TimeActivityMultiplier.read_time_activity_multiplier(os.path.join(Constants.Paths.NATIONAL_DATA.FULL_PATH_FOLDER,
-            #                                                                   lockdown_file))
+    #time_activity_multiplier = None
+    if use_lockdown:
+        print(f"Implementing a lockdown scenario")
+        time_activity_multiplier = lockdown_file #pd.read_csv(lockdown_file)
+        # Cap at 1.0 (it's a curve so some times peaks above 1.0)=
+        #time_activity_multiplier[ColumnNames.TIME_ACTIVITY_MULTIPLIER] = time_activity_multiplier.loc[:, ColumnNames.TIME_ACTIVITY_MULTIPLIER]. \
+        #     apply(lambda x: 1.0 if x > 1.0 else x)
+            
     # if open_cl_model:
     run_opencl_model(individuals,
                      activity_locations,

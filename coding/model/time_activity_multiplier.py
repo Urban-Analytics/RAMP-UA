@@ -13,6 +13,7 @@ import pandas as pd
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrame
 from coding.constants import Constants
 from coding.constants import ColumnNames
+from coding.initialise.raw_data_handler import RawDataHandler
 
 class TimeActivityMultiplier:
 
@@ -28,10 +29,7 @@ class TimeActivityMultiplier:
         :param lockdown_file: Where to read the mobility data from (assume it's within the DATA_DIR).
         :return: A dataframe with 'day' and 'timeout_multiplier' columns
         """
-        assert lockdown_file != "", \
-            "read_time_activity_multiplier should not have been called if lockdown_file is empty"
-        print(f"Reading time activity multiplier data from {lockdown_file}...", )
-        time_activity = pd.read_csv(lockdown_file)
+        time_activity = RawDataHandler.getLockdownFile() #pd.read_csv(lockdown_file)
         # Cap at 1.0 (it's a curve so some times peaks above 1.0)=
         time_activity[ColumnNames.TIME_ACTIVITY_MULTIPLIER] = time_activity.loc[:, ColumnNames.TIME_ACTIVITY_MULTIPLIER]. \
             apply(lambda x: 1.0 if x > 1.0 else x)

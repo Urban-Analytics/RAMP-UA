@@ -43,7 +43,7 @@ class PopulationInitialisation:
     REGIONAL_DATA_DIR = "" # leaving this here until we remove the remove devon_data stuff completely
     testing = False
     debug = False
-    raw_data_handler: RawDataHandler = None
+    raw_data_handler: RawDataHandler = None # defining the static variabla raw_data_handler as type RawDataHandler
 
     def __init__(self,
                 #  regional_data_dir: str = "",
