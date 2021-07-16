@@ -565,7 +565,6 @@ class OpenCLWrapper(object):
         return m.run()
 
     def run(self):
-        simulator = None  # This is the object that will eventually be returned (current state of the model)
 
         # If this is the first data assimilation window, we can just run the model as normal
         if self.start_day == 0:
@@ -607,9 +606,9 @@ class OpenCLWrapper(object):
                 simulator.step()
                 iter_count += 1
 
-                # Update the statuses (TODO check: is this necessary to do every iteration)
-                simulator.download("people_statuses", snapshot.buffers.people_statuses)
-                summary.update(iter_count, snapshot.buffers.people_statuses)
+            # Update the statuses
+            simulator.download("people_statuses", snapshot.buffers.people_statuses)
+            summary.update(iter_count, snapshot.buffers.people_statuses)
 
             if not self.quiet:
                 for i in range(self.run_length):
@@ -636,7 +635,8 @@ class OpenCLWrapper(object):
             raise Exception("Not implemented yet")
 
         # Return the current state of the model in a dictionary describing what it is
-        return {"simulator": simulator}
+        #return {"simulator": simulator}
+        return {"simulator": snapshot}
 
     @staticmethod
     def summary_stats(raw_model_results: dict) -> dict:
