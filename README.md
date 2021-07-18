@@ -24,6 +24,7 @@ Once edited all the above, you have to run the model using the two `main` module
 NOTE: the model now runs with only one parameter in input, check 'Main difference with RAMP-UA' below, so be aware of this (IE if you want to choose whether to run the OpenCL or not, you change the parameter directly in `model_parameters/default.yml`, not by command line);
 The current version only runs the OpenCL model and the GUI is on its way (see the todo list for the dashboard map).
 
+Note2: This is a test for commits from PyCharm from Fernando Benitez, you can delete it, if I have done not.   
 
 ## Description
 This branch is a first draft of the scaling up of the RAMP Urban Analytics project to a national level. It takes the project workflow as it is now and aims at making it run on other UK regions (in the current project only Devon is implemented, see issue https://github.com/Urban-Analytics/RAMP-UA/issues/254).
