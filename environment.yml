@@ -1,4 +1,4 @@
-name: ramp-ua
+name: ecotwins
 channels:
   - conda-forge
   - defaults
@@ -43,6 +43,6 @@ dependencies:
   - sphinx
   - pip:
      - convertbng==0.6.25
-     - -r file:microsim/opencl/requirements.txt
+     - -r file:coding/model/opencl/requirements.txt
      - sphinx_rtd_theme
      - sphinx-autodoc-typehints

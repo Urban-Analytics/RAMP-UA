@@ -1,8 +1,9 @@
 # Contains some useful utility functionality
 import pandas as pd
 from typing import List
-
+from decimal import *
 from coding.constants import ColumnNames
+getcontext().rounding = ROUND_DOWN
 
 class Optimise:
     """
@@ -43,12 +44,13 @@ class Optimise:
 
 
 def check_durations_sum_to_1(individuals, activities):
-    total_duration = [0.0] * len(individuals)  # Add up all the different activity durations
+    epsilon = 0.01
+    total_dura = [0.0] * len(individuals)  # Add up all the different activity durations
     for activity in activities:
-        total_duration = total_duration + individuals.loc[:, f"{activity}{ColumnNames.ACTIVITY_DURATION}"]
-    if not (total_duration.apply(lambda x: round(x, 2)) <= 1.0).all():
+        total_dura = total_dura + individuals.loc[:, f"{activity}{ColumnNames.ACTIVITY_DURATION}"]
+    if not (total_dura.apply(lambda x: round(x, 2)) == 1.0).all():
         print("Some activity durations don't sum to 1", flush=True)
-        print(total_duration[total_duration != 1.0], flush=True)
+        print(total_dura[total_dura != 1.0], flush=True)
         raise Exception("Some activity durations don't sum to 1")
 
 

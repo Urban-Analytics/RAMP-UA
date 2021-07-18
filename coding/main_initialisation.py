@@ -155,6 +155,11 @@ def main(parameters_file):
         # args for population initialisation
         population = PopulationInitialisation(**population_args)
         individuals = population.individuals
+
+        # print(individuals)
+        # df2 = pd.DataFrame(individuals)
+        # df2.to_csv(r'/Users/fbenitez/file_individuals.csv')
+
         activity_locations = population.activity_locations
         lockdown = raw_data_handler.getLockdownFile()
 
