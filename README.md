@@ -5,12 +5,20 @@
 ## Notes for first time users (temporarily needed to have the model run)
 The model is in a trial phase still, you can see the description and the main differences with RAMP-UA model hereafter. You can have it run though taking into account a few assumptions:
 [spoiler: some steps are temporary, at least until all the data dependencies are checked]
-1. Edit in `coding/constants.py` the variable `abspath` = "path_to_where_the_project_folder_is_located_in_your_computer"
-2. inside `parameters_file/default.yml` edit:
+
+1. Clone or Download the repo Urban-Analytics/RAMP-UA at EcoTwins (github.com)
+2. Install the EcoTwins Env using:
+   `$ conda env create -f environment.yml`
+3. Install RAMPUA Package using: 
+  `$ python setup.py develop`
+  `$ python setup.py install`
+4. Once you have the RampUA project cloned, make sure you are in the Branch EcoTwins (`git checkout EcoTwins`), if you have downloaded the EcoTwins folder, or clone the RampUA repo, make sure you have the correct python interpreter (`python 3.7 (EcoTwins)`), and you have started the EcoTwins Env in your conda `conda activate ecotwins`
+5. Edit in `coding/constants.py` the variable `abspath` = "path_to_where_the_project_folder_is_located_in_your_computer"
+6. inside `parameters_file/default.yml` edit:
     - `study-area` the name for the folder in `processed_data` and `output` folders that pertains to your chosen study area, the name you assign here will be used throughout the whole process;
     - `list-of-msoas` the name of the file containing the list of the MSOAs IDs for your study area
    
-Once edited all the above, you have to run the model using the two `main` modules:
+Once edited all the above, you have to run the model using the two `main` modules, first to all You need to get the data or what we call `initialisation process`, then you can run the model what we call `Model process`:
 1. Run the initialisation process via `python coding/main_initialisation.py -p model_parameters/default.yml`, this module will download the data (to `data/raw_data/`), process them and prepare the table/data for the model that will be stored in `data/processed_data/your-study-area-folder/`
 2. in this folder TEMPORARILY you shall add also these 4 files, that have not yet been completely implemented:
     1. `google_mobility_lockdown_daily_14_day_moving_average.csv`
@@ -18,7 +26,7 @@ Once edited all the above, you have to run the model using the two `main` module
     3. `msoas_risk.csv`
     4. `msoa_building_coordinates.json`
     - (these files are available for Devon and West Yorksire)
-3. finally you can run the OpenCL model using `python coding/main_model.py -p model_parameters/default.yml`.
+3. finally, you can run the OpenCL model using `python coding/main_model.py -p model_parameters/default.yml`.
 
 
 NOTE: the model now runs with only one parameter in input, check 'Main difference with RAMP-UA' below, so be aware of this (IE if you want to choose whether to run the OpenCL or not, you change the parameter directly in `model_parameters/default.yml`, not by command line);
