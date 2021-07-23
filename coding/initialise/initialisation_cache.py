@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import pickle
+import json
 
 
 class InitialisationCache:
@@ -12,13 +13,16 @@ class InitialisationCache:
         self.individuals_filepath = os.path.join(self.cache_dir, "individuals.pkl")
         self.activity_locations_filepath = os.path.join(self.cache_dir, "activity_locations.pkl")
         self.lockdown_filepath = os.path.join(self.cache_dir, "lockdown.pkl")
+        self.shpfile_filepath = os.path.join(self.cache_dir,"msoa_building_coordinates.json")
         self.all_cache_filepaths = [self.individuals_filepath, self.activity_locations_filepath, self.lockdown_filepath]
 
-    def store_in_cache(self, individuals, activity_locations, lockdown):
+    def store_in_cache(self, individuals, activity_locations, lockdown, shpfile):
         individuals.to_pickle(self.individuals_filepath)
         with open(self.activity_locations_filepath, 'wb') as handle:
             pickle.dump(activity_locations, handle)
         lockdown.to_pickle(self.lockdown_filepath)
+        with open(self.shpfile_filepath, 'w') as output_file:
+            json.dump(shpfile, output_file)
 
     def read_from_cache(self):
         individuals = pd.read_pickle(self.individuals_filepath)

@@ -78,8 +78,8 @@ def main(parameters_file):
             #         self.params, self.params_changed = Model._init_kwargs(params, kwargs)
             #         [setattr(self, key, value) for key, value in self.params.items()]
             # Utility parameters
-            scenario = sim_params["scenario"]
-            initialise = sim_params["initialise"]
+            #scenario = sim_params["scenario"]
+            #initialise = sim_params["initialise"]
             iterations = sim_params["iterations"]
             # Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH = sim_params["project-dir-absolute-path"]
             study_area = sim_params["study-area"]
@@ -163,8 +163,13 @@ def main(parameters_file):
         activity_locations = population.activity_locations
         lockdown = raw_data_handler.getLockdownFile()
 
+        OSMshp = raw_data_handler.getCombinedShpFile()
+        maps_handler = MapsHandler(OSMshp,list_of_msoas)
+
+        shpfile = maps_handler.getFinalBuildings()
+
         # store in cache so we can load later
-        cache.store_in_cache(individuals, activity_locations, lockdown)
+        cache.store_in_cache(individuals, activity_locations, lockdown, shpfile)
 
 
     else:  # load from cache
