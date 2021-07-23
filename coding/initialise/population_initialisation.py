@@ -15,7 +15,7 @@ import sys
 from coding.initialise.activity_location import ActivityLocation
 from coding.constants import ColumnNames
 from coding.constants import Constants
-from coding.initialise.utilities import Optimise, check_durations_sum_to_1
+from coding.model.microsim.utilities import Optimise, check_durations_sum_to_1
 from coding.initialise.quant_api import QuantRampAPI
 from coding.initialise.raw_data_handler import RawDataHandler
 from decimal import *
@@ -1020,7 +1020,7 @@ class PopulationInitialisation:
         :param activity_locations:
         :return: The new individuals dataframe
         """
-        epsilon = 0.01
+        
         total_duration = [0.0] * len(individuals)  # Add up all the different activity durations
 
         for activity in activity_locations.keys():
@@ -1028,21 +1028,18 @@ class PopulationInitialisation:
             individuals.loc[:, f"{activity}{ColumnNames.ACTIVITY_DURATION}"] = round(
                 individuals.loc[:, f"{activity}{ColumnNames.ACTIVITY_DURATION}"], 2)
             total_duration = total_duration + individuals.loc[:, f"{activity}{ColumnNames.ACTIVITY_DURATION}"]
-        total_duration = total_duration.apply(lambda x: round(x, 2))
-        total_duration_dec = total_duration.apply(lambda x: Decimal(str(x)))
-        # total_duration_dec_float = float(total_duration_dec)
+        total_duration = total_duration.apply(lambda x: round(x, 5))
 
-        assert (total_duration <= (1.0 + epsilon)).all()  # None should be more than 1.0 (after rounding)
+        #assert (total_duration <= (1.0).all()  # None should be more than 1.0 (after rounding)
 
         missing_duration = 1.0 - total_duration  # Amount of activity time that needs to be added on to home
-        # missing_duration = missing_duration.apply(lambda x: round(x,5))
+        missing_duration = missing_duration.apply(lambda x: round(x,5))
 
         individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = \
-            (individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] + missing_duration).apply(
-                lambda x: round(x, 2))
+            (individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] + missing_duration)
 
-        # individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = \
-        #     (individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] + missing_duration)
+        individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"] = \
+            (individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"].mask(individuals[f"{ColumnNames.Activities.HOME}{ColumnNames.ACTIVITY_DURATION}"]<0,0))
 
         check_durations_sum_to_1(individuals, activity_locations.keys())
 

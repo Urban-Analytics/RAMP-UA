@@ -5,7 +5,7 @@ import os
 # INIT_DATA_CASES = "msoas.csv"
 
 
-abspath = "/Users/fbenitez/Documents/ResearchATI/EcoTwins/" #os.getcwd() # leave this empty, will inputted from the default.yml file
+abspath = "/Users/hsalat/RAMP-UA/" #os.getcwd() # leave this empty, will inputted from the default.yml file
 # /model_parameters/
 parameters_folder = "model_parameters"
 # /coding/

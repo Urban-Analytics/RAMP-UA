@@ -17,7 +17,7 @@ import tarfile
 import zipfile
 import geopandas as gpd
 import numpy as np
-import gzip # to open .gz files
+#import gzip # to open .gz files
 
 from coding.constants import Constants
 from coding.constants import ColumnNames
@@ -58,7 +58,6 @@ class RawDataHandler:
             RawDataHandler.download_data(remote_folder="referencedata", # name of the folder online in Azure
                                          local_folder=Constants.Paths.REFERENCE_DATA.FULL_PATH_FOLDER,
                                          file=Constants.Paths.LUT.FILE)
-            # lut = pd.read_csv(lut_file_with_path)
         else:
             print(f"I'm not downloading the look-up table as {lut_file_with_path} already exists")
         print(f"Reading Look up table from {lut_file_with_path}")
@@ -298,13 +297,15 @@ class RawDataHandler:
                                                Constants.Paths.OSM_FILE.FILE))
                     #("data/common_data/" + tus_hse_ref[x] + "/gis_osm_buildings_a_free_1.shp")
                     ]).pipe(gpd.GeoDataFrame)
-            self._combined_shp_file = osm_shp
+
+        self._combined_shp_file = osm_shp
 
         # TO_DO
         #  branch to load "load_msoa_locations.py" code -> DONE
         # Find centroid of intersected shp -> DONE
         # extract risks from shp dbf -> DONE
-        # add the "get..." variables (se bottom of the script) in the rest of code when they are called
+        # add the "get..." variables (see bottom of the script) in the rest of code when they are called
+
         return
 
     # Defining functions to download data from Azure repository and unpack them right after
@@ -352,9 +353,9 @@ class RawDataHandler:
         return self._combined_TU_file
 
     def getCombinedShpFile(self):
-        if self._combined_shp_file is None:
-            raise Exception("MSOA shp file hasn't been created")
-        return self._combined_shp_file
+       if self._combined_shp_file is None:
+           raise Exception("MSOA shp file hasn't been created")
+       return self._combined_shp_file
 
     def getLockdownFile(self):
         if self._lockdown_file is None:

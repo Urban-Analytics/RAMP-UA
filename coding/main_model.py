@@ -11,6 +11,7 @@ import sys
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
 import multiprocessing
 import pandas as pd
+import numpy as np
 pd.set_option('display.expand_frame_repr', False)  # Don't wrap lines when displaying DataFrames
 # pd.set_option('display.width', 0)  # Automatically find the best width
 import os
@@ -126,7 +127,9 @@ def main(parameters_file):
     #time_activity_multiplier = None
     if use_lockdown:
         print(f"Implementing a lockdown scenario")
-        time_activity_multiplier = lockdown_file #pd.read_csv(lockdown_file)
+        time_activity_multiplier = lockdown_file
+    else:
+        time_activity_multiplier = np.ones(3000)
         # Cap at 1.0 (it's a curve so some times peaks above 1.0)=
         #time_activity_multiplier[ColumnNames.TIME_ACTIVITY_MULTIPLIER] = time_activity_multiplier.loc[:, ColumnNames.TIME_ACTIVITY_MULTIPLIER]. \
         #     apply(lambda x: 1.0 if x > 1.0 else x)

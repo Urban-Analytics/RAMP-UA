@@ -1,14 +1,17 @@
-import os
-# import sys
-# sys.path.append("microsim") 
-# import json
-from tqdm import tqdm
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 from coding.constants import Constants
 from coding.constants import ColumnNames
 from coding.initialise.raw_data_handler import RawDataHandler
+# import json
+# import os
+# import sys
+# sys.path.append("microsim") 
 
 # Functionality to create a lookup table of MSOA codes to a list of coordinates of all the buildings
 # in that MSOA area, this is stored to a JSON file and used in the OpenCL SnapshotConverter to allocate people's
@@ -20,7 +23,7 @@ from coding.initialise.raw_data_handler import RawDataHandler
 class MapsHandler:
     # @staticmethod
     # def run():
-    def __init__(self):
+    def __init__(self,OSMshp,list_of_msoas):
         """
         Class that generates the JSON file for the OpenCL snapshot (final dashboard)
         """
@@ -29,17 +32,17 @@ class MapsHandler:
         # #                         Constants.Paths.DATA_FOLDER,
         # #                         Constants.Paths.COMMON_DATA_FOLDER) #"devon_data")
         # data_dir = Constants.Paths.DATA.FULL_PATH_FOLDER
-
-        osm_buildings = self.load_osm_shapefile(
-            RawDataHandler._combined_shp_file)  # ("/Users/azanchetta/OneDrive - The Alan Turing Institute/Research/projects/EcoTwins2/data/regional_data/WestYorkshire/")
-
+        
         msoa_shapes = self.load_msoa_shapes(shapefile=Constants.Paths.MSOAS_SHP.FULL_PATH_FILE,
-                                            msoa_list_with_path=Constants.Paths.LIST_MSOAS.FULL_PATH_FILE,
+                                            msoa_list_with_path=list_of_msoas,
                                             visualize=False)
 
-        msoa_buildings = self.calculate_msoa_buildings(osm_buildings,
+        msoa_buildings = self.calculate_msoa_buildings(OSMshp,
                                                        msoa_shapes)
-        return msoa_buildings
+
+        self._msoa_buildings = msoa_buildings
+        
+        return
 
         # print("Writing MSOA buildings to JSON file")
         # # output_filepath = os.path.join(data_dir, "msoa_building_coordinates.json") # correct this
@@ -50,16 +53,15 @@ class MapsHandler:
         #     json.dump(msoa_buildings, output_file)
 
     # @staticmethod
-    def load_osm_shapefile(self, shapefile): # (data_dir):
-        # Shape file downloaded for devon from https://download.geofabrik.de/europe/great-britain/england/devon.html
-        # osm_dir = os.path.join(data_dir, "osm")
+    #def load_osm_shapefile(self, shapefile): # (data_dir):
+        #osm_dir = os.path.join(data_dir, "osm")
         # shape_file = os.path.join(osm_dir, "gis_osm_buildings_a_free_1.shp")
-        shape_file = shapefile
+     #   shape_file = shapefile
 
-        print("Loading OSM buildings shapefile")
-        osm_buildings = gpd.read_file(shape_file)
-        print(f"Loaded {len(osm_buildings.index)} buildings from shapefile")
-        return osm_buildings
+      #  print("Loading OSM buildings shapefile")
+      #  osm_buildings = gpd.read_file(shape_file)
+      #  print(f"Loaded {len(osm_buildings.index)} buildings from shapefile")
+    #  return osm_buildings
 
     # @staticmethod
     def load_studyarea_msoas(self,
@@ -104,7 +106,7 @@ class MapsHandler:
     def calculate_msoa_buildings(self, osm_buildings, msoa_shapes):
         msoa_buildings = dict()
 
-        msoa_codes = msoa_shapes.loc[:, "Code"]
+        msoa_codes = msoa_shapes.loc[:, "MSOA11CD"]
         msoa_geometries = msoa_shapes.loc[:, "geometry"]
         building_geometries = osm_buildings.loc[:, "geometry"]
 
@@ -123,3 +125,7 @@ class MapsHandler:
 
         return msoa_buildings
 
+    def getFinalBuildings(self):
+        if self._msoa_buildings is None:
+            raise Exception("Buildings set not found")
+        return self._msoa_buildings 
