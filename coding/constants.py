@@ -4,9 +4,16 @@ import os
 # INIT_DATA_MSOAS_RISK = "initial_cases.csv"
 # INIT_DATA_CASES = "msoas.csv"
 
+#### NOTE: Please leave the following checks commented out, do not delete until fully tested
+#print(f"*** check 1 \n {os.getcwd()}")
+# print(f"*** check 2 \n {os.path.dirname(__file__)}")
+# not needed anymore: # os.chdir(os.path.dirname(__file__)) # change dir to the current file's path
+# print(f"*** check 3 \n {os.getcwd()}")
 
-abspath = "/Users/hsalat/RAMP-UA/" #os.getcwd() # leave this empty, will inputted from the default.yml file
-# /model_parameters/
+abspath = os.getcwd() # this one works when starting from working the project folder
+# NOTE: in PyCharm in run configurations:
+# Parameters: -p model_parameters/default.yml
+# Working directory: your project location
 parameters_folder = "model_parameters"
 # /coding/
 code_folder = "coding"
@@ -305,11 +312,13 @@ class Constants:
                                                    opencl_model_folder,
                                                    SOURCE_FOLDER,
                                                    KERNELS_FOLDER)
+            # **** IMPORTANT ****
             # The following variable is used only by Simulator module
             # OpenCL kernels are really sensible to the path provided
-            # Specifically, you have to start from the current working directory
-            # that currently is abspath/project_folder/coding/ (see configurations)
-            FOLDER_PATH_FOR_KERNEL = os.path.join(model_folder,
+            # Specifically, you have to start from 'after' the current working directory
+            # that currently is abspath/project_folder/ (must be consistent with the  configurations)
+            FOLDER_PATH_FOR_KERNEL = os.path.join(code_folder,
+                                                  model_folder,
                                                   opencl_model_folder,
                                                   SOURCE_FOLDER,
                                                   KERNELS_FOLDER)
@@ -321,6 +330,7 @@ class Constants:
                                                  SOURCE_FOLDER,
                                                  KERNELS_FOLDER,
                                                  KERNEL_FILE)
+            # **** END ****
             SHADERS_FOLDER = opencl_shaders_folder
             FULL_PATH_SHADERS_FOLDER = os.path.join(abspath,
                                                     code_folder,
