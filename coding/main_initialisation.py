@@ -50,8 +50,10 @@ Actual initialisation process
               '--parameters-file',
               type=click.Path(exists=True),
               help="Parameters file to use to configure the model. This must be located in the working directory.")
+
 # @click.option('-ocl', '--opencl/--no-opencl', default=True, help="Run OpenCL model (runs in headless mode by default")
 def main(parameters_file):
+    print(f"*** \n {os.getcwd()} \n***")
     #raw_data_handler_param: RawDataHandler
     """
     Main function which runs the population initialisation
@@ -81,7 +83,7 @@ def main(parameters_file):
             #scenario = sim_params["scenario"]
             #initialise = sim_params["initialise"]
             iterations = sim_params["iterations"]
-            # Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH = sim_params["project-dir-absolute-path"]
+            #Constants.Paths.PROJECT_FOLDER_ABSOLUTE_PATH = os.getcwd() #sim_params["project-dir-absolute-path"]
             study_area = sim_params["study-area"]
             list_of_msoas_file = sim_params["list-of-msoas"]
             # selected_region_folder_name = sim_params["selected-region-folder-name"]
@@ -116,6 +118,7 @@ def main(parameters_file):
     # TODO: change this working dir because it's not correct and had to add the ".." in the 2 paths under here
 
     # Check that working directory is as expected, ie 'project/data/raw_data'
+    print(f"check {Constants.Paths.RAW_DATA.FULL_PATH_FOLDER}")
     if not os.path.exists(Constants.Paths.RAW_DATA.FULL_PATH_FOLDER):
         raise Exception("Data folder structure not valid. Make sure you are running within correct working directory.")
 
@@ -164,7 +167,9 @@ def main(parameters_file):
         lockdown = raw_data_handler.getLockdownFile()
 
         OSMshp = raw_data_handler.getCombinedShpFile()
-        maps_handler = MapsHandler(OSMshp,list_of_msoas)
+
+        maps_handler = MapsHandler(OSMshp,
+                                   list_of_msoas)
 
         shpfile = maps_handler.getFinalBuildings()
 

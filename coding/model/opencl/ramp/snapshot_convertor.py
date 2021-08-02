@@ -16,7 +16,9 @@ class SnapshotConvertor:
     Convert dataframe of individuals and activity locations into a Snapshot object that can be used by the OpenCL model
     """
 
-    def __init__(self, individuals, activity_locations, time_activity_multiplier, data_dir):
+    def __init__(self, individuals, activity_locations,
+                 time_activity_multiplier,
+                 data_dir):
         self.data_dir = data_dir
 
         self.individuals = individuals
@@ -31,6 +33,7 @@ class SnapshotConvertor:
         #         .astype(np.float32)
         # else:
         #     self.lockdown_multipliers = np.ones(1000) # Random high number that should be higher than the length of the lockdown file
+        self.lockdown_multipliers = time_activity_multiplier
 
         self.num_people = self.individuals['ID'].count()
         self.global_place_id_lookup, self.num_places = self.create_global_place_ids()

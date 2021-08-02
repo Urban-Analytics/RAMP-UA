@@ -82,9 +82,16 @@ Documentation currently follows the one for RAMP-UA, plus some README files here
 
 
 ## TODO list:
-Features that currently are not available, but are to be implemented on this version as well.
+Features that currently are not available, important steps need to be tackled, issues that need to be fixed.
+- [X] reorganise folders structure depending on the agreed option (discussed separately in the HackMD mentioned above)
+- [X] get rid of hard-coded variables depending on the reorganised folders structure
+- [X] implement the connection with the 'initialisation' process
+- <strike> [ ] implement R model compatibility </strike>
+- [ ] run Python tests
+- [X] understand where/when the `msoa_building_coordinates.json` is created (see `load_msoa_locations.py`)
+- [X] correct the hard-coded coordinates and MSOA code within `snapshot.py` add this to the initialisation process (@manluow)
 - [ ] run tests
-- [ ] fix the `abspath` variable (eliminate if possible)
+- [X] fix the `abspath` variable (eliminate if possible)
 - [ ] import the snapshot creation for OpenCL version to the initialisation part: IE separate the opencl code (what is in now in `coding/model/opencl/ramp/`) and put the part that generates the opencl snapshot (`cache.npz`) into the initialisation part 
 - [ ] what happens when one uses a study area name that already exists? (Raise exception ... overwrite existing files, or use the already existing cache/processed data?)
 - [ ] think whether to separate the configuration file (`model_parameters/default.yml`) in two, one for the initialisation and one for the model

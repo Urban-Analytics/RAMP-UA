@@ -72,7 +72,7 @@ class Snapshot:
         area_codes = np.full(npeople, "E02002371") # "E02004129")
         not_home_probs = np.random.rand(npeople).astype(np.float32)
 
-        lockdown_multipliers = np.ones(100)
+        lockdown_multipliers = np.ones(1000)
 
         buffers = Buffers(
             place_activities=np.random.randint(6, size=nplaces, dtype=np.uint32),

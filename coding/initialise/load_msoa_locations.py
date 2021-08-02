@@ -23,7 +23,10 @@ from coding.initialise.raw_data_handler import RawDataHandler
 class MapsHandler:
     # @staticmethod
     # def run():
-    def __init__(self,OSMshp,list_of_msoas):
+    def __init__(self,
+                 OSMshp,
+                 list_of_msoas):
+
         """
         Class that generates the JSON file for the OpenCL snapshot (final dashboard)
         """
