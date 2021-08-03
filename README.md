@@ -88,15 +88,20 @@ Documentation currently follows the one for RAMP-UA, plus some README files here
 - [X] integrate the data download code into the initialisation, test it
 - [ ] <strike> implement R model compatibility </strike>
 - [X] create new environment that takes into account also opencl requirements
+- [X] solve the error from assertion in popoulation_initialisation (checks the sum up tp 1)
 - [X] understand where/when the `msoa_building_coordinates.json` is created (see `load_msoa_locations.py`)
 - [X] integrate the shp creation (from step above) in the main code: correct the hard-coded coordinates and MSOA code within `snapshot.py` add this to the initialisation process (@manluow)
 - [X] fix the `abspath` variable (eliminate if possible) - ELIMINATED
 - [ ] integrate improved lockdown implementation (STILL TO BE CHECKED)
+- [ ] remove print statements in the json creation
 - [ ] implement improved seeding procedure to substitute `initial_cases` and `msoas_risk`
 - [ ] run Python tests
 - [ ] model calibration
   
 **Possible improvements:**
+- [ ] improve outputs readability
+- [ ] remove further hard-code (ex in some column names in the opencl code, the level of risk choice in `initial_cases.py`, etc)
+- [ ] **IMPORTANT**: solve the 'manual' assignation of variables in `param.py`
 - [ ] implement free start date
 - [ ] import the snapshot creation for OpenCL version to the initialisation part, IE separate the opencl code (what is in now in `coding/model/opencl/ramp/`) and put the part that generates the opencl snapshot (`cache.npz`) into the initialisation part 
 - [ ] explicit parameters file (???)
