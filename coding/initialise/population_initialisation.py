@@ -15,7 +15,7 @@ import sys
 from coding.initialise.activity_location import ActivityLocation
 from coding.constants import ColumnNames
 from coding.constants import Constants
-from coding.model.microsim.utilities import Optimise, check_durations_sum_to_1
+from coding.model.utilities import Optimise, check_durations_sum_to_1
 from coding.initialise.quant_api import QuantRampAPI
 from coding.initialise.raw_data_handler import RawDataHandler
 from decimal import *

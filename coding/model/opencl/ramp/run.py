@@ -15,10 +15,10 @@ from coding.constants import Constants
 
 def run_opencl(snapshot,
                study_area,
+               parameters_file,
                iterations=100,
                use_gui=True,
                use_gpu=False,
-               num_seed_days=5,
                quiet=False
                ):
     """
@@ -36,11 +36,18 @@ def run_opencl(snapshot,
 
     # Create a simulator and upload the snapshot data to the OpenCL device
     simulator = Simulator(snapshot,
-                          selected_region_folder_full_path=study_area_folder_in_processed_data,
-                          gpu=use_gpu,
-                          num_seed_days=num_seed_days
+                          parameters_file,
+                          gpu=use_gpu
                           )
+    #simulator.upload_all(snapshot.buffers)
+
+    [people_statuses,people_transition_times] = simulator.seeding_base()
+
     simulator.upload_all(snapshot.buffers)
+    
+    simulator.upload("people_statuses", people_statuses)
+    simulator.upload("people_transition_times", people_transition_times)
+
     if not quiet:
         print(f"Platform:\t{simulator.platform_name()}\nDevice:\t\t{simulator.device_name()}\n")
 
@@ -95,7 +102,7 @@ def run_headless(simulator,
 
     # only show progress bar in quiet mode
     timestep_iterator = range(iterations) if quiet else tqdm(range(iterations), desc="Running simulation")
-    
+
     for time in timestep_iterator:
         # Update parameters based on lockdown
         params.set_lockdown_multiplier(snapshot.lockdown_multipliers, time)

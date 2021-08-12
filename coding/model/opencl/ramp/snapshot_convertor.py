@@ -28,11 +28,6 @@ class SnapshotConvertor:
         for activity_name in self.activity_names:
             self.locations[activity_name] = activity_locations[activity_name]._locations
 
-        # if time_activity_multiplier is not None:
-        #     self.lockdown_multipliers = time_activity_multiplier.loc[:, ColumnNames.TIME_ACTIVITY_MULTIPLIER].to_numpy()\
-        #         .astype(np.float32)
-        # else:
-        #     self.lockdown_multipliers = np.ones(1000) # Random high number that should be higher than the length of the lockdown file
         self.lockdown_multipliers = time_activity_multiplier
 
         self.num_people = self.individuals['ID'].count()

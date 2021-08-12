@@ -1,6 +1,8 @@
 import numpy as np
+from numpy import random
 import pyopencl as cl
 import os
+import math
 from coding.model.opencl.ramp.buffers import Buffers
 from coding.model.opencl.ramp.kernels import Kernels
 from coding.model.opencl.ramp.params import Params
@@ -17,9 +19,10 @@ class Simulator:
 
     def __init__(self,
                  snapshot,
-                 selected_region_folder_full_path,
-                 gpu=False,
-                 num_seed_days=5):
+                 parameters_file,
+                 #selected_region_folder_full_path,
+                 gpu=False
+                 ):
         """Initialise OpenCL context, kernels, and buffers for the simulator.
 
         Args:
@@ -126,9 +129,10 @@ class Simulator:
         # data_dir = os.path.join(opencl_dir, "data/")
         self.initial_cases = InitialCases(snapshot.area_codes,
                                           snapshot.not_home_probs,
-                                          selected_region_folder_full_path)
+                                          parameters_file)
+                                          
 
-        self.num_seed_days = num_seed_days
+        self.num_seed_days = 0
 
     def platform_name(self):
         """The name of the OpenCL platform being used for simulation."""
@@ -205,7 +209,7 @@ class Simulator:
 
     def step_with_seeding(self):
         """For initial case seeding: sets a number of people infected based on the initial cases data, then runs only
-        the kernel which updates people statuses."""
+        the kernel which updates people statuses. LEGACY"""
         max_hazard_val = np.finfo(np.float32).max
 
         people_hazards = np.zeros(self.npeople, dtype=np.float32)
@@ -221,3 +225,32 @@ class Simulator:
         # run only the update statuses kernel so that people transition through disease states
         self.step_kernel("people_update_statuses")
         self.time += np.uint32(1)
+
+    def seeding_base(self):
+        """Different seeding: sets a number of people infected based on the MSOA cases data and decides their status 
+        (asymptomatic, symptomatic) according to the rules of the model."""
+        initial_case_ids = self.initial_cases.get_seed_people_ids()
+
+        people_statuses = np.zeros(self.npeople, dtype=np.float32)
+        people_transition_times = np.zeros(self.npeople, dtype=np.float32)
+        people_statuses[initial_case_ids] = 3
+
+        cov_params = Params.fromarray(self.start_snapshot.buffers.params)
+        people_ages = self.start_snapshot.buffers.people_ages
+        people_obesity = self.start_snapshot.buffers.people_obesity
+
+        for i in initial_case_ids:
+            # define random statuses
+            symptomatic_prob = cov_params.symptomatic_probs[min(math.floor(people_ages[i]/10), 8)]
+            if people_obesity[i]>2:
+                symptomatic_prob = symptomatic_prob*cov_params.overweight_sympt_mplier
+            if random.random() < symptomatic_prob:
+                people_statuses[i] = 4
+            # define random duration times
+            people_transition_times[i] = random.lognormal(pow(cov_params.infection_log_scale, 2) + math.log(cov_params.infection_mode), cov_params.infection_log_scale)
+            people_transition_times[i] = random.choice(range(math.floor(people_transition_times[i])))
+
+        people_statuses = people_statuses.astype(np.uint32)
+        people_transition_times = people_transition_times.astype(np.uint32)
+
+        return [people_statuses,people_transition_times]

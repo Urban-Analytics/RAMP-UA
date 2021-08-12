@@ -25,7 +25,6 @@ class Inspector:
     def __init__(self, simulator, snapshot, study_area_folder, nlines, window_name, width, height,
                  # font_path="microsim/opencl/fonts/RobotoMono.ttf"):
                  font_path=os.path.join(Constants.Paths.OPENCL_FONTS.FULL_PATH_ROBOTO)):
-                 # font_path="/Users/azanchetta/EcoTwins/microsim/opencl/fonts/RobotoMono.ttf"):
         """Create the window, imgui renderer, and all background renderers.
 
         Args:

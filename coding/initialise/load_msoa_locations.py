@@ -47,24 +47,6 @@ class MapsHandler:
         
         return
 
-        # print("Writing MSOA buildings to JSON file")
-        # # output_filepath = os.path.join(data_dir, "msoa_building_coordinates.json") # correct this
-        # output_filepath = os.path.join(study_area_folder_in_processed_data,
-        #                                Constants.Paths.PROCESSED_DATA.BUILDINGS_SHP_FILE)
-        #
-        # with open(output_filepath, 'w') as output_file:
-        #     json.dump(msoa_buildings, output_file)
-
-    # @staticmethod
-    #def load_osm_shapefile(self, shapefile): # (data_dir):
-        #osm_dir = os.path.join(data_dir, "osm")
-        # shape_file = os.path.join(osm_dir, "gis_osm_buildings_a_free_1.shp")
-     #   shape_file = shapefile
-
-      #  print("Loading OSM buildings shapefile")
-      #  osm_buildings = gpd.read_file(shape_file)
-      #  print(f"Loaded {len(osm_buildings.index)} buildings from shapefile")
-    #  return osm_buildings
 
     # @staticmethod
     def load_studyarea_msoas(self,
@@ -74,8 +56,7 @@ class MapsHandler:
         #                 names=["Easting", "Northing", "Num", "Code", "Desc"])
         # msoa_list_with_path = Constants.Paths.LIST_MSOAS.FULL_PATH_FILE
         return pd.read_csv(msoa_list_with_path,
-                           header=None,
-                           names=[ColumnNames.MSOAsID]) #["MSOA11CD"])
+                           usecols=[ColumnNames.MSOAsID]) #["MSOA11CD"])
     # @staticmethod
     def load_msoa_shapes(self,
                          shapefile,
