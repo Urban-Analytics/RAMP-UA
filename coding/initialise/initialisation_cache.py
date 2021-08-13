@@ -12,7 +12,7 @@ class InitialisationCache:
         self.cache_dir = cache_dir
         self.individuals_filepath = os.path.join(self.cache_dir, "individuals.pkl")
         self.activity_locations_filepath = os.path.join(self.cache_dir, "activity_locations.pkl")
-        self.lockdown_filepath = os.path.join(self.cache_dir, "lockdown.pkl")
+        self.lockdown_filepath = os.path.join(self.cache_dir, "lockdown.csv")
         self.shpfile_filepath = os.path.join(self.cache_dir,"msoa_building_coordinates.json")
         self.all_cache_filepaths = [self.individuals_filepath, self.activity_locations_filepath, self.lockdown_filepath]
 
@@ -20,7 +20,7 @@ class InitialisationCache:
         individuals.to_pickle(self.individuals_filepath)
         with open(self.activity_locations_filepath, 'wb') as handle:
             pickle.dump(activity_locations, handle)
-        lockdown.to_pickle(self.lockdown_filepath)
+        lockdown.to_csv(self.lockdown_filepath)
         with open(self.shpfile_filepath, 'w') as output_file:
             json.dump(shpfile, output_file)
 
@@ -28,7 +28,7 @@ class InitialisationCache:
         individuals = pd.read_pickle(self.individuals_filepath)
         with open(self.activity_locations_filepath, 'rb') as handle:
             activity_locations = pickle.load(handle)
-        lockdown = pd.read_pickle(self.lockdown_filepath)
+        lockdown = pd.read_csv(self.lockdown_filepath)
         return individuals, activity_locations, lockdown
 
     def cache_files_exist(self):

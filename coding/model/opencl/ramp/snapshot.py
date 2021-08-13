@@ -35,7 +35,7 @@ class Snapshot:
         area_codes = np.full(npeople, "E00000000") # "E02002371") # "E02004129")
         not_home_probs = np.zeros(npeople).astype(np.float32)
 
-        lockdown_multipliers = np.ones(1000) # Random high number that should be higher than the length of the lockdown file
+        lockdown_multipliers = np.ones(2000) # Random high number that should be higher than the length of the lockdown file
 
         buffers = Buffers(
             place_activities=np.zeros(nplaces, dtype=np.uint32),
@@ -72,7 +72,7 @@ class Snapshot:
         area_codes = np.full(npeople, "E02002371") # "E02004129")
         not_home_probs = np.random.rand(npeople).astype(np.float32)
 
-        lockdown_multipliers = np.ones(1000)
+        lockdown_multipliers = np.ones(2000)
 
         buffers = Buffers(
             place_activities=np.random.randint(6, size=nplaces, dtype=np.uint32),

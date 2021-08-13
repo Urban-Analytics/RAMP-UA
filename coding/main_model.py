@@ -71,6 +71,7 @@ def main(parameters_file):
             open_cl_model = sim_params["opencl-model"]
             opencl_gui = sim_params["opencl-gui"]
             opencl_gpu = sim_params["opencl-gpu"]
+            startDate = sim_params["start-date"]
     except Exception as error:
         print('Error in parameters file format')
         raise error
@@ -123,30 +124,28 @@ def main(parameters_file):
         print("Loading data from previous cache")
         individuals, activity_locations, lockdown_file = cache.read_from_cache()
 
-        #     # Calculate the time-activity multiplier (this is for implementing lockdown)
-    #time_activity_multiplier = None
     if use_lockdown:
-        print(f"Implementing a lockdown scenario")
-        time_activity_multiplier = lockdown_file
+        print(f"Loading the lockdown scenario")
+        time_activity_multiplier = lockdown_file.change
+        time_activity_multiplier = time_activity_multiplier[startDate:len(time_activity_multiplier)] # offset file to start date
+        time_activity_multiplier.index = range(len(time_activity_multiplier))
     else:
-        time_activity_multiplier = np.ones(3000)
-        # Cap at 1.0 (it's a curve so some times peaks above 1.0)=
-        #time_activity_multiplier[ColumnNames.TIME_ACTIVITY_MULTIPLIER] = time_activity_multiplier.loc[:, ColumnNames.TIME_ACTIVITY_MULTIPLIER]. \
-        #     apply(lambda x: 1.0 if x > 1.0 else x)
+        time_activity_multiplier = np.ones(2000)
             
     # if open_cl_model:
     run_opencl_model(individuals,
                      activity_locations,
                      time_activity_multiplier,
                      iterations,
-                     # study_area_folder_in_processed_data, # selected_region_folder_full_path, #TODO check this name
+                     # study_area_folder_in_processed_data, # selected_region_folder_full_path, #todo check this name
                      study_area,
                      opencl_gui,
                      opencl_gpu,
                      use_cache,
                      initialise,
                      calibration_params,
-                     disease_params)
+                     disease_params,
+                     parameters_file)
     # else:
     #     # If -init flag set then don't run the model. Note for the opencl model this check needs to happen
     #     # after the snapshots have been created in run_opencl_model
@@ -173,7 +172,8 @@ def run_opencl_model(individuals_df,
                      use_cache,
                      initialise,
                      calibration_params,
-                     disease_params):
+                     disease_params,
+                     parameters_file):
     study_area_folder_in_processed_data = os.path.join(Constants.Paths.PROCESSED_DATA.FULL_PATH_FOLDER,
                                                        study_area)
     snapshot_cache_filepath = os.path.join(study_area_folder_in_processed_data, "snapshot", "cache.npz") # project_dir + "microsim/opencl/snapshots/cache.npz"
@@ -210,11 +210,12 @@ def run_opencl_model(individuals_df,
     print(f"\nRunning OpenCL model in {run_mode} mode")
     run_opencl(snapshot,
                study_area,
+               parameters_file,
                iterations,
                use_gui,
                use_gpu,
-               num_seed_days=disease_params["seed_days"],
-               quiet=False)
+               quiet=False
+               )
 
 
 # def run_python_model(individuals_df, activity_locations_df, time_activity_multiplier, msim_args, iterations,

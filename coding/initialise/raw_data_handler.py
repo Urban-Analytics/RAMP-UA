@@ -217,6 +217,7 @@ class RawDataHandler:
         print("... done!")
         # From extra time at home to less time away from home
         lockdown = (1 - (np.mean(tus_hse.phome) * change))/np.mean(tus_hse.phome)
+        lockdown.index = range(len(lockdown))
         self._lockdown_file = lockdown
 
         """
