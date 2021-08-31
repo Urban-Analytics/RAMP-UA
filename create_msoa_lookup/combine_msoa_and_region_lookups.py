@@ -2,8 +2,49 @@ import pandas as pd
 
 
 def main():
-    msoa_to_lad_lookup = import_msoa_to_lad_lookup()
-    lad_to_region_lookup = import_lad_to_region_lookup()
+    area_name = 'Yorkshire and The Humber'
+    # MSOAS_df = get_MSOAs_by_region(area_name)
+    MSOAS_df = get_MSOAS_by_ITL(area_name)
+
+    # get cases for each region
+    seed_day_index = 20
+    regions_with_cases_df = merge_with_cases(MSOAS_df, seed_day_index)
+
+    # check for duplicates
+    deduplicated_df = regions_with_cases_df.drop_duplicates(subset=['MSOA11CD'])
+    print(f"deduped length: {len(deduplicated_df.index)} MSOAs")
+    assert len(deduplicated_df.index) == len(regions_with_cases_df.index)
+
+    # write MSOAs with cases to csv file
+    output_name = "./" + area_name.replace(" ", "_") + "_with_cases.csv"
+    regions_with_cases_df.to_csv(output_name, index=False)
+
+
+def get_MSOAS_by_ITL(ITL_name):
+    print("\nloading complete lookup")
+
+    complete_lookup = pd.read_csv('../data/raw_data/reference_data/lookUp.csv')
+    ITL1_df = complete_lookup.drop(['MSOA11CD', 'MSOA11NM', 'LAD20CD', 'LAD20NM', 'ITL321CD', 'ITL321NM',
+       'ITL221CD', 'ITL221NM', 'CTY20NM', 'CCTY20NM',
+       'GoogleMob', 'OSM', 'OldTU', 'NewTU'], axis=1)\
+        .drop_duplicates(subset=['ITL121CD'])
+
+    print(ITL1_df.head())
+    print(ITL1_df.columns)
+    print(len(ITL1_df.index))
+
+    # group msoas by ITL1
+    ITL_groups = complete_lookup.groupby(['ITL121NM'])
+    print(ITL_groups.groups.keys())
+    ITL_grouped = ITL_groups.get_group(ITL_name)
+    msoas_for_ITL = ITL_grouped['MSOA11CD']
+
+    return msoas_for_ITL
+
+
+def get_MSOAs_by_region(region_name):
+    msoa_to_lad_lookup = load_msoa_to_lad_lookup()
+    lad_to_region_lookup = load_lad_to_region_lookup()
 
     print("\nMerging on LAD")
     merged_lookup_df = pd.merge(
@@ -16,19 +57,12 @@ def main():
     # group msoas by region
     region_groups = merged_lookup_df.groupby(['RGN11NM'])
     print(region_groups.groups.keys())
-    region_name = 'Yorkshire and The Humber'
     region_grouped = region_groups.get_group(region_name)
     msoas_for_region = region_grouped['MSOA11CD']
 
-    # get cases for each region
-    seed_day_index = 20
-    regions_with_cases_df = merge_with_cases(msoas_for_region, seed_day_index)
+    return msoas_for_region
 
-    output_name = "./" + region_name.replace(" ", "_") + "_with_cases.csv"
-    regions_with_cases_df.to_csv(output_name, index=True)
-
-
-def import_msoa_to_lad_lookup():
+def load_msoa_to_lad_lookup():
     print("\nimporting msoa to lad lookup")
     msoa_to_lad_lookup = pd.read_csv('raw_data/MSOA_to_LAD_lookup.csv')
 
@@ -42,7 +76,7 @@ def import_msoa_to_lad_lookup():
     return msoa_to_lad_lookup
 
 
-def import_lad_to_region_lookup():
+def load_lad_to_region_lookup():
     print("\nimporting lad to region lookup")
     lad_to_region_lookup = pd.read_csv('raw_data/LAD_to_region_lookup_2011.csv')
 
