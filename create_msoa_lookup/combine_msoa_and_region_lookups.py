@@ -2,7 +2,7 @@ import pandas as pd
 
 
 def main():
-    area_name = 'Yorkshire and The Humber'
+    area_name = 'London'
     # MSOAS_df = get_MSOAs_by_region(area_name)
     MSOAS_df = get_MSOAS_by_ITL(area_name)
 

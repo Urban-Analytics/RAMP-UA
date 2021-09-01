@@ -398,6 +398,7 @@ class PopulationInitialisation:
         # TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
 
         # Make a new, unique id for each individual (PIDs have been replicated so no longer uniquely identify individuals}
+        print(f"unique rows: {round(len(tuh.index.unique())/1000000, 2)} million, actual rows: {round(len(tuh)/1000000, 2)} million")
         assert len(tuh.index.unique()) == len(tuh)  # Index should have been set to row number when tuh was read in
         tuh.insert(0, "ID", tuh.index, allow_duplicates=False)  # Insert into first position
 
