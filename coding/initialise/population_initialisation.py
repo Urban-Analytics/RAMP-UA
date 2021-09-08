@@ -382,6 +382,8 @@ class PopulationInitialisation:
 
         # tuh = pd.read_csv(filename)  # , encoding = "ISO-8859-1")
         tuh = self.raw_data_handler.getCombinedTUFile()  # Calling file created from RawDataHandler that appends TU files
+        tuh.index = range(len(tuh))
+
         tuh = Optimise.optimize(tuh)  # Reduce memory of tuh where possible.
 
         # Drop people that weren't matched to a household originally

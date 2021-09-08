@@ -170,7 +170,7 @@ class RawDataHandler:
             print(f"I'm not downloading the TimeAtHomeIncrease file as {unpacked_lockdown_file_with_path} already exists")
         print("Reading the TimeAtHomeIncrease file (lockdown scenario)")
         lockdown = pd.read_csv(unpacked_lockdown_file_with_path) #"data/common_data/timeAtHomeIncreaseCTY.csv")
-        self._lockdown_file = lockdown
+        #self._lockdown_file = lockdown
         # Note: Added method similar to other variables to be able to get this variable inside the code
         # (see end of the script, where we do this for the tus and other files)
 
@@ -206,19 +206,18 @@ class RawDataHandler:
         # average change within study area weighted by msoa population
         cty_pop = np.repeat(0, len(change_ref))
         change = np.repeat(0, np.max(lockdown.day)+1)
-        for x in range(0, len(change_ref)):
+        for x in range(len(change_ref)):
             cty_pop[x] = np.nansum(msoas_pop[lut.GoogleMob[lut[ColumnNames.MSOAsID].isin(msoas_list)] == change_ref[x]])
-            # match = lockdown.change[lockdown[ColumnNames.LOCKDOWN_CTY_NAME] == change_ref[x]]   # CTY20
-            # moltip = match * cty_pop[x]
-            # verif = change + moltip
-            # change = verif
-            change = change + lockdown.change[lockdown[ColumnNames.LOCKDOWN_CTY_NAME] == change_ref[x]] * cty_pop[x]  # CTY20
+            toBeAdded = lockdown.change[lockdown[ColumnNames.LOCKDOWN_CTY_NAME] == change_ref[x]] * cty_pop[x]
+            toBeAdded.index = range(len(toBeAdded))
+            change = change + toBeAdded
+            change.index = range(len(change))
         change = change/np.sum(cty_pop)
         print("... done!")
         # From extra time at home to less time away from home
-        lockdown = (1 - (np.mean(tus_hse.phome) * change))/np.mean(tus_hse.phome)
-        lockdown.index = range(len(lockdown))
-        self._lockdown_file = lockdown
+        lockdownVar = (1 - (np.mean(tus_hse.phome) * change))/np.mean(tus_hse.phome)
+        lockdownVar.index = range(len(lockdownVar))
+        self._lockdown_file = lockdownVar
 
         """
         Seeding
@@ -245,7 +244,7 @@ class RawDataHandler:
                                                      tus_hse_ref[0])
         if not os.path.isdir(unpacked_osm_folder_with_path):
             print("Downloading OSM data...")
-            target_path = packed_osm_folder_with_path # ("data/common_data",tus_hse_ref[0] + ".zip")
+            target_path = packed_osm_folder_with_path
             response = requests.get(url, stream=True)
 
             if not response.ok: # HTTP status code for "OK"
@@ -259,12 +258,11 @@ class RawDataHandler:
                     raise Exception("Error downloading OSM data: file is empty")
             zip_file = zipfile.ZipFile(target_path)
             print("Downloaded file, will now extract it...")
-            zip_file.extractall(unpacked_osm_folder_with_path) # ("data/common_data/" + tus_hse_ref[0])
+            zip_file.extractall(unpacked_osm_folder_with_path)
             print("extracted!")
 
         osm_shp = gpd.read_file(os.path.join(unpacked_osm_folder_with_path,
                                              Constants.Paths.OSM_FILE.FILE))
-                               # ("data/common_data/" + tus_hse_ref[0] + "/gis_osm_buildings_a_free_1.shp")
 
         # If study area across more than one County, download other counties and combine shapefiles into one
         if len(osm_ref) > 1:
@@ -272,11 +270,10 @@ class RawDataHandler:
                 url = osm_ref[x]
                 packed_osm_file = tus_hse_ref[x] + ".zip"
                 local_osm_folder = Constants.Paths.OSM_FOLDER.FULL_PATH_FOLDER
-                packed_osm_file = tus_hse_ref[0] + ".zip"
                 packed_osm_folder_with_path = os.path.join(local_osm_folder,
                                                            packed_osm_file)
                 unpacked_osm_folder_with_path = os.path.join(local_osm_folder,
-                                                             tus_hse_ref[0])
+                                                             tus_hse_ref[x])
 
                 target_path = packed_osm_folder_with_path
                 # ("data/common_data",tus_hse_ref[x] + ".zip")
@@ -290,22 +287,15 @@ class RawDataHandler:
                             raise Exception("Error downloading OSM data: file is empty")
 
                 zip_file = zipfile.ZipFile(target_path)
-                zip_file.extractall(unpacked_osm_folder_with_path) #("data/common_data/" + tus_hse_ref[x])
+                zip_file.extractall(unpacked_osm_folder_with_path)
             print("Combining OSM shapefiles together")
             osm_shp = pd.concat([
                     osm_shp,
                     gpd.read_file(os.path.join(unpacked_osm_folder_with_path,
                                                Constants.Paths.OSM_FILE.FILE))
-                    #("data/common_data/" + tus_hse_ref[x] + "/gis_osm_buildings_a_free_1.shp")
                     ]).pipe(gpd.GeoDataFrame)
 
         self._combined_shp_file = osm_shp
-
-        # TO_DO
-        #  branch to load "load_msoa_locations.py" code -> DONE
-        # Find centroid of intersected shp -> DONE
-        # extract risks from shp dbf -> DONE
-        # add the "get..." variables (see bottom of the script) in the rest of code when they are called
 
         return
 
