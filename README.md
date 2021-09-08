@@ -77,17 +77,14 @@ Though, this step generates a cache that is stored and can be accessed from the 
 Documentation currently follows the one for RAMP-UA, plus some README files here and there (see for example in the data folder).
 
 ## TODO list:
-**High priority / Model in working state**
-- [ ] run Python tests
-- [ ] run multiple test scenarios
-
 **Major updates**
 - [ ] implement improved commuting
 - [ ] model calibration
+- [ ] implement detailed timetables (weekends, seasons ... ?)
 - [ ] improve outputs readability
 
 **Possible improvements:**
-- [ ] implement detailed timetables (weekends, seasons ... ?)
+- [ ] run Python tests
 - [ ] import snapshot creation for OpenCL version to the initialisation part, i.e. separate the opencl code (what is in now in `coding/model/opencl/ramp/`) and put the part that generates the opencl snapshot (`cache.npz`) into the initialisation part 
 - [ ] remove print statements in the json creation
 - [ ] solve the 'manual' assignment of variables in `param.py`
@@ -107,4 +104,5 @@ Documentation currently follows the one for RAMP-UA, plus some README files here
 - [X] understand where/when the `msoa_building_coordinates.json` is created (see `load_msoa_locations.py`)
 - [X] integrate the shp creation (from step above) in the main code: correct the hard-coded coordinates and MSOA code within `snapshot.py` add this to the initialisation process (@manluow)
 - [X] fix the `abspath` variable (eliminate if possible) - ELIMINATED
+- [X] run multiple test scenarios and debug
 
