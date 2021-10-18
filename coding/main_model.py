@@ -44,8 +44,6 @@ def main(parameters_file):
 
     try:
         with open(parameters_file, 'r') as f:
-            #print(f"Reading parameters file: {parameters_file}. ")
-            # print(f"Reading parameters file: {parameters_file}. ")
             parameters = load(f,
                               Loader=SafeLoader)
             sim_params = parameters["microsim"]  # Parameters for the dynamic microsim (python)

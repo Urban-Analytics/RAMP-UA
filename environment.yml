@@ -1,4 +1,4 @@
-name: ecotwins
+name: ecotwins_Oct21
 channels:
   - conda-forge
   - defaults

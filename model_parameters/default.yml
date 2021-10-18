@@ -2,13 +2,13 @@
 ###### These can also be passed as command line arguments   ##### REVIEW THIS!!!
 
 microsim:
-  study-area: "Test_accross" # Name of directory inside data/processed_data (will be created if doesn't exist) Test_3
-  list-of-msoas: "Input_Test_accross.csv" # Input data: a csv with the list of MSOAs in the study area and initial number of cases
+  study-area: "WY" # Name of directory inside data/processed_data (will be created if doesn't exist) Test_3
+  list-of-msoas: "WY_MSOAs_CasesPerDay24.csv" # Input data: a csv with the list of MSOAs in the study area and initial number of cases
   scenario: "BaseScenario" # name for scenario directory
   iterations: 80 # Number of model iterations. 0 means just initialise the model and create caches and snapshots, don't run it
   repetitions: 1 # How many times to run the model
   use-lockdown: TRUE # Whether to preload the lockdown scenario
-  start-date: 10 # Counted as number of days since 15/02/2020 (currently, max is 435)
+  start-date: 24 # Counted as number of days since 15/02/2020 (currently, max is 435) ## Day 24 for the Entire WY Area
   initialise: FALSE # Legacy
   output: TRUE # Whether to generate output or not
   output-every-iteration: FALSE # Can optionally write output at every iteration, not just at the end

@@ -68,6 +68,7 @@ class Constants:
         # !!!
 
         class PARAMETERS:
+            FOLDER_INITIALCASES = '/Users/fbenitez/PycharmProjects/RAMP-UA_EcoTwins1709/model_parameters'
             FOLDER = parameters_folder
             FULL_PATH = os.path.join(abspath,
                                      FOLDER)
@@ -300,6 +301,7 @@ class Constants:
                                             FONT_ROBOTO)
         class OPENCL_SOURCE:
             SOURCE_FOLDER = opencl_source_folder
+            PATH_KERNEL = '/Users/fbenitez/PycharmProjects/RAMP-UA_EcoTwins1709/coding/model/opencl/ramp/kernels'
             FULL_PATH_SOURCE = os.path.join(abspath,
                                             code_folder,
                                             model_folder,
