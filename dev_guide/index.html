@@ -1,73 +1,34 @@
-
-
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
-  
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
   <title>Developers Guide &mdash; RAMP-UA 0.2.1 documentation</title>
-  
-
-  
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-
-  
-  
-
-  
-  
-
-  
-
-  
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
         <script src="../_static/underscore.js"></script>
         <script src="../_static/doctools.js"></script>
-    
-    <script type="text/javascript" src="../_static/js/theme.js"></script>
-
-    
+    <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Contributing" href="../contributing/index.html" />
     <link rel="prev" title="Setting up the OpenCL model" href="../usage/opencl.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
-
-          
             <a href="../index.html" class="icon icon-home"> RAMP-UA
-          
-
-          
           </a>
-
-          
-            
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -75,18 +36,7 @@
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage/index.html">Usage Guide</a></li>
@@ -102,76 +52,35 @@
 <li class="toctree-l1"><a class="reference internal" href="../Reference/index.html">RAMP-UA API Reference</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../index.html">RAMP-UA</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-        
       <li>Developers Guide</li>
-    
-    
       <li class="wy-breadcrumbs-aside">
-        
-          
             <a href="../_sources/dev_guide/index.rst.txt" rel="nofollow"> View page source</a>
-          
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-            
-  <div class="section" id="developers-guide">
-<h1>Developers Guide<a class="headerlink" href="#developers-guide" title="Permalink to this headline">¶</a></h1>
+             
+  <section id="developers-guide">
+<h1>Developers Guide<a class="headerlink" href="#developers-guide" title="Permalink to this headline"></a></h1>
 <p>This page provides a broad overview of how the model works. It is intended for programmers who want to read and/or edit the code.</p>
-<div class="section" id="source-code-and-packages">
-<h2>Source Code and Packages<a class="headerlink" href="#source-code-and-packages" title="Permalink to this headline">¶</a></h2>
+<section id="source-code-and-packages">
+<h2>Source Code and Packages<a class="headerlink" href="#source-code-and-packages" title="Permalink to this headline"></a></h2>
 <p>The main package for the source code is <a class="reference internal" href="../Reference/microsim.html#module-microsim" title="microsim"><code class="xref py py-class docutils literal notranslate"><span class="pre">microsim</span></code></a> and the entry-point for the program is the function <a class="reference internal" href="../Reference/microsim.html#module-microsim.main" title="microsim.main"><code class="xref py py-func docutils literal notranslate"><span class="pre">microsim.main()</span></code></a> in <code class="docutils literal notranslate"><span class="pre">microsim/main.py</span></code>. To run the model and see what arguments are available, execute the following from the root project directory:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python microsim/main.py --help
 </pre></div>
@@ -189,65 +98,48 @@
 <li><p>If the <strong>OpenCL</strong> model is executed: a secondary cache, called a <em>snapshot</em> is created or read in if the model has been executed once already. Basically the model takes the pandas DataFrames created earlier and converts them into arrays. The <code class="docutils literal notranslate"><span class="pre">microsim/opencl/ramp/run.py</span></code> file is called and a <code class="docutils literal notranslate"><span class="pre">Simulator</span></code> class (<code class="docutils literal notranslate"><span class="pre">microsim/opencl/ramp/simualtor.py</span></code>) is created and stepped to run the model.</p></li>
 <li><p>If the <strong>Python</strong> model is executed: a <code class="docutils literal notranslate"><span class="pre">Microsim</span></code> object, see  <a class="reference internal" href="#microsim-label"><span class="std std-ref">microsim/microsim_model.py</span></a>, is created to run the model by calling <code class="docutils literal notranslate"><span class="pre">Microsim.run()</span></code> Note that if the model is going to be run multiple times with the same parameters (<em>repetitions</em>) then a multi-process wrapper calls a few <code class="docutils literal notranslate"><span class="pre">Microsim.run()</span></code> functions simultaneously using different processes.</p></li>
 </ul>
-<div class="section" id="population-initialisation-microsim-population-initialisation-py">
-<span id="population-initialisation-label"></span><h3>Population Initialisation (<code class="docutils literal notranslate"><span class="pre">microsim/population_initialisation.py</span></code>)<a class="headerlink" href="#population-initialisation-microsim-population-initialisation-py" title="Permalink to this headline">¶</a></h3>
+<section id="population-initialisation-microsim-population-initialisation-py">
+<span id="population-initialisation-label"></span><h3>Population Initialisation (<code class="docutils literal notranslate"><span class="pre">microsim/population_initialisation.py</span></code>)<a class="headerlink" href="#population-initialisation-microsim-population-initialisation-py" title="Permalink to this headline"></a></h3>
 <p>The task of the <a class="reference internal" href="../Reference/microsim.html#microsim.population_initialisation.PopulationInitialisation" title="microsim.population_initialisation.PopulationInitialisation"><code class="xref py py-class docutils literal notranslate"><span class="pre">microsim.population_initialisation.PopulationInitialisation</span></code></a> class is to read the data that represents the synthetic population at the core of the model. This includes csv files with information about each individual, as well as files used to estimate workplace locations, etc. That file is commented quite extensively, so see the documentation there for further details.</p>
 <p>The most important thing that the <a class="reference internal" href="../Reference/microsim.html#microsim.population_initialisation.PopulationInitialisation" title="microsim.population_initialisation.PopulationInitialisation"><code class="xref py py-class docutils literal notranslate"><span class="pre">microsim.population_initialisation.PopulationInitialisation</span></code></a> class does is to return the <code class="docutils literal notranslate"><span class="pre">individuals</span></code> dataframe and the <code class="docutils literal notranslate"><span class="pre">activity_locations</span></code> dictionary (that points to dataframes for the locations where indvidiauals will spend their time).</p>
-</div>
-<div class="section" id="microsim-class-microsim-microsim-model-py">
-<span id="microsim-label"></span><h3>Microsim class (<code class="docutils literal notranslate"><span class="pre">microsim/microsim_model.py</span></code>)<a class="headerlink" href="#microsim-class-microsim-microsim-model-py" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="microsim-class-microsim-microsim-model-py">
+<span id="microsim-label"></span><h3>Microsim class (<code class="docutils literal notranslate"><span class="pre">microsim/microsim_model.py</span></code>)<a class="headerlink" href="#microsim-class-microsim-microsim-model-py" title="Permalink to this headline"></a></h3>
 <p>The <a class="reference internal" href="../Reference/microsim.html#microsim.microsim_model.Microsim" title="microsim.microsim_model.Microsim"><code class="xref py py-class docutils literal notranslate"><span class="pre">microsim.microsim_model.Microsim</span></code></a> class is the main entry point for the python model. It contains the main code to control the spread of the disease. See the <a class="reference internal" href="../Reference/microsim.html#microsim.microsim_model.Microsim.step" title="microsim.microsim_model.Microsim.step"><code class="xref py py-func docutils literal notranslate"><span class="pre">microsim.microsim_model.Microsim.step()</span></code></a> function for details about what, specifically, happens in each iteration of the model. The OpenCL model follows the same procedures, although they are implemented differently.</p>
 <p>The other thing to note is the <a class="reference internal" href="../Reference/microsim.html#microsim.microsim_model.Microsim.calculate_new_disease_status" title="microsim.microsim_model.Microsim.calculate_new_disease_status"><code class="xref py py-func docutils literal notranslate"><span class="pre">microsim.microsim_model.Microsim.calculate_new_disease_status()</span></code></a> function. That function calls the file <code class="docutils literal notranslate"><span class="pre">microsim/r_interface.py</span></code> file which in turn delegates the estimation of an individual’s specific disease status.</p>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
            </div>
-           
           </div>
-          <footer>
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="../contributing/index.html" class="btn btn-neutral float-right" title="Contributing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="../usage/opencl.html" class="btn btn-neutral float-left" title="Setting up the OpenCL model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../contributing/index.html" class="btn btn-neutral float-right" title="Contributing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        &#169; Copyright 2020, RAMP UA Team.
-
-    </p>
+    <p>&#169; Copyright 2020, RAMP UA Team.</p>
   </div>
-    
-    
-    
-    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>
