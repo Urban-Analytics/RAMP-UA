@@ -308,9 +308,10 @@ class OpenCLRunner:
         if use_healthier_pop:
             snapshot.switch_to_healthier_population()
 
-        print("testing obesity arrays not equal")
-        print(np.mean(prev_obesity))
-        print(np.mean(snapshot.buffers.people_obesity))
+        #print("testing obesity arrays not equal")
+        #print(np.mean(prev_obesity))
+        #print(np.mean(snapshot.buffers.people_obesity))
+
         # assert not np.array_equal(prev_obesity, snapshot.buffers.people_obesity)
         # print("arrays not equal")
 
