@@ -345,7 +345,8 @@ class OpenCLRunner:
             opencl_dir=os.path.join(".", "microsim", "opencl"),
             snapshot_filepath=os.path.join(".", "microsim", "opencl", "snapshots", "cache.npz"),
             multiprocess=False,
-            random_ids=False):
+            random_ids=False,
+            quiet=False):
         """Run a number of models and return a list of summaries.
 
         :param multiprocess: Whether to run in mutliprocess mode (default False)
@@ -360,7 +361,7 @@ class OpenCLRunner:
         l_use_gpu = [use_gpu] * repetitions
         l_use_healthier_pop = [use_healthier_pop] * repetitions
         l_store_detailed_counts = [store_detailed_counts] * repetitions
-        l_quiet = [False] * repetitions  # Don't print info
+        l_quiet = [quiet] * repetitions  # Whether or not to print info
 
         args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_use_gpu, l_use_healthier_pop,
                    l_store_detailed_counts, l_quiet)
@@ -368,7 +369,8 @@ class OpenCLRunner:
         start_time = time.time()
         if multiprocess:
             try:
-                print("Running multiple models in multiprocess mode ... ", end="", flush=True)
+                if not quiet:
+                    print("Running multiple models in multiprocess mode ... ", end="", flush=True)
                 with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
                     to_return = pool.starmap(OpenCLRunner.run_opencl_model, args)
             finally:  # Make sure they get closed (shouldn't be necessary)
@@ -379,7 +381,8 @@ class OpenCLRunner:
             # a generator. Also means we can use tqdm to get a progress bar, which is nice.
             to_return = [x for x in tqdm.tqdm(results, desc="Running models", total=repetitions)]
 
-        print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)
+        if not quiet:
+            print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)
         return to_return
 
     @classmethod
@@ -434,7 +437,8 @@ class OpenCLRunner:
             return fitness
 
     @classmethod
-    def run_model_with_params_abc(cls, input_params_dict: dict, return_full_details=False):
+    def run_model_with_params_abc(cls, input_params_dict: dict, return_full_details=False,
+                                  quiet=True):
         """
         Run the model, compatible with pyABC. Random variables (parameters) are passed in as a dictionary.
         For constant parameters that override the defaults (in the default.yml file) set them first
@@ -443,6 +447,7 @@ class OpenCLRunner:
         :param return_full_details: If True then rather than just returning the normal results,
             it returns a tuple of the following:
              (fitness value, simulated results, observations, the Params object, summaries list)
+        :param quiet: Turn print messages on (false) or off (true, default)
         :return: The number of cumulative new infections per day (as a list value in a
             dictionary as required by the pyabc package) unless return_full_details is True.
         """
@@ -468,13 +473,15 @@ class OpenCLRunner:
         results = OpenCLRunner.run_opencl_model_multi(
             repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,
             opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
-            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False, random_ids=True
+            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False, random_ids=True,
+            quiet=quiet
         )
 
         summaries = [x[0] for x in results]
         # Get the cumulative number of new infections per day (i.e. simulated results)
         sim = OpenCLRunner.get_cumulative_new_infections(summaries)
-        print(f"Ran Model with {str(input_params_dict)}")
+        if not quiet:
+            print(f"Ran Model with {str(input_params_dict)}")
 
         if return_full_details:
             # Can compare these to the observations to get a fitness
