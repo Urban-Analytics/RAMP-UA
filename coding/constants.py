@@ -10,7 +10,7 @@ import os
 # not needed anymore: # os.chdir(os.path.dirname(__file__)) # change dir to the current file's path
 # print(f"*** check 3 \n {os.getcwd()}")
 
-abspath = os.getcwd() # this one works when starting from working the project folder
+abspath = "/Users/fbenitez/PycharmProjects/RAMP-UA_EcoTwins1709" # this one works when starting from working the project folder
 # NOTE: in PyCharm in run configurations:
 # Parameters: -p model_parameters/default.yml
 # Working directory: your project location
@@ -68,7 +68,6 @@ class Constants:
         # !!!
 
         class PARAMETERS:
-            FOLDER_INITIALCASES = '/Users/fbenitez/PycharmProjects/RAMP-UA_EcoTwins1709/model_parameters'
             FOLDER = parameters_folder
             FULL_PATH = os.path.join(abspath,
                                      FOLDER)
@@ -301,7 +300,6 @@ class Constants:
                                             FONT_ROBOTO)
         class OPENCL_SOURCE:
             SOURCE_FOLDER = opencl_source_folder
-            PATH_KERNEL = '/Users/fbenitez/PycharmProjects/RAMP-UA_EcoTwins1709/coding/model/opencl/ramp/kernels'
             FULL_PATH_SOURCE = os.path.join(abspath,
                                             code_folder,
                                             model_folder,
@@ -319,6 +317,7 @@ class Constants:
             # OpenCL kernels are really sensible to the path provided
             # Specifically, you have to start from 'after' the current working directory
             # that currently is abspath/project_folder/ (must be consistent with the  configurations)
+            
             FOLDER_PATH_FOR_KERNEL = os.path.join(code_folder,
                                                   model_folder,
                                                   opencl_model_folder,
