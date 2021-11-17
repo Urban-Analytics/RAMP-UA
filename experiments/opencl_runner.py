@@ -498,6 +498,8 @@ class OpenCLWrapper(object):
     data assimilation. Uses some features of OpenCLRunner but isn't intended to run a model from start to
     finish."""
 
+    model_counter = 0  # Count the number of models that we run. For debugging mostly
+
     def __init__(self, const_params_dict,
                  quiet, use_gpu, store_detailed_counts, start_day, run_length,
                  current_particle_pop_df, parameters_file, snapshot_file, opencl_dir,
@@ -574,6 +576,11 @@ class OpenCLWrapper(object):
 
     def run(self):
 
+        # Count how many times the model is run. This isn't an ID, but can be useful for debugging
+        OpenCLWrapper.model_counter += 1
+        model_number =  OpenCLWrapper.model_counter
+        print(f"OpenclRunner is running model {model_number}")
+
         # If this is the first data assimilation window, we can just run the model as normal
         if self.start_day == 0:
             assert self.current_particle_pop_df is None  # Shouldn't have any preivously-created particles
@@ -642,9 +649,10 @@ class OpenCLWrapper(object):
             #
             raise Exception("Not implemented yet")
 
-        # Return the current state of the model in a dictionary describing what it is
-        #return {"simulator": simulator}
-        return {"simulator": snapshot}
+        # Return the current state of the model in a dictionary.
+        # The most important thing to return is the snapshot (i.e. this model's state) but we an include other
+        # things as well that might be useful.
+        return {"simulator": snapshot, "model_number": model_number}
 
     @staticmethod
     def summary_stats(raw_model_results: dict) -> dict:
@@ -667,13 +675,14 @@ class OpenCLWrapper(object):
         return raw_model_results
 
     @staticmethod
-    def distance(sim, obs):
+    def distance(sim: dict, obs: dict) -> dict:
         """Calculate the difference (error) between simulated and observed data.
 
         :param sim: a dictionary containing the simulated data
         :param obs: a dictionary containing the observed (real) data
         :return: a single distance measure (float). Lower is better."""
         # Check that we receive everything that we expect to
+        x=1
         if "simulator" not in sim.keys():
             raise Exception(f"No 'simulator' item found in the model results that are passed "
                             f"to summary_stats: {sim}")
