@@ -188,9 +188,6 @@ db_path = ("sqlite:///" + "ramp_da2.db")
 run_id = abc.new(db_path, {'observation': observations, "individuals":individuals_df})
 
 
-
-
-
 # Run :
 
 history = abc.run(max_nr_populations=2)
