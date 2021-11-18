@@ -155,7 +155,7 @@ parameters_file = os.path.join("../../", "model_parameters/", "default.yml")  # 
 
 da_window_size = 14 # Set the size of a data assimilation window in days:
 
-admin_params = { "quiet":True, "use_gpu": False, "store_detailed_counts": True, "start_day": 0, "run_length": da_window_size,
+admin_params = { "quiet":True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0, "run_length": da_window_size,
                 "current_particle_pop_df": None,
                 "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR
                }
