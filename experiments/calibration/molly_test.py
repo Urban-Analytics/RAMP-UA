@@ -1,3 +1,4 @@
+#### Import modules required
 import multiprocessing as mp
 import numpy as np
 import yaml # pyyaml library for reading the parameters.yml file
@@ -47,19 +48,21 @@ from opencl_runner import OpenCLWrapper # Some additional functions to simplify 
 LOAD_PICKLES = True
 
 
-
-
+##########################################################################
+##########################################################################
+# Read case data and spatial data
+##########################################################################
+##########################################################################
 from microsim.load_msoa_locations import load_osm_shapefile, load_msoa_shapes
 
+# Directory where spatial data is stored
 gis_data_dir = ("../../devon_data")
 #osm_buildings = load_osm_shapefile(gis_data_dir)
 devon_msoa_shapes = load_msoa_shapes(gis_data_dir, visualize=False)
 devon_msoa_shapes = devon_msoa_shapes.set_index('Code', drop=True, verify_integrity=True)
 
-
-
-
-
+# Observed cases data
+# These were prepared by Hadrien and made available on the RAMP blob storage (see the observation data README).
 cases_msoa = pd.read_csv(os.path.join("observation_data", "england_initial_cases_MSOAs.csv")).set_index('MSOA11CD', drop=True, verify_integrity=True)
 
 # Merge them to the GIS data for convenience
@@ -76,10 +79,13 @@ cases_msoa_melt = pd.melt(cases_msoa.reset_index(), id_vars='MSOA11CD',
 cases_msoa_melt = cases_msoa_melt.set_index('MSOA11CD', drop=True) # Keep the index as the MSOA
 cases_msoa_melt['day'] = cases_msoa_melt['variable'].apply(lambda day: int(day[1:])) # Strip off the initial 'D' to get the day number
 
-
-
-
-
+##########################################################################
+##########################################################################
+# Setup Model
+# Optionally initialise the population, delete the old OpenCL model snapshot (i.e. an already-initialised model) and
+# re-create a new one. Useful if something may have changed (e.g. changed the lockdown file).
+##########################################################################
+##########################################################################
 OPENCL_DIR = os.path.join("..", "..", "microsim", "opencl")
 SNAPSHOT_FILEPATH = os.path.join(OPENCL_DIR, "snapshots", "cache.npz")
 assert os.path.isfile(SNAPSHOT_FILEPATH), f"Snapshot doesn't exist: {SNAPSHOT_FILEPATH}"
