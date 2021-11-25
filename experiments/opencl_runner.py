@@ -147,6 +147,7 @@ class OpenCLRunner:
 
         :param summaries: A list of Summary objects created by running the OpenCL model
         """
+        x=1
         iters = len(summaries[0].total_counts[DiseaseStatus.Exposed.value])  # Number of iterations for each repetition
         total_not_susceptible = np.zeros(iters)  # Total people not susceptible per iteration
         for d, disease_status in enumerate(DiseaseStatus):
@@ -301,7 +302,7 @@ class OpenCLRunner:
         :return: A summary python array that contains the results for each iteration and a final state
 
         """
-
+        x=1
         # load snapshot
         snapshot = Snapshot.load_full_snapshot(path=snapshot_filepath)
         prev_obesity = np.copy(snapshot.buffers.people_obesity)
@@ -351,6 +352,7 @@ class OpenCLRunner:
 
         :param multiprocess: Whether to run in mutliprocess mode (default False)
         """
+        x=1
         # Prepare the function arguments. We need one set of arguments per repetition
         l_i = [i for i in range(repetitions)] if not random_ids else \
             [random.randint(1, 100000) for _ in range(repetitions)]
@@ -396,6 +398,7 @@ class OpenCLRunner:
         :return: The mean fitness across all model runs
 
         """
+        x=1
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
@@ -451,7 +454,7 @@ class OpenCLRunner:
         :return: The number of cumulative new infections per day (as a list value in a
             dictionary as required by the pyabc package) unless return_full_details is True.
         """
-
+        x=1
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
@@ -523,6 +526,7 @@ class OpenCLWrapper(object):
         m(random_variables_dict=={"random_param1":2.0, "random_param2":0.5})``
         That method was suggested here: https://github.com/ICB-DCM/pyABC/issues/446
         """
+        x=1
         # Set administrative parameters
         self.quiet = quiet
         self.use_gpu = use_gpu
@@ -565,6 +569,7 @@ class OpenCLWrapper(object):
         # and random variables passed here
         # (Is creation of m actually necessary? Probably not. Advantageous though for when we want
         # to call methods like m.run()
+        x=1
         m = OpenCLWrapper(const_params_dict=self.const_params_dict,
                           quiet=self.quiet, use_gpu=self.use_gpu, store_detailed_counts=self.store_detailed_counts,
                           start_day=self.start_day, run_length=self.run_length,
@@ -575,7 +580,7 @@ class OpenCLWrapper(object):
         return m.run()
 
     def run(self):
-
+        x=1
         # Count how many times the model is run. This isn't an ID, but can be useful for debugging
         OpenCLWrapper.model_counter += 1
         model_number =  OpenCLWrapper.model_counter
@@ -652,7 +657,11 @@ class OpenCLWrapper(object):
         # Return the current state of the model in a dictionary.
         # The most important thing to return is the snapshot (i.e. this model's state) but we an include other
         # things as well that might be useful.
-        return {"simulator": snapshot, "model_number": model_number}
+        disease_statuses = snapshot.buffers.people_statuses
+        return {"simulator": disease_statuses, "model_number": model_number}
+        #return disease_statuses
+        #return {"simulator": snapshot, "model_number": model_number}
+        #return {"simulator": 1, "model_number": model_number}
 
     @staticmethod
     def summary_stats(raw_model_results: dict) -> dict:
@@ -665,6 +674,7 @@ class OpenCLWrapper(object):
         :param raw_model_results: dictionary of model results as output from __call__.
         :return: processed model results.
         """
+        x=0
         # Check that we receive everything that we expect to
         if "simulator" not in raw_model_results.keys():
             raise Exception(f"No 'simulator' item found in the model results that are passed "
@@ -672,20 +682,70 @@ class OpenCLWrapper(object):
 
         # Just pass the model results on. The 'distance' function can work out how good the results
         # are. The important thing is that the model summary will now be stored by ABC in the database
+        #print(raw_model_results)
         return raw_model_results
 
-    @staticmethod
-    def distance(sim: dict, obs: dict) -> dict:
-        """Calculate the difference (error) between simulated and observed data.
+    # @staticmethod
+    # def distance(sim: dict, obs: dict) -> dict:
+    #     """Calculate the difference (error) between simulated and observed data.
+    #
+    #     :param sim: a dictionary containing the simulated data
+    #     :param obs: a dictionary containing the observed (real) data
+    #     :return: a single distance measure (float). Lower is better."""
+    #     # Check that we receive everything that we expect to
+    #     x=1
+    #
+    #     if "simulator" not in sim.keys():
+    #         raise Exception(f"No 'simulator' item found in the model results that are passed "
+    #                         f"to summary_stats: {sim}")
+    #
+    #     # TODO HERE. Calculate the distance.
+    #     return 1
 
-        :param sim: a dictionary containing the simulated data
-        :param obs: a dictionary containing the observed (real) data
-        :return: a single distance measure (float). Lower is better."""
-        # Check that we receive everything that we expect to
-        x=1
-        if "simulator" not in sim.keys():
-            raise Exception(f"No 'simulator' item found in the model results that are passed "
-                            f"to summary_stats: {sim}")
+    # @staticmethod
+    def distance(sim:dict, obs: dict) -> dict:
+        """Calculate the distance between the number of cases in the model by MSOA compared to some observations (case data).
+        All lists are assumed to be in the same MSOA order (e.g. first element in each list corresponds to the number of cases
+        in the same MSOA).
+        
+        :param sim: Case data per MSOA. A dictionary with two lists:
+          - Symp (number of presymptomatic people in each MSOA in the current day
+          - Asymp (number of asymptomatic people in each MSOA in the current day)
+        :param obs: Same as `sim`, but have lists have the number of (pre)symptomatic people from real case data
+        """
+        ########### Model
+        # Find the disease status of each indidivual in the model run
+        model_disease_status = sim['simulator']
+        # Convert to dataframe
+        model_disease_status_df = pd.DataFrame({'disease': model_disease_status})
 
-        # TODO HERE. Calculate the distance.
-        return 1
+        # Join the disease status of each individual to the df containing info on each individual
+        individuals_df = obs['individuals']
+        model_disease_status_df = pd.concat([individuals_df.reset_index(drop=True), model_disease_status_df], axis=1)
+
+        # Find the number of each disease status by area
+        model_disease_status_by_area = (pd.crosstab([model_disease_status_df.area], model_disease_status_df.disease))
+        # Add column with 'diseased' column encompassing states 1, 2, 3 and 4
+
+        model_disease_status_by_area['model_diseased']  = model_disease_status_by_area.iloc[:, -5:-1].sum(axis=1)
+        #model_disease_status_by_area['model_diseased'] = model_disease_status_by_area[1] + model_disease_status_by_area[2] + model_disease_status_by_area[3] + model_disease_status_by_area[4]
+
+        ########### Observations
+        observations = obs['observation']
+        # observations_df = pd.DataFrame({'observations' : observations})
+        # set index as the MSOA codes from the ....
+        observations_df = pd.DataFrame(data=observations[0:, 0:], index = model_disease_status_by_area.index,
+                          columns = ['day' + str(i) for i in range(observations.shape[1])])
+
+        ## Join model with obs
+        obs_and_model_df = pd.concat([observations_df, model_disease_status_by_area['model_diseased']], axis=1)
+
+        # Find the euclidean difference between
+        difference = np.linalg.norm(np.array(obs_and_model_df['day14']) - np.array(obs_and_model_df['model_diseased']))
+        #print(difference)
+
+        #return 1
+        return difference
+    
+
+    

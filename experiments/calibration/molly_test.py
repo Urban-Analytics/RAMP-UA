@@ -97,17 +97,27 @@ if cache.is_empty():
     raise Exception(f"The cache in {cache_dir} has not been initialised. Probably need to run the code a",
                     "few cells up that initialises the population")
 
-individuals, activity_locations = cache.read_from_cache()
+individuals_df, activity_locations = cache.read_from_cache()
 
 print(f"Activity locations: {activity_locations}")
 
-
-
+##########################################################################
+##########################################################################
+# Define constants
+# These are not touched by ABC. Include parameters that should not be optimised.
+##########################################################################
+##########################################################################
 const_params_dict = {
     "current_risk_beta": 0.03, # Global risk multplier (leave this as it is and allow the other parameters to vary)
     "home": 1.0,  # Risk associated with being at home. Again leave this constant so the coefficients of other places will vary around it
 }
 
+##########################################################################
+##########################################################################
+# Define random variables and the prior distribution
+# Random variables are the global parameters.
+##########################################################################
+##########################################################################
 # School and retail multipliers are uniform between 0-1
 retail_rv, primary_school_rv, secondary_school_rv = (pyabc.RV("uniform", 0, 1) for _ in range(3))
 # Work needs some dampening because we know that workplaces are too big in the current implementation
@@ -140,17 +150,22 @@ for i, (var_name, variable) in enumerate(all_rv.items()):
 # fig.tight_layout()
 fig.suptitle("Priors")
 
-
+## Create a distrubtion from these random variables
 decorated_rvs = { name: pyabc.LowerBoundDecorator(rv, 0.0) for name, rv in all_rv.items() }
 
 # The distribution is a collection of the priors and their name (e.g. 'asymptomatic'=asymptomatic_rv, 'work'=work_rv, .. )
 # so can just unpack the decorated_rvs dictionary and pass it straight in
 priors = pyabc.Distribution(**decorated_rvs)
 
-
-
-
-
+##########################################################################
+##########################################################################
+# Create model 'template'
+# Constants and random variables need to be handed differently. To set constants,
+# create an instance of OpenCLWrapper; this is a 'template' instance of the model.
+# Then ABC calls that instance directly via the __call__ function, which allows random
+# variables to be passed. I followed the suggestions from here: https://github.com/ICB-DCM/pyABC/issues/446
+##########################################################################
+##########################################################################
 parameters_file = os.path.join("../../", "model_parameters/", "default.yml")  # Need to tell it where the default parameters are
 
 da_window_size = 14 # Set the size of a data assimilation window in days:
@@ -168,7 +183,11 @@ template.__name__ = OpenCLWrapper.__name__
 print(f"Created a template model with: \n\tconstant params: {const_params_dict}\n\tadmin params:{admin_params}")
 
 
-
+##########################################################################
+##########################################################################
+# First window
+##########################################################################
+##########################################################################
 abc = pyabc.ABCSMC(
     models=template, # Model (could be a list)
     parameter_priors=priors, # Priors (could be a list)
@@ -182,15 +201,79 @@ abc = pyabc.ABCSMC(
 # Observations are cases per msoa, but make it into a numpy array because this may be more efficient
 # (first axis is the msoa number, second is the day)
 observations = cases_msoa.iloc[:,0:405].to_numpy()
-individuals_df = pd.DataFrame(data={'a':[1,2,3]})
 
 db_path = ("sqlite:///" + "ramp_da2.db")
 run_id = abc.new(db_path, {'observation': observations, "individuals":individuals_df})
 
-
 # Run :
-
+print('here')
 history = abc.run(max_nr_populations=2)
 
 print(f"Running new ABC with id {run_id}.... ", flush=True)
+history
 
+##########################################################################
+##########################################################################
+### Algorithm diagnostics
+##########################################################################
+##########################################################################
+
+_, arr_ax = plt.subplots(2, 2)
+
+pyabc.visualization.plot_sample_numbers(history, ax=arr_ax[0][0])
+pyabc.visualization.plot_epsilons(history, ax=arr_ax[0][1])
+#pyabc.visualization.plot_credible_intervals(
+#    history, levels=[0.95, 0.9, 0.5], ts=[0, 1, 2, 3, 4],
+#    show_mean=True, show_kde_max_1d=True,
+#    refval={'mean': 2.5},
+#    arr_ax=arr_ax[1][0])
+pyabc.visualization.plot_effective_sample_sizes(history, ax=arr_ax[1][1])
+
+plt.gcf().set_size_inches((12, 8))
+plt.gcf().tight_layout()
+
+#### Algorithm diagnostics
+_, arr_ax = plt.subplots(2, 2)
+
+pyabc.visualization.plot_sample_numbers(history, ax=arr_ax[0][0])
+pyabc.visualization.plot_epsilons(history, ax=arr_ax[0][1])
+#pyabc.visualization.plot_credible_intervals(
+#    history, levels=[0.95, 0.9, 0.5], ts=[0, 1, 2, 3, 4],
+#    show_mean=True, show_kde_max_1d=True,
+#    refval={'mean': 2.5},
+#    arr_ax=arr_ax[1][0])
+pyabc.visualization.plot_effective_sample_sizes(history, ax=arr_ax[1][1])
+
+plt.gcf().set_size_inches((12, 8))
+plt.gcf().tight_layout()
+
+########## Plot the marginal posteriors
+fig, axes = plt.subplots(3,int(len(priors)/2), figsize=(12,10))
+
+#cmap = { 0:'k',1:'b',2:'y',3:'g',4:'r' }  # Do this automatically for len(params)
+
+for i, param in enumerate(priors.keys()):
+    ax = axes.flat[i]
+    for t in range(history.max_t + 1):
+        df, w = history.get_distribution(m=0, t=t)
+        pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
+            label=f"{param} PDF t={t}",
+            alpha=1.0 if t==0 else float(t)/history.max_t, # Make earlier populations transparent
+            color= "black" if t==history.max_t else None # Make the last one black
+        )
+        if param!="work":
+            ax.set_xlim(0,1)
+        ax.legend(fontsize="small")
+        #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
+        #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
+        ax.set_title(f"{param}")
+fig.tight_layout()
+
+### Analyse the posterior
+# Posterior distribution for the final population.
+# This is made up of the posterior estimates for each particle in the population and the associated weight.
+_df, _w = history.get_distribution(m=0, t=history.max_t)
+# Merge dataframe and weights and sort by weight (highest weight at the top)
+_df['weight'] = _w
+posterior_df = _df.sort_values('weight', ascending=False).reset_index()
+posterior_df
