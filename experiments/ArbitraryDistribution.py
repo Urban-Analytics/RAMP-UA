@@ -25,6 +25,33 @@ class ArbitraryDistribution(Distribution):
         self.kde = MultivariateNormalTransition(scaling=1)
         self.kde.fit(dist_df, dist_w)
 
+        # set as variable on the object
+        self.abc_hist = abc_hist
+
+    def display(self):
+        # Get the dataframe of particles (parameter point estimates) and associated weights
+        dist_df, dist_w = self.abc_hist.get_distribution(m=0, t=self.abc_hist.max_t)
+
+        fig, axes = plt.subplots(2, 4, figsize=(14, 6), sharex=True, sharey=True)
+        x = np.linspace(-1, 2, 99)  # (specified so that we have some whole numbers)
+        marker = itertools.cycle((',', '+', '.', 'o', '*'))
+        i=0
+        for variable in dist_df.columns:
+            print(variable)
+            ax = axes.flatten()[i]
+            pyabc.visualization.plot_kde_1d(
+                dist_df, dist_w,
+                xmin=0, xmax=1.5,
+                x=variable, ax=ax,
+                label="PDF t={}".format(t))
+            ax.legend()
+            #fig.show()
+            i=i+1
+        #ax.legend()
+        #fig.tight_layout()
+        fig.suptitle("Priors")
+        fig.show()
+
     def rvs(self) -> Parameter:
         """Sample from the joint distribution, returning a Parameter object.
            Just calls rvs() on the underlying kde"""

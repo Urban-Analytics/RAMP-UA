@@ -12,6 +12,7 @@ import random
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 import sys
+import datetime
 
 # For easier plots
 import plotly.express as px
@@ -153,6 +154,7 @@ for i, (var_name, variable) in enumerate(all_rv.items()):
 # ax.legend()
 # fig.tight_layout()
 fig.suptitle("Priors")
+fig.show()
 
 ## Create a distrubtion from these random variables
 decorated_rvs = { name: pyabc.LowerBoundDecorator(rv, 0.0) for name, rv in all_rv.items() }
@@ -273,19 +275,24 @@ original_priors = pyabc.Distribution(**decorated_rvs)
 # Path to parameters
 parameters_file = os.path.join("../../", "model_parameters/", "default.yml")  # Need to tell it where the default parameters are
 # Set the size of a data assimilation window in days:
-da_window_size = 14 
+da_window_size = 2
 # Dictionary with parameters for running model
 admin_params = { "quiet":True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0, "run_length": da_window_size,
                 "current_particle_pop_df": None,
                 "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR}
 
+dfs_dict = {}
+weights_dict = {}
 windows =10
-for window_number in range(3,windows):
+starting_windows_time = datetime.datetime.now()
+for window_number in range(1,windows):
+
     print ("Window number: ", window_number)
-    print("Running for {} days".format(da_window_size * window_number))
+    print("Running for 14 days")
+    #print("Running for {} days".format(da_window_size * window_number))
     
     # Edit the da_window size in the admin params
-    admin_params['run_length'] = admin_params['run_length'] * window_number
+    #admin_params['run_length'] = admin_params['run_length'] * window_number
 
     # Template for model
     template = OpenCLWrapper(const_params_dict, **admin_params)
@@ -297,6 +304,37 @@ for window_number in range(3,windows):
         priors = pyabc.Distribution(**decorated_rvs)
     else:
         priors = ArbitraryDistribution(abc_history)
+        #priors.display()
+
+        # rvs = priors.rvs()
+
+        # Define priors
+        # Assume both paramerers are normally distributed around 5 and 6 respectivly (mostly arbitrary)
+        #post_asymptomatic_rv = pyabc.RV("norm", rvs['asymptomatic'], 1)
+
+        #param_a_rv = pyabc.RV("norm", rvs['param_a'], 1)
+        #param_b_rv = pyabc.RV("norm", rvs['param_b'], 1)
+
+        # Individual multipliers
+        # Asymptomatic is normal such that the middle 95% is the range [0.138, 0.75]  (see justification in abc)
+        # No idea about (pre)symptomatic, so use same distribution as asymptomatic
+        presymptomatic_rv, symptomatic_rv, asymptomatic_rv = (pyabc.RV("norm", 0.444, 0.155) for _ in range(3))
+
+        # Group all random variables together and give them a string name (this is needed for the distribution later)
+        #all_rv = {
+        #    "retail": retail_rv, "primary_school": primary_school_rv, "secondary_school": secondary_school_rv,
+        #    "work": work_rv,
+        #    "presymptomatic": presymptomatic_rv, "symptomatic": symptomatic_rv, "asymptomatic": asymptomatic_rv
+        #}
+
+        #X = np.linspace(-0, 10, 1000)
+        #plt.plot(X, pyabc.Distribution(param=param_a_rv).pdf({"param": X}), '--',
+        #         label="Paremter A", lw=3)
+        #plt.plot(X, pyabc.Distribution(param=param_b_rv).pdf({"param": X}), ':',
+        #         label="Parameter B", lw=3)
+        #plt.autoscale(tight=True)
+        #plt.legend(title=r"Model parameters");
+        #plt.show()
     
     # set up model
     abc = pyabc.ABCSMC(
@@ -313,7 +351,7 @@ for window_number in range(3,windows):
     # (first axis is the msoa number, second is the day)
     observations = cases_msoa.iloc[:,0:405].to_numpy()
     
-    db_path = ("sqlite:///" + "ramp_da2.db")
+    db_path = ("sqlite:///" + "ramp_da2_window{}.db".format(window_number))
     run_id = abc.new(db_path, {'observation': observations, "individuals":individuals_df})
     
     # Run :
@@ -321,10 +359,15 @@ for window_number in range(3,windows):
     
     # Save some info on the posterior parameter distributions.
     _df, _w = abc.history.get_distribution(m=0, t=abc.history.max_t)
+
+    # Save these for use in plotting the prior on the plot of parameter values in each population
+    dfs_dict[window_number] = _df
+    weights_dict[window_number] = _w
+
     # Merge dataframe and weights and sort by weight (highest weight at the top)
     _df['weight'] = _w
     posterior_df = _df.sort_values('weight', ascending=False).reset_index()
-    posterior_df.to_csv("Plots/window_number{}_posterior_df.csv".format(window_number), index = False)
+    posterior_df.to_csv("Plots_test/window_number{}_posterior_df.csv".format(window_number), index = False)
 
     # ##########################################################################
     # ##########################################################################
@@ -344,7 +387,7 @@ for window_number in range(3,windows):
 
     plt.gcf().set_size_inches((12, 8))
     plt.gcf().tight_layout()
-    plt.savefig("Plots/window_number{}_algorithm_diagnostics.jpg".format(window_number))
+    plt.savefig("Plots_test/window_number{}_algorithm_diagnostics.jpg".format(window_number))
     plt.show()
 
     # ########## Plot the marginal posteriors
@@ -367,9 +410,11 @@ for window_number in range(3,windows):
             #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
             #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
             ax.set_title(f"{param}")
+
     fig.tight_layout()
     fig.show()
-    fig.savefig("Plots/window_number{}_marginal_posteriors.jpg".format(window_number))
+    fig.savefig("Plots_test/window_number{}_marginal_posteriors.jpg".format(window_number))
 
-
+    print("Finished window {} in {}".format(window_number, datetime.datetime.now()- starting_windows_time))
+    ##os.remove("ramp_da2.db")
 
