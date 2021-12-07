@@ -32,7 +32,7 @@ import logging
 logging.getLogger("pyopencl").setLevel(logging.ERROR)
 
 # Import arbitrary distribution class
-sys.path.append("C:/Users/gy17m2a/OneDrive - University of Leeds/Project/RAMP-UA/experiments/") 
+sys.path.append('..')
 from ArbitraryDistribution import ArbitraryDistribution
 
 # RAMP model
@@ -159,114 +159,6 @@ fig.show()
 ## Create a distrubtion from these random variables
 decorated_rvs = { name: pyabc.LowerBoundDecorator(rv, 0.0) for name, rv in all_rv.items() }
 
-# The distribution is a collection of the priors and their name (e.g. 'asymptomatic'=asymptomatic_rv, 'work'=work_rv, .. )
-# so can just unpack the decorated_rvs dictionary and pass it straight in
-original_priors = pyabc.Distribution(**decorated_rvs)
-
-##########################################################################
-##########################################################################
-# Create model 'template'
-# Constants and random variables need to be handed differently. To set constants,
-# create an instance of OpenCLWrapper; this is a 'template' instance of the model.
-# Then ABC calls that instance directly via the __call__ function, which allows random
-# variables to be passed. I followed the suggestions from here: https://github.com/ICB-DCM/pyABC/issues/446
-##########################################################################
-##########################################################################
-# parameters_file = os.path.join("../../", "model_parameters/", "default.yml")  # Need to tell it where the default parameters are
-
-# da_window_size = 14 # Set the size of a data assimilation window in days:
-
-# admin_params = { "quiet":True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0, "run_length": da_window_size,
-#                 "current_particle_pop_df": None,
-#                 "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR
-#                }
-
-# template = OpenCLWrapper(const_params_dict, **admin_params)
-
-# # Not sure why this is needed. Wthout it we get an error when passing the template object to ABCSMC below
-# template.__name__ = OpenCLWrapper.__name__
-
-# print(f"Created a template model with: \n\tconstant params: {const_params_dict}\n\tadmin params:{admin_params}")
-
-
-##########################################################################
-# ##########################################################################
-# # First window
-# ##########################################################################
-# ##########################################################################
-# abc = pyabc.ABCSMC(
-#     models=template, # Model (could be a list)
-#     parameter_priors=priors, # Priors (could be a list)
-#     #summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
-#     distance_function=OpenCLWrapper.distance,  # Distance function
-#     sampler = pyabc.sampler.SingleCoreSampler()  # Single core because the model is parallelised anyway (and easier to debug)
-#     #sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
-#     #transition=transition,  # Define how to transition from one population to the next
-#     )
-
-# # Observations are cases per msoa, but make it into a numpy array because this may be more efficient
-# # (first axis is the msoa number, second is the day)
-# observations = cases_msoa.iloc[:,0:405].to_numpy()
-
-# db_path = ("sqlite:///" + "ramp_da2.db")
-# run_id = abc.new(db_path, {'observation': observations, "individuals":individuals_df})
-
-# # Run :
-# history = abc.run(max_nr_populations=2)
-
-# print(f"Running new ABC with id {run_id}.... ", flush=True)
-
-# ##########################################################################
-# ##########################################################################
-# # Now try running again, using the posterior as a new prior
-# ##########################################################################
-# ##########################################################################
-# # Create the new prior from the posterio from window one
-# new_priors = ArbitraryDistribution(abc_history)
-
-# # Edit the da_window size in the admin params
-# admin_params['run_length'] = 28
-
-# # Recreate the template
-# template = OpenCLWrapper(const_params_dict, **admin_params)
-
-# # Not sure why this is needed. Wthout it we get an error when passing the template object to ABCSMC below
-# template.__name__ = OpenCLWrapper.__name__
-
-# # Prepare the ABC model
-# abc = pyabc.ABCSMC(
-#     models=template, # Model (could be a list)
-#     parameter_priors=new_priors, # Priors (could be a list)
-#     #summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
-#     distance_function=OpenCLWrapper.distance,  # Distance function
-#     sampler = pyabc.sampler.SingleCoreSampler()  # Single core because the model is parallelised anyway (and easier to debug)
-#     #sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
-#     #transition=transition,  # Define how to transition from one population to the next
-#     )
-
-# # The results are stored in a database. We use a simple file database (sqlite) that creates a database
-# # file in the current directory
-# db_path = ("sqlite:///" + "ramp_da2.db")
-
-# # Each time you run it you get a new 'ID' (useful if you want to look up runs in the database)
-# # Note that this is where we give it the observations as well. Our distance function is expecting
-# # a dictionary with an 'observation' key in it, so we create a dictionary on the fly with { .. }
-# run_id = abc.new(db_path, {'observation': observations, "individuals":individuals_df})
-# print(f"Running new ABC with id {run_id}.... ", flush=True)
-
-# # Run the algorithm! (you can look up the max_nr_populations and minimum_epsilon arguments).
-# history = abc.run(max_nr_populations=2)
-
-# # Re-do the Algorithm diagnostics. I copied most of this from the docs
-# _, arr_ax = plt.subplots(2, 2)
-# pyabc.visualization.plot_sample_numbers(history, ax=arr_ax[0][0])
-# pyabc.visualization.plot_epsilons(history, ax=arr_ax[0][1])
-# pyabc.visualization.plot_effective_sample_sizes(history, ax=arr_ax[1][1])
-
-# plt.gcf().set_size_inches((12, 8))
-# plt.gcf().tight_layout()
-# plt.show()
-
 ##########################################################################
 ##########################################################################
 # Setup loop for running model
@@ -275,12 +167,51 @@ original_priors = pyabc.Distribution(**decorated_rvs)
 # Path to parameters
 parameters_file = os.path.join("../../", "model_parameters/", "default.yml")  # Need to tell it where the default parameters are
 # Set the size of a data assimilation window in days:
-da_window_size = 2
+da_window_size = 14
 # Dictionary with parameters for running model
 admin_params = { "quiet":True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0, "run_length": da_window_size,
                 "current_particle_pop_df": None,
                 "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR}
 
+###################################
+# Test 1000 runs of model, if each time run time gets longer
+###################################
+# Create a dataframe to store the details on how long each model run takes
+all_times_df =pd.DataFrame()
+
+# Test for window lengths of 1,14,28,42,57,70,84 days:
+for run_length in [1, 14, 28, 42, 56, 70, 84]:
+    # Edit the run length in the admin params
+    admin_params['run_length'] = run_length
+    # Create template for model
+    template = OpenCLWrapper(const_params_dict, **admin_params)
+    # Not sure why this is needed. Wthout it we get an error when passing the template object to ABCSMC below
+    template.__name__ = OpenCLWrapper.__name__
+    # Create list to store the time taken in each model run
+    times_lst = []
+    # Run the model 100 times, store the time taken in the list
+    for i in range(1,50):
+        test = template.run()
+        time = test['run_time']
+        times_lst.append(time)
+    # convert to dataframe
+    times_df = pd.DataFrame({run_length: times_lst})
+    # convert to a float
+    times_df = times_df[run_length]/ np.timedelta64(1, 's')
+    # Add to te dataframe containing all the results
+    all_times_df = pd.concat([all_times_df.reset_index(drop=True), times_df], axis=1)
+
+# Plot the lines
+fig, axes = plt.subplots()
+for i in [1, 14, 28, 42, 56, 70, 84]:
+    all_times_df[i].plot.line()
+plt.xlabel("model run no")
+plt.ylabel("seconds")
+plt.legend()
+fig.show()
+
+####################################################################################
+# This was for plotting the distribution / kde?
 dfs_dict = {}
 weights_dict = {}
 windows =10
@@ -356,7 +287,8 @@ for window_number in range(1,windows):
     
     # Run :
     abc_history = abc.run(max_nr_populations=2)
-    
+    x=1
+
     # Save some info on the posterior parameter distributions.
     _df, _w = abc.history.get_distribution(m=0, t=abc.history.max_t)
 
