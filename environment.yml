@@ -37,6 +37,7 @@ dependencies:
   - r-tidyselect
   - r-rvcheck
   - r-stringdist
+  - scikit-learn
   - git-lfs
   - pocl
   - pip=20

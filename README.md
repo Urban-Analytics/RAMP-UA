@@ -78,10 +78,10 @@ Documentation currently follows the one for RAMP-UA, plus some README files here
 
 ## TODO list:
 **Major updates**
-- [ ] implement improved commuting
 - [ ] model calibration
 - [ ] implement detailed timetables (weekends, seasons ... ?)
 - [ ] improve outputs readability
+- [ ] Vaccines
 
 **Possible improvements:**
 - [ ] run Python tests
@@ -105,4 +105,5 @@ Documentation currently follows the one for RAMP-UA, plus some README files here
 - [X] integrate the shp creation (from step above) in the main code: correct the hard-coded coordinates and MSOA code within `snapshot.py` add this to the initialisation process (@manluow)
 - [X] fix the `abspath` variable (eliminate if possible) - ELIMINATED
 - [X] run multiple test scenarios and debug
+- [X] implement improved commuting
 

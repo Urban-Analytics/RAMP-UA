@@ -18,6 +18,7 @@ from coding.constants import Constants
 from coding.model.utilities import Optimise, check_durations_sum_to_1
 from coding.initialise.quant_api import QuantRampAPI
 from coding.initialise.raw_data_handler import RawDataHandler
+from coding.initialise.comModule import Commuting
 from decimal import *
 import multiprocessing  # process based parallelism
 import pandas as pd
@@ -30,6 +31,7 @@ import warnings
 from collections.abc import Iterable  # drop `.abc` with Python 2.7 or lower
 from typing import List, Dict, Tuple
 from tqdm import tqdm  # For a progress bar
+from yaml import load, SafeLoader
 
 getcontext().rounding = ROUND_DOWN
 
@@ -217,51 +219,71 @@ class PopulationInitialisation:
         # TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
         del primary_schools, secondary_schools  # No longer needed as we gave copies to the ActivityLocation
 
+        # Assign work NEW VERSION.
+        with open('model_parameters/default.yml', 'r') as f:
+            # print(f"Reading parameters file: {parameters_file}. ")
+            parameters = load(f,
+                              Loader=SafeLoader)
+            sim_params = parameters["microsim"]
+            wthreshold = sim_params["sicThresh"]
+        #wthreshold = 0 # Add threshold to parameters
+
+        commuting = Commuting(self.individuals,
+                              wthreshold)
+        [reg,orig,dest] = commuting.getCommutingData()
+        PopulationInitialisation._add_location_columns(reg, location_names=reg['id'])
+        work_name = ColumnNames.Activities.WORK
+        self.individuals = PopulationInitialisation.add_work_flows(self,flow_type=work_name,individuals=self.individuals,orig = orig,dest = dest)
+        self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=reg, flows=None,
+                                                              individuals=self.individuals, duration_col="pwork")
+        print("...finished calculating commuting flows.")
+
         # Assign work. Use a flow matrix of general commuting flows. Assume one office for each different employment
         # type exists in each MSOA. An individual is assigned flows and office locations according to the general
         # flows from their home MSOA.
         # Occupation is taken from column soc2010 in individuals df. Make it a string and replace empty cells with "NA" string
-        self.individuals['soc2010'] = self.individuals['soc2010'].astype(str).fillna("NA")
-        possible_jobs = sorted(self.individuals.soc2010.unique())  # list of possible jobs in alphabetical order
-        workplace_names = []  # Creat a list of workplace names, built from the MSOA code and the SOC
-        workplace_msoas = []
-        workplace_socs = []
-        for msoa in self.all_msoas:
-            for soc in possible_jobs:
-                workplace_msoas.append(msoa)
-                workplace_socs.append(soc)
-                workplace_names.append(msoa + "-" + soc)
-        assert len(workplace_names) == len(self.all_msoas) * len(possible_jobs)
-        assert len(pd.unique(workplace_names)) == len(workplace_names)  # Each name should be unique
+        #self.individuals['soc2010'] = self.individuals['soc2010'].astype(str).fillna("NA")
+        #possible_jobs = sorted(self.individuals.soc2010.unique())  # list of possible jobs in alphabetical order
+        #workplace_names = []  # Creat a list of workplace names, built from the MSOA code and the SOC
+        #workplace_msoas = []
+        #workplace_socs = []
+        #for msoa in self.all_msoas:
+        #    for soc in possible_jobs:
+        #        workplace_msoas.append(msoa)
+        #        workplace_socs.append(soc)
+        #        workplace_names.append(msoa + "-" + soc)
+        #assert len(workplace_names) == len(self.all_msoas) * len(possible_jobs)
+        #assert len(pd.unique(workplace_names)) == len(workplace_names)  # Each name should be unique
         # name = ColumnNames.MSOAsID
         # print(f"this is number 4 {name}")
-        workplaces = pd.DataFrame({
-            'ID': range(0, len(workplace_names)),
-            'MSOA': workplace_msoas,
-            'SOC': workplace_socs
-        })
-        assert len(workplaces) == len(self.all_msoas) * len(possible_jobs)  # One location per job per msoa
-        PopulationInitialisation._add_location_columns(workplaces, location_names=workplace_names)
-        work_name = ColumnNames.Activities.WORK
+        #workplaces = pd.DataFrame({
+        #    'ID': range(0, len(workplace_names)),
+        #    'MSOA': workplace_msoas,
+        #    'SOC': workplace_socs
+        #})
+        #assert len(workplaces) == len(self.all_msoas) * len(possible_jobs)  # One location per job per msoa
+        #PopulationInitialisation._add_location_columns(workplaces, location_names=workplace_names)
+        # work_name = ColumnNames.Activities.WORK
         # Workplaces dataframe is ready. Now read commuting flows
-        commuting_flows = PopulationInitialisation.read_commuting_flows_data(self, self.all_msoas)
-        num_individuals = len(self.individuals)  # (sanity check)
-        cols = self.individuals.columns
-        self.individuals = PopulationInitialisation.add_work_flows(self, flow_type=work_name,
-                                                                   individuals=self.individuals,
-                                                                   workplaces=workplaces,
-                                                                   commuting_flows=commuting_flows,
-                                                                   flow_threshold=5)
+        #commuting_flows = PopulationInitialisation.read_commuting_flows_data(self, self.all_msoas)
+        #num_individuals = len(self.individuals)  # (sanity check)
+        #cols = self.individuals.columns
+        #self.individuals = PopulationInitialisation.add_work_flows(self, flow_type=work_name,
+        #                                                           individuals=self.individuals,
+        #                                                           workplaces=workplaces,
+        #                                                           commuting_flows=commuting_flows,
+        #                                                           flow_threshold=5)
         # TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
 
-        assert num_individuals == len(self.individuals), \
-            "There was an error reading workplaces (caching?) and the number of individuals has changed!"
-        assert (self.individuals.columns[0:-3] == cols).all(), \
-            "There was an error reading workplaces (caching?) the column names don't match!"
-        del num_individuals, cols
-        self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
-                                                              individuals=self.individuals, duration_col="pwork")
+        #assert num_individuals == len(self.individuals), \
+        #    "There was an error reading workplaces (caching?) and the number of individuals has changed!"
+        #assert (self.individuals.columns[0:-3] == cols).all(), \
+        #    "There was an error reading workplaces (caching?) the column names don't match!"
+        #del num_individuals, cols
+        #self.activity_locations[work_name] = ActivityLocation(name=work_name, locations=workplaces, flows=None,
+        #                                                      individuals=self.individuals, duration_col="pwork")
         # TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
+
 
         ## Some flows will be very complicated numbers. Reduce the numbers of decimal places across the board.
         ## This makes it easier to write out the files and to make sure that the proportions add up properly
@@ -696,6 +718,11 @@ class PopulationInitialisation:
 
         return primary_schools, secondary_schools, primary_flow_matrix, secondary_flow_matrix
 
+
+    def read_commuting_flows_data(self, reg, pop, useSic):
+        [orig,dest] = Commuting.commutingDistance(self,reg,pop)
+
+    #read_commuting_flows_data(self, reg, pop, useSic)
     def read_commuting_flows_data(self, study_msoas: List[str]) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Read the commuting flows between each MSOA
@@ -735,9 +762,61 @@ class PopulationInitialisation:
 
         return commuting_flows
 
-    def add_work_flows(self, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame,
+    """ def read_commuting_flows_data(self, study_msoas: List[str]) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        
+        Read the commuting flows between each MSOA
+        :param study_msoas: A list of MSOAs in the study area (flows outside of this will be ignored)
+        :return: A dataframe with origin and destination flows in all MSOAs in the study area
+        
+        print("Reading commuting flow data for the selected region...", )
+        # commuting_flows = pd.read_csv(Constants.Paths.COMMUTING.FULL_PATH_FILE,
+        #                               dtype={'HomeMSOA': str,
+        #                                      'DestinationMSOA': str,
+        #                                      'Total_Flow': int})
+        commuting_flows = self.raw_data_handler.getOriginDestinationFile()  # Calling file created from RawDataHandler that contains ODcommuting data
+        # TODO: this is hard-coded, add this threshold to the list of thresholds in Configuration.py?
+        # Need to append the devon code to the areas (they're integers in the csv file)
+        commuting_flows["Orig"] = commuting_flows["HomeMSOA"]  # .apply(lambda x: "E0" + x)
+        commuting_flows["Dest"] = commuting_flows["DestinationMSOA"]  # .apply(lambda x: "E0" + x)
+        print(f"\tRead {len(pd.unique(commuting_flows['Orig']))} origins and {len(pd.unique(commuting_flows['Dest']))} "
+              f"destinations (MSOAs in the study area: {len(study_msoas)})")
+
+        # TEMP: remove areas outside the study area (just while the correct files are being prepared)
+        if len(commuting_flows.loc[~commuting_flows.Orig.isin(study_msoas)]) > 0 or \
+                len(commuting_flows.loc[~commuting_flows.Dest.isin(study_msoas)]) > 0:
+            warnings.warn(
+                f"Some origins ({len(pd.unique(commuting_flows.loc[~commuting_flows.Orig.isin(study_msoas), 'Orig']))}) "
+                f"and destinations ({len(pd.unique(commuting_flows.loc[~commuting_flows.Dest.isin(study_msoas), 'Dest']))}) "
+                f"are outside the study area. Removing them.")
+            commuting_flows = commuting_flows.loc[commuting_flows.Orig.isin(study_msoas)]
+            commuting_flows = commuting_flows.loc[commuting_flows.Dest.isin(study_msoas)]
+        assert len(commuting_flows.loc[~commuting_flows.Orig.isin(study_msoas)]) == 0
+        assert len(commuting_flows.loc[~commuting_flows.Dest.isin(study_msoas)]) == 0
+        assert len(pd.unique(commuting_flows["Orig"])) == len(study_msoas)
+        assert len(pd.unique(commuting_flows["Dest"])) == len(study_msoas)
+
+        # There should be a flow between every possible combination of areas:
+        assert len(study_msoas) ** 2 == len(commuting_flows)
+
+        return commuting_flows """
+
+    def add_work_flows(self,flow_type: str,individuals: pd.DataFrame,orig,dest) -> (pd.DataFrame):
+        venues_col = f"{flow_type}{ColumnNames.ACTIVITY_VENUES}"
+        flows_col = f"{flow_type}{ColumnNames.ACTIVITY_FLOWS}"
+        prob = [[0] for _ in range(len(individuals))]
+        destf = [[] for _ in range(len(individuals))]
+        for i in range(len(orig)):
+            indid = np.where(individuals['idp'] == orig[i])[0][0]
+            prob[indid] = [1]
+            destf[indid] = [dest[i]]
+        individuals[venues_col] = destf
+        individuals[flows_col] = prob
+        return individuals
+
+
+    """ def add_work_flows(self, flow_type: str, individuals: pd.DataFrame, workplaces: pd.DataFrame,
                        commuting_flows: pd.DataFrame, flow_threshold) -> (pd.DataFrame):
-        """
+        
         Create a dataframe of work locations that individuals travel to. The flows are based on general commuting
         patterns and assume one work location per industry type MSOA.
         :param flow_type: The name for these flows (probably something like 'Work')
@@ -746,7 +825,7 @@ class PopulationInitialisation:
         :param commuting_flows: The general commuting flows between MSOAs (an O-D matrix)
         :param flow_threshold: Only include the top x destinations as possible flows. 'None' means no limit.
         :return: The new 'individuals' dataframe (with new columns)
-        """
+        
         # The logic of this function is basically copied from add_individual_flows()
 
         # Names for the columns and empty lists to store the venues and flows
@@ -803,6 +882,7 @@ class PopulationInitialisation:
         assert False not in (individuals.loc[:, flows_col].apply(lambda cell: len(cell)) > 0).values
 
         return individuals
+    """
 
     @staticmethod
     def _calc_workplace_indices(soc: str, dest_msoas: List, workplace_df: pd.DataFrame):

@@ -8,8 +8,6 @@ Created on Thu Apr 22
 @author: Anna on Hadrien's code
 """
 
-#TO_DO: add columns names to Constants file (example: MSOA11CD, pop from msoa_shp, CTY20)
-
 import os
 import pandas as pd
 import requests
@@ -38,22 +36,15 @@ class RawDataHandler:
         MSOAs list
         """
         # Reading in msoas list
-        # assumption: msoas_list variable read from input provided by the user
-        # os.chdir("/Users/hsalat/MiscPython")
-        # msoas_list = pd.read_csv("/Users/hsalat/West_Yorkshire/Seeding/msoas.csv")
-        # msoas_list = msoas_list["area_code"]
-
-        # Note: this step needs to be improved by creating a formal way of introducing the list and checking its format is correct
-        # msoas_list_file = pd.read_csv(Constants.Paths.LIST_MSOAS.FULL_PATH_FILE)  ### Needs to be put as initial parameter, for now in Constants
         msoas_list_file = pd.read_csv(list_of_msoas)
-        msoas_list = msoas_list_file[ColumnNames.MSOAsID]     # some times "area_code" or "area", current test file has column name "MSOA11CD"
+        msoas_list = msoas_list_file[ColumnNames.MSOAsID]
 
         """
         Look-up table
         """
         # Checking that look-up table exists and reading it in
         lut_file_with_path = Constants.Paths.LUT.FULL_PATH_FILE
-        if not os.path.isfile(lut_file_with_path):  #("data/common_data/lookUp.csv"):
+        if not os.path.isfile(lut_file_with_path):  
             print("Downloading Look up table")
             RawDataHandler.download_data(remote_folder="referencedata", # name of the folder online in Azure
                                          local_folder=Constants.Paths.REFERENCE_DATA.FULL_PATH_FOLDER,
@@ -61,7 +52,7 @@ class RawDataHandler:
         else:
             print(f"I'm not downloading the look-up table as {lut_file_with_path} already exists")
         print(f"Reading Look up table from {lut_file_with_path}")
-        lut = pd.read_csv(lut_file_with_path) #("data/common_data/lookUp.csv")
+        lut = pd.read_csv(lut_file_with_path)
 
         """
         TUS files
@@ -103,14 +94,13 @@ class RawDataHandler:
         """
         QUANT RAMP
         """
-        # print(Constants.Paths.QUANT.FULL_PATH_FOLDER)
         remote_quant_folder = "nationaldata"
         local_quant_folder = Constants.Paths.NATIONAL_DATA.FULL_PATH_FOLDER
         packed_quant_file = "QUANT_RAMP.tar.gz"
         unpacked_quant_folder_with_path = Constants.Paths.QUANT.FULL_PATH_FOLDER
         packed_quant_file_with_path = os.path.join(local_quant_folder,
                                                    packed_quant_file)
-        if not os.path.isdir(unpacked_quant_folder_with_path): #("data/common_data/QUANT_RAMP/")
+        if not os.path.isdir(unpacked_quant_folder_with_path):
             print("Downloading the QUANT files...")
             RawDataHandler.download_data(remote_folder=remote_quant_folder,
                                          local_folder=local_quant_folder,
@@ -126,31 +116,43 @@ class RawDataHandler:
         """
         CommutingOD
         """
-        remote_commuting_folder = "nationaldata"
-        local_commuting_folder = Constants.Paths.NATIONAL_DATA.FULL_PATH_FOLDER
-        packed_commuting_file = "commutingOD.gz"
-        unpacked_commuting_file_with_path = Constants.Paths.COMMUTING.FULL_PATH_FILE
-        packed_commuting_file_with_path = os.path.join(local_commuting_folder,
-                                                       packed_commuting_file)
-        if not os.path.isfile(unpacked_commuting_file_with_path): #("data/common_data/commutingOD.csv"):
-            print("Downloading the CommutingOD file...")
-            RawDataHandler.download_data(remote_folder=remote_commuting_folder,
-                                         local_folder=local_commuting_folder,
-                                         file=packed_commuting_file)  # "commutingOD.gz")
-            print("... done!")
-            print("Unpacking the CommutingOD file")
-            RawDataHandler.unpack_data(packed_file=packed_commuting_file_with_path,
-                                       destination_folder=local_commuting_folder)
-            print("... finished unpacking!")
-        print(f"I'm not downloading the commutingOD file as {unpacked_commuting_file_with_path} already exists")
-        print("Reading the commutingOD file...")
-        OD = pd.read_csv(unpacked_commuting_file_with_path) #("data/common_data/commutingOD.csv")
-        print("... done!")
-        OD = OD[OD.HomeMSOA.isin(msoas_list)]
-        OD = OD[OD.DestinationMSOA.isin(msoas_list)]
-        self._origindestination_file = OD
+        #remote_commuting_folder = "nationaldata"
+        #local_commuting_folder = Constants.Paths.NATIONAL_DATA.FULL_PATH_FOLDER
+        #packed_commuting_file = "commutingOD.gz"
+        #unpacked_commuting_file_with_path = Constants.Paths.COMMUTING.FULL_PATH_FILE
+        #packed_commuting_file_with_path = os.path.join(local_commuting_folder,
+        #                                               packed_commuting_file)
+        #if not os.path.isfile(unpacked_commuting_file_with_path):
+        #    print("Downloading the CommutingOD file...")
+        #    RawDataHandler.download_data(remote_folder=remote_commuting_folder,
+        #                                 local_folder=local_commuting_folder,
+        #                                 file=packed_commuting_file)
+        #    print("... done!")
+        #    print("Unpacking the CommutingOD file")
+        #    RawDataHandler.unpack_data(packed_file=packed_commuting_file_with_path,
+        #                               destination_folder=local_commuting_folder)
+        #    print("... finished unpacking!")
+        #print(f"I'm not downloading the commutingOD file as {unpacked_commuting_file_with_path} already exists")
+        #print("Reading the commutingOD file...")
+        #OD = pd.read_csv(unpacked_commuting_file_with_path)
+        #print("... done!")
+        #OD = OD[OD.HomeMSOA.isin(msoas_list)]
+        #OD = OD[OD.DestinationMSOA.isin(msoas_list)]
+        #self._origindestination_file = OD
         # Note: Added method similar to other variables to be able to get this variable inside the code
         # (see end of the script, where we do this for the tus and other files)
+
+        """
+        Business registry
+        """
+        br_file_with_path = Constants.Paths.BUSINESSREGISTRY.FULL_PATH_FILE
+        if not os.path.isfile(br_file_with_path):  
+            print("Downloading national business registry")
+            RawDataHandler.download_data(remote_folder="nationaldata", # name of the folder online in Azure
+                                         local_folder=Constants.Paths.NATIONAL_DATA.FULL_PATH_FOLDER,
+                                         file=Constants.Paths.BUSINESSREGISTRY.FILE)
+        else:
+            print(f"Not downloading the business registry as {br_file_with_path} already exists")
 
         """
         Lockdown scenario

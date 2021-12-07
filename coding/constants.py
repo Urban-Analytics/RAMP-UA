@@ -131,6 +131,13 @@ class Constants:
                                          raw_data_folder,
                                          national_data_folder,
                                          FILE)
+        class BUSINESSREGISTRY:
+            FILE = "businessRegistry.csv"
+            FULL_PATH_FILE = os.path.join(abspath,
+                                         data_folder,
+                                         raw_data_folder,
+                                         national_data_folder,
+                                         FILE)
         class NIGHTCLUBS:
             FILE = "nightclubs.csv"
             FULL_PATH_FILE = os.path.join(abspath,
