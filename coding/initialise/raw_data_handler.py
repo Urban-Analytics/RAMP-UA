@@ -15,6 +15,7 @@ import tarfile
 import zipfile
 import geopandas as gpd
 import numpy as np
+from tqdm import tqdm
 #import gzip # to open .gz files
 
 from coding.constants import Constants
@@ -247,17 +248,7 @@ class RawDataHandler:
         if not os.path.isdir(unpacked_osm_folder_with_path):
             print("Downloading OSM data...")
             target_path = packed_osm_folder_with_path
-            response = requests.get(url, stream=True)
-
-            if not response.ok: # HTTP status code for "OK"
-                raise Exception("Error downloading OSM data")
-
-            with open(target_path, 'wb') as f:
-                f.write(response.raw.read())
-                f.seek(0, os.SEEK_END)
-                size = f.tell()
-                if size == 0:
-                    raise Exception("Error downloading OSM data: file is empty")
+            download_with_progress(url, target_path)
             zip_file = zipfile.ZipFile(target_path)
             print("Downloaded file, will now extract it...")
             zip_file.extractall(unpacked_osm_folder_with_path)
@@ -279,14 +270,7 @@ class RawDataHandler:
 
                 target_path = packed_osm_folder_with_path
                 # ("data/common_data",tus_hse_ref[x] + ".zip")
-                response = requests.get(url, stream=True)
-                if response.ok: #status_code == 200: # HTTP status code for "OK"
-                    with open(target_path, 'wb') as f:
-                        f.write(response.raw.read())
-                        f.seek(0, os.SEEK_END)
-                        size = f.tell()
-                        if size == 0:
-                            raise Exception("Error downloading OSM data: file is empty")
+                download_with_progress(url, target_path)
 
                 zip_file = zipfile.ZipFile(target_path)
                 zip_file.extractall(unpacked_osm_folder_with_path)
@@ -315,17 +299,7 @@ class RawDataHandler:
         url = os.path.join(Constants.Paths.AZURE_URL + remote_folder, file)
         target_path = os.path.join(local_folder,#Constants.Paths.COUNTY_DATA.FULL_PATH_FOLDER,
                                    file)
-        response = requests.get(url, stream=True)
-        if not response.ok: # Ie checking that the HTTP status code is 'OK'
-            raise Exception(f"Error downloading file {file}")
-
-        with open(target_path, 'wb') as f:
-            f.write(response.raw.read())
-            f.seek(0, os.SEEK_END)
-            size = f.tell()
-            if size == 0:
-                raise Exception(f"Error downloading {file}: file is empty")
-        return
+        download_with_progress(url, target_path)
 
     @staticmethod
     # def unpack_data(archive: str):
@@ -364,3 +338,25 @@ class RawDataHandler:
         if self._msoas_risk_list is None:
             raise Exception("MSOAs risk file not found")
         return self._msoas_risk_list
+
+
+def download_with_progress(url: str,
+                           local_path: str):
+    """
+    Downloads a file, showing a progress bar. Overwrites any existing files.
+    """
+    total_bytes = int(requests.head(url).headers["Content-Length"])
+    chunk_size = 1024
+
+    with open(local_path, 'wb') as f:
+        with requests.get(url, stream=True) as req:
+            with tqdm(
+                    unit='B',
+                    unit_scale=True,
+                    unit_divisor=chunk_size,
+                    total=total_bytes,
+                    desc=os.path.basename(url)
+            ) as progress:
+                for chunk in req.iter_content(chunk_size=chunk_size):
+                    num_bytes = f.write(chunk)
+                    progress.update(num_bytes)
