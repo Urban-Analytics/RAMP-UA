@@ -34,11 +34,11 @@ The model is then run in two steps:
 
 7. The "initialisation" step processes the raw data for the chosen area (needs to be run only once for each new area) in accordance with the parameters file set above; use:
 ```bash
-$ python coding/main_initialisation.py -p model_parameters/default.yml
+$ python main_initialisation.py -p model_parameters/default.yml
 ```
 8. The "model" step runs the actual model and opens a dashboard to visualise the results in accordance with the parameters file set above; use:
 ```bash
-$ python coding/main_model.py -p model_parameters/default.yml
+$ python main_model.py -p model_parameters/default.yml
 ```
 
 ## Troubleshooting
