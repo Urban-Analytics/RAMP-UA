@@ -10,6 +10,7 @@ import time
 import tqdm
 import pandas as pd
 import random
+import datetime
 
 from typing import List
 from microsim.opencl.ramp.snapshot import Snapshot
@@ -526,7 +527,6 @@ class OpenCLWrapper(object):
         m(random_variables_dict=={"random_param1":2.0, "random_param2":0.5})``
         That method was suggested here: https://github.com/ICB-DCM/pyABC/issues/446
         """
-        x=1
         # Set administrative parameters
         self.quiet = quiet
         self.use_gpu = use_gpu
@@ -579,23 +579,138 @@ class OpenCLWrapper(object):
                           _random_params_dict=random_params_dict)
         return m.run()
 
+        # Return the current state of the model in a dictionary.
+        # The most important thing to return is the snapshot (i.e. this model's state) but we an include other
+        # things as well that might be useful.
+        disease_statuses = snapshot.buffers.people_statuses.copy()
+        print(f"OpenclRunner is running model {model_number}", ' in ',  datetime.datetime.now() - now, sep = '')
+        return {"disease_statuses": disease_statuses, "model_number": model_number, "run_time":datetime.datetime.now() - now }
+
+    @staticmethod
+    def summary_stats(raw_model_results: dict) -> dict:
+        """Takes raw model results, as output from `__call__` and passed them on to the
+        `distance` function. This doesn't actually calculate summary statistics, nor do
+        anything else useful in itself, but is useful because anything returned in the
+        dictionary is added to the results database, so we can recover a model state, not
+        just it's results.
+
+        :param raw_model_results: dictionary of model results as output from __call__.
+        :return: processed model results.
+        """
+        # Check that we receive everything that we expect to
+        if "disease_statuses" not in raw_model_results.keys():
+            raise Exception(f"No 'disease_statuses' item found in the model results that are passed "
+                            f"to summary_stats: {raw_model_results}")
+
+        # Just pass the model results on. The 'distance' function can work out how good the results
+        # are. The important thing is that the model summary will now be stored by ABC in the database
+        return raw_model_results
+
+    # @staticmethod
+    def distance(sim:dict, obs: dict) -> dict:
+        """Calculate the distance between the number of cases in the model by MSOA compared to some observations (case data).
+        All lists are assumed to be in the same MSOA order (e.g. first element in each list corresponds to the number of cases
+        in the same MSOA).
+        
+        :param sim: Case data per MSOA. A dictionary with two lists:
+          - Symp (number of presymptomatic people in each MSOA in the current day
+          - Asymp (number of asymptomatic people in each MSOA in the current day)
+        :param obs: Same as `sim`, but have lists have the number of (pre)symptomatic people from real case data
+        """
+        # model_disease_status = sim['disease_status']
+        # # Convert to dataframe
+        # model_disease_status_df = pd.DataFrame({'disease': model_disease_status})
+        #
+        # # Join the disease status of each individual to the df containing info on each individual
+        # individuals_df = obs['individuals']
+        # model_disease_status_df = pd.concat([individuals_df.reset_index(drop=True), model_disease_status_df], axis=1)
+        #
+        # # Find the number of each disease status by area
+        # model_disease_status_by_area = (pd.crosstab([model_disease_status_df.area], model_disease_status_df.disease))
+        # # Add column with 'diseased' column encompassing states 1, 2, 3 and 4
+        #
+        # model_disease_status_by_area['model_diseased'] = model_disease_status_by_area.iloc[:, -5:-1].sum(axis=1)
+
+        ########### Model
+        # Find the disease status of each individual in the model run on each day from day 1-14
+        #day14_model_disease_statuses = sim['disease_status']
+        cumulative_model_disease_statuses = sim['people_statuses_per_day']
+
+        ################### Convert to dataframe
+        # Cases on day 14
+        #day14_model_disease_statuses_df = pd.DataFrame({'disease_status_day14': day14_model_disease_statuses})
+        # Cumulative cases
+        # cumulative_model_disease_statuses is a 1D array with the results for each day stacked on top of each other
+        # and so to get the results for each day, need to split off each 695,309 results
+        cumulative_model_disease_statuses_df = pd.DataFrame()
+        colnames = []
+        for i in range(1,15):
+            colnames.append('Day' + str(i))
+            df = pd.DataFrame(cumulative_model_disease_statuses[(695309*(i-1)):(695309*i)])
+            cumulative_model_disease_statuses_df = pd.concat([cumulative_model_disease_statuses_df, df], axis=1)
+        cumulative_model_disease_statuses_df.columns = colnames
+
+        ###### Load dataframe containing info on all individuals
+        individuals_df = obs['individuals']
+
+        # Join the disease status of each individual to the df containing info on each individual
+        # to create a dataframe containing the disease state of each individual on each day
+        #day14_model_disease_statuses_df = pd.concat([individuals_df.reset_index(drop=True), day14_model_disease_statuses_df], axis=1)
+        cumulative_model_disease_statuses_df= pd.concat([cumulative_model_disease_statuses_df, individuals_df], axis=1)
+
+        #### Find the total number of people in a disease status for each area on each day
+        cumulative_model_diseased_by_area = pd.DataFrame()
+        for i in range(1,15):
+            day = 'Day' + str(i)
+            # Find the total number of individuals in each disease status on this day
+            cumulative_model_disease_statuses_by_area = (pd.crosstab([cumulative_model_disease_statuses_df.area], cumulative_model_disease_statuses_df[day]))
+            # Add a column with the total number in any of the disease states
+            # list the disease status columns to include
+            columns_in_df = list(cumulative_model_disease_statuses_by_area.columns.values)
+            columns_to_include = [i for i in [1.0, 2.0, 3.0, 4.0] if i in columns_in_df]
+            cumulative_model_disease_statuses_by_area[day] = cumulative_model_disease_statuses_by_area[columns_to_include].sum(axis=1)
+            # Add this to the dataframe
+            cumulative_model_diseased_by_area = pd.concat([cumulative_model_diseased_by_area,cumulative_model_disease_statuses_by_area[day]], axis=1)
+        # Add a column containing the cumulative total over the 14 days
+        cumulative_model_diseased_by_area['14DayTotal_model'] = cumulative_model_diseased_by_area.sum(axis=1)
+
+        ########### Observations
+        observations = obs['observation']
+        # observations_df = pd.DataFrame({'observations' : observations})
+        # set index as the MSOA codes from the ....
+        observations_df = pd.DataFrame(data=observations[0:, 0:], index = cumulative_model_diseased_by_area.index,
+                          columns = ['day' + str(i) for i in range(1, observations.shape[1]+1)])
+        # Add a cumulative total of cases from the first 14 days
+        observations_df['14DayTotal_obs'] = observations_df.iloc[:, 0:14].sum(axis=1)
+
+        ## Join model with obs
+        obs_and_model_df = pd.concat([observations_df['14DayTotal_obs'], cumulative_model_diseased_by_area['14DayTotal_model']], axis=1)
+
+        # Find the euclidean difference between
+        difference = np.linalg.norm(np.array(obs_and_model_df['14DayTotal_obs']) - np.array(obs_and_model_df['14DayTotal_model']))
+        print(difference)
+
+        return difference
+
     def run(self):
-        x=1
+        # store start time in order to store run time
+        start_time = datetime.datetime.now()
+
         # Count how many times the model is run. This isn't an ID, but can be useful for debugging
         OpenCLWrapper.model_counter += 1
-        model_number =  OpenCLWrapper.model_counter
+        model_number = OpenCLWrapper.model_counter
+        # Print progress statement
         print(f"OpenclRunner is running model {model_number}")
 
         # If this is the first data assimilation window, we can just run the model as normal
         if self.start_day == 0:
-            assert self.current_particle_pop_df is None  # Shouldn't have any preivously-created particles
+            assert self.current_particle_pop_df is None  # Shouldn't have any previously-created particles
             # load snapshot
             snapshot = Snapshot.load_full_snapshot(path=self.snapshot_file)
             # set params
             snapshot.update_params(self.params)
             # Can set the random seed to make it deterministic (None means np will choose one randomly)
             snapshot.seed_prngs(seed=None)
-
             # Create a simulator and upload the snapshot data to the OpenCL device
             simulator = Simulator(snapshot, opencl_dir=self.opencl_dir, gpu=self.use_gpu)
             simulator.upload_all(snapshot.buffers)
@@ -615,6 +730,9 @@ class OpenCLWrapper(object):
             timestep_iterator = range(self.run_length) if self.quiet \
                 else tqdm(range(self.quiet), desc="Running simulation")
 
+            # Create array to store the disease statuses for each day
+            people_statuses_per_day = np.array([])
+
             iter_count = 0  # Count the total number of iterations
             # Run for iterations days
             for _ in timestep_iterator:
@@ -626,10 +744,18 @@ class OpenCLWrapper(object):
                 simulator.step()
                 iter_count += 1
 
-            # Update the statuses
-            simulator.download("people_statuses", snapshot.buffers.people_statuses)
+                # Download today's data
+                simulator.download("people_statuses", snapshot.buffers.people_statuses)
+                # Save the people's statuses
+                people_statuses_per_day = np.append(people_statuses_per_day, snapshot.buffers.people_statuses, axis=0)
+                #print(len(people_statuses_per_day))
+                #people_statuses_per_day.append(snapshot.buffers.people_statuses)
+            # Download the statuses at the end of the window (no need to do this now as we do it at the end of the for loop)
+            # simulator.download("people_statuses", snapshot.buffers.people_statuses)
+
             summary.update(iter_count, snapshot.buffers.people_statuses)
 
+            #print(len(people_statuses_per_day))
             if not self.quiet:
                 for i in range(self.run_length):
                     print(f"\nDay {i}")
@@ -658,94 +784,12 @@ class OpenCLWrapper(object):
         # The most important thing to return is the snapshot (i.e. this model's state) but we an include other
         # things as well that might be useful.
         disease_statuses = snapshot.buffers.people_statuses
-        return {"simulator": disease_statuses, "model_number": model_number}
-        #return disease_statuses
-        #return {"simulator": snapshot, "model_number": model_number}
-        #return {"simulator": 1, "model_number": model_number}
+        print(f"\t...took {datetime.datetime.now() - start_time}")
+        return {"disease_status": disease_statuses, "model_number": model_number,
+                "people_statuses_per_day": people_statuses_per_day}
+        # return disease_statuses
+        # return {"simulator": snapshot, "model_number": model_number}
+        # return {"simulator": 1, "model_number": model_number}
 
-    @staticmethod
-    def summary_stats(raw_model_results: dict) -> dict:
-        """Takes raw model results, as output from `__call__` and passed them on to the
-        `distance` function. This doesn't actually calculate summary statistics, nor do
-        anything else useful in itself, but is useful because anything returned in the
-        dictionary is added to the results database, so we can recover a model state, not
-        just it's results.
-
-        :param raw_model_results: dictionary of model results as output from __call__.
-        :return: processed model results.
-        """
-        x=0
-        # Check that we receive everything that we expect to
-        if "simulator" not in raw_model_results.keys():
-            raise Exception(f"No 'simulator' item found in the model results that are passed "
-                            f"to summary_stats: {raw_model_results}")
-
-        # Just pass the model results on. The 'distance' function can work out how good the results
-        # are. The important thing is that the model summary will now be stored by ABC in the database
-        #print(raw_model_results)
-        return raw_model_results
-
-    # @staticmethod
-    # def distance(sim: dict, obs: dict) -> dict:
-    #     """Calculate the difference (error) between simulated and observed data.
-    #
-    #     :param sim: a dictionary containing the simulated data
-    #     :param obs: a dictionary containing the observed (real) data
-    #     :return: a single distance measure (float). Lower is better."""
-    #     # Check that we receive everything that we expect to
-    #     x=1
-    #
-    #     if "simulator" not in sim.keys():
-    #         raise Exception(f"No 'simulator' item found in the model results that are passed "
-    #                         f"to summary_stats: {sim}")
-    #
-    #     # TODO HERE. Calculate the distance.
-    #     return 1
-
-    # @staticmethod
-    def distance(sim:dict, obs: dict) -> dict:
-        """Calculate the distance between the number of cases in the model by MSOA compared to some observations (case data).
-        All lists are assumed to be in the same MSOA order (e.g. first element in each list corresponds to the number of cases
-        in the same MSOA).
-        
-        :param sim: Case data per MSOA. A dictionary with two lists:
-          - Symp (number of presymptomatic people in each MSOA in the current day
-          - Asymp (number of asymptomatic people in each MSOA in the current day)
-        :param obs: Same as `sim`, but have lists have the number of (pre)symptomatic people from real case data
-        """
-        ########### Model
-        # Find the disease status of each indidivual in the model run
-        model_disease_status = sim['simulator']
-        # Convert to dataframe
-        model_disease_status_df = pd.DataFrame({'disease': model_disease_status})
-
-        # Join the disease status of each individual to the df containing info on each individual
-        individuals_df = obs['individuals']
-        model_disease_status_df = pd.concat([individuals_df.reset_index(drop=True), model_disease_status_df], axis=1)
-
-        # Find the number of each disease status by area
-        model_disease_status_by_area = (pd.crosstab([model_disease_status_df.area], model_disease_status_df.disease))
-        # Add column with 'diseased' column encompassing states 1, 2, 3 and 4
-
-        model_disease_status_by_area['model_diseased']  = model_disease_status_by_area.iloc[:, -5:-1].sum(axis=1)
-        #model_disease_status_by_area['model_diseased'] = model_disease_status_by_area[1] + model_disease_status_by_area[2] + model_disease_status_by_area[3] + model_disease_status_by_area[4]
-
-        ########### Observations
-        observations = obs['observation']
-        # observations_df = pd.DataFrame({'observations' : observations})
-        # set index as the MSOA codes from the ....
-        observations_df = pd.DataFrame(data=observations[0:, 0:], index = model_disease_status_by_area.index,
-                          columns = ['day' + str(i) for i in range(observations.shape[1])])
-
-        ## Join model with obs
-        obs_and_model_df = pd.concat([observations_df, model_disease_status_by_area['model_diseased']], axis=1)
-
-        # Find the euclidean difference between
-        difference = np.linalg.norm(np.array(obs_and_model_df['day14']) - np.array(obs_and_model_df['model_diseased']))
-        #print(difference)
-
-        #return 1
-        return difference
-    
 
     
