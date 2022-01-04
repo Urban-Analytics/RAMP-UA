@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import scipy.stats as stats
 import sys
 import datetime
+import matplotlib.cm as cm
 
 # For easier plots
 import plotly.express as px
@@ -85,6 +86,18 @@ cases_msoa_melt = cases_msoa_melt.set_index('MSOA11CD', drop=True) # Keep the in
 cases_msoa_melt['day'] = cases_msoa_melt['variable'].apply(lambda day: int(day[1:])) # Strip off the initial 'D' to get the day number
 
 ##########################################################################
+#########################################################################
+# Inspect observations
+##########################################################################
+#########################################################################
+observations_df = cases_msoa.iloc[:, 0:405]
+observations_df.reset_index(level=0, inplace=True)
+observations_df.rename(columns={'MSOA11CD':'msoa11cd'}, inplace=True)
+
+observations_df_t = observations_df.transpose()
+observations_df_t.index = observations_df_t.index.str[1:]
+
+################################
 ##########################################################################
 # Setup Model
 # Optionally initialise the population, delete the old OpenCL model snapshot (i.e. an already-initialised model) and
@@ -159,6 +172,9 @@ fig.show()
 ## Create a distrubtion from these random variables
 decorated_rvs = { name: pyabc.LowerBoundDecorator(rv, 0.0) for name, rv in all_rv.items() }
 
+# Define the original priors
+original_priors = pyabc.Distribution(**decorated_rvs)
+
 ##########################################################################
 ##########################################################################
 # Setup loop for running model
@@ -173,101 +189,42 @@ admin_params = { "quiet":True, "use_gpu": True, "store_detailed_counts": True, "
                 "current_particle_pop_df": None,
                 "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR}
 
-###################################
-# Test 1000 runs of model, if each time run time gets longer
-###################################
-# Create a dataframe to store the details on how long each model run takes
-all_times_df =pd.DataFrame()
+####################################################################################
+# Create dictionaries to store the dfs, weights or history from each window (don't need all of these, but testing for now)
+dfs_dict = {}
+weights_dict = {}
+history_dict = {}
 
-# Test for window lengths of 1,14,28,42,57,70,84 days:
-for run_length in [1, 14, 28, 42, 56, 70, 84]:
-    # Edit the run length in the admin params
-    admin_params['run_length'] = run_length
+# Store starting time to use to calculate how long processing the whole window has taken
+starting_windows_time = datetime.datetime.now()
+
+# Define number of windows to run for
+windows =3
+
+# Loop through each window
+for window_number in range(1,windows+1):
+    print ("Window number: ", window_number)
+    print("Running for 14 days")    
+    
+    # Edit the da_window size in the admin params
+    admin_params['run_length'] = admin_params['run_length'] * window_number
+    print("Running for {} days".format(da_window_size * window_number))
+
     # Create template for model
     template = OpenCLWrapper(const_params_dict, **admin_params)
     # Not sure why this is needed. Wthout it we get an error when passing the template object to ABCSMC below
     template.__name__ = OpenCLWrapper.__name__
-    # Create list to store the time taken in each model run
-    times_lst = []
-    # Run the model 100 times, store the time taken in the list
-    for i in range(1,50):
-        test = template.run()
-        time = test['run_time']
-        times_lst.append(time)
-    # convert to dataframe
-    times_df = pd.DataFrame({run_length: times_lst})
-    # convert to a float
-    times_df = times_df[run_length]/ np.timedelta64(1, 's')
-    # Add to te dataframe containing all the results
-    all_times_df = pd.concat([all_times_df.reset_index(drop=True), times_df], axis=1)
-
-# Plot the lines
-fig, axes = plt.subplots()
-for i in [1, 14, 28, 42, 56, 70, 84]:
-    all_times_df[i].plot.line()
-plt.xlabel("model run no")
-plt.ylabel("seconds")
-plt.legend()
-fig.show()
-
-####################################################################################
-# This was for plotting the distribution / kde?
-dfs_dict = {}
-weights_dict = {}
-windows =10
-starting_windows_time = datetime.datetime.now()
-for window_number in range(1,windows):
-
-    print ("Window number: ", window_number)
-    print("Running for 14 days")
-    #print("Running for {} days".format(da_window_size * window_number))
-    
-    # Edit the da_window size in the admin params
-    #admin_params['run_length'] = admin_params['run_length'] * window_number
-
-    # Template for model
-    template = OpenCLWrapper(const_params_dict, **admin_params)
-    # Not sure why this is needed. Wthout it we get an error when passing the template object to ABCSMC below
-    template.__name__ = OpenCLWrapper.__name__
-    
+     
     # Define priors
+    # If first window, then use user-specified (original) priors
     if window_number ==1:
-        priors = pyabc.Distribution(**decorated_rvs)
+        priors =original_priors
+    # If a subsequent window, then generate distribution from posterior from previous window
     else:
         priors = ArbitraryDistribution(abc_history)
         #priors.display()
 
-        # rvs = priors.rvs()
-
-        # Define priors
-        # Assume both paramerers are normally distributed around 5 and 6 respectivly (mostly arbitrary)
-        #post_asymptomatic_rv = pyabc.RV("norm", rvs['asymptomatic'], 1)
-
-        #param_a_rv = pyabc.RV("norm", rvs['param_a'], 1)
-        #param_b_rv = pyabc.RV("norm", rvs['param_b'], 1)
-
-        # Individual multipliers
-        # Asymptomatic is normal such that the middle 95% is the range [0.138, 0.75]  (see justification in abc)
-        # No idea about (pre)symptomatic, so use same distribution as asymptomatic
-        presymptomatic_rv, symptomatic_rv, asymptomatic_rv = (pyabc.RV("norm", 0.444, 0.155) for _ in range(3))
-
-        # Group all random variables together and give them a string name (this is needed for the distribution later)
-        #all_rv = {
-        #    "retail": retail_rv, "primary_school": primary_school_rv, "secondary_school": secondary_school_rv,
-        #    "work": work_rv,
-        #    "presymptomatic": presymptomatic_rv, "symptomatic": symptomatic_rv, "asymptomatic": asymptomatic_rv
-        #}
-
-        #X = np.linspace(-0, 10, 1000)
-        #plt.plot(X, pyabc.Distribution(param=param_a_rv).pdf({"param": X}), '--',
-        #         label="Paremter A", lw=3)
-        #plt.plot(X, pyabc.Distribution(param=param_b_rv).pdf({"param": X}), ':',
-        #         label="Parameter B", lw=3)
-        #plt.autoscale(tight=True)
-        #plt.legend(title=r"Model parameters");
-        #plt.show()
-    
-    # set up model
+    # Set up model
     abc = pyabc.ABCSMC(
         models=template, # Model (could be a list)
         parameter_priors=priors, # Priors (could be a list)
@@ -281,72 +238,192 @@ for window_number in range(1,windows):
     # Observations are cases per msoa, but make it into a numpy array because this may be more efficient
     # (first axis is the msoa number, second is the day)
     observations = cases_msoa.iloc[:,0:405].to_numpy()
-    
-    db_path = ("sqlite:///" + "ramp_da2_window{}.db".format(window_number))
+
+    # Path to database?
+    db_path = ("sqlite:///" + "ramp_da.db")
     run_id = abc.new(db_path, {'observation': observations, "individuals":individuals_df})
     
-    # Run :
+    # Run model
     abc_history = abc.run(max_nr_populations=2)
-    x=1
 
     # Save some info on the posterior parameter distributions.
-    _df, _w = abc.history.get_distribution(m=0, t=abc.history.max_t)
+    for t in range(0,abc.history.max_t+1):
+        print(t)
+        # for this t (population) extract the 100 particle parameter values, and their weights
+        df_t1, w_t1 = abc.history.get_distribution(m=0, t=t)
+        # Are these equivalent? yes!
+        #df_t1_2, w_t1_2 = abc_history.get_distribution(m=0, t=abc_history.max_t)
+        #df_t1.equals(df_t1_2)
+        #(w_t1 == w_t1_2).all()
 
-    # Save these for use in plotting the prior on the plot of parameter values in each population
-    dfs_dict[window_number] = _df
-    weights_dict[window_number] = _w
+        # Save these for use in plotting the prior on the plot of parameter values in each population
+        dfs_dict["w{},pop{}".format(window_number, t)] = df_t1
+        weights_dict["w{}, pop{}".format(window_number, t)] = w_t1
+        history_dict["w{}".format(window_number)] = abc_history
 
     # Merge dataframe and weights and sort by weight (highest weight at the top)
-    _df['weight'] = _w
-    posterior_df = _df.sort_values('weight', ascending=False).reset_index()
-    posterior_df.to_csv("Plots_test/window_number{}_posterior_df.csv".format(window_number), index = False)
+    #_df['weight'] = _w
+    #posterior_df = _df.sort_values('weight', ascending=False).reset_index()
+    #posterior_df.to_csv("Plots/window_number{}_posterior_df.csv".format(window_number), index = False)
 
-    # ##########################################################################
-    # ##########################################################################
-    # ### Algorithm diagnostics
-    # ##########################################################################
-    # ##########################################################################
-    _, arr_ax = plt.subplots(2, 2)
+# ##########################################################################
+# ##########################################################################
+# ### Save dicts
+# ##########################################################################
+# with open('8windows_14days_each_finalpop_dfs_dict.pkl', 'wb') as f:
+#     pickle.dump(dfs_dict, f)
+# with open('8windows_14days_each_finalpop_ws_dict.pkl', 'wb') as f:
+#     pickle.dump(weights_dict, f)
+# with open('8windows_14days_each_finalpop_history_dict.pkl', 'wb') as f:
+#     pickle.dump(history_dict, f)
+#
+# with open('8windows_14days_each_finalpop_dfs_dict.pkl', 'rb') as f:
+#     dfs_dict = pickle.load(f)
+# with open('8windows_14days_each_finalpop_ws_dict.pkl', 'rb') as f:
+#     weights_dict = pickle.load(f)
+# with open('8windows_14days_each_finalpop_history_dict.pkl', 'rb') as f:
+#     history_dict = pickle.load(f)
+#
+# ##########################################################################
+# ##########################################################################
+# ### Plot the final population for each window
+# ##########################################################################
+# ##########################################################################
+# evenly_spaced_interval = np.linspace(0, 1, 8)
+# colors = [cm.autumn_r(x) for x in evenly_spaced_interval]
+#
+# fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
+# for i, param in enumerate(original_priors.keys()):
+#     ax = axes.flat[i]
+#     color_i =0
+#     for history_name, history in history_dict.items():
+#         color = colors[color_i]
+#         df, w = history.get_distribution(m=0, t=history.max_t)
+#         pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
+#                 label=history_name,
+#                 #alpha=1.0 if t==0 else float(t)/abc_history.max_t, # Make earlier populations transparent
+#                 color= color)
+#         if param!="work":
+#                 ax.set_xlim(0,1)
+#         if param=="secondary_school" or param=='presymptomatic' or param =='symptomatic':
+#              ax.set_ylim(0,2.5)
+#         elif param == 'retail' or param == 'primary_school':
+#              ax.set_ylim(0,1.4)
+#         elif param == 'work' :
+#              ax.set_ylim(0,20)
+#              ax.set_xlim(0,0.4)
+#         elif param == 'asymptomatic' :
+#              ax.set_ylim(0,7)
+#         ax.legend(fontsize="small")
+#         #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
+#         #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
+#         ax.set_title(f"{param}")
+#         handles, labels = ax.get_legend_handles_labels()
+#         ax.get_legend().remove()
+#         color_i = color_i +1
+# fig.legend(handles, labels, loc='center right', fontsize = 17,
+#            bbox_to_anchor=(1.01, 0.17))
+#           # ncol = 8, bbox_to_anchor=(0.5, -0.07))
+# axes[2,2].set_axis_off()
+# axes[2,1].set_axis_off()
+# fig.tight_layout()
+# fig.show()
+# fig.savefig("Plots/8windows_14days_each_finalpop.jpg")
+#
+#
+# # ##########################################################################
+# # ##########################################################################
+# # ### Plot all populations for each window
+# # ##########################################################################
+# # ##########################################################################
+# colors = [cm.autumn_r(x) for x in evenly_spaced_interval]
+# alphas= [1, 1]
+# linestyles = ['dotted', 'solid']
+# fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
+# for i, param in enumerate(original_priors.keys()):
+#     ax = axes.flat[i]
+#     col_i = 0
+#     for history_name, history in history_dict.items():
+#         for t in range(history.max_t + 1):
+#             print(t)
+#             df, w = history.get_distribution(m=0, t=t)
+#             pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
+#                 label="{}, pop {}".format(history_name, t),
+#                 alpha= alphas[t],
+#                 color = colors[col_i],
+#                 linestyle = linestyles[t])
+#             if param!="work":
+#                 ax.set_xlim(0,1)
+#             if param=="secondary_school" or param=='presymptomatic' or param =='symptomatic':
+#                  ax.set_ylim(0,2.5)
+#             elif param == 'retail' or param == 'primary_school':
+#                  ax.set_ylim(0,1.4)
+#             elif param == 'work' :
+#                  ax.set_ylim(0,20)
+#             elif param == 'asymptomatic' :
+#                  ax.set_ylim(0,7)
+#             ax.legend(fontsize="small")
+#             #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
+#             #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
+#             ax.set_title(f"{param}")
+#             handles, labels = ax.get_legend_handles_labels()
+#             ax.get_legend().remove()
+#         col_i = col_i+1
+# axes[2,2].set_axis_off()
+# axes[2,1].set_axis_off()
+# fig.legend(handles, labels, loc='center right', fontsize = 17,ncol =2,
+#            bbox_to_anchor=(1.01, 0.17))
+# fig.tight_layout()
+# fig.show()
+# fig.savefig("Plots/8windows_14days_each_allpops.jpg")
 
-    pyabc.visualization.plot_sample_numbers(abc_history, ax=arr_ax[0][0])
-    pyabc.visualization.plot_epsilons(abc_history, ax=arr_ax[0][1])
-    #pyabc.visualization.plot_credible_intervals(
-    #    history, levels=[0.95, 0.9, 0.5], ts=[0, 1, 2, 3, 4],
-    #    show_mean=True, show_kde_max_1d=True,
-    #    refval={'mean': 2.5},
-    #    arr_ax=arr_ax[1][0])
-    pyabc.visualization.plot_effective_sample_sizes(abc_history, ax=arr_ax[1][1])
 
-    plt.gcf().set_size_inches((12, 8))
-    plt.gcf().tight_layout()
-    plt.savefig("Plots_test/window_number{}_algorithm_diagnostics.jpg".format(window_number))
-    plt.show()
-
-    # ########## Plot the marginal posteriors
-    fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
-
-    #cmap = { 0:'k',1:'b',2:'y',3:'g',4:'r' }  # Do this automatically for len(params)
-
-    for i, param in enumerate(original_priors.keys()):
-        ax = axes.flat[i]
-        for t in range(abc_history.max_t + 1):
-            df, w = abc_history.get_distribution(m=0, t=t)
-            pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
-                label=f"{param} PDF t={t}",
-                alpha=1.0 if t==0 else float(t)/abc_history.max_t, # Make earlier populations transparent
-                color= "black" if t==abc_history.max_t else None # Make the last one black
-            )
-            if param!="work":
-                ax.set_xlim(0,1)
-            ax.legend(fontsize="small")
-            #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
-            #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
-            ax.set_title(f"{param}")
-
-    fig.tight_layout()
-    fig.show()
-    fig.savefig("Plots_test/window_number{}_marginal_posteriors.jpg".format(window_number))
-
-    print("Finished window {} in {}".format(window_number, datetime.datetime.now()- starting_windows_time))
-    ##os.remove("ramp_da2.db")
-
+#     # # ##########################################################################
+#     # # ##########################################################################
+#     # # ### Algorithm diagnostics
+#     # # ##########################################################################
+#     # # ##########################################################################
+#     # _, arr_ax = plt.subplots(2, 2)
+#     #
+#     # pyabc.visualization.plot_sample_numbers(abc_history, ax=arr_ax[0][0])
+#     # pyabc.visualization.plot_epsilons(abc_history, ax=arr_ax[0][1])
+#     # #pyabc.visualization.plot_credible_intervals(
+#     # #    history, levels=[0.95, 0.9, 0.5], ts=[0, 1, 2, 3, 4],
+#     # #    show_mean=True, show_kde_max_1d=True,
+#     # #    refval={'mean': 2.5},
+#     # #    arr_ax=arr_ax[1][0])
+#     # pyabc.visualization.plot_effective_sample_sizes(abc_history, ax=arr_ax[1][1])
+#     #
+#     # plt.gcf().set_size_inches((12, 8))
+#     # plt.gcf().tight_layout()
+#     # plt.savefig("Plots/window_number{}_algorithm_diagnostics.jpg".format(window_number))
+#     # plt.show()
+#     #
+#     # # ########## Plot the marginal posteriors
+#     # fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
+#     #
+#     # #cmap = { 0:'k',1:'b',2:'y',3:'g',4:'r' }  # Do this automatically for len(params)
+#     #
+#     # for i, param in enumerate(original_priors.keys()):
+#     #     ax = axes.flat[i]
+#     #     for t in range(abc_history.max_t + 1):
+#     #         df, w = abc_history.get_distribution(m=0, t=t)
+#     #         pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
+#     #             label=f"{param} PDF t={t}",
+#     #             alpha=1.0 if t==0 else float(t)/abc_history.max_t, # Make earlier populations transparent
+#     #             color= "black" if t==abc_history.max_t else None # Make the last one black
+#     #         )
+#     #         if param!="work":
+#     #             ax.set_xlim(0,1)
+#     #         ax.legend(fontsize="small")
+#     #         #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
+#     #         #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
+#     #         ax.set_title(f"{param}")
+#     #
+#     # fig.tight_layout()
+#     # fig.show()
+#     # fig.savefig("Plots/window_number{}_marginal_posteriors.jpg".format(window_number))
+#     #
+#     # print("Finished window {} in {}".format(window_number, datetime.datetime.now()- starting_windows_time))
+#     # ##os.remove("ramp_da2.db")
+#
