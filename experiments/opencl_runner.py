@@ -620,12 +620,16 @@ class OpenCLWrapper(object):
         :param sim:
         :param obs:
         """
+        
         start_time = datetime.datetime.now()
+
         # Get the model run length (in days)
         n_days = sim['model_run_length']
 
         #############################################################################
-        ########### Model
+        # Create dataframe containing the disease status of each individual on each
+        # day the model has been ran for, and the area (MSOA) they live in 
+        # IS THIS CUMULATIVE?
         #############################################################################
         # Get the disease status of each individual on each day in the model run
         cumulative_model_disease_statuses = sim['people_statuses_per_day']
@@ -651,7 +655,19 @@ class OpenCLWrapper(object):
         # including which MSOA they are found within
         cumulative_model_disease_statuses_df= pd.concat([cumulative_model_disease_statuses_df, individuals_df], axis=1)
 
-        ########################
+        ########################################################################
+        ########################################################################
+        # Get the number of individuals in disease states 1-4 for each area (MSOA)
+        # for each day the model is run for
+        # This was causing a memory error when being run for more than 14 days 
+        # to do with using pd.crosstab
+        # So now it does the crosstab calculation for each 14 day chunk in the run 
+        # period seperately
+        ########################################################################
+        ########################################################################
+        # Create lists containing start and end days for each 14 day chunk of time
+        # within the total number of days in this model run
+        # Need to 
         start_days = [1]
         end_days = [14]
 
@@ -662,7 +678,6 @@ class OpenCLWrapper(object):
 
         cumulative_model_diseased_by_area = pd.DataFrame()
         for start_day, end_day in zip(start_days, end_days):
-            print(start_day, end_day)
             cumulative_model_diseased_by_area_14days = pd.DataFrame()
             # Loop through each day...
             for i in range(start_day,end_day+1):
@@ -683,43 +698,11 @@ class OpenCLWrapper(object):
             cumulative_model_diseased_by_area = pd.concat([cumulative_model_diseased_by_area, cumulative_model_diseased_by_area_14days], axis=1)
         cumulative_model_diseased_by_area['CumulativeTotal_model'] = cumulative_model_diseased_by_area.sum(axis=1)
 
-        ###### Create dataframe containing the number of individuals in any of disease states 1-4
-        # ###### for each day being considered
-        #
-        # # Create empty dataframe to population
-        # cumulative_model_diseased_by_area = pd.DataFrame()
-        # # Define all area names (e.g. MSOA names)
-        # AreaNames = cumulative_model_disease_statuses_df.area.unique()
-        # # why is dict needed?
-        # DataFrameDict = {elem: pd.DataFrame for elem in AreaNames}
-        # key_list = [k for k in DataFrameDict.keys()]
-        # for key in DataFrameDict.keys():
-        #     # Extract dataframe containing only rows of individuals in this area
-        #     this_area = cumulative_model_disease_statuses_df[:][cumulative_model_disease_statuses_df.area == key]
-        #     # Create empty dataframe to store counts for this area of anyone in any disease status from 1-4
-        #     this_area_all_diseased = pd.DataFrame()
-        #     # Loop through each day...
-        #     for i in range(1,n_days+1):
-        #         day = 'Day' + str(i)
-        #         # Find the total number of individuals in each disease status on this day
-        #         cumulative_model_disease_statuses_by_area = (pd.crosstab([this_area.area], this_area[day]))
-        #         # Add a column with the total number in any of the disease states
-        #         # list the disease status columns to include
-        #         columns_in_df = list(cumulative_model_disease_statuses_by_area.columns.values)
-        #         columns_to_include = [i for i in [1.0, 2.0, 3.0, 4.0] if i in columns_in_df]
-        #         # Filter out columns we don't want to include
-        #         cumulative_model_disease_statuses_by_area[day] = cumulative_model_disease_statuses_by_area[columns_to_include].sum(axis=1)
-        #         # Add this to the dataframe to store results in
-        #         this_area_all_diseased = pd.concat([this_area_all_diseased,cumulative_model_disease_statuses_by_area[day]], axis=1)
-        #     # Add a column containing the cumulative total over all the days
-        #     this_area_all_diseased['CumulativeTotal_model'] = this_area_all_diseased.sum(axis=1)
-        #
-        #     # Join to dataframe
-        #     cumulative_model_diseased_by_area = pd.concat([cumulative_model_diseased_by_area, this_area_all_diseased])
-
-        #############################################################################
-        ########### Observations
-        #############################################################################
+        ########################################################################
+        ########################################################################
+        # Create dataframe containing the observed number of cases on each day
+        ########################################################################
+        ########################################################################
         # Get the observations
         observations = obs['observation']
         # Create as dataframe
@@ -728,36 +711,18 @@ class OpenCLWrapper(object):
         # Add a cumulative total of cases from the first X days
         observations_df['CumulativeTotal_obs'] = observations_df.iloc[:, 0:n_days].sum(axis=1)
 
+        ########################################################################
+        ########################################################################
+        # Find euclidean difference between cumulative number of cases over the
+        # number of days being considered
+        ########################################################################
+        ########################################################################
         ## Join model with obs
         obs_and_model_df = pd.concat([observations_df['CumulativeTotal_obs'], cumulative_model_diseased_by_area['CumulativeTotal_model']], axis=1)
 
         # Find the euclidean difference between the cumulative cases in model and obs
         difference = np.linalg.norm(np.array(obs_and_model_df['CumulativeTotal_obs']) - np.array(obs_and_model_df['CumulativeTotal_model']))
 
-        print(difference)
-
-        # ### Plotting
-        # cumulative_model_diseased_Devon = cumulative_model_diseased_by_area.copy()
-        # cumulative_model_diseased_Devon.loc['Total_model',:]= cumulative_model_diseased_Devon.sum(axis=0)
-        # cumulative_model_diseased_Devon = cumulative_model_diseased_Devon.drop(cumulative_model_diseased_Devon.index.values.tolist()[:-1])
-        #
-        # observations_df_Devon = observations_df.copy()
-        # observations_df_Devon.loc['Total_obs',:]= observations_df_Devon.sum(axis=0)
-        # observations_df_Devon = observations_df_Devon.drop(observations_df_Devon.index.values.tolist()[:-1])
-        #
-        # obs_and_model_df_Devon = pd.concat([observations_df_Devon, cumulative_model_diseased_Devon], axis=0)
-        # # Keep only first 14 days
-        # obs_and_model_df_Devon = obs_and_model_df_Devon.iloc[:, 0:14]
-        #
-        # obs_and_model_df_Devon_T = obs_and_model_df_Devon.T
-        # obs_and_model_df_Devon_T['CUMSUM_Obs'] = obs_and_model_df_Devon_T['Total_obs'].cumsum()
-        # obs_and_model_df_Devon_T['CUMSUM_Model'] = obs_and_model_df_Devon_T['Total_model'].cumsum()
-        #
-        # #obs_and_model_df_Devon_T.plot(y=['CUMSUM_Obs', 'CUMSUM_Model'], figsize=(10, 5))
-        # #plt.ylabel("Cases")
-        # #print("I am here")
-        # #plt.savefig("saving.png")
-        # #plt.show()
         print("Found distance in {}".format(datetime.datetime.now() - start_time))
         return difference
 
