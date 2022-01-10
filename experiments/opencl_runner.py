@@ -11,6 +11,7 @@ import tqdm
 import pandas as pd
 import random
 import datetime
+import copy
 
 from typing import List
 from microsim.opencl.ramp.snapshot import Snapshot
@@ -20,6 +21,7 @@ from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, Loc
 from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 from microsim.opencl.ramp.summary import Summary
 
+import matplotlib.pyplot as plt
 
 class OpenCLRunner:
     """Includes useful functions for running the OpenCL model in notebooks"""
@@ -581,7 +583,6 @@ class OpenCLWrapper(object):
         # Return the current state of the model in a dictionary.
         # The most important thing to return is the snapshot (i.e. this model's state) but we an include other
         # things as well that might be useful.
-        #self.run_length)
         disease_statuses = snapshot.buffers.people_statuses.copy()
         print(f"OpenclRunner is running model {model_number}", ' in ',  datetime.datetime.now() - now, sep = '')
         return {"disease_statuses": disease_statuses, "model_number": model_number, "run_time":datetime.datetime.now() - now }
@@ -598,13 +599,17 @@ class OpenCLWrapper(object):
         :return: processed model results.
         """
         # Check that we receive everything that we expect to
+        print(raw_model_results.keys())
         if "disease_statuses" not in raw_model_results.keys():
             raise Exception(f"No 'disease_statuses' item found in the model results that are passed "
                             f"to summary_stats: {raw_model_results}")
 
+        model_result_summary = raw_model_results['model_result']
+        return {"model_summary": model_result_summary, "test": "SUMMARY_TEST"}
+
         # Just pass the model results on. The 'distance' function can work out how good the results
         # are. The important thing is that the model summary will now be stored by ABC in the database
-        return raw_model_results
+        #return raw_model_results
 
     # @staticmethod
     def distance(sim:dict, obs: dict):
@@ -615,7 +620,7 @@ class OpenCLWrapper(object):
         :param sim:
         :param obs:
         """
-
+        start_time = datetime.datetime.now()
         # Get the model run length (in days)
         n_days = sim['model_run_length']
 
@@ -639,29 +644,78 @@ class OpenCLWrapper(object):
 
         ###### Load dataframe containing info on all individuals
         individuals_df = obs['individuals']
+        # Keep just column with the MSOA area code each individual lives in
+        individuals_df = individuals_df[['area']]
 
         # Join DF containing disease status of each individual on each day to the DF containing info on each individual
         # including which MSOA they are found within
         cumulative_model_disease_statuses_df= pd.concat([cumulative_model_disease_statuses_df, individuals_df], axis=1)
 
-        #### Find the total number of people in a disease status for each MSOA on each day
-        # Create empty dataframe to population
+        ########################
+        start_days = [1]
+        end_days = [14]
+
+        if n_days != 14:
+            for i in range(1, int(n_days / 14)):
+                start_days.append(i * 14 + 1)
+                end_days.append(i * 14 + 14)
+
         cumulative_model_diseased_by_area = pd.DataFrame()
-        # Loop through each day...
-        for i in range(1,n_days+1):
-            day = 'Day' + str(i)
-            # Find the total number of individuals in each disease status on this day
-            cumulative_model_disease_statuses_by_area = (pd.crosstab([cumulative_model_disease_statuses_df.area], cumulative_model_disease_statuses_df[day]))
-            # Add a column with the total number in any of the disease states
-            # list the disease status columns to include
-            columns_in_df = list(cumulative_model_disease_statuses_by_area.columns.values)
-            columns_to_include = [i for i in [1.0, 2.0, 3.0, 4.0] if i in columns_in_df]
-            # Filter out columns we don't want to include
-            cumulative_model_disease_statuses_by_area[day] = cumulative_model_disease_statuses_by_area[columns_to_include].sum(axis=1)
-            # Add this to the dataframe to store results in
-            cumulative_model_diseased_by_area = pd.concat([cumulative_model_diseased_by_area,cumulative_model_disease_statuses_by_area[day]], axis=1)
-        # Add a column containing the cumulative total over all the days
+        for start_day, end_day in zip(start_days, end_days):
+            print(start_day, end_day)
+            cumulative_model_diseased_by_area_14days = pd.DataFrame()
+            # Loop through each day...
+            for i in range(start_day,end_day+1):
+                day = 'Day' + str(i)
+                # Find the total number of individuals in each disease status on this day
+                cumulative_model_disease_statuses_by_area = (pd.crosstab([cumulative_model_disease_statuses_df.area], cumulative_model_disease_statuses_df[day]))
+                # Add a column with the total number in any of the disease states
+                # list the disease status columns to include
+                columns_in_df = list(cumulative_model_disease_statuses_by_area.columns.values)
+                columns_to_include = [i for i in [1.0, 2.0, 3.0, 4.0] if i in columns_in_df]
+                # Filter out columns we don't want to include
+                cumulative_model_disease_statuses_by_area[day] = cumulative_model_disease_statuses_by_area[columns_to_include].sum(axis=1)
+                # Add this to the dataframe to store results in
+                cumulative_model_diseased_by_area_14days = pd.concat([cumulative_model_diseased_by_area_14days,cumulative_model_disease_statuses_by_area[day]], axis=1)
+            # Add a column containing the cumulative total over all the days
+            #cumulative_model_diseased_by_area['CumulativeTotal_model'] = cumulative_model_diseased_by_area.sum(axis=1)
+            # Join to dataframe containing results for every 14 day window
+            cumulative_model_diseased_by_area = pd.concat([cumulative_model_diseased_by_area, cumulative_model_diseased_by_area_14days], axis=1)
         cumulative_model_diseased_by_area['CumulativeTotal_model'] = cumulative_model_diseased_by_area.sum(axis=1)
+
+        ###### Create dataframe containing the number of individuals in any of disease states 1-4
+        # ###### for each day being considered
+        #
+        # # Create empty dataframe to population
+        # cumulative_model_diseased_by_area = pd.DataFrame()
+        # # Define all area names (e.g. MSOA names)
+        # AreaNames = cumulative_model_disease_statuses_df.area.unique()
+        # # why is dict needed?
+        # DataFrameDict = {elem: pd.DataFrame for elem in AreaNames}
+        # key_list = [k for k in DataFrameDict.keys()]
+        # for key in DataFrameDict.keys():
+        #     # Extract dataframe containing only rows of individuals in this area
+        #     this_area = cumulative_model_disease_statuses_df[:][cumulative_model_disease_statuses_df.area == key]
+        #     # Create empty dataframe to store counts for this area of anyone in any disease status from 1-4
+        #     this_area_all_diseased = pd.DataFrame()
+        #     # Loop through each day...
+        #     for i in range(1,n_days+1):
+        #         day = 'Day' + str(i)
+        #         # Find the total number of individuals in each disease status on this day
+        #         cumulative_model_disease_statuses_by_area = (pd.crosstab([this_area.area], this_area[day]))
+        #         # Add a column with the total number in any of the disease states
+        #         # list the disease status columns to include
+        #         columns_in_df = list(cumulative_model_disease_statuses_by_area.columns.values)
+        #         columns_to_include = [i for i in [1.0, 2.0, 3.0, 4.0] if i in columns_in_df]
+        #         # Filter out columns we don't want to include
+        #         cumulative_model_disease_statuses_by_area[day] = cumulative_model_disease_statuses_by_area[columns_to_include].sum(axis=1)
+        #         # Add this to the dataframe to store results in
+        #         this_area_all_diseased = pd.concat([this_area_all_diseased,cumulative_model_disease_statuses_by_area[day]], axis=1)
+        #     # Add a column containing the cumulative total over all the days
+        #     this_area_all_diseased['CumulativeTotal_model'] = this_area_all_diseased.sum(axis=1)
+        #
+        #     # Join to dataframe
+        #     cumulative_model_diseased_by_area = pd.concat([cumulative_model_diseased_by_area, this_area_all_diseased])
 
         #############################################################################
         ########### Observations
@@ -670,7 +724,7 @@ class OpenCLWrapper(object):
         observations = obs['observation']
         # Create as dataframe
         observations_df = pd.DataFrame(data=observations[0:, 0:], index = cumulative_model_diseased_by_area.index,
-                          columns = ['day' + str(i) for i in range(1, observations.shape[1]+1)])
+                          columns = ['Day' + str(i) for i in range(1, observations.shape[1]+1)])
         # Add a cumulative total of cases from the first X days
         observations_df['CumulativeTotal_obs'] = observations_df.iloc[:, 0:n_days].sum(axis=1)
 
@@ -679,12 +733,35 @@ class OpenCLWrapper(object):
 
         # Find the euclidean difference between the cumulative cases in model and obs
         difference = np.linalg.norm(np.array(obs_and_model_df['CumulativeTotal_obs']) - np.array(obs_and_model_df['CumulativeTotal_model']))
-        #print(difference)
 
+        print(difference)
+
+        # ### Plotting
+        # cumulative_model_diseased_Devon = cumulative_model_diseased_by_area.copy()
+        # cumulative_model_diseased_Devon.loc['Total_model',:]= cumulative_model_diseased_Devon.sum(axis=0)
+        # cumulative_model_diseased_Devon = cumulative_model_diseased_Devon.drop(cumulative_model_diseased_Devon.index.values.tolist()[:-1])
+        #
+        # observations_df_Devon = observations_df.copy()
+        # observations_df_Devon.loc['Total_obs',:]= observations_df_Devon.sum(axis=0)
+        # observations_df_Devon = observations_df_Devon.drop(observations_df_Devon.index.values.tolist()[:-1])
+        #
+        # obs_and_model_df_Devon = pd.concat([observations_df_Devon, cumulative_model_diseased_Devon], axis=0)
+        # # Keep only first 14 days
+        # obs_and_model_df_Devon = obs_and_model_df_Devon.iloc[:, 0:14]
+        #
+        # obs_and_model_df_Devon_T = obs_and_model_df_Devon.T
+        # obs_and_model_df_Devon_T['CUMSUM_Obs'] = obs_and_model_df_Devon_T['Total_obs'].cumsum()
+        # obs_and_model_df_Devon_T['CUMSUM_Model'] = obs_and_model_df_Devon_T['Total_model'].cumsum()
+        #
+        # #obs_and_model_df_Devon_T.plot(y=['CUMSUM_Obs', 'CUMSUM_Model'], figsize=(10, 5))
+        # #plt.ylabel("Cases")
+        # #print("I am here")
+        # #plt.savefig("saving.png")
+        # #plt.show()
+        print("Found distance in {}".format(datetime.datetime.now() - start_time))
         return difference
 
     def run(self):
-        x=1
         # store start time in order to store run time
         start_time = datetime.datetime.now()
 
@@ -723,8 +800,7 @@ class OpenCLWrapper(object):
                 else tqdm(range(self.quiet), desc="Running simulation")
 
             # Create array to store the disease statuses for each day
-            people_statuses_per_day = np.array([])
-
+            people_statuses_per_day = np.array([],dtype='uint8')
             iter_count = 0  # Count the total number of iterations
             # Run for iterations days
             for _ in timestep_iterator:
@@ -741,7 +817,6 @@ class OpenCLWrapper(object):
                 # Save the people's statuses
                 people_statuses_per_day = np.append(people_statuses_per_day, snapshot.buffers.people_statuses, axis=0)
                 #print(len(people_statuses_per_day))
-                #people_statuses_per_day.append(snapshot.buffers.people_statuses)
             # Download the statuses at the end of the window (no need to do this now as we do it at the end of the for loop)
             # simulator.download("people_statuses", snapshot.buffers.people_statuses)
 
@@ -775,14 +850,13 @@ class OpenCLWrapper(object):
         # Return the current state of the model in a dictionary.
         # The most important thing to return is the snapshot (i.e. this model's state) but we an include other
         # things as well that might be useful.
-        disease_statuses = snapshot.buffers.people_statuses
+        disease_statuses = snapshot.buffers.people_statuses.copy()
         print("OpenclRunner ran model {} in {}".format(model_number, datetime.datetime.now() - start_time))
         #print(f"\t...took {datetime.datetime.now() - start_time}")
-        return {"disease_status": disease_statuses, "model_number": model_number,
-                "people_statuses_per_day": people_statuses_per_day, "model_run_length": self.run_length}
+        return {"disease_statuses": disease_statuses.copy(), "model_number": model_number,
+                 "model_run_length": self.run_length, "people_statuses_per_day": people_statuses_per_day.copy()}
         # return disease_statuses
         # return {"simulator": snapshot, "model_number": model_number}
         # return {"simulator": 1, "model_number": model_number}
 
 
-    
