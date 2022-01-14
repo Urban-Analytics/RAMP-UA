@@ -95,14 +95,6 @@ assert len(cases_msoa) == len(devon_msoa_shapes)  # Check we don't use any areas
 # For some reason we lose the index name when joining
 cases_msoa.index.name = "msoa11cd"
 
-# Melt so that cases on each day (D0, D1, ... D404) become a value in a new row
-# (Also need to convert the index (area code) to a column)
-cases_msoa_melt = pd.melt(cases_msoa.reset_index(), id_vars='MSOA11CD',
-                          value_vars=["D" + str(i) for i in range(405)]).rename(columns={'value': 'cases'})
-cases_msoa_melt = cases_msoa_melt.set_index('MSOA11CD', drop=True)  # Keep the index as the MSOA
-cases_msoa_melt['day'] = cases_msoa_melt['variable'].apply(
-    lambda day: int(day[1:]))  # Strip off the initial 'D' to get the day number
-
 # Observations are cases per msoa.
 # Store as an array for us in model (more efficient?)
 # (first axis is the msoa number, second is the day)
