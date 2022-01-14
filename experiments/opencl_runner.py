@@ -509,6 +509,7 @@ class OpenCLWrapper(object):
     def __init__(self, const_params_dict,
                  quiet, use_gpu, store_detailed_counts, start_day, run_length,
                  current_particle_pop_df, parameters_file, snapshot_file, opencl_dir,
+                 individuals_df, observations_array, ## XXXX TEMP
                  _random_params_dict=None):
         """The constructor accepts the following:
 
@@ -539,6 +540,9 @@ class OpenCLWrapper(object):
         self.snapshot_file = snapshot_file
         self.opencl_dir = opencl_dir
         self.current_particle_pop_df = current_particle_pop_df
+        # XXXX TEMP
+        self.individuals_df = individuals_df
+        self.observations_array = observations_array
 
         # Now deal with the model parameters
         self.const_params_dict = const_params_dict
@@ -580,12 +584,6 @@ class OpenCLWrapper(object):
                           _random_params_dict=random_params_dict)
         return m.run()
 
-        # Return the current state of the model in a dictionary.
-        # The most important thing to return is the snapshot (i.e. this model's state) but we an include other
-        # things as well that might be useful.
-        disease_statuses = snapshot.buffers.people_statuses.copy()
-        print(f"OpenclRunner is running model {model_number}", ' in ',  datetime.datetime.now() - now, sep = '')
-        return {"disease_statuses": disease_statuses, "model_number": model_number, "run_time":datetime.datetime.now() - now }
 
     @staticmethod
     def summary_stats(raw_model_results: dict) -> dict:
@@ -620,7 +618,17 @@ class OpenCLWrapper(object):
         :param sim:
         :param obs:
         """
-        
+
+        # Check that the input dictionaries have everything that we need
+        sim_essentials = ['model_run_length', 'people_statuses_per_day']
+        for key in sim_essentials:
+            if key not in sim:
+                raise Exception(f"sim dictionary needs these entries: {sim_essentials}. I have been given: {sim}")
+        obs_essentials = ['individuals', 'observations_array']
+        for key in obs_essentials:
+            if key not in obs:
+                raise Exception(f"obs dictionary needs these entries: {obs_essentials}. I have been given: {obs}")
+
         start_time = datetime.datetime.now()
 
         # Get the model run length (in days)
@@ -817,11 +825,18 @@ class OpenCLWrapper(object):
         # things as well that might be useful.
         disease_statuses = snapshot.buffers.people_statuses.copy()
         print("OpenclRunner ran model {} in {}".format(model_number, datetime.datetime.now() - start_time))
-        #print(f"\t...took {datetime.datetime.now() - start_time}")
-        return {"disease_statuses": disease_statuses.copy(), "model_number": model_number,
-                 "model_run_length": self.run_length, "people_statuses_per_day": people_statuses_per_day.copy()}
-        # return disease_statuses
-        # return {"simulator": snapshot, "model_number": model_number}
-        # return {"simulator": 1, "model_number": model_number}
+        dist = OpenCLWrapper.distance(
+            sim={'model_run_length': self.run_length, 'people_statuses_per_day': people_statuses_per_day},
+            obs={'individuals': self.individuals_df, "observations_array": self.observations_array}
+        )
+        # XXXX TESTING RETURNING THE DISTANCE DIRECTLY TO SEE IF THIS LOWERS MEMORY USE
+        return {"distance": dist, "model_number": model_number,
+                "model_run_length": self.run_length}
 
-
+        #return {"disease_statuses": disease_statuses.copy(), "model_number": model_number,
+        #         "model_run_length": self.run_length, "people_statuses_per_day": people_statuses_per_day.copy()}
+    @staticmethod
+    def distance2(sim: dict, obs: dict):
+        """XXXX TEMP JUST RETURN WHATEVER DISTANCE YOU GET FROM HTE MODEL"""
+        x=1
+        return sim["distance"]

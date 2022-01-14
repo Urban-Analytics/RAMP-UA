@@ -15,15 +15,6 @@ import sys
 import datetime
 import matplotlib.cm as cm
 
-# For easier plots
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-# These allow you to plot in a notebook -- may first need to install the jupyter lab plotly extension:
-# jupyter labextension install jupyterlab-plotly@4.8.2
-from plotly.offline import init_notebook_mode
-init_notebook_mode(connected = True)
-
 # PYABC (https://pyabc.readthedocs.io/en/latest/)
 import pyabc
 from pygam import LinearGAM  # For graphing posteriors
@@ -214,7 +205,10 @@ da_window_size = 14
 # Dictionary with parameters for running model
 admin_params = { "quiet":True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0, "run_length": da_window_size,
                 "current_particle_pop_df": None,
-                "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR}
+                 "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR,
+                 "individuals": individuals_df, "observations_array": observations_array  # XXXX TEMP
+                 }
+
 
 # Create dictionaries to store the dfs, weights or history from each window (don't need all of these, but testing for now)
 dfs_dict = {}
@@ -254,7 +248,7 @@ for window_number in range(1,windows+1):
         models=template, # Model (could be a list)
         parameter_priors=priors, # Priors (could be a list)
         #summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
-        distance_function=OpenCLWrapper.distance,  # Distance function
+        distance_function=OpenCLWrapper.distance2,  # Distance function XXXX TEMP TESTING DISTANCE FUNCTION THAT JUST RETURNS THE DISTANCE THAT THE MODEL CALCULATES
         sampler = pyabc.sampler.SingleCoreSampler()  # Single core because the model is parallelised anyway (and easier to debug)
         #sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
         #transition=transition,  # Define how to transition from one population to the next
