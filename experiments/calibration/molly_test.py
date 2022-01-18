@@ -29,12 +29,12 @@ from ArbitraryDistribution import ArbitraryDistribution
 
 # RAMP model
 from microsim.initialisation_cache import InitialisationCache
-#from microsim.opencl.ramp.run import run_headless
-#from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
-#from microsim.opencl.ramp.snapshot import Snapshot
-#from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
-#from microsim.opencl.ramp.simulator import Simulator
-#from microsim.opencl.ramp.disease_statuses import DiseaseStatus
+# from microsim.opencl.ramp.run import run_headless
+# from microsim.opencl.ramp.snapshot_convertor import SnapshotConvertor
+# from microsim.opencl.ramp.snapshot import Snapshot
+# from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
+# from microsim.opencl.ramp.simulator import Simulator
+# from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 
 # Bespoke RAMP classes for running the model
 import sys
@@ -203,7 +203,8 @@ parameters_file = os.path.join("../../", "model_parameters/", "default.yml")  # 
 # Set the size of a data assimilation window in days:
 da_window_size = 14
 # Dictionary with parameters for running model
-admin_params = { "quiet":True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0, "run_length": da_window_size,
+admin_params = { "quiet":True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0,
+                 "run_length": da_window_size,
                 "current_particle_pop_df": None,
                  "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR,
                  "individuals": individuals_df, "observations_array": observations_array  # XXXX TEMP
