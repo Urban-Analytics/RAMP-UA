@@ -581,7 +581,9 @@ class OpenCLWrapper(object):
                           current_particle_pop_df=self.current_particle_pop_df,
                           parameters_file=self.parameters_file, snapshot_file=self.snapshot_file,
                           opencl_dir=self.opencl_dir,
-                          _random_params_dict=random_params_dict)
+                          _random_params_dict=random_params_dict,
+                          individuals_df=self.individuals_df, observations_array=self.observations_array,  ## XXXX TEMP
+                          )
         return m.run()
 
 
@@ -623,11 +625,11 @@ class OpenCLWrapper(object):
         sim_essentials = ['model_run_length', 'people_statuses_per_day']
         for key in sim_essentials:
             if key not in sim:
-                raise Exception(f"sim dictionary needs these entries: {sim_essentials}. I have been given: {sim}")
-        obs_essentials = ['individuals', 'observations_array']
+                raise Exception(f"sim dictionary needs these entries: {sim_essentials}. I have been given: {sim.keys()}")
+        obs_essentials = ['individuals', 'observation']
         for key in obs_essentials:
             if key not in obs:
-                raise Exception(f"obs dictionary needs these entries: {obs_essentials}. I have been given: {obs}")
+                raise Exception(f"obs dictionary needs these entries: {obs_essentials}. I have been given: {obs.keys()}")
 
         start_time = datetime.datetime.now()
 
@@ -827,7 +829,7 @@ class OpenCLWrapper(object):
         print("OpenclRunner ran model {} in {}".format(model_number, datetime.datetime.now() - start_time))
         dist = OpenCLWrapper.distance(
             sim={'model_run_length': self.run_length, 'people_statuses_per_day': people_statuses_per_day},
-            obs={'individuals': self.individuals_df, "observations_array": self.observations_array}
+            obs={'individuals': self.individuals_df, "observation": self.observations_array}
         )
         # XXXX TESTING RETURNING THE DISTANCE DIRECTLY TO SEE IF THIS LOWERS MEMORY USE
         return {"distance": dist, "model_number": model_number,

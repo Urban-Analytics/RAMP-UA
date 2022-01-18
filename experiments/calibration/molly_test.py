@@ -68,38 +68,32 @@ devon_msoa_shapes = devon_msoa_shapes.set_index('Code', drop=True, verify_integr
 ##########################################################################
 # Observed cases data
 # These were prepared by Hadrien and made available on the RAMP blob storage (see the observation data README).
-cases_msoa = pd.read_csv(os.path.join("observation_data", "england_initial_cases_MSOAs.csv")).set_index('MSOA11CD', drop=True, verify_integrity=True)
+cases_msoa = pd.read_csv(os.path.join("observation_data", "england_initial_cases_MSOAs.csv")).\
+    set_index('MSOA11CD', drop=True, verify_integrity=True)
 
 # Merge them to the GIS data for convenience
-cases_msoa = cases_msoa.join(other = devon_msoa_shapes, how="inner")  # Joins on the indices (both indices are MSOA code)
+cases_msoa = cases_msoa.join(other=devon_msoa_shapes, how="inner")  # Joins on the indices (both indices are MSOA code)
 assert len(cases_msoa) == len(devon_msoa_shapes)  # Check we don't use any areas in the join
 
 # For some reason we lose the index name when joining
 cases_msoa.index.name = "msoa11cd"
 
-# Melt so that cases on each day (D0, D1, ... D404) become a value in a new row
-# (Also need to convert the index (area code) to a column)
-cases_msoa_melt = pd.melt(cases_msoa.reset_index(), id_vars='msoa11cd',
-                          value_vars=[ "D"+str(i) for i in range(405) ]).rename(columns={'value':'cases'})
-cases_msoa_melt = cases_msoa_melt.set_index('msoa11cd', drop=True) # Keep the index as the MSOA
-cases_msoa_melt['day'] = cases_msoa_melt['variable'].apply(lambda day: int(day[1:])) # Strip off the initial 'D' to get the day number
-
 # Observations are cases per msoa.
 # Store as an array for us in model (more efficient?)
 # (first axis is the msoa number, second is the day)
-observations_array = cases_msoa.iloc[:,0:405].to_numpy()
+observations_array = cases_msoa.iloc[:, 0:405].to_numpy()
 
-# Reformat into dataframe with one column containing days and one column 
-# containing cases 
+# Reformat into dataframe with one column containing days and one column
+# containing cases
 observations_msoas_df = cases_msoa.iloc[:, 0:405]
 observations_msoas_df.reset_index(level=0, inplace=True)
 # Change to MSOA as columns, days as rows
 observations_msoas_df = observations_msoas_df.T
 # set MSOA codes as column names and remove as a row
-observations_msoas_df.rename(columns=observations_msoas_df.iloc[0], inplace = True)
-observations_msoas_df.drop(observations_msoas_df.index[0], inplace = True)
+observations_msoas_df.rename(columns=observations_msoas_df.iloc[0], inplace=True)
+observations_msoas_df.drop(observations_msoas_df.index[0], inplace=True)
 # Add column with Day number at front of columns
-observations_msoas_df.insert(0, 'Day', range(0,len(observations_df)) )
+observations_msoas_df.insert(0, 'Cases', range(0, len(observations_msoas_df)))
 
 # Create new dataframe with cumulative sums rather than cases per day
 observations_msoas_cumulative_df = observations_msoas_df.copy()
@@ -109,11 +103,11 @@ for colname in observations_msoas_cumulative_df.columns[1:].tolist():
 ## Create dataframe with totals for whole of Devon
 observations_devon_cumulative_df = observations_msoas_cumulative_df.copy()
 # Add total across all MSOAs
-observations_devon_cumulative_df['Total'] = observations_devon_cumulative_df.iloc[:,1:].sum(axis=1)
+observations_devon_cumulative_df['Cases'] = observations_devon_cumulative_df.iloc[:, 1:].sum(axis=1)
 # Drop MSOA values
 observations_devon_cumulative_df.drop(observations_devon_cumulative_df.columns[1:108], axis=1, inplace=True)
 # reset index
-observations_devon_cumulative_df.reset_index(inplace = True, drop = True)
+observations_devon_cumulative_df.reset_index(inplace=True, drop=True)
 
 ################################
 ##########################################################################
@@ -203,11 +197,11 @@ parameters_file = os.path.join("../../", "model_parameters/", "default.yml")  # 
 # Set the size of a data assimilation window in days:
 da_window_size = 14
 # Dictionary with parameters for running model
-admin_params = { "quiet":True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0,
+admin_params = { "quiet":True, "use_gpu": False, "store_detailed_counts": True, "start_day": 0,
                  "run_length": da_window_size,
                 "current_particle_pop_df": None,
                  "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR,
-                 "individuals": individuals_df, "observations_array": observations_array  # XXXX TEMP
+                 "individuals_df": individuals_df, "observations_array": observations_array  # XXXX TEMP
                  }
 
 
