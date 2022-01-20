@@ -1,40 +1,24 @@
 #### Import modules required
 import multiprocessing as mp
 import numpy as np
-import yaml  # pyyaml library for reading the parameters.yml file
 import os
 import itertools
 import pandas as pd
-import unittest
 import pickle
-import copy
-import random
 import matplotlib.pyplot as plt
-import scipy.stats as stats
 import sys
 import datetime
-import matplotlib.cm as cm
 
-# For easier plots
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-# These allow you to plot in a notebook -- may first need to install the jupyter lab plotly extension:
-# jupyter labextension install jupyterlab-plotly@4.8.2
-from plotly.offline import init_notebook_mode
-
-init_notebook_mode(connected=True)
 
 # PYABC (https://pyabc.readthedocs.io/en/latest/)
 import pyabc
-from pygam import LinearGAM  # For graphing posteriors
 from pyabc.transition.multivariatenormal import MultivariateNormalTransition  # For drawing from the posterior
 # Quieten down the pyopencl info messages (just print errors)
 import logging
 
 logging.getLogger("pyopencl").setLevel(logging.ERROR)
 
-# Import arbitrary distribution class
+# Import arbitrary distribution class for using posterior estimates as new priors
 sys.path.append('..')
 from ArbitraryDistribution import ArbitraryDistribution
 
@@ -219,7 +203,9 @@ da_window_size = 14
 admin_params = {"quiet": True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0,
                 "run_length": da_window_size,
                 "current_particle_pop_df": None,
-                "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR}
+                "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR,
+                "individuals_df": individuals_df, "observations_array": observations_array
+                }
 
 # Create dictionaries to store the dfs, weights or history from each window (don't need all of these, but testing for now)
 dfs_dict = {}
@@ -259,16 +245,24 @@ for window_number in range(1, windows + 1):
         models=template,  # Model (could be a list)
         parameter_priors=priors,  # Priors (could be a list)
         # summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
-        distance_function=OpenCLWrapper.distance,  # Distance function
+        distance_function=OpenCLWrapper.dummy_distance,  # Distance function
         sampler=pyabc.sampler.SingleCoreSampler()
         # Single core because the model is parallelised anyway (and easier to debug)
         # sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
         # transition=transition,  # Define how to transition from one population to the next
     )
 
-    # Path to database?
-    db_path = ("sqlite:///" + "ramp_da.db")
-    run_id = abc.new(db_path, {'observation': observations_array, "individuals": individuals_df})
+    # Prepare to run the model
+    db_path = ("sqlite:///" + "ramp_da.db")  # Path to database
+
+    # abc.new() needs the database location and any observations that we will use (these are passed to the
+    # distance_function provided to pyabc.ABCSMC above). Currently the observations are provided to the model
+    # when it is initialised and these are then used at the end of the model run() function. So they don't
+    # need to be provided here.
+    run_id = abc.new(
+        db=db_path,
+        observed_sum_stat=None  # {'observation': observations_array, "individuals": individuals_df}
+    )
 
     # Run model
     abc_history = abc.run(max_nr_populations=2)
