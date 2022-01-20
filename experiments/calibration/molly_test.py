@@ -1,29 +1,24 @@
 #### Import modules required
 import multiprocessing as mp
 import numpy as np
-import yaml # pyyaml library for reading the parameters.yml file
 import os
 import itertools
 import pandas as pd
-import unittest
 import pickle
-import copy
-import random
 import matplotlib.pyplot as plt
-import scipy.stats as stats
 import sys
 import datetime
-import matplotlib.cm as cm
+
 
 # PYABC (https://pyabc.readthedocs.io/en/latest/)
 import pyabc
-from pygam import LinearGAM  # For graphing posteriors
 from pyabc.transition.multivariatenormal import MultivariateNormalTransition  # For drawing from the posterior
 # Quieten down the pyopencl info messages (just print errors)
 import logging
+
 logging.getLogger("pyopencl").setLevel(logging.ERROR)
 
-# Import arbitrary distribution class
+# Import arbitrary distribution class for using posterior estimates as new priors
 sys.path.append('..')
 from ArbitraryDistribution import ArbitraryDistribution
 
@@ -38,8 +33,9 @@ from microsim.initialisation_cache import InitialisationCache
 
 # Bespoke RAMP classes for running the model
 import sys
+
 sys.path.append('..')
-from opencl_runner import OpenCLWrapper # Some additional functions to simplify running the OpenCL model
+from opencl_runner import OpenCLWrapper  # Some additional functions to simplify running the OpenCL model
 from opencl_runner import OpenCLRunner
 
 # Set this to False to recalculate all results (good on HPC or whatever).
@@ -55,9 +51,13 @@ from microsim.load_msoa_locations import load_osm_shapefile, load_msoa_shapes
 
 # Directory where spatial data is stored
 gis_data_dir = ("../../devon_data")
-#osm_buildings = load_osm_shapefile(gis_data_dir)
+# osm_buildings = load_osm_shapefile(gis_data_dir)
 devon_msoa_shapes = load_msoa_shapes(gis_data_dir, visualize=False)
 devon_msoa_shapes = devon_msoa_shapes.set_index('Code', drop=True, verify_integrity=True)
+
+
+devon_msoa_codes = pd.DataFrame({'msoa11cd' :devon_msoa_shapes.index.to_list()})
+devon_msoa_codes.to_csv("observation_data/devon_msoa_codes.csv", index=False)
 
 ##########################################################################
 ##########################################################################
@@ -68,8 +68,9 @@ devon_msoa_shapes = devon_msoa_shapes.set_index('Code', drop=True, verify_integr
 ##########################################################################
 # Observed cases data
 # These were prepared by Hadrien and made available on the RAMP blob storage (see the observation data README).
-cases_msoa = pd.read_csv(os.path.join("observation_data", "england_initial_cases_MSOAs.csv")).\
-    set_index('MSOA11CD', drop=True, verify_integrity=True)
+cases_msoa = pd.read_csv(os.path.join("observation_data", "england_initial_cases_MSOAs.csv")).set_index('MSOA11CD',
+                                                                                                        drop=True,
+                                                                                                        verify_integrity=True)
 
 # Merge them to the GIS data for convenience
 cases_msoa = cases_msoa.join(other=devon_msoa_shapes, how="inner")  # Joins on the indices (both indices are MSOA code)
@@ -138,8 +139,9 @@ print(f"Activity locations: {activity_locations}")
 ##########################################################################
 ##########################################################################
 const_params_dict = {
-    "current_risk_beta": 0.03, # Global risk multplier (leave this as it is and allow the other parameters to vary)
-    "home": 1.0,  # Risk associated with being at home. Again leave this constant so the coefficients of other places will vary around it
+    "current_risk_beta": 0.03,  # Global risk multplier (leave this as it is and allow the other parameters to vary)
+    "home": 1.0,
+    # Risk associated with being at home. Again leave this constant so the coefficients of other places will vary around it
 }
 
 ##########################################################################
@@ -182,7 +184,7 @@ fig.suptitle("Priors")
 fig.show()
 
 ## Create a distrubtion from these random variables
-decorated_rvs = { name: pyabc.LowerBoundDecorator(rv, 0.0) for name, rv in all_rv.items() }
+decorated_rvs = {name: pyabc.LowerBoundDecorator(rv, 0.0) for name, rv in all_rv.items()}
 
 # Define the original priors
 original_priors = pyabc.Distribution(**decorated_rvs)
@@ -193,17 +195,17 @@ original_priors = pyabc.Distribution(**decorated_rvs)
 ##########################################################################
 ##########################################################################
 # Path to parameters
-parameters_file = os.path.join("../../", "model_parameters/", "default.yml")  # Need to tell it where the default parameters are
+parameters_file = os.path.join("../../", "model_parameters/",
+                               "default.yml")  # Need to tell it where the default parameters are
 # Set the size of a data assimilation window in days:
 da_window_size = 14
 # Dictionary with parameters for running model
-admin_params = { "quiet":True, "use_gpu": False, "store_detailed_counts": True, "start_day": 0,
-                 "run_length": da_window_size,
+admin_params = {"quiet": True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0,
+                "run_length": da_window_size,
                 "current_particle_pop_df": None,
-                 "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR,
-                 "individuals_df": individuals_df, "observations_array": observations_array  # XXXX TEMP
-                 }
-
+                "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR,
+                "individuals_df": individuals_df, "observations_array": observations_array
+                }
 
 # Create dictionaries to store the dfs, weights or history from each window (don't need all of these, but testing for now)
 dfs_dict = {}
@@ -214,14 +216,14 @@ history_dict = {}
 starting_windows_time = datetime.datetime.now()
 
 # Define number of windows to run for
-windows =3
+windows = 3
 
 # Loop through each window
-for window_number in range(1,windows+1):
+for window_number in range(1, windows + 1):
     print("Window number: ", window_number)
-    
+
     # Edit the da_window size in the admin params
-    #print("Running for 14 days")
+    # print("Running for 14 days")
     admin_params['run_length'] = admin_params['run_length'] * window_number
     print("Running for {} days".format(da_window_size * window_number))
 
@@ -229,42 +231,51 @@ for window_number in range(1,windows+1):
     template = OpenCLWrapper(const_params_dict, **admin_params)
     # Not sure why this is needed. Wthout it we get an error when passing the template object to ABCSMC below
     template.__name__ = OpenCLWrapper.__name__
-     
+
     # Define priors
     # If first window, then use user-specified (original) priors
-    if window_number ==1:
-        priors =original_priors
+    if window_number == 1:
+        priors = original_priors
     # If a subsequent window, then generate distribution from posterior from previous window
     else:
         priors = ArbitraryDistribution(abc_history)
 
     # Set up model
     abc = pyabc.ABCSMC(
-        models=template, # Model (could be a list)
-        parameter_priors=priors, # Priors (could be a list)
-        #summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
-        distance_function=OpenCLWrapper.distance2,  # Distance function XXXX TEMP TESTING DISTANCE FUNCTION THAT JUST RETURNS THE DISTANCE THAT THE MODEL CALCULATES
-        sampler = pyabc.sampler.SingleCoreSampler()  # Single core because the model is parallelised anyway (and easier to debug)
-        #sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
-        #transition=transition,  # Define how to transition from one population to the next
-        )
-    
-    # Path to database?
-    db_path = ("sqlite:///" + "ramp_da.db")
-    run_id = abc.new(db_path, {'observation': observations_array, "individuals":individuals_df})
-    
+        models=template,  # Model (could be a list)
+        parameter_priors=priors,  # Priors (could be a list)
+        # summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
+        distance_function=OpenCLWrapper.dummy_distance,  # Distance function
+        sampler=pyabc.sampler.SingleCoreSampler()
+        # Single core because the model is parallelised anyway (and easier to debug)
+        # sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
+        # transition=transition,  # Define how to transition from one population to the next
+    )
+
+    # Prepare to run the model
+    db_path = ("sqlite:///" + "ramp_da.db")  # Path to database
+
+    # abc.new() needs the database location and any observations that we will use (these are passed to the
+    # distance_function provided to pyabc.ABCSMC above). Currently the observations are provided to the model
+    # when it is initialised and these are then used at the end of the model run() function. So they don't
+    # need to be provided here.
+    run_id = abc.new(
+        db=db_path,
+        observed_sum_stat=None  # {'observation': observations_array, "individuals": individuals_df}
+    )
+
     # Run model
     abc_history = abc.run(max_nr_populations=2)
 
     # Save some info on the posterior parameter distributions.
-    for t in range(0,abc.history.max_t+1):
+    for t in range(0, abc.history.max_t + 1):
         print(t)
         # for this t (population) extract the 100 particle parameter values, and their weights
         df_t1, w_t1 = abc.history.get_distribution(m=0, t=t)
         # Are these equivalent? yes!
-        #df_t1_2, w_t1_2 = abc_history.get_distribution(m=0, t=abc_history.max_t)
-        #df_t1.equals(df_t1_2)
-        #(w_t1 == w_t1_2).all()
+        # df_t1_2, w_t1_2 = abc_history.get_distribution(m=0, t=abc_history.max_t)
+        # df_t1.equals(df_t1_2)
+        # (w_t1 == w_t1_2).all()
 
         # Save these for use in plotting the prior on the plot of parameter values in each population
         dfs_dict["w{},pop{}".format(window_number, t)] = df_t1
@@ -272,10 +283,9 @@ for window_number in range(1,windows+1):
         history_dict["w{}".format(window_number)] = abc_history
 
     # Merge dataframe and weights and sort by weight (highest weight at the top)
-    #_df['weight'] = _w
-    #posterior_df = _df.sort_values('weight', ascending=False).reset_index()
-    #posterior_df.to_csv("Plots/window_number{}_posterior_df.csv".format(window_number), index = False)
-
+    # _df['weight'] = _w
+    # posterior_df = _df.sort_values('weight', ascending=False).reset_index()
+    # posterior_df.to_csv("Plots/window_number{}_posterior_df.csv".format(window_number), index = False)
 
 #############################################################################################################
 #############################################################################################################
@@ -295,23 +305,23 @@ USE_GPU = True
 STORE_DETAILED_COUNTS = False
 REPETITIONS = 5
 USE_HEALTHIER_POP = True
-#assert ITERATIONS < len(OBSERVATIONS), \
-    # f"Have more iterations ({ITERATIONS}) than observations ({len(OBSERVATIONS)})."
+# assert ITERATIONS < len(OBSERVATIONS), \
+# f"Have more iterations ({ITERATIONS}) than observations ({len(OBSERVATIONS)})."
 
 OpenCLRunner.init(iterations=ITERATIONS,
-    repetitions=REPETITIONS,
-    observations=observations_msoas_cumulative_df,
-    use_gpu=USE_GPU,
-    use_healthier_pop = USE_HEALTHIER_POP,
-    store_detailed_counts=STORE_DETAILED_COUNTS,
-    parameters_file=PARAMETERS_FILE,
-    opencl_dir=OPENCL_DIR,
-    snapshot_filepath=SNAPSHOT_FILEPATH)
+                  repetitions=REPETITIONS,
+                  observations=observations_devon_cumulative_df,
+                  use_gpu=USE_GPU,
+                  use_healthier_pop=USE_HEALTHIER_POP,
+                  store_detailed_counts=STORE_DETAILED_COUNTS,
+                  parameters_file=PARAMETERS_FILE,
+                  opencl_dir=OPENCL_DIR,
+                  snapshot_filepath=SNAPSHOT_FILEPATH)
 
 ##### define the abc_history object (not necessary as this will be most recent abc_history anyway)
-abc_history= history_dict['w3']
+abc_history = history_dict['w3']
 
-# Define the number of samples to take from the posterior distribution of parameters 
+# Define the number of samples to take from the posterior distribution of parameters
 N_samples = 50
 df, w = abc_history.get_distribution(m=0, t=abc_history.max_t)
 
@@ -332,7 +342,7 @@ negative_count = 0  # Count the number of negatives returned in the KDE posterio
 for i, sample in samples.iterrows():
     # Check for negatives. If needed, resample
     while (sample < 0).values.any():
-    #while (any(value < 0 for value in sample.values())):
+        # while (any(value < 0 for value in sample.values())):
         print("Found negatives. Resampling")
         negative_count += 1
         sample = kde.rvs()
@@ -361,6 +371,7 @@ print(f"Finished sampling. Ignored {negative_count} negative samples.")
 for i in range(len(obs_l) - 1):
     assert np.array_equal(obs_l[0], obs_l[i])
 
+
 # Save these because it took ages to sample
 def pickle_samples(mode, *arrays):
     if mode == "save":
@@ -379,6 +390,7 @@ def pickle_samples(mode, *arrays):
         return (fitness_l, sim_l, obs_l, out_params_l, out_calibrated_params_l, summaries_l)
     else:
         raise Exception(f"Unkonwn mode: {mode}")
+
 
 pickle_samples('save', fitness_l, sim_l, obs_l, out_params_l, out_calibrated_params_l, summaries_l)
 
@@ -404,7 +416,7 @@ for i in range(len(summaries_l)):
 # Plot observations
 ax.plot(x, obs_l[0], label="Observations", color="blue")
 # Plot result from manually calibrated model
-#ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
+# ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
 ax.legend()
 # plot_summaries(summaries=summaries_l[0], plot_type="error_bars", observations=OBSERVATIONS)
 plt.xlabel("Days")
@@ -412,8 +424,6 @@ plt.ylabel("Cases")
 plt.show()
 
 del _fitness, fitness_norm
-
-
 
 # ##########################################################################
 # ##########################################################################

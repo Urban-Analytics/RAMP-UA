@@ -462,7 +462,7 @@ class OpenCLRunner:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
 
-        # Check that all input parametrers are not negative
+        # Check that all input parameters are not negative
         for k, v in input_params_dict.items():
             if v < 0:
                 raise Exception(f"The parameter {k}={v} < 0. "
@@ -509,7 +509,7 @@ class OpenCLWrapper(object):
     def __init__(self, const_params_dict,
                  quiet, use_gpu, store_detailed_counts, start_day, run_length,
                  current_particle_pop_df, parameters_file, snapshot_file, opencl_dir,
-                 individuals_df, observations_array, ## XXXX TEMP
+                 individuals_df, observations_array,
                  _random_params_dict=None):
         """The constructor accepts the following:
 
@@ -540,7 +540,7 @@ class OpenCLWrapper(object):
         self.snapshot_file = snapshot_file
         self.opencl_dir = opencl_dir
         self.current_particle_pop_df = current_particle_pop_df
-        # XXXX TEMP
+        # The following two are used for calculating model error:
         self.individuals_df = individuals_df
         self.observations_array = observations_array
 
@@ -581,11 +581,9 @@ class OpenCLWrapper(object):
                           current_particle_pop_df=self.current_particle_pop_df,
                           parameters_file=self.parameters_file, snapshot_file=self.snapshot_file,
                           opencl_dir=self.opencl_dir,
-                          _random_params_dict=random_params_dict,
-                          individuals_df=self.individuals_df, observations_array=self.observations_array,  ## XXXX TEMP
-                          )
+                          individuals_df=self.individuals_df, observations_array=self.observations_array,
+                          _random_params_dict=random_params_dict)
         return m.run()
-
 
     @staticmethod
     def summary_stats(raw_model_results: dict) -> dict:
@@ -620,17 +618,7 @@ class OpenCLWrapper(object):
         :param sim:
         :param obs:
         """
-
-        # Check that the input dictionaries have everything that we need
-        sim_essentials = ['model_run_length', 'people_statuses_per_day']
-        for key in sim_essentials:
-            if key not in sim:
-                raise Exception(f"sim dictionary needs these entries: {sim_essentials}. I have been given: {sim.keys()}")
-        obs_essentials = ['individuals', 'observation']
-        for key in obs_essentials:
-            if key not in obs:
-                raise Exception(f"obs dictionary needs these entries: {obs_essentials}. I have been given: {obs.keys()}")
-
+        
         start_time = datetime.datetime.now()
 
         # Get the model run length (in days)
@@ -736,6 +724,15 @@ class OpenCLWrapper(object):
         print("Found distance in {}".format(datetime.datetime.now() - start_time))
         return difference
 
+    @staticmethod
+    def dummy_distance(sim: dict, obs:dict):
+        """PyABC needs a function that takes model results (`sim`) and some observations (`obs`) and returns the
+        error (the 'distance' between the model results and the observations. This calculation is performed
+        by the OpenCLWrapper.distance() function. But the calculation is done as part of the model run() and
+        then included in the results returned by the model. THerefore all this function needs to do is pass that
+        distance on to PyABC"""
+        return sim["distance"]
+
     def run(self):
         # store start time in order to store run time
         start_time = datetime.datetime.now()
@@ -822,23 +819,15 @@ class OpenCLWrapper(object):
             #
             raise Exception("Not implemented yet")
 
-        # Return the current state of the model in a dictionary.
-        # The most important thing to return is the snapshot (i.e. this model's state) but we an include other
-        # things as well that might be useful.
-        disease_statuses = snapshot.buffers.people_statuses.copy()
+        # Return any useful information from the model.
         print("OpenclRunner ran model {} in {}".format(model_number, datetime.datetime.now() - start_time))
+
+        # Could return the disease statuses (not currently needed)
+        # disease_statuses = snapshot.buffers.people_statuses.copy()
+
+        # Calculate the error ('distance') and include that in the information returned
         dist = OpenCLWrapper.distance(
             sim={'model_run_length': self.run_length, 'people_statuses_per_day': people_statuses_per_day},
             obs={'individuals': self.individuals_df, "observation": self.observations_array}
         )
-        # XXXX TESTING RETURNING THE DISTANCE DIRECTLY TO SEE IF THIS LOWERS MEMORY USE
-        return {"distance": dist, "model_number": model_number,
-                "model_run_length": self.run_length}
-
-        #return {"disease_statuses": disease_statuses.copy(), "model_number": model_number,
-        #         "model_run_length": self.run_length, "people_statuses_per_day": people_statuses_per_day.copy()}
-    @staticmethod
-    def distance2(sim: dict, obs: dict):
-        """XXXX TEMP JUST RETURN WHATEVER DISTANCE YOU GET FROM HTE MODEL"""
-        x=1
-        return sim["distance"]
+        return {"distance": dist, "model_number": model_number, "model_run_length": self.run_length}
