@@ -462,7 +462,7 @@ class OpenCLRunner:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
 
-        # Check that all input parametrers are not negative
+        # Check that all input parameters are not negative
         for k, v in input_params_dict.items():
             if v < 0:
                 raise Exception(f"The parameter {k}={v} < 0. "
@@ -580,12 +580,12 @@ class OpenCLWrapper(object):
                           _random_params_dict=random_params_dict)
         return m.run()
 
-        # Return the current state of the model in a dictionary.
-        # The most important thing to return is the snapshot (i.e. this model's state) but we an include other
-        # things as well that might be useful.
-        disease_statuses = snapshot.buffers.people_statuses.copy()
-        print(f"OpenclRunner is running model {model_number}", ' in ',  datetime.datetime.now() - now, sep = '')
-        return {"disease_statuses": disease_statuses, "model_number": model_number, "run_time":datetime.datetime.now() - now }
+        # # Return the current state of the model in a dictionary.
+        # # The most important thing to return is the snapshot (i.e. this model's state) but we an include other
+        # # things as well that might be useful.
+        # disease_statuses = snapshot.buffers.people_statuses.copy()
+        # print(f"OpenclRunner is running model {model_number}", ' in ',  datetime.datetime.now() - now, sep = '')
+        # return {"disease_statuses": disease_statuses, "model_number": model_number, "run_time":datetime.datetime.now() - now }
 
     @staticmethod
     def summary_stats(raw_model_results: dict) -> dict:
