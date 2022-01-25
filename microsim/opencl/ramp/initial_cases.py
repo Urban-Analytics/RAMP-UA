@@ -9,6 +9,10 @@ class InitialCases:
         This class loads the initial cases data for seeding infections in the model.
         Once the data is loaded it selects the people from higher risk area codes who
         spend more time outside of their home.
+
+        :param area_codes: Area codes, from the dataframe of individuals
+        :param not_home_probs: `pnothome` column from the dataframe of individuals.
+            (Basically the amount of time per day people are expected not to be at home).
         """
 
         # load initial case data
