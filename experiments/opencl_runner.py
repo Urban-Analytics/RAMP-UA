@@ -710,6 +710,8 @@ class OpenCLWrapper(object):
         ########################################################################
         ## Join model with obs
         obs_and_model_df = pd.concat([observations_df['CumulativeTotal_obs'], cumulative_model_diseased_by_area['CumulativeTotal_model']], axis=1)
+        obs_and_model_df.loc['Total'] = obs_and_model_df.sum()
+        obs_and_model_df = obs_and_model_df.iloc[-1:]
 
         # Find the euclidean difference between the cumulative cases in model and obs
         difference = np.linalg.norm(np.array(obs_and_model_df['CumulativeTotal_obs']) - np.array(obs_and_model_df['CumulativeTotal_model']))
