@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import sys
 import datetime
 
-
 # PYABC (https://pyabc.readthedocs.io/en/latest/)
 import pyabc
 from pyabc.transition.multivariatenormal import MultivariateNormalTransition  # For drawing from the posterior
@@ -48,16 +47,7 @@ LOAD_PICKLES = True
 ##########################################################################
 ##########################################################################
 from microsim.load_msoa_locations import load_osm_shapefile, load_msoa_shapes
-
-# Directory where spatial data is stored
-gis_data_dir = ("../../devon_data")
-# osm_buildings = load_osm_shapefile(gis_data_dir)
-devon_msoa_shapes = load_msoa_shapes(gis_data_dir, visualize=False)
-devon_msoa_shapes = devon_msoa_shapes.set_index('Code', drop=True, verify_integrity=True)
-
-
-devon_msoa_codes = pd.DataFrame({'msoa11cd' :devon_msoa_shapes.index.to_list()})
-devon_msoa_codes.to_csv("observation_data/devon_msoa_codes.csv", index=False)
+devon_msoa_codes =  pd.read_csv("observation_data/devon_msoa_codes.csv")
 
 ##########################################################################
 ##########################################################################
@@ -67,48 +57,26 @@ devon_msoa_codes.to_csv("observation_data/devon_msoa_codes.csv", index=False)
 ##########################################################################
 ##########################################################################
 # Observed cases data
-# These were prepared by Hadrien and made available on the RAMP blob storage (see the observation data README).
-cases_msoa = pd.read_csv(os.path.join("observation_data", "england_initial_cases_MSOAs.csv")).set_index('MSOA11CD',
-                                                                                                        drop=True,
-                                                                                                        verify_integrity=True)
-
-# Merge them to the GIS data for convenience
-cases_msoa = cases_msoa.join(other=devon_msoa_shapes, how="inner")  # Joins on the indices (both indices are MSOA code)
-assert len(cases_msoa) == len(devon_msoa_shapes)  # Check we don't use any areas in the join
-
-# For some reason we lose the index name when joining
-cases_msoa.index.name = "msoa11cd"
+cases_msoa_weekly = pd.read_csv("observation_data/weekly_cases_msoas_aggregated_from_daily_IS.csv")
+# remove date column
+cases_msoa_weekly = cases_msoa_weekly.iloc[:, 1:]
+# Transpose
+cases_msoa_weekly = cases_msoa_weekly.T
 
 # Observations are cases per msoa.
 # Store as an array for us in model (more efficient?)
 # (first axis is the msoa number, second is the day)
-observations_array = cases_msoa.iloc[:, 0:405].to_numpy()
+observations_weekly_array = cases_msoa_weekly.to_numpy()
 
-# Reformat into dataframe with one column containing days and one column
-# containing cases
-observations_msoas_df = cases_msoa.iloc[:, 0:405]
-observations_msoas_df.reset_index(level=0, inplace=True)
-# Change to MSOA as columns, days as rows
-observations_msoas_df = observations_msoas_df.T
-# set MSOA codes as column names and remove as a row
-observations_msoas_df.rename(columns=observations_msoas_df.iloc[0], inplace=True)
-observations_msoas_df.drop(observations_msoas_df.index[0], inplace=True)
-# Add column with Day number at front of columns
-observations_msoas_df.insert(0, 'Cases', range(0, len(observations_msoas_df)))
-
+## Get dataframe with totals for whole of Devon
+cases_devon_weekly = pd.read_csv("observation_data/weekly_cases_devon_aggregated_from_daily_IS.csv")
 # Create new dataframe with cumulative sums rather than cases per day
-observations_msoas_cumulative_df = observations_msoas_df.copy()
-for colname in observations_msoas_cumulative_df.columns[1:].tolist():
-    observations_msoas_cumulative_df[colname] = observations_msoas_cumulative_df[colname].cumsum()
+cases_devon_weekly['CumulativeCases'] = cases_devon_weekly['OriginalCases'].cumsum()
 
-## Create dataframe with totals for whole of Devon
-observations_devon_cumulative_df = observations_msoas_cumulative_df.copy()
-# Add total across all MSOAs
-observations_devon_cumulative_df['Cases'] = observations_devon_cumulative_df.iloc[:, 1:].sum(axis=1)
-# Drop MSOA values
-observations_devon_cumulative_df.drop(observations_devon_cumulative_df.columns[1:108], axis=1, inplace=True)
-# reset index
-observations_devon_cumulative_df.reset_index(inplace=True, drop=True)
+# Read in daily devon case data (interpoalted from weekly)
+cases_devon_daily = pd.read_csv("observation_data/daily_cases_devon_shifted_mpld_smoothed_IS.csv")
+# Create new dataframe with cumulative sums rather than cases per day
+cases_devon_daily['CumulativeCases'] = cases_devon_daily['OriginalCases'].cumsum()
 
 ################################
 ##########################################################################
@@ -204,7 +172,7 @@ admin_params = {"quiet": True, "use_gpu": True, "store_detailed_counts": True, "
                 "run_length": da_window_size,
                 "current_particle_pop_df": None,
                 "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR,
-                "individuals_df": individuals_df, "observations_array": observations_array
+                "individuals_df": individuals_df, "observations_weekly_array": observations_weekly_array
                 }
 
 # Create dictionaries to store the dfs, weights or history from each window (don't need all of these, but testing for now)
@@ -216,7 +184,7 @@ history_dict = {}
 starting_windows_time = datetime.datetime.now()
 
 # Define number of windows to run for
-windows = 3
+windows = 2
 
 # Loop through each window
 for window_number in range(1, windows + 1):
@@ -310,7 +278,7 @@ USE_HEALTHIER_POP = True
 
 OpenCLRunner.init(iterations=ITERATIONS,
                   repetitions=REPETITIONS,
-                  observations=observations_devon_cumulative_df,
+                  observations=cases_devon_weekly,
                   use_gpu=USE_GPU,
                   use_healthier_pop=USE_HEALTHIER_POP,
                   store_detailed_counts=STORE_DETAILED_COUNTS,
@@ -319,10 +287,10 @@ OpenCLRunner.init(iterations=ITERATIONS,
                   snapshot_filepath=SNAPSHOT_FILEPATH)
 
 ##### define the abc_history object (not necessary as this will be most recent abc_history anyway)
-abc_history = history_dict['w3']
+abc_history = history_dict['w2']
 
 # Define the number of samples to take from the posterior distribution of parameters
-N_samples = 50
+N_samples = 10
 df, w = abc_history.get_distribution(m=0, t=abc_history.max_t)
 
 # Sample from the dataframe of posteriors using KDE
@@ -353,6 +321,11 @@ for i, sample in samples.iterrows():
     param_values = {param: sample[str(param)] for param in priors}
 
     # Run the model
+    # _fitness = fitness (comparison between sim and obs)
+    # _sim =  model_weekly_cumulative_infections
+    # _obs = obs_weekly_cumulative_infections
+    # _out_params = 
+    # _summaries = 
     (_fitness, _sim, _obs, _out_params, _summaries) = \
         OpenCLRunner.run_model_with_params_abc(param_values, return_full_details=True)
     print(f"Fitness: {_fitness}.")
@@ -370,7 +343,6 @@ print(f"Finished sampling. Ignored {negative_count} negative samples.")
 # Sanity check - that observations in each case are the same length?
 for i in range(len(obs_l) - 1):
     assert np.array_equal(obs_l[0], obs_l[i])
-
 
 # Save these because it took ages to sample
 def pickle_samples(mode, *arrays):
@@ -403,24 +375,48 @@ pickle_samples('save', fitness_l, sim_l, obs_l, out_params_l, out_calibrated_par
 _fitness = np.array(fitness_l)  # Easier to do maths on np.array
 fitness_norm = (_fitness - min(_fitness)) / (max(_fitness) - min(_fitness))
 
+
+############## PLOT WEEKLY DATA
 fig, ax = plt.subplots(1, 1, figsize=(12, 8))
 x = range(len(sim_l[0]))
+for i in range(len(summaries_l)):
+    ax.plot(x, sim_l[i],
+            # label=f"Particle {df.index[sample_idx[i]]}",
+            color="black", alpha=1 - fitness_norm[i]  # (1-x because high fitness is bad)
+            )
+    # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"Fitness {round(fitness_l[i])}", fontsize=8)
+    # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"P{df.index[sample_idx[i]]}, F{round(fitness_l[i])}", fontsize=8)
+# Plot observations
+ax.plot(x, obs_l[0], label="Observations", color="darkblue")
+# Plot result from manually calibrated model
+# ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
+ax.legend(fontsize=20)
+# plot_summaries(summaries=summaries_l[0], plot_type="error_bars", observations=OBSERVATIONS)
+ax.tick_params(axis='both', which='major', labelsize=20)
+plt.xlabel("Week", size=20)
+plt.ylabel("Cases",size=20)
+plt.show()
+
+
+############## PLOT DAILY DATA
+fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+x = range(len(OpenCLRunner.get_cumulative_new_infections(summaries_l[1])))
 for i in range(len(summaries_l)):
     ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries_l[i]),
             # label=f"Particle {df.index[sample_idx[i]]}",
             color="black", alpha=1 - fitness_norm[i]  # (1-x because high fitness is bad)
             )
-
     # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"Fitness {round(fitness_l[i])}", fontsize=8)
     # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"P{df.index[sample_idx[i]]}, F{round(fitness_l[i])}", fontsize=8)
 # Plot observations
-ax.plot(x, obs_l[0], label="Observations", color="blue")
+ax.plot(x, cases_devon_daily['CumulativeCases'][0:100], label="Observations", color="blue")
 # Plot result from manually calibrated model
 # ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
-ax.legend()
+ax.legend(fontsize=20)
 # plot_summaries(summaries=summaries_l[0], plot_type="error_bars", observations=OBSERVATIONS)
-plt.xlabel("Days")
-plt.ylabel("Cases")
+ax.tick_params(axis='both', which='major', labelsize=20)
+plt.xlabel("Day", size=20)
+plt.ylabel("Cases",size=20)
 plt.show()
 
 del _fitness, fitness_norm

@@ -171,8 +171,8 @@ abc = pyabc.ABCSMC(
     parameter_priors=priors,  # Priors (again could be a list if we have different priors for different models)
     distance_function=distance,  # Distance function defined earlier
     summary_statistics=summary_stats,  # Function takes raw model output and calculates a summary
-    #sampler=pyabc.sampler.SingleCoreSampler()  # Single core for testing (optional)
-    sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
+    sampler=pyabc.sampler.SingleCoreSampler()  # Single core for testing (optional)
+    #sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
 )
 
 # The results are stored in a database. We use a simple file database (sqlite) that creates a database
@@ -223,8 +223,20 @@ plt.show()
 # *********************************************************
 # Now try running again, using the posterior as a new prior
 # *********************************************************
-
 new_priors = ArbitraryDistribution(abc_history)
+new_priors.plot(abc_history)
+
+
+dist_df, dist_w = abc_history.get_distribution(m=0, t=abc_history.max_t)
+fig, ax = plt.subplots()
+pyabc.visualization.plot_kde_1d(
+    dist_df,dist_w,
+    xmin=0, xmax=5,
+    x="mean", ax=ax,
+    label="PDF t={}".format(t))    
+
+
+
 
 # Prepare the ABC model
 abc = pyabc.ABCSMC(
