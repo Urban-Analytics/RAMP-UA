@@ -1,13 +1,14 @@
 # Observation data
+##  Preparing estimates of daily Covid cases in Devon
 
-## Devon case data for calibration
+### Current method
+Data being used in running the models currently is created in
+`CreatingObservations-Daily-InterpolateSecond.ipynb`
 
-Files: 
+A variation of the method used to create the data in this script is also investigated in `CreatingObservations-Daily-InterpolateFirst.ipynb`, but it is concluded that the results of this are not as realistic.
 
- - [devon_cases.csv] devon_cases.csv)
- - [gam_cases.R](gam_cases.R)
- - [getUKCovidTimeSeries.R](getUKCovidTimeSeries.R)
-
+### Previous methods#
+#### 1. gam_cases.csv
 James Salter has been maintaining an r script: `getUKCovidTimeSeries.R` that retrieves the latest covid case and hospital admissions data. Run the function in that script to obtain the latest data, then to get cases for devon do (e.g.):
 
 ```
@@ -21,9 +22,9 @@ Fiona has written a script (`gam_cases.R`) to smooth the cases. That script outp
 
 ## National MSOA data
 
-More recently (May 2011) we obtained case data nationally and at MSOA:
+#### 2. Hadrien [england_initial_cases.csv](england_initial_cases.csv)
+A second approach was based on modelling daily case data from the weekly cases at hospital and biweekly infection survey results.
 
- - [england_initial_cases.csv](england_initial_cases.csv)
- - [england_initial_cases_MSOAs.csv](england_initial_cases_MSOAs.csv)
+`https://github.com/Urban-Analytics/RAMP-UA/blob/Ecotwins-withCommuting/lab/createSeedingFiles.R`
 
-
+This creates "england_initial_cases.csv" in which D0 refers to 05/03/20
