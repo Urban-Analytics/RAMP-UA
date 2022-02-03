@@ -12,8 +12,8 @@ class InitialCases:
         """
 
         # load initial case data
-        self.initial_cases = pd.read_csv("experiments/calibration/observation_data/daily_cases_devon_shifted_mpld_smoothed_IS.csv")
         #self.initial_cases = pd.read_csv(os.path.join(data_dir, "devon_initial_cases.csv"))
+        self.initial_cases = pd.read_csv(os.path.join(data_dir, "daily_cases_devon_shifted_mpld_smoothed_IS.csv"))
 
         msoa_risks_df = pd.read_csv(os.path.join(data_dir, "msoas.csv"), usecols=[1, 2])
 
@@ -29,7 +29,11 @@ class InitialCases:
     def get_seed_people_ids_for_day(self, day):
         """Randomly choose a given number of people ids from the high risk people"""
         
-        num_cases = self.initial_cases.loc[day, "num_cases"]
+        #num_cases = self.initial_cases.loc[day, "num_cases"]
+        test = self.initial_cases
+        print(test.head())
+        num_cases = self.initial_cases.loc[day, "OriginalCases"]
+        num_cases = int(num_cases)
         if num_cases > self.high_risk_ids.shape[0]:  # if there aren't enough high risk individuals then return all of them
             return self.high_risk_ids
 
