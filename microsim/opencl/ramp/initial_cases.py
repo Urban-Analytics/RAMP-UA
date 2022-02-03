@@ -12,7 +12,8 @@ class InitialCases:
         """
 
         # load initial case data
-        self.initial_cases = pd.read_csv(os.path.join(data_dir, "devon_initial_cases.csv"))
+        self.initial_cases = pd.read_csv("experiments/calibration/observation_data/daily_cases_devon_shifted_mpld_smoothed_IS.csv")
+        #self.initial_cases = pd.read_csv(os.path.join(data_dir, "devon_initial_cases.csv"))
 
         msoa_risks_df = pd.read_csv(os.path.join(data_dir, "msoas.csv"), usecols=[1, 2])
 
