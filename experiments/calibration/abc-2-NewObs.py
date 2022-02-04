@@ -74,6 +74,8 @@ LOAD_PICKLES = True
 # Useful for connecting to this kernel
 #%connect_info
 
+print(os.getcwd())
+
 # ## Setup
 # Read parameters
 

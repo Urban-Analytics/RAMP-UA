@@ -461,7 +461,7 @@ class OpenCLRunner:
         :return: The number of cumulative new infections per day (as a list value in a
             dictionary as required by the pyabc package) unless return_full_details is True.
         """      
-        print("Here in run_model_with_params_abc")
+        print("opencl_runner.py -- run_model_with_params_abc")
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
