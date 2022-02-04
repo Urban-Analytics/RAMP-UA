@@ -34,7 +34,7 @@ class OpenCLRunner:
     @classmethod
     def init(cls, iterations: int, repetitions: int, observations: pd.DataFrame, use_gpu: bool,
              use_healthier_pop: bool, store_detailed_counts: bool, parameters_file: str, opencl_dir: str,
-             snapshot_filepath: str):
+             snapshot_filepath: str, num_seed_days:int):
         """
         The class variables determine how the model should run. They need to be class variables
         because the 'run_model_with_params' function, which is called by calibration libraries, can only take
@@ -60,6 +60,7 @@ class OpenCLRunner:
         cls.OPENCL_DIR = opencl_dir
         cls.SNAPSHOT_FILEPATH = snapshot_filepath
         cls.initialised = True
+        cls.NUM_SEED_DAYS = num_seed_days
 
     @classmethod
     def update(cls, iterations: int = None, repetitions: int = None, observations: pd.DataFrame = None,
@@ -112,6 +113,8 @@ class OpenCLRunner:
         sim : array_like
               The simulated data."""
 
+        print(obs)
+        print(sim)
         if len(obs) != len(sim):
             raise Exception(f"Lengths should be the same, not {len(obs)}) and {len(sim)}")
         if np.array(obs).shape != np.array(sim).shape:
@@ -288,7 +291,7 @@ class OpenCLRunner:
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
                          opencl_dir: str, use_gpu: bool,
-                         use_healthier_pop: bool,
+                         use_healthier_pop: bool, num_seed_days:int,
                          store_detailed_counts: bool = True, quiet=False) -> (np.ndarray, np.ndarray):
         """
         Run the OpenCL model.
@@ -305,9 +308,9 @@ class OpenCLRunner:
         :return: A summary python array that contains the results for each iteration and a final state
 
         """
-        print("opencl_runner.py -- run_opencl_model")
+        #print("opencl_runner.py -- run_opencl_model")
         # load snapshot
-        print(snapshot_filepath)
+        #print(snapshot_filepath)
         snapshot = Snapshot.load_full_snapshot(path=snapshot_filepath)
         # print(snapshot)
         prev_obesity = np.copy(snapshot.buffers.people_obesity)
@@ -328,10 +331,10 @@ class OpenCLRunner:
         snapshot.seed_prngs(i)
 
         # Create a simulator and upload the snapshot data to the OpenCL device
-        simulator = Simulator(snapshot, opencl_dir=opencl_dir, gpu=use_gpu)
+        simulator = Simulator(snapshot, opencl_dir=opencl_dir, gpu=use_gpu, num_seed_days = num_seed_days)
         # print(simulator)
         simulator.upload_all(snapshot.buffers)
-        print(simulator.initial_cases)
+        #print(simulator.initial_cases)
 
         if not quiet:
             print(f"Running simulation {i + 1}.")
@@ -348,7 +351,7 @@ class OpenCLRunner:
     #
     @staticmethod
     def run_opencl_model_multi(
-            repetitions: int, iterations: int, params: Params,
+            repetitions: int, iterations: int, params: Params, num_seed_days: int,
             use_gpu: bool = False, use_healthier_pop: bool = False, store_detailed_counts: bool = False,
             opencl_dir=os.path.join(".", "microsim", "opencl"),
             snapshot_filepath=os.path.join(".", "microsim", "opencl", "snapshots", "cache.npz"),
@@ -359,7 +362,7 @@ class OpenCLRunner:
 
         :param multiprocess: Whether to run in mutliprocess mode (default False)
         """
-        print("opencl_runner.py - run_opencl_model_multi")
+        #print("opencl_runner.py - run_opencl_model_multi")
         # Prepare the function arguments. We need one set of arguments per repetition
         l_i = [i for i in range(repetitions)] if not random_ids else \
             [random.randint(1, 100000) for _ in range(repetitions)]
@@ -369,11 +372,13 @@ class OpenCLRunner:
         l_opencl_dir = [opencl_dir] * repetitions
         l_use_gpu = [use_gpu] * repetitions
         l_use_healthier_pop = [use_healthier_pop] * repetitions
+        l_num_seed_days = [num_seed_days] * repetitions
         l_store_detailed_counts = [store_detailed_counts] * repetitions
         l_quiet = [quiet] * repetitions  # Whether or not to print info
+     
 
         args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_use_gpu, l_use_healthier_pop,
-                   l_store_detailed_counts, l_quiet)
+                   l_num_seed_days, l_store_detailed_counts, l_quiet)
         to_return = None
         start_time = time.time()
         if multiprocess:
@@ -427,9 +432,9 @@ class OpenCLRunner:
             symptomatic=symptomatic)
 
         results = OpenCLRunner.run_opencl_model_multi(
-            repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,
+            repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params, num_seed_days = cls.NUM_SEED_DAYS,
             opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
-            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False
+            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False 
         )
 
         summaries = [x[0] for x in results]
@@ -461,7 +466,7 @@ class OpenCLRunner:
         :return: The number of cumulative new infections per day (as a list value in a
             dictionary as required by the pyabc package) unless return_full_details is True.
         """      
-        print("opencl_runner.py -- run_model_with_params_abc")
+        #print("opencl_runner.py -- run_model_with_params_abc")
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
@@ -481,7 +486,7 @@ class OpenCLRunner:
         )
 
         results = OpenCLRunner.run_opencl_model_multi(
-            repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,
+            repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,num_seed_days = cls.NUM_SEED_DAYS,
             opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
             store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False, random_ids=True,
             quiet=quiet)

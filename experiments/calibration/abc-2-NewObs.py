@@ -28,7 +28,6 @@
 #   
 #  - Presymptomatic and symptomatic multipliers (`presymptomatic` and `symptomatic`)
 #   - Are fixed at 1.0
-# 
 
 # ## Import modules
 
@@ -122,7 +121,7 @@ cases_devon_weekly.head()
 # ### Run default (manually calibrated) model
 # This shows what happens with the 'default' (manually calibrated) model
 ITERATIONS = 100  # Number of iterations to run for
-NUM_SEED_DAYS = 10  # Number of days to seed the population
+NUM_SEED_DAYS = 5  # Number of days to seed the population
 USE_GPU = True
 STORE_DETAILED_COUNTS = False
 REPETITIONS = 5
@@ -144,7 +143,8 @@ OpenCLRunner.init(
     store_detailed_counts = STORE_DETAILED_COUNTS,
     parameters_file = PARAMETERS_FILE,
     opencl_dir = OPENCL_DIR,
-    snapshot_filepath = SNAPSHOT_FILEPATH
+    snapshot_filepath = SNAPSHOT_FILEPATH,
+    num_seed_days = NUM_SEED_DAYS
 )
 
 OpenCLRunner.update(repetitions=5)  # Temporarily use more repetitions to give a good baseline
@@ -355,6 +355,7 @@ abc = pyabc.ABCSMC(
     models=OpenCLRunner.run_model_with_params_abc, # Model (could be a list)
     parameter_priors=priors, # Priors (could be a list)
     distance_function=distance,  # Distance function
+    # distance_function = OpenCLWrapper.distance,
     sampler = pyabc.sampler.SingleCoreSampler()  # Single core because the model is parallelised
     #transition=transition,  # Define how to transition from one population to the next
     )
