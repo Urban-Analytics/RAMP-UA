@@ -20,6 +20,7 @@ from microsim.opencl.ramp.run import run_headless
 from microsim.opencl.ramp.params import Params, IndividualHazardMultipliers, LocationHazardMultipliers
 from microsim.opencl.ramp.disease_statuses import DiseaseStatus
 from microsim.opencl.ramp.summary import Summary
+from microsim.opencl.ramp.initial_cases import InitialCases
 
 import matplotlib.pyplot as plt
 
@@ -304,9 +305,11 @@ class OpenCLRunner:
         :return: A summary python array that contains the results for each iteration and a final state
 
         """
-        x=1
+        print("opencl_runner.py -- run_opencl_model")
         # load snapshot
+        print(snapshot_filepath)
         snapshot = Snapshot.load_full_snapshot(path=snapshot_filepath)
+        # print(snapshot)
         prev_obesity = np.copy(snapshot.buffers.people_obesity)
         if use_healthier_pop:
             snapshot.switch_to_healthier_population()
@@ -326,7 +329,9 @@ class OpenCLRunner:
 
         # Create a simulator and upload the snapshot data to the OpenCL device
         simulator = Simulator(snapshot, opencl_dir=opencl_dir, gpu=use_gpu)
+        # print(simulator)
         simulator.upload_all(snapshot.buffers)
+        print(simulator.initial_cases)
 
         if not quiet:
             print(f"Running simulation {i + 1}.")
@@ -354,7 +359,7 @@ class OpenCLRunner:
 
         :param multiprocess: Whether to run in mutliprocess mode (default False)
         """
-        x=1
+        print("opencl_runner.py - run_opencl_model_multi")
         # Prepare the function arguments. We need one set of arguments per repetition
         l_i = [i for i in range(repetitions)] if not random_ids else \
             [random.randint(1, 100000) for _ in range(repetitions)]
@@ -456,7 +461,7 @@ class OpenCLRunner:
         :return: The number of cumulative new infections per day (as a list value in a
             dictionary as required by the pyabc package) unless return_full_details is True.
         """      
-        
+        print("Here in run_model_with_params_abc")
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
@@ -496,11 +501,12 @@ class OpenCLRunner:
         if not quiet:
             print(f"Ran Model with {str(input_params_dict)}")
 
+        # Get observations as array
+        obs_weekly_cumulative_infections = cls.OBSERVATIONS.loc[:cls.ITERATIONS - 1, "CumulativeCases"].values
+        # Cut to same length as the modelled results
+        obs_weekly_cumulative_infections= obs_weekly_cumulative_infections[0:len(model_weekly_cumulative_infections)]
+
         if return_full_details:
-            # Get observations as array
-            obs_weekly_cumulative_infections = cls.OBSERVATIONS.loc[:cls.ITERATIONS - 1, "CumulativeCases"].values
-            # Cut to same length as the modelled results
-            obs_weekly_cumulative_infections= obs_weekly_cumulative_infections[0:len(model_weekly_cumulative_infections)]
             # check same length (but obviously will be now as set length based on model)
             assert len(model_weekly_cumulative_infections) == len(obs_weekly_cumulative_infections)
             # Can compare these to the observations to get a fitness

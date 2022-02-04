@@ -25,6 +25,7 @@ class Simulator:
         Raises:
             OSError: If a GPU was requested but none is found.
         """
+        print("simulator.py -- simulator __init__")
         nplaces = snapshot.nplaces
         npeople = snapshot.npeople
         nslots = snapshot.nslots

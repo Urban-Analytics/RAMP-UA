@@ -52,6 +52,7 @@ def run_headless(simulator, snapshot, iterations, quiet, store_detailed_counts=T
     be set to True to output the required data for the dashboard, however the model runs faster with this set to False.
     """
     params = Params.fromarray(snapshot.buffers.params)
+    print("running headless")
     summary = Summary(snapshot, store_detailed_counts=store_detailed_counts, max_time=iterations)
 
     # only show progress bar in quiet mode
