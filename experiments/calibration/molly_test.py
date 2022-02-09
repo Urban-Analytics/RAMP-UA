@@ -234,6 +234,7 @@ for window_number in range(1, windows + 1):
     # need to be provided here.
     run_id = abc.new(
         db=db_path,
+        stores_sum_stats = True,
         observed_sum_stat=None  # {'observation': observations_array, "individuals": individuals_df}
     )
 
@@ -273,7 +274,7 @@ PARAMS = OpenCLRunner.create_parameters(parameters_file=PARAMETERS_FILE)
 
 ITERATIONS = 105  # Number of iterations to run for
 assert (ITERATIONS /7).is_integer()
-NUM_SEED_DAYS = 20  # Number of days to seed the population
+NUM_SEED_DAYS = 10  # Number of days to seed the population
 USE_GPU = True
 STORE_DETAILED_COUNTS = False
 REPETITIONS = 5
@@ -293,13 +294,13 @@ OpenCLRunner.init(iterations=ITERATIONS,
                   num_seed_days = NUM_SEED_DAYS)
 
 # Set constants 
-# OpenCLRunner.set_constants(const_params_dict}
+OpenCLRunner.set_constants(const_params_dict)
 
 ##### define the abc_history object (not necessary as this will be most recent abc_history anyway)
 abc_history = history_dict['w2']
 
 # Define the number of samples to take from the posterior distribution of parameters
-N_samples = 20
+N_samples = 30
 df, w = abc_history.get_distribution(m=0, t=abc_history.max_t)
 
 # Sample from the dataframe of posteriors using KDE
@@ -327,8 +328,9 @@ for i, sample in samples.iterrows():
         sample = pd.Series(sample)
 
     # Create a dictionary with the parameters and their values for this sample
-    param_values = {param: sample[str(param)] for param in priors}
-
+    #param_values = {param: sample[str(param)] for param in priors}
+    param_values = sample.to_dict()
+    print(param_values)
     # Run the model
     # _fitness = fitness (comparison between sim and obs)
     # _sim =  model_weekly_cumulative_infections
