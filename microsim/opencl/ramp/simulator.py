@@ -15,7 +15,7 @@ class Simulator:
     and a step() method to execute the kernels to calculate one timestep of the model.
     """
 
-    def __init__(self, snapshot, gpu=True, opencl_dir="microsim/opencl/", num_seed_days=10):
+    def __init__(self, snapshot, num_seed_days, gpu=True, opencl_dir="microsim/opencl/"):
         """Initialise OpenCL context, kernels, and buffers for the simulator.
 
         Args:
@@ -25,7 +25,7 @@ class Simulator:
         Raises:
             OSError: If a GPU was requested but none is found.
         """
-        #print("simulator.py -- simulator __init__")
+        print(num_seed_days)
         nplaces = snapshot.nplaces
         npeople = snapshot.npeople
         nslots = snapshot.nslots

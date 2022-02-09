@@ -24,6 +24,7 @@ from microsim.opencl.ramp.initial_cases import InitialCases
 
 import matplotlib.pyplot as plt
 
+
 class OpenCLRunner:
     """Includes useful functions for running the OpenCL model in notebooks"""
 
@@ -34,7 +35,7 @@ class OpenCLRunner:
     @classmethod
     def init(cls, iterations: int, repetitions: int, observations: pd.DataFrame, use_gpu: bool,
              use_healthier_pop: bool, store_detailed_counts: bool, parameters_file: str, opencl_dir: str,
-             snapshot_filepath: str, num_seed_days:int):
+             snapshot_filepath: str, num_seed_days: int):
         """
         The class variables determine how the model should run. They need to be class variables
         because the 'run_model_with_params' function, which is called by calibration libraries, can only take
@@ -113,8 +114,6 @@ class OpenCLRunner:
         sim : array_like
               The simulated data."""
 
-        print(obs)
-        print(sim)
         if len(obs) != len(sim):
             raise Exception(f"Lengths should be the same, not {len(obs)}) and {len(sim)}")
         if np.array(obs).shape != np.array(sim).shape:
@@ -291,7 +290,7 @@ class OpenCLRunner:
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
                          opencl_dir: str, use_gpu: bool,
-                         use_healthier_pop: bool, num_seed_days:int,
+                         use_healthier_pop: bool, num_seed_days: int,
                          store_detailed_counts: bool = True, quiet=False) -> (np.ndarray, np.ndarray):
         """
         Run the OpenCL model.
@@ -308,18 +307,18 @@ class OpenCLRunner:
         :return: A summary python array that contains the results for each iteration and a final state
 
         """
-        #print("opencl_runner.py -- run_opencl_model")
+        # print("opencl_runner.py -- run_opencl_model")
         # load snapshot
-        #print(snapshot_filepath)
+        # print(snapshot_filepath)
         snapshot = Snapshot.load_full_snapshot(path=snapshot_filepath)
         # print(snapshot)
         prev_obesity = np.copy(snapshot.buffers.people_obesity)
         if use_healthier_pop:
             snapshot.switch_to_healthier_population()
 
-        #print("testing obesity arrays not equal")
-        #print(np.mean(prev_obesity))
-        #print(np.mean(snapshot.buffers.people_obesity))
+        # print("testing obesity arrays not equal")
+        # print(np.mean(prev_obesity))
+        # print(np.mean(snapshot.buffers.people_obesity))
 
         # assert not np.array_equal(prev_obesity, snapshot.buffers.people_obesity)
         # print("arrays not equal")
@@ -331,10 +330,10 @@ class OpenCLRunner:
         snapshot.seed_prngs(i)
 
         # Create a simulator and upload the snapshot data to the OpenCL device
-        simulator = Simulator(snapshot, opencl_dir=opencl_dir, gpu=use_gpu, num_seed_days = num_seed_days)
+        simulator = Simulator(snapshot, opencl_dir=opencl_dir, gpu=use_gpu, num_seed_days=num_seed_days)
         # print(simulator)
         simulator.upload_all(snapshot.buffers)
-        #print(simulator.initial_cases)
+        # print(simulator.initial_cases)
 
         if not quiet:
             print(f"Running simulation {i + 1}.")
@@ -362,7 +361,7 @@ class OpenCLRunner:
 
         :param multiprocess: Whether to run in mutliprocess mode (default False)
         """
-        #print("opencl_runner.py - run_opencl_model_multi")
+        # print("opencl_runner.py - run_opencl_model_multi")
         # Prepare the function arguments. We need one set of arguments per repetition
         l_i = [i for i in range(repetitions)] if not random_ids else \
             [random.randint(1, 100000) for _ in range(repetitions)]
@@ -375,7 +374,6 @@ class OpenCLRunner:
         l_num_seed_days = [num_seed_days] * repetitions
         l_store_detailed_counts = [store_detailed_counts] * repetitions
         l_quiet = [quiet] * repetitions  # Whether or not to print info
-     
 
         args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_use_gpu, l_use_healthier_pop,
                    l_num_seed_days, l_store_detailed_counts, l_quiet)
@@ -410,7 +408,6 @@ class OpenCLRunner:
         :return: The mean fitness across all model runs
 
         """
-        x=1
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
@@ -432,9 +429,9 @@ class OpenCLRunner:
             symptomatic=symptomatic)
 
         results = OpenCLRunner.run_opencl_model_multi(
-            repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params, num_seed_days = cls.NUM_SEED_DAYS,
+            repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params, num_seed_days=cls.NUM_SEED_DAYS,
             opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
-            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False 
+            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False
         )
 
         summaries = [x[0] for x in results]
@@ -465,8 +462,8 @@ class OpenCLRunner:
         :param quiet: Turn print messages on (false) or off (true, default)
         :return: The number of cumulative new infections per day (as a list value in a
             dictionary as required by the pyabc package) unless return_full_details is True.
-        """      
-        #print("opencl_runner.py -- run_model_with_params_abc")
+        """
+        # print("opencl_runner.py -- run_model_with_params_abc")
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
@@ -486,7 +483,7 @@ class OpenCLRunner:
         )
 
         results = OpenCLRunner.run_opencl_model_multi(
-            repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params,num_seed_days = cls.NUM_SEED_DAYS,
+            repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params, num_seed_days=cls.NUM_SEED_DAYS,
             opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
             store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False, random_ids=True,
             quiet=quiet)
@@ -496,10 +493,12 @@ class OpenCLRunner:
         # Get the cumulative number of new infections per day (i.e. simulated results)
         model_daily_cumulative_infections = OpenCLRunner.get_cumulative_new_infections(summaries)
         # Convert from cumulative cases to new cases
-        model_daily_new_infections =  np.insert(np.diff(model_daily_cumulative_infections), 0, model_daily_cumulative_infections[0], axis=0)
+        model_daily_new_infections = np.insert(np.diff(model_daily_cumulative_infections), 0,
+                                               model_daily_cumulative_infections[0], axis=0)
 
         # Convert to number of new infections per week (i.e. take sum of each 7 values)
-        model_weekly_new_infections = np.add.reduceat(model_daily_new_infections, np.arange(0, len(model_daily_new_infections), 7))
+        model_weekly_new_infections = np.add.reduceat(model_daily_new_infections,
+                                                      np.arange(0, len(model_daily_new_infections), 7))
         # Convert back to cumulative totals
         model_weekly_cumulative_infections = np.cumsum(model_weekly_new_infections)
 
@@ -509,7 +508,7 @@ class OpenCLRunner:
         # Get observations as array
         obs_weekly_cumulative_infections = cls.OBSERVATIONS.loc[:cls.ITERATIONS - 1, "CumulativeCases"].values
         # Cut to same length as the modelled results
-        obs_weekly_cumulative_infections= obs_weekly_cumulative_infections[0:len(model_weekly_cumulative_infections)]
+        obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[0:len(model_weekly_cumulative_infections)]
 
         if return_full_details:
             # check same length (but obviously will be now as set length based on model)
@@ -518,7 +517,8 @@ class OpenCLRunner:
             fitness = OpenCLRunner.fit_l2(model_weekly_cumulative_infections, obs_weekly_cumulative_infections)
             return fitness, model_weekly_cumulative_infections, obs_weekly_cumulative_infections, params, summaries
         else:  # Return the expected counts in a dictionary
-            return {"data": obs_weekly_cumulative_infections}
+            return {"data": model_weekly_cumulative_infections}
+
 
 class OpenCLWrapper(object):
     """A simplified version of the OpenCLRunner designed specifically to support using ABC as a day to do
@@ -530,7 +530,7 @@ class OpenCLWrapper(object):
     def __init__(self, const_params_dict,
                  quiet, use_gpu, store_detailed_counts, start_day, run_length,
                  current_particle_pop_df, parameters_file, snapshot_file, opencl_dir,
-                 individuals_df, observations_weekly_array,
+                 individuals_df, observations_weekly_array, num_seed_days,
                  _random_params_dict=None):
         """The constructor accepts the following:
 
@@ -564,6 +564,7 @@ class OpenCLWrapper(object):
         # The following two are used for calculating model error:
         self.individuals_df = individuals_df
         self.observations_weekly_array = observations_weekly_array
+        self.num_seed_days = num_seed_days
 
         # Now deal with the model parameters
         self.const_params_dict = const_params_dict
@@ -603,6 +604,7 @@ class OpenCLWrapper(object):
                           parameters_file=self.parameters_file, snapshot_file=self.snapshot_file,
                           opencl_dir=self.opencl_dir,
                           individuals_df=self.individuals_df, observations_weekly_array=self.observations_weekly_array,
+                          num_seed_days=self.num_seed_days,
                           _random_params_dict=random_params_dict)
         return m.run()
 
@@ -628,10 +630,10 @@ class OpenCLWrapper(object):
 
         # Just pass the model results on. The 'distance' function can work out how good the results
         # are. The important thing is that the model summary will now be stored by ABC in the database
-        #return raw_model_results
+        # return raw_model_results
 
     # @staticmethod
-    def distance(sim:dict, obs: dict):
+    def distance(sim: dict, obs: dict):
         """Calculate the distance between the number of cases in the model by MSOA compared to some observations (case data).
         All lists are assumed to be in the same MSOA order (e.g. first element in each list corresponds to the number of cases
         in the same MSOA).
@@ -639,7 +641,7 @@ class OpenCLWrapper(object):
         :param sim:
         :param obs:
         """
-        
+
         start_time = datetime.datetime.now()
 
         # Get the model run length (in days)
@@ -659,9 +661,9 @@ class OpenCLWrapper(object):
         # and so to get the results for each day, need to split off each 695,309 results and add to new column
         cumulative_model_disease_statuses_df = pd.DataFrame()
         colnames = []
-        for i in range(1,n_days+1):
+        for i in range(1, n_days + 1):
             colnames.append('Day' + str(i))
-            df = pd.DataFrame(cumulative_model_disease_statuses[(695309*(i-1)):(695309*i)])
+            df = pd.DataFrame(cumulative_model_disease_statuses[(695309 * (i - 1)):(695309 * i)])
             cumulative_model_disease_statuses_df = pd.concat([cumulative_model_disease_statuses_df, df], axis=1)
         cumulative_model_disease_statuses_df.columns = colnames
 
@@ -672,7 +674,7 @@ class OpenCLWrapper(object):
 
         # Join DF containing disease status of each individual on each day to the DF containing info on each individual
         # including which MSOA they are found within
-        cumulative_model_disease_statuses_df= pd.concat([cumulative_model_disease_statuses_df, individuals_df], axis=1)
+        cumulative_model_disease_statuses_df = pd.concat([cumulative_model_disease_statuses_df, individuals_df], axis=1)
 
         ########################################################################
         ########################################################################
@@ -684,18 +686,21 @@ class OpenCLWrapper(object):
         # Create empty dataframe to population
         cumulative_model_diseased_by_area = pd.DataFrame()
         # Loop through each day...
-        for i in range(1,n_days+1):
+        for i in range(1, n_days + 1):
             day = 'Day' + str(i)
             # Find the total number of individuals in each disease status on this day
-            cumulative_model_disease_statuses_by_area = (pd.crosstab([cumulative_model_disease_statuses_df.area], cumulative_model_disease_statuses_df[day]))
+            cumulative_model_disease_statuses_by_area = (
+                pd.crosstab([cumulative_model_disease_statuses_df.area], cumulative_model_disease_statuses_df[day]))
             # Add a column with the total number in any of the disease states
             # list the disease status columns to include
             columns_in_df = list(cumulative_model_disease_statuses_by_area.columns.values)
             columns_to_include = [i for i in [1.0, 2.0, 3.0, 4.0] if i in columns_in_df]
             # Filter out columns we don't want to include
-            cumulative_model_disease_statuses_by_area[day] = cumulative_model_disease_statuses_by_area[columns_to_include].sum(axis=1)
+            cumulative_model_disease_statuses_by_area[day] = cumulative_model_disease_statuses_by_area[
+                columns_to_include].sum(axis=1)
             # Add this to the dataframe to store results in
-            cumulative_model_diseased_by_area = pd.concat([cumulative_model_diseased_by_area,cumulative_model_disease_statuses_by_area[day]], axis=1)
+            cumulative_model_diseased_by_area = pd.concat(
+                [cumulative_model_diseased_by_area, cumulative_model_disease_statuses_by_area[day]], axis=1)
         # Add a column containing the cumulative total over all the days
         cumulative_model_diseased_by_area['CumulativeTotal_model'] = cumulative_model_diseased_by_area.sum(axis=1)
 
@@ -707,10 +712,10 @@ class OpenCLWrapper(object):
         # Get the observations
         observations = obs['observation']
         # Create as dataframe
-        observations_df = pd.DataFrame(data=observations[0:, 0:], index = cumulative_model_diseased_by_area.index,
-                          columns = ['Week' + str(i) for i in range(1, observations.shape[1]+1)])
+        observations_df = pd.DataFrame(data=observations[0:, 0:], index=cumulative_model_diseased_by_area.index,
+                                       columns=['Week' + str(i) for i in range(1, observations.shape[1] + 1)])
         # Add a cumulative total of cases from the first X days
-        n_weeks = int(n_days/7)
+        n_weeks = int(n_days / 7)
         observations_df['CumulativeTotal_obs'] = observations_df.iloc[:, 0:n_weeks].sum(axis=1)
 
         ########################################################################
@@ -720,18 +725,21 @@ class OpenCLWrapper(object):
         ########################################################################
         ########################################################################
         ## Join model with obs
-        obs_and_model_df = pd.concat([observations_df['CumulativeTotal_obs'], cumulative_model_diseased_by_area['CumulativeTotal_model']], axis=1)
+        obs_and_model_df = pd.concat(
+            [observations_df['CumulativeTotal_obs'], cumulative_model_diseased_by_area['CumulativeTotal_model']],
+            axis=1)
         obs_and_model_df.loc['Total'] = obs_and_model_df.sum()
         obs_and_model_df = obs_and_model_df.iloc[-1:]
 
         # Find the euclidean difference between the cumulative cases in model and obs
-        difference = np.linalg.norm(np.array(obs_and_model_df['CumulativeTotal_obs']) - np.array(obs_and_model_df['CumulativeTotal_model']))
+        difference = np.linalg.norm(
+            np.array(obs_and_model_df['CumulativeTotal_obs']) - np.array(obs_and_model_df['CumulativeTotal_model']))
 
         print("Found distance in {}".format(datetime.datetime.now() - start_time))
         return difference
 
     @staticmethod
-    def dummy_distance(sim: dict, obs:dict):
+    def dummy_distance(sim: dict, obs: dict):
         """PyABC needs a function that takes model results (`sim`) and some observations (`obs`) and returns the
         error (the 'distance' between the model results and the observations. This calculation is performed
         by the OpenCLWrapper.distance() function. But the calculation is done as part of the model run() and
@@ -747,7 +755,7 @@ class OpenCLWrapper(object):
         OpenCLWrapper.model_counter += 1
         model_number = OpenCLWrapper.model_counter
         # Print progress statement
-        #print(f"OpenclRunner is running model {model_number}")
+        # print(f"OpenclRunner is running model {model_number}")
 
         # If this is the first data assimilation window, we can just run the model as normal
         if self.start_day == 0:
@@ -759,7 +767,7 @@ class OpenCLWrapper(object):
             # Can set the random seed to make it deterministic (None means np will choose one randomly)
             snapshot.seed_prngs(seed=None)
             # Create a simulator and upload the snapshot data to the OpenCL device
-            simulator = Simulator(snapshot, opencl_dir=self.opencl_dir, gpu=self.use_gpu)
+            simulator = Simulator(snapshot, num_seed_days= self.num_seed_days, opencl_dir=self.opencl_dir, gpu=self.use_gpu)
             simulator.upload_all(snapshot.buffers)
 
             if not self.quiet:
@@ -778,7 +786,7 @@ class OpenCLWrapper(object):
                 else tqdm(range(self.quiet), desc="Running simulation")
 
             # Create array to store the disease statuses for each day
-            people_statuses_per_day = np.array([],dtype='uint8')
+            people_statuses_per_day = np.array([], dtype='uint8')
             iter_count = 0  # Count the total number of iterations
             # Run for iterations days
             for _ in timestep_iterator:
@@ -794,13 +802,13 @@ class OpenCLWrapper(object):
                 simulator.download("people_statuses", snapshot.buffers.people_statuses)
                 # Save the people's statuses
                 people_statuses_per_day = np.append(people_statuses_per_day, snapshot.buffers.people_statuses, axis=0)
-                #print(len(people_statuses_per_day))
+                # print(len(people_statuses_per_day))
             # Download the statuses at the end of the window (no need to do this now as we do it at the end of the for loop)
             # simulator.download("people_statuses", snapshot.buffers.people_statuses)
 
             summary.update(iter_count, snapshot.buffers.people_statuses)
 
-            #print(len(people_statuses_per_day))
+            # print(len(people_statuses_per_day))
             if not self.quiet:
                 for i in range(self.run_length):
                     print(f"\nDay {i}")

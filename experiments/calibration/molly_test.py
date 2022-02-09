@@ -8,6 +8,9 @@ import pickle
 import matplotlib.pyplot as plt
 import sys
 import datetime
+from matplotlib import cm
+
+os.chdir("C:/Users/gy17m2a/OneDrive - University of Leeds/Project/RAMP-UA/experiments/calibration")
 
 # PYABC (https://pyabc.readthedocs.io/en/latest/)
 import pyabc
@@ -107,9 +110,8 @@ print(f"Activity locations: {activity_locations}")
 ##########################################################################
 ##########################################################################
 const_params_dict = {
-    "current_risk_beta": 0.03,  # Global risk multplier (leave this as it is and allow the other parameters to vary)
-    "home": 1.0,
-    # Risk associated with being at home. Again leave this constant so the coefficients of other places will vary around it
+    "current_risk_beta": 0.025239665550846085,  # Global risk multplier (leave this as it is and allow the other parameters to vary)
+    "home": 1.0, # Risk associated with being at home. Again leave this constant so the coefficients of other places will vary around it
 }
 
 ##########################################################################
@@ -118,6 +120,9 @@ const_params_dict = {
 # Random variables are the global parameters.
 ##########################################################################
 ##########################################################################
+# The following should all be constant (overiding whatever is in the default.yml parameters file)
+#OpenCLRunner.set_constants(const_params_dict}
+
 # School and retail multipliers are uniform between 0-1
 retail_rv, primary_school_rv, secondary_school_rv = (pyabc.RV("uniform", 0, 1) for _ in range(3))
 # Work needs some dampening because we know that workplaces are too big in the current implementation
@@ -172,8 +177,8 @@ admin_params = {"quiet": True, "use_gpu": True, "store_detailed_counts": True, "
                 "run_length": da_window_size,
                 "current_particle_pop_df": None,
                 "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR,
-                "individuals_df": individuals_df, "observations_weekly_array": observations_weekly_array
-                }
+                "individuals_df": individuals_df, "observations_weekly_array": observations_weekly_array,
+                 'num_seed_days' :20}
 
 # Create dictionaries to store the dfs, weights or history from each window (don't need all of these, but testing for now)
 dfs_dict = {}
@@ -184,7 +189,7 @@ history_dict = {}
 starting_windows_time = datetime.datetime.now()
 
 # Define number of windows to run for
-windows = 2
+windows = 1
 
 # Loop through each window
 for window_number in range(1, windows + 1):
@@ -261,14 +266,14 @@ for window_number in range(1, windows + 1):
 # Plot the results to compare the performance of the model with the observations
 #############################################################################################################
 #############################################################################################################
-
 # Initialise the class so that its ready to run the model.
 ## Define parameters
 PARAMETERS_FILE = os.path.join("../../", "model_parameters", "default.yml")
 PARAMS = OpenCLRunner.create_parameters(parameters_file=PARAMETERS_FILE)
 
-ITERATIONS = 100  # Number of iterations to run for
-NUM_SEED_DAYS = 10  # Number of days to seed the population
+ITERATIONS = 105  # Number of iterations to run for
+assert (ITERATIONS /7).is_integer()
+NUM_SEED_DAYS = 20  # Number of days to seed the population
 USE_GPU = True
 STORE_DETAILED_COUNTS = False
 REPETITIONS = 5
@@ -284,13 +289,17 @@ OpenCLRunner.init(iterations=ITERATIONS,
                   store_detailed_counts=STORE_DETAILED_COUNTS,
                   parameters_file=PARAMETERS_FILE,
                   opencl_dir=OPENCL_DIR,
-                  snapshot_filepath=SNAPSHOT_FILEPATH)
+                  snapshot_filepath=SNAPSHOT_FILEPATH,
+                  num_seed_days = NUM_SEED_DAYS)
+
+# Set constants 
+# OpenCLRunner.set_constants(const_params_dict}
 
 ##### define the abc_history object (not necessary as this will be most recent abc_history anyway)
 abc_history = history_dict['w2']
 
 # Define the number of samples to take from the posterior distribution of parameters
-N_samples = 10
+N_samples = 20
 df, w = abc_history.get_distribution(m=0, t=abc_history.max_t)
 
 # Sample from the dataframe of posteriors using KDE
@@ -363,7 +372,6 @@ def pickle_samples(mode, *arrays):
     else:
         raise Exception(f"Unkonwn mode: {mode}")
 
-
 pickle_samples('save', fitness_l, sim_l, obs_l, out_params_l, out_calibrated_params_l, summaries_l)
 
 # print(f"Original fitness: {round(fitness0)}\nOptimised fitness: {round(fitness)}")
@@ -374,7 +382,6 @@ pickle_samples('save', fitness_l, sim_l, obs_l, out_params_l, out_calibrated_par
 # Normalise fitness to 0-1 to calculate transparency
 _fitness = np.array(fitness_l)  # Easier to do maths on np.array
 fitness_norm = (_fitness - min(_fitness)) / (max(_fitness) - min(_fitness))
-
 
 ############## PLOT WEEKLY DATA
 fig, ax = plt.subplots(1, 1, figsize=(12, 8))
@@ -397,7 +404,6 @@ plt.xlabel("Week", size=20)
 plt.ylabel("Cases",size=20)
 plt.show()
 
-
 ############## PLOT DAILY DATA
 fig, ax = plt.subplots(1, 1, figsize=(12, 8))
 x = range(len(OpenCLRunner.get_cumulative_new_infections(summaries_l[1])))
@@ -409,7 +415,7 @@ for i in range(len(summaries_l)):
     # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"Fitness {round(fitness_l[i])}", fontsize=8)
     # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"P{df.index[sample_idx[i]]}, F{round(fitness_l[i])}", fontsize=8)
 # Plot observations
-ax.plot(x, cases_devon_daily['CumulativeCases'][0:100], label="Observations", color="blue")
+ax.plot(x, cases_devon_daily['CumulativeCases'][0:105], label="Observations", color="blue")
 # Plot result from manually calibrated model
 # ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
 ax.legend(fontsize=20)
@@ -441,96 +447,96 @@ del _fitness, fitness_norm
 #
 # ##########################################################################
 # ##########################################################################
-# ### Plot the final population for each window
+# ### Plot the final population for each window - parameter values
 # ##########################################################################
 # ##########################################################################
-# evenly_spaced_interval = np.linspace(0, 1, 8)
-# colors = [cm.autumn_r(x) for x in evenly_spaced_interval]
-#
-# fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
-# for i, param in enumerate(original_priors.keys()):
-#     ax = axes.flat[i]
-#     color_i =0
-#     for history_name, history in history_dict.items():
-#         color = colors[color_i]
-#         df, w = history.get_distribution(m=0, t=history.max_t)
-#         pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
-#                 label=history_name,
-#                 #alpha=1.0 if t==0 else float(t)/abc_history.max_t, # Make earlier populations transparent
-#                 color= color)
-#         if param!="work":
-#                 ax.set_xlim(0,1)
-#         if param=="secondary_school" or param=='presymptomatic' or param =='symptomatic':
-#              ax.set_ylim(0,2.5)
-#         elif param == 'retail' or param == 'primary_school':
-#              ax.set_ylim(0,1.4)
-#         elif param == 'work' :
-#              ax.set_ylim(0,20)
-#              ax.set_xlim(0,0.4)
-#         elif param == 'asymptomatic' :
-#              ax.set_ylim(0,7)
-#         ax.legend(fontsize="small")
-#         #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
-#         #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
-#         ax.set_title(f"{param}")
-#         handles, labels = ax.get_legend_handles_labels()
-#         ax.get_legend().remove()
-#         color_i = color_i +1
-# fig.legend(handles, labels, loc='center right', fontsize = 17,
-#            bbox_to_anchor=(1.01, 0.17))
-#           # ncol = 8, bbox_to_anchor=(0.5, -0.07))
-# axes[2,2].set_axis_off()
-# axes[2,1].set_axis_off()
-# fig.tight_layout()
-# fig.show()
+evenly_spaced_interval = np.linspace(0, 1, 8)
+colors = [cm.autumn_r(x) for x in evenly_spaced_interval]
+
+fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
+for i, param in enumerate(original_priors.keys()):
+    ax = axes.flat[i]
+    color_i =0
+    for history_name, history in history_dict.items():
+        color = colors[color_i]
+        df, w = history.get_distribution(m=0, t=history.max_t)
+        pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
+                label=history_name,
+                #alpha=1.0 if t==0 else float(t)/abc_history.max_t, # Make earlier populations transparent
+                color= color)
+        if param!="work":
+                ax.set_xlim(0,1)
+        if param=="secondary_school" or param=='presymptomatic' or param =='symptomatic':
+              ax.set_ylim(0,2.5)
+        elif param == 'retail' or param == 'primary_school':
+              ax.set_ylim(0,1.4)
+        elif param == 'work' :
+              ax.set_ylim(0,20)
+              ax.set_xlim(0,0.4)
+        elif param == 'asymptomatic' :
+              ax.set_ylim(0,7)
+        ax.legend(fontsize="small")
+        #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
+        #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
+        ax.set_title(f"{param}")
+        handles, labels = ax.get_legend_handles_labels()
+        ax.get_legend().remove()
+        color_i = color_i +1
+fig.legend(handles, labels, loc='center right', fontsize = 17,
+            bbox_to_anchor=(1.01, 0.17))
+          # ncol = 8, bbox_to_anchor=(0.5, -0.07))
+axes[2,2].set_axis_off()
+axes[2,1].set_axis_off()
+fig.tight_layout()
+fig.show()
 # fig.savefig("Plots/8windows_14days_each_finalpop.jpg")
 #
 #
-# # ##########################################################################
-# # ##########################################################################
-# # ### Plot all populations for each window
-# # ##########################################################################
-# # ##########################################################################
-# colors = [cm.autumn_r(x) for x in evenly_spaced_interval]
-# alphas= [1, 1]
-# linestyles = ['dotted', 'solid']
-# fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
-# for i, param in enumerate(original_priors.keys()):
-#     ax = axes.flat[i]
-#     col_i = 0
-#     for history_name, history in history_dict.items():
-#         for t in range(history.max_t + 1):
-#             print(t)
-#             df, w = history.get_distribution(m=0, t=t)
-#             pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
-#                 label="{}, pop {}".format(history_name, t),
-#                 alpha= alphas[t],
-#                 color = colors[col_i],
-#                 linestyle = linestyles[t])
-#             if param!="work":
-#                 ax.set_xlim(0,1)
-#             if param=="secondary_school" or param=='presymptomatic' or param =='symptomatic':
-#                  ax.set_ylim(0,2.5)
-#             elif param == 'retail' or param == 'primary_school':
-#                  ax.set_ylim(0,1.4)
-#             elif param == 'work' :
-#                  ax.set_ylim(0,20)
-#             elif param == 'asymptomatic' :
-#                  ax.set_ylim(0,7)
-#             ax.legend(fontsize="small")
-#             #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
-#             #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
-#             ax.set_title(f"{param}")
-#             handles, labels = ax.get_legend_handles_labels()
-#             ax.get_legend().remove()
-#         col_i = col_i+1
-# axes[2,2].set_axis_off()
-# axes[2,1].set_axis_off()
-# fig.legend(handles, labels, loc='center right', fontsize = 17,ncol =2,
-#            bbox_to_anchor=(1.01, 0.17))
-# fig.tight_layout()
-# fig.show()
-# fig.savefig("Plots/8windows_14days_each_allpops.jpg")
+##########################################################################
+##########################################################################
+### Plot all populations for each window
+##########################################################################
+##########################################################################
+colors = [cm.autumn_r(x) for x in evenly_spaced_interval]
+alphas= [1, 1]
+linestyles = ['dotted', 'solid']
+fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
+for i, param in enumerate(original_priors.keys()):
+    ax = axes.flat[i]
+    col_i = 0
+    for history_name, history in history_dict.items():
+        for t in range(history.max_t + 1):
+            print(t)
+            df, w = history.get_distribution(m=0, t=t)
+            pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
+                label="{}, pop {}".format(history_name, t),
+                alpha= alphas[t],
+                color = colors[col_i],
+                linestyle = linestyles[t])
+            if param!="work":
+                ax.set_xlim(0,1)
+            if param=="secondary_school" or param=='presymptomatic' or param =='symptomatic':
+                  ax.set_ylim(0,2.5)
+            elif param == 'retail' or param == 'primary_school':
+                  ax.set_ylim(0,1.4)
+            elif param == 'work' :
+                  ax.set_ylim(0,20)
+            elif param == 'asymptomatic' :
+                  ax.set_ylim(0,7)
+            ax.legend(fontsize="small")
+            #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
+            #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
+            ax.set_title(f"{param}")
+            handles, labels = ax.get_legend_handles_labels()
+            ax.get_legend().remove()
+        col_i = col_i+1
+axes[2,2].set_axis_off()
+axes[2,1].set_axis_off()
+fig.legend(handles, labels, loc='center right', fontsize = 17,ncol =2,
+            bbox_to_anchor=(1.01, 0.17))
+fig.tight_layout()
+fig.show()
+fig.savefig("Plots/8windows_14days_each_allpops.jpg")
 
 
 #     # # ##########################################################################
