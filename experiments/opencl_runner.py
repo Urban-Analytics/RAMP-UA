@@ -497,9 +497,8 @@ class OpenCLRunner:
                                                model_daily_cumulative_infections[0], axis=0)
 
         # Convert to number of new infections per week (i.e. take sum of each 7 values)
-        model_weekly_new_infections = np.add.reduceat(model_daily_new_infections,
-                                                      np.arange(0, len(model_daily_new_infections), 7))
-        # Convert back to cumulative totals
+        model_weekly_new_infections = pd.Series(model_daily_new_infections).groupby(
+                                                     pd.Series(model_daily_new_infections).index // 7).sum().values
         model_weekly_cumulative_infections = np.cumsum(model_weekly_new_infections)
 
         if not quiet:
@@ -509,7 +508,7 @@ class OpenCLRunner:
         obs_weekly_cumulative_infections = cls.OBSERVATIONS.loc[:cls.ITERATIONS - 1, "CumulativeCases"].values
         # Cut to same length as the modelled results
         obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[0:len(model_weekly_cumulative_infections)]
-
+        x=1
         if return_full_details:
             # check same length (but obviously will be now as set length based on model)
             assert len(model_weekly_cumulative_infections) == len(obs_weekly_cumulative_infections)
@@ -620,13 +619,15 @@ class OpenCLWrapper(object):
         :return: processed model results.
         """
         # Check that we receive everything that we expect to
-        print(raw_model_results.keys())
-        if "disease_statuses" not in raw_model_results.keys():
-            raise Exception(f"No 'disease_statuses' item found in the model results that are passed "
-                            f"to summary_stats: {raw_model_results}")
+        # if "disease_statuses" not in raw_model_results.keys():
+        #     raise Exception(f"No 'disease_statuses' item found in the model results that are passed "
+        #                     f"to summary_stats: {raw_model_results}")
 
-        model_result_summary = raw_model_results['model_result']
-        return {"model_summary": model_result_summary, "test": "SUMMARY_TEST"}
+        # return {"model_summary": model_result_summary, "test": "SUMMARY_TEST"}
+        print(raw_model_results['obs_and_model_df'])
+        return {"test": "SUMMARY_TEST",
+                "distance": raw_model_results['distance'],
+                "model_summary": raw_model_results['obs_and_model_df']}
 
         # Just pass the model results on. The 'distance' function can work out how good the results
         # are. The important thing is that the model summary will now be stored by ABC in the database
@@ -641,7 +642,6 @@ class OpenCLWrapper(object):
         :param sim:
         :param obs:
         """
-
         start_time = datetime.datetime.now()
 
         # Get the model run length (in days)
@@ -650,7 +650,6 @@ class OpenCLWrapper(object):
         #############################################################################
         # Create dataframe containing the disease status of each individual on each
         # day the model has been ran for, and the area (MSOA) they live in 
-        # IS THIS CUMULATIVE?
         #############################################################################
         # Get the disease status of each individual on each day in the model run
         cumulative_model_disease_statuses = sim['people_statuses_per_day']
@@ -702,7 +701,17 @@ class OpenCLWrapper(object):
             cumulative_model_diseased_by_area = pd.concat(
                 [cumulative_model_diseased_by_area, cumulative_model_disease_statuses_by_area[day]], axis=1)
         # Add a column containing the cumulative total over all the days
-        cumulative_model_diseased_by_area['CumulativeTotal_model'] = cumulative_model_diseased_by_area.sum(axis=1)
+        #cumulative_model_diseased_by_area['CumulativeTotal_model'] = cumulative_model_diseased_by_area.sum(axis=1)
+
+        # Add a cumulative total of cases from the first X days
+        cumulative_model_diseased_by_area_weekly_sum = pd.DataFrame()
+        n_weeks = int(n_days / 7)
+        for i in range(7, (n_weeks*7)+7, 7):
+            print(i)
+            weekly_total = cumulative_model_diseased_by_area.iloc[:, 0:i].sum(axis=1)
+            cumulative_model_diseased_by_area_weekly_sum["week{}Sum".format(int(i/7))] = weekly_total
+        # Sum over MSOAs
+        cumulative_model_diseased_by_area_weekly_sum = cumulative_model_diseased_by_area_weekly_sum.sum(axis=0)
 
         ########################################################################
         ########################################################################
@@ -714,9 +723,15 @@ class OpenCLWrapper(object):
         # Create as dataframe
         observations_df = pd.DataFrame(data=observations[0:, 0:], index=cumulative_model_diseased_by_area.index,
                                        columns=['Week' + str(i) for i in range(1, observations.shape[1] + 1)])
-        # Add a cumulative total of cases from the first X days
+
+        # Add a cumulative total of cases over the whole period the model being ran
         n_weeks = int(n_days / 7)
-        observations_df['CumulativeTotal_obs'] = observations_df.iloc[:, 0:n_weeks].sum(axis=1)
+        #observations_df['CumulativeTotal_obs'] = observations_df.iloc[:, 0:n_weeks].sum(axis=1)
+
+        # Keep only the number of weeks over which the model is being ran
+        observations_df_this_window = observations_df.iloc[:,0:n_weeks]
+        # sum the values over all MSOAs
+        observations_df_this_window_sums = observations_df_this_window.sum(axis=0)
 
         ########################################################################
         ########################################################################
@@ -724,19 +739,27 @@ class OpenCLWrapper(object):
         # number of days being considered
         ########################################################################
         ########################################################################
-        ## Join model with obs
-        obs_and_model_df = pd.concat(
-            [observations_df['CumulativeTotal_obs'], cumulative_model_diseased_by_area['CumulativeTotal_model']],
-            axis=1)
-        obs_and_model_df.loc['Total'] = obs_and_model_df.sum()
-        obs_and_model_df = obs_and_model_df.iloc[-1:]
+        # ## Join model with obs
+        # obs_and_model_df = pd.concat(
+        #     [observations_df['CumulativeTotal_obs'], cumulative_model_diseased_by_area['CumulativeTotal_model']],
+        #     axis=1)
+        # obs_and_model_df.loc['Total'] = obs_and_model_df.sum()
+        # obs_and_model_df = obs_and_model_df.iloc[-1:]
+        #
+        # # Find the euclidean difference between the cumulative cases in model and obs
+        # difference = np.linalg.norm(
+        #     np.array(obs_and_model_df['CumulativeTotal_obs']) - np.array(obs_and_model_df['CumulativeTotal_model']))
 
-        # Find the euclidean difference between the cumulative cases in model and obs
-        difference = np.linalg.norm(
-            np.array(obs_and_model_df['CumulativeTotal_obs']) - np.array(obs_and_model_df['CumulativeTotal_model']))
+        ########################################################################
+        ########################################################################
+        # Euclidean difference - method 2
+        ########################################################################
+        ########################################################################
+        difference = np.linalg.norm(np.array(observations_df_this_window_sums) - np.array(cumulative_model_diseased_by_area_weekly_sum))
 
         print("Found distance in {}".format(datetime.datetime.now() - start_time))
         return difference
+
 
     @staticmethod
     def dummy_distance(sim: dict, obs: dict):
@@ -844,6 +867,11 @@ class OpenCLWrapper(object):
 
         dist = OpenCLWrapper.distance(
             sim={'model_run_length': self.run_length, 'people_statuses_per_day': people_statuses_per_day},
-            obs={'individuals': self.individuals_df, "observation": self.observations_weekly_array}
-        )
-        return {"distance": dist, "model_number": model_number, "model_run_length": self.run_length}
+            obs={'individuals': self.individuals_df, "observation": self.observations_weekly_array})
+
+        return {"distance": dist['difference'], "model_number": model_number, 
+                "model_run_length": self.run_length,
+                "obs_and_model_df":dist["obs_and_model_df"], 
+                "cumulative_model_diseased_by_area":dist['cumulative_model_diseased_by_area'] }
+    
+    
