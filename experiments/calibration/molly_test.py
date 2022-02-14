@@ -171,7 +171,7 @@ original_priors = pyabc.Distribution(**decorated_rvs)
 parameters_file = os.path.join("../../", "model_parameters/",
                                "default.yml")  # Need to tell it where the default parameters are
 # Set the size of a data assimilation window in days:
-da_window_size = 7
+da_window_size = 8
 # Dictionary with parameters for running model
 admin_params = {"quiet": True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0,
                 "run_length": da_window_size,
@@ -189,7 +189,7 @@ history_dict = {}
 starting_windows_time = datetime.datetime.now()
 
 # Define number of windows to run for
-windows = 2
+windows = 1
 
 # Loop through each window
 for window_number in range(1, windows + 1):
@@ -253,9 +253,9 @@ for window_number in range(1, windows + 1):
         # (w_t1 == w_t1_2).all()
 
         # Save these for use in plotting the prior on the plot of parameter values in each population
-        dfs_dict["w{},pop{}".format(window_number, t)] = df_t1
-        weights_dict["w{}, pop{}".format(window_number, t)] = w_t1
-        history_dict["w{}".format(window_number)] = abc_history
+        dfs_dict["DA window{},pop{}".format(window_number, t)] = df_t1
+        weights_dict["DA window{}, pop{}".format(window_number, t)] = w_t1
+        history_dict["DA window{}".format(window_number)] = abc_history
 
     # Merge dataframe and weights and sort by weight (highest weight at the top)
     # _df['weight'] = _w
@@ -265,11 +265,157 @@ for window_number in range(1, windows + 1):
 
 #############################################################################################################
 #############################################################################################################
-#
+# Get results at end of each window
 #############################################################################################################
 #############################################################################################################
-weighted_sum_stats = abc_history.get_weighted_sum_stats_for_model()
 
+
+df = pd.DataFrame()
+
+fig, ax = plt.subplots()
+
+colors ={'DA window1': 'darkred', 'DA window2': 'darkblue'}
+for window, n_days in {"DA window1" : 14, "DA window2":28}.items():
+    print(window, n_days)
+    x=range(1,n_days)    
+    history  = history_dict[window]   
+    weighted_sum_stats_t0 = history.get_weighted_sum_stats_for_model(t=0)[1]
+    
+    for particle_no in range(0,100):
+        print(particle_no)
+        particle_x_dict = weighted_sum_stats_t0[particle_no]
+        cumulative_model_diseased_by_area = particle_x_dict["cumulative_model_diseased_by_area"]
+    
+        cumulative_model_diseased_by_area_devon_sum = cumulative_model_diseased_by_area.sum(axis=0)
+    
+        # Create dataframe to populate with results
+        cumulative_model_diseased_by_area_weekly_sum = pd.DataFrame()
+        # Define n weeks
+        n_weeks = int(n_days / 7)
+        # Loop through each week in n_weeks, find total number of cases in that week
+        # for each MSOA, add column to dataframe containing this total
+        for i in range(7, (n_weeks * 7) + 7, 7):
+            weekly_total = cumulative_model_diseased_by_area.iloc[:, 0:i].sum(axis=1)
+            cumulative_model_diseased_by_area_weekly_sum["week{}Sum".format(int(i / 7))] = weekly_total
+        # Sum over MSOAs
+        cumulative_model_diseased_by_area_weekly_sum = cumulative_model_diseased_by_area_weekly_sum.sum(axis=0)
+        df[particle_no] = cumulative_model_diseased_by_area_devon_sum
+        
+        ax.plot(x,cumulative_model_diseased_by_area_devon_sum[1:], color = colors[window])
+    
+    ax.set_xlabel("Day")
+    ax.set_ylabel("Number infections")
+
+
+##########################################################################
+##########################################################################
+### Plot the parameter values being used in each window
+##########################################################################
+##########################################################################
+
+#### Final population for each window
+evenly_spaced_interval = np.linspace(0.35, 1, 3)
+colors = [cm.Greens(x) for x in evenly_spaced_interval]
+
+fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
+for i, param in enumerate(original_priors.keys()):
+    color_i =0
+    ax = axes.flat[i]
+    # Add parameter priors
+    ax.plot(x, pyabc.Distribution(param=all_rv[param]).pdf({"param": x}), 
+            color = 'black', label = 'Prior', linewidth  = 2, linestyle ='dashed')
+    for history_name, history in history_dict.items():
+        color = colors[color_i]
+        df, w = history.get_distribution(m=0, t=history.max_t)
+        pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
+                label=history_name, linewidth = 3,
+                #alpha=1.0 if t==0 else float(t)/abc_history.max_t, # Make earlier populations transparent
+                color= color)
+        ax.set_xlim(-1,2)
+        if param=="secondary_school" :
+              ax.set_ylim(0,2.1)
+        elif param=='presymptomatic':
+              ax.set_ylim(0,3)      
+        elif param =='symptomatic':
+               ax.set_ylim(0,3.5)                  
+        elif param == 'retail' :
+              ax.set_ylim(0,2)
+        elif param == 'primary_school':
+              ax.set_ylim(0,1.4)              
+        elif param == 'work' :
+              ax.set_ylim(0,5)
+              # ax.set_xlim(-1,2)
+        elif param == 'asymptomatic' :
+              ax.set_ylim(0,7)
+        ax.legend(fontsize="small")
+        #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
+        #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
+        ax.set_title(f"{param}")
+        handles, labels = ax.get_legend_handles_labels()
+        ax.get_legend().remove()
+        color_i = color_i +1
+        
+fig.legend(handles, labels, loc='center right', fontsize = 17,
+            bbox_to_anchor=(1.01, 0.17))
+          # ncol = 8, bbox_to_anchor=(0.5, -0.07))
+axes[2,2].set_axis_off()
+axes[2,1].set_axis_off()
+fig.tight_layout()
+fig.show()
+# fig.savefig("Plots/8windows_14days_each_finalpop.jpg")
+
+### Plot all populations for each window
+evenly_spaced_interval = np.linspace(0.5, 1, 3)
+colors = [cm.Greens(x) for x in evenly_spaced_interval]
+alphas= [1, 1,1]
+linestyles = ['dotted', 'dotted', 'solid']
+linewidths = [1,1,3]
+fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
+for i, param in enumerate(original_priors.keys()):
+    ax = axes.flat[i]
+    col_i = 0
+    # Add parameter priors
+    ax.plot(x, pyabc.Distribution(param=all_rv[param]).pdf({"param": x}), 
+            color = 'black', label = 'Prior', linewidth  = 1, linestyle ='dashed')
+    for history_name, history in history_dict.items():
+        for t in range(history.max_t + 1):
+            print(t)
+            df, w = history.get_distribution(m=0, t=t)
+            pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
+                label="{}, pop {}".format(history_name, t),
+                alpha= alphas[t],
+                color = colors[col_i],
+                linestyle = linestyles[t],linewidth = linewidths[t])
+            ax.set_xlim(-1,2)
+            if param=="secondary_school" :
+                  ax.set_ylim(0,2.1)
+            elif param=='presymptomatic':
+                  ax.set_ylim(0,3)      
+            elif param =='symptomatic':
+                   ax.set_ylim(0,3.5)                  
+            elif param == 'retail' :
+                  ax.set_ylim(0,2)
+            elif param == 'primary_school':
+                  ax.set_ylim(0,1.4)              
+            elif param == 'work' :
+                  ax.set_ylim(0,5)
+                  # ax.set_xlim(-1,2)
+            elif param == 'asymptomatic' :
+                  ax.set_ylim(0,7)
+            ax.legend(fontsize="small")
+            #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
+            #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
+            ax.set_title(f"{param}")
+            handles, labels = ax.get_legend_handles_labels()
+            ax.get_legend().remove()
+        col_i = col_i+1
+axes[2,2].set_axis_off()
+axes[2,1].set_axis_off()
+fig.legend(handles, labels, loc='center right', fontsize = 17,ncol =2,
+            bbox_to_anchor=(1.01, 0.17))
+fig.tight_layout()
+fig.show()
+# fig.savefig("Plots/8windows_14days_each_allpops.jpg")
 
 
 #############################################################################################################
@@ -396,9 +542,9 @@ pickle_samples('save', fitness_l, sim_l, obs_l, out_params_l, out_calibrated_par
 # Plot the individual results for each sample
 #####################################################################
 initial_cases = pd.read_csv("../../microsim/opencl/data/daily_cases_devon_shifted_mpld_smoothed_IS.csv")
-initial_cases['CumulativeCases'] = initial_cases['OriginalCases'].cumsum()
-initial_cases_weekly = pd.DataFrame({'OriginalCases':
-                                    initial_cases['OriginalCases'].groupby(initial_cases['OriginalCases'].index // 7).sum()})
+initial_cases['CumulativeCases'] = initial_cases['num_cases'].cumsum()
+initial_cases_weekly = pd.DataFrame({'num_cases':
+                                    initial_cases['num_cases'].groupby(initial_cases['num_cases'].index // 7).sum()})
 initial_cases_weekly['CumulativeCases'] = initial_cases_weekly.cumsum()
 
 # Normalise fitness to 0-1 to calculate transparency
@@ -467,147 +613,4 @@ with open('2windows_14days_each_finalpop_history_dict.pkl', 'wb') as f:
 #     weights_dict = pickle.load(f)
 # with open('8windows_14days_each_finalpop_history_dict.pkl', 'rb') as f:
 #     history_dict = pickle.load(f)
-#
-# ##########################################################################
-# ##########################################################################
-# ### Plot the final population for each window - parameter values
-# ##########################################################################
-# ##########################################################################
-evenly_spaced_interval = np.linspace(0, 1, 8)
-colors = [cm.autumn_r(x) for x in evenly_spaced_interval]
-
-fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
-for i, param in enumerate(original_priors.keys()):
-    ax = axes.flat[i]
-    color_i =0
-    for history_name, history in history_dict.items():
-        color = colors[color_i]
-        df, w = history.get_distribution(m=0, t=history.max_t)
-        pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
-                label=history_name,
-                #alpha=1.0 if t==0 else float(t)/abc_history.max_t, # Make earlier populations transparent
-                color= color)
-        if param!="work":
-                ax.set_xlim(0,1)
-        if param=="secondary_school" or param=='presymptomatic' or param =='symptomatic':
-              ax.set_ylim(0,2.5)
-        elif param == 'retail' or param == 'primary_school':
-              ax.set_ylim(0,1.4)
-        elif param == 'work' :
-              ax.set_ylim(0,20)
-              ax.set_xlim(0,0.4)
-        elif param == 'asymptomatic' :
-              ax.set_ylim(0,7)
-        ax.legend(fontsize="small")
-        #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
-        #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
-        ax.set_title(f"{param}")
-        handles, labels = ax.get_legend_handles_labels()
-        ax.get_legend().remove()
-        color_i = color_i +1
-fig.legend(handles, labels, loc='center right', fontsize = 17,
-            bbox_to_anchor=(1.01, 0.17))
-          # ncol = 8, bbox_to_anchor=(0.5, -0.07))
-axes[2,2].set_axis_off()
-axes[2,1].set_axis_off()
-fig.tight_layout()
-fig.show()
-# fig.savefig("Plots/8windows_14days_each_finalpop.jpg")
-#
-#
-##########################################################################
-##########################################################################
-### Plot all populations for each window
-##########################################################################
-##########################################################################
-colors = [cm.autumn_r(x) for x in evenly_spaced_interval]
-alphas= [1, 1]
-linestyles = ['dotted', 'solid']
-fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
-for i, param in enumerate(original_priors.keys()):
-    ax = axes.flat[i]
-    col_i = 0
-    for history_name, history in history_dict.items():
-        for t in range(history.max_t + 1):
-            print(t)
-            df, w = history.get_distribution(m=0, t=t)
-            pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
-                label="{}, pop {}".format(history_name, t),
-                alpha= alphas[t],
-                color = colors[col_i],
-                linestyle = linestyles[t])
-            if param!="work":
-                ax.set_xlim(0,1)
-            if param=="secondary_school" or param=='presymptomatic' or param =='symptomatic':
-                  ax.set_ylim(0,2.5)
-            elif param == 'retail' or param == 'primary_school':
-                  ax.set_ylim(0,1.4)
-            elif param == 'work' :
-                  ax.set_ylim(0,20)
-            elif param == 'asymptomatic' :
-                  ax.set_ylim(0,7)
-            ax.legend(fontsize="small")
-            #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
-            #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
-            ax.set_title(f"{param}")
-            handles, labels = ax.get_legend_handles_labels()
-            ax.get_legend().remove()
-        col_i = col_i+1
-axes[2,2].set_axis_off()
-axes[2,1].set_axis_off()
-fig.legend(handles, labels, loc='center right', fontsize = 17,ncol =2,
-            bbox_to_anchor=(1.01, 0.17))
-fig.tight_layout()
-fig.show()
-fig.savefig("Plots/8windows_14days_each_allpops.jpg")
-
-
-#     # # ##########################################################################
-#     # # ##########################################################################
-#     # # ### Algorithm diagnostics
-#     # # ##########################################################################
-#     # # ##########################################################################
-#     # _, arr_ax = plt.subplots(2, 2)
-#     #
-#     # pyabc.visualization.plot_sample_numbers(abc_history, ax=arr_ax[0][0])
-#     # pyabc.visualization.plot_epsilons(abc_history, ax=arr_ax[0][1])
-#     # #pyabc.visualization.plot_credible_intervals(
-#     # #    history, levels=[0.95, 0.9, 0.5], ts=[0, 1, 2, 3, 4],
-#     # #    show_mean=True, show_kde_max_1d=True,
-#     # #    refval={'mean': 2.5},
-#     # #    arr_ax=arr_ax[1][0])
-#     # pyabc.visualization.plot_effective_sample_sizes(abc_history, ax=arr_ax[1][1])
-#     #
-#     # plt.gcf().set_size_inches((12, 8))
-#     # plt.gcf().tight_layout()
-#     # plt.savefig("Plots/window_number{}_algorithm_diagnostics.jpg".format(window_number))
-#     # plt.show()
-#     #
-#     # # ########## Plot the marginal posteriors
-#     # fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
-#     #
-#     # #cmap = { 0:'k',1:'b',2:'y',3:'g',4:'r' }  # Do this automatically for len(params)
-#     #
-#     # for i, param in enumerate(original_priors.keys()):
-#     #     ax = axes.flat[i]
-#     #     for t in range(abc_history.max_t + 1):
-#     #         df, w = abc_history.get_distribution(m=0, t=t)
-#     #         pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
-#     #             label=f"{param} PDF t={t}",
-#     #             alpha=1.0 if t==0 else float(t)/abc_history.max_t, # Make earlier populations transparent
-#     #             color= "black" if t==abc_history.max_t else None # Make the last one black
-#     #         )
-#     #         if param!="work":
-#     #             ax.set_xlim(0,1)
-#     #         ax.legend(fontsize="small")
-#     #         #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
-#     #         #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
-#     #         ax.set_title(f"{param}")
-#     #
-#     # fig.tight_layout()
-#     # fig.show()
-#     # fig.savefig("Plots/window_number{}_marginal_posteriors.jpg".format(window_number))
-#     #
-#     # print("Finished window {} in {}".format(window_number, datetime.datetime.now()- starting_windows_time))
-#     # ##os.remove("ramp_da2.db")
 #

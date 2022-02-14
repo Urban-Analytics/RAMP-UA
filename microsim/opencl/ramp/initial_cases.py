@@ -15,7 +15,11 @@ class InitialCases:
         # load initial case data
         #self.initial_cases = pd.read_csv(os.path.join(data_dir, "devon_initial_cases.csv"))
         self.initial_cases = pd.read_csv(os.path.join(data_dir, "daily_cases_devon_shifted_mpld_smoothed_IS.csv"))
-        print("printing initial cases", self.initial_cases)
+        # self.initial_cases['Date'] = range(1,len(self.initial_cases)+1)
+        # print(self.initial_cases)
+        # self.initial_cases.rename(columns={'Date': '', 'OriginalCases':'num_cases'}, inplace = True)
+                
+        #print("printing initial cases", self.initial_cases)
         msoa_risks_df = pd.read_csv(os.path.join(data_dir, "msoas.csv"), usecols=[1, 2])
 
         # combine into a single dataframe to allow easy filtering based on high risk area codes and
@@ -32,8 +36,8 @@ class InitialCases:
         #print("initial-cases.py -- get_seed_people_ids_for_day")
         #test = self.initial_cases
         #print(test.head())
-        #num_cases = self.initial_cases.loc[day, "num_cases"]        
-        num_cases = self.initial_cases.loc[day, "OriginalCases"]
+        num_cases = self.initial_cases.loc[day, "num_cases"]        
+        #num_cases = self.initial_cases.loc[day, "OriginalCases"]
         num_cases = int(num_cases)
         if num_cases > self.high_risk_ids.shape[0]:  # if there aren't enough high risk individuals then return all of them
             return self.high_risk_ids
