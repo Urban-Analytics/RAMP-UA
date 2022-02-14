@@ -874,5 +874,3 @@ class OpenCLWrapper(object):
         return {"distance": dist['difference'], "model_number": model_number,
                 "model_run_length": self.run_length,
                 "cumulative_model_diseased_by_area": dist['cumulative_model_diseased_by_area']}
-
-

@@ -171,14 +171,14 @@ original_priors = pyabc.Distribution(**decorated_rvs)
 parameters_file = os.path.join("../../", "model_parameters/",
                                "default.yml")  # Need to tell it where the default parameters are
 # Set the size of a data assimilation window in days:
-da_window_size = 14
+da_window_size = 3
 # Dictionary with parameters for running model
 admin_params = {"quiet": True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0,
                 "run_length": da_window_size,
                 "current_particle_pop_df": None,
                 "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR,
                 "individuals_df": individuals_df, "observations_weekly_array": observations_weekly_array,
-                 'num_seed_days' :20}
+                 'num_seed_days' :7}
 
 # Create dictionaries to store the dfs, weights or history from each window (don't need all of these, but testing for now)
 dfs_dict = {}
@@ -214,10 +214,11 @@ for window_number in range(1, windows + 1):
         priors = ArbitraryDistribution(abc_history)
 
     # Set up model
+    #Configuring the ABCSMC run
     abc = pyabc.ABCSMC(
         models=template,  # Model (could be a list)
         parameter_priors=priors,  # Priors (could be a list)
-        # summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
+        #summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
         distance_function=OpenCLWrapper.dummy_distance,  # Distance function
         sampler=pyabc.sampler.SingleCoreSampler()
         # Single core because the model is parallelised anyway (and easier to debug)
@@ -232,11 +233,11 @@ for window_number in range(1, windows + 1):
     # distance_function provided to pyabc.ABCSMC above). Currently the observations are provided to the model
     # when it is initialised and these are then used at the end of the model run() function. So they don't
     # need to be provided here.
+    
+    # new method, indicating that we start a new run as opposed to resuming a stored run 
     run_id = abc.new(
         db=db_path,
-        stores_sum_stats = True,
-        observed_sum_stat=None  # {'observation': observations_array, "individuals": individuals_df}
-    )
+        observed_sum_stat=None)    # {'observation': observations_array, "individuals": individuals_df})
 
     # Run model
     abc_history = abc.run(max_nr_populations=2)
@@ -261,6 +262,16 @@ for window_number in range(1, windows + 1):
     # posterior_df = _df.sort_values('weight', ascending=False).reset_index()
     # posterior_df.to_csv("Plots/window_number{}_posterior_df.csv".format(window_number), index = False)
 
+
+#############################################################################################################
+#############################################################################################################
+#
+#############################################################################################################
+#############################################################################################################
+weighted_sum_stats = abc_history.get_weighted_sum_stats_for_model()
+
+
+
 #############################################################################################################
 #############################################################################################################
 # Run the model X (50?) times using paramater values drawn from the posterior
@@ -268,13 +279,17 @@ for window_number in range(1, windows + 1):
 #############################################################################################################
 #############################################################################################################
 # Initialise the class so that its ready to run the model.
+# with open('2windows_finalpop_history_dict.pkl', 'rb') as f:
+#     history_dict = pickle.load(f)
+# abc_history = history_dict['w1']
+
 ## Define parameters
 PARAMETERS_FILE = os.path.join("../../", "model_parameters", "default.yml")
 PARAMS = OpenCLRunner.create_parameters(parameters_file=PARAMETERS_FILE)
 
 ITERATIONS = 105  # Number of iterations to run for
 assert (ITERATIONS /7).is_integer()
-NUM_SEED_DAYS = 10  # Number of days to seed the population
+NUM_SEED_DAYS = 7  # Number of days to seed the population
 USE_GPU = True
 STORE_DETAILED_COUNTS = False
 REPETITIONS = 5
@@ -297,10 +312,10 @@ OpenCLRunner.init(iterations=ITERATIONS,
 OpenCLRunner.set_constants(const_params_dict)
 
 ##### define the abc_history object (not necessary as this will be most recent abc_history anyway)
-abc_history = history_dict['w2']
+# abc_history = history_dict['w2']
 
 # Define the number of samples to take from the posterior distribution of parameters
-N_samples = 30
+N_samples = 5
 df, w = abc_history.get_distribution(m=0, t=abc_history.max_t)
 
 # Sample from the dataframe of posteriors using KDE
@@ -330,7 +345,6 @@ for i, sample in samples.iterrows():
     # Create a dictionary with the parameters and their values for this sample
     #param_values = {param: sample[str(param)] for param in priors}
     param_values = sample.to_dict()
-    print(param_values)
     # Run the model
     # _fitness = fitness (comparison between sim and obs)
     # _sim =  model_weekly_cumulative_infections
@@ -381,6 +395,12 @@ pickle_samples('save', fitness_l, sim_l, obs_l, out_params_l, out_calibrated_par
 #####################################################################
 # Plot the individual results for each sample
 #####################################################################
+initial_cases = pd.read_csv("../../microsim/opencl/data/daily_cases_devon_shifted_mpld_smoothed_IS.csv")
+initial_cases['CumulativeCases'] = initial_cases['OriginalCases'].cumsum()
+initial_cases_weekly = pd.DataFrame({'OriginalCases':
+                                    initial_cases['OriginalCases'].groupby(initial_cases['OriginalCases'].index // 7).sum()})
+initial_cases_weekly['CumulativeCases'] = initial_cases_weekly.cumsum()
+
 # Normalise fitness to 0-1 to calculate transparency
 _fitness = np.array(fitness_l)  # Easier to do maths on np.array
 fitness_norm = (_fitness - min(_fitness)) / (max(_fitness) - min(_fitness))
@@ -388,6 +408,7 @@ fitness_norm = (_fitness - min(_fitness)) / (max(_fitness) - min(_fitness))
 ############## PLOT WEEKLY DATA
 fig, ax = plt.subplots(1, 1, figsize=(12, 8))
 x = range(len(sim_l[0]))
+x = range(1,len(sim_l[0])+1)
 for i in range(len(summaries_l)):
     ax.plot(x, sim_l[i],
             # label=f"Particle {df.index[sample_idx[i]]}",
@@ -396,7 +417,7 @@ for i in range(len(summaries_l)):
     # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"Fitness {round(fitness_l[i])}", fontsize=8)
     # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"P{df.index[sample_idx[i]]}, F{round(fitness_l[i])}", fontsize=8)
 # Plot observations
-ax.plot(x, obs_l[0], label="Observations", color="darkblue")
+ax.plot(x, initial_cases_weekly['CumulativeCases'][0:int((105/7))], label="Observations", linewidth=5, color="darkred")
 # Plot result from manually calibrated model
 # ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
 ax.legend(fontsize=20)
@@ -408,7 +429,7 @@ plt.show()
 
 ############## PLOT DAILY DATA
 fig, ax = plt.subplots(1, 1, figsize=(12, 8))
-x = range(len(OpenCLRunner.get_cumulative_new_infections(summaries_l[1])))
+x = range(1,len(OpenCLRunner.get_cumulative_new_infections(summaries_l[1]))+1)
 for i in range(len(summaries_l)):
     ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries_l[i]),
             # label=f"Particle {df.index[sample_idx[i]]}",
@@ -417,7 +438,7 @@ for i in range(len(summaries_l)):
     # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"Fitness {round(fitness_l[i])}", fontsize=8)
     # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"P{df.index[sample_idx[i]]}, F{round(fitness_l[i])}", fontsize=8)
 # Plot observations
-ax.plot(x, cases_devon_daily['CumulativeCases'][0:105], label="Observations", color="blue")
+ax.plot(x, initial_cases['CumulativeCases'][0:105], label="Observations", linewidth = 5, color="darkred")
 # Plot result from manually calibrated model
 # ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
 ax.legend(fontsize=20)
@@ -433,12 +454,12 @@ del _fitness, fitness_norm
 # ##########################################################################
 # ### Save dicts
 # ##########################################################################
-# with open('8windows_14days_each_finalpop_dfs_dict.pkl', 'wb') as f:
-#     pickle.dump(dfs_dict, f)
-# with open('8windows_14days_each_finalpop_ws_dict.pkl', 'wb') as f:
-#     pickle.dump(weights_dict, f)
-# with open('8windows_14days_each_finalpop_history_dict.pkl', 'wb') as f:
-#     pickle.dump(history_dict, f)
+with open('2windows_dfs_dict.pkl', 'wb') as f:
+    pickle.dump(dfs_dict, f)
+with open('2windows_ws_dict.pkl', 'wb') as f:
+    pickle.dump(weights_dict, f)
+with open('2windows_14days_each_finalpop_history_dict.pkl', 'wb') as f:
+    pickle.dump(history_dict, f)
 #
 # with open('8windows_14days_each_finalpop_dfs_dict.pkl', 'rb') as f:
 #     dfs_dict = pickle.load(f)
