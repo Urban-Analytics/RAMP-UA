@@ -700,14 +700,20 @@ class OpenCLWrapper(object):
             # Add this to the dataframe to store results in
             cumulative_model_diseased_by_area = pd.concat(
                 [cumulative_model_diseased_by_area, cumulative_model_disease_statuses_by_area[day]], axis=1)
-        # Add a column containing the cumulative total over all the days
-        # cumulative_model_diseased_by_area['CumulativeTotal_model'] = cumulative_model_diseased_by_area.sum(axis=1)
 
-        # Add a cumulative total of cases from the first X days
+        ########################################################################
+        ########################################################################
+        # Find the total number of cases in each week the model is being run for
+        # summed across all the MSOAs
+        ########################################################################
+        ########################################################################
+        # Create dataframe to populate with results
         cumulative_model_diseased_by_area_weekly_sum = pd.DataFrame()
+        # Define n weeks
         n_weeks = int(n_days / 7)
+        # Loop through each week in n_weeks, find total number of cases in that week
+        # for each MSOA, add column to dataframe containing this total
         for i in range(7, (n_weeks * 7) + 7, 7):
-            print(i)
             weekly_total = cumulative_model_diseased_by_area.iloc[:, 0:i].sum(axis=1)
             cumulative_model_diseased_by_area_weekly_sum["week{}Sum".format(int(i / 7))] = weekly_total
         # Sum over MSOAs
@@ -715,50 +721,31 @@ class OpenCLWrapper(object):
 
         ########################################################################
         ########################################################################
-        # Create dataframe containing the observed number of cases on each day
+        # Find the total number of cases in each week, summed across all MSOAs
         ########################################################################
         ########################################################################
-        # Get the observations
+        # Create dataframe containing the observed number of cases each week
         observations = obs['observation']
-        # Create as dataframe
         observations_df = pd.DataFrame(data=observations[0:, 0:], index=cumulative_model_diseased_by_area.index,
                                        columns=['Week' + str(i) for i in range(1, observations.shape[1] + 1)])
 
-        # Add a cumulative total of cases over the whole period the model being ran
+        # Trim the observations_df so as to keep only the weekly values for the
+        # weeks over which the model is being ran
         n_weeks = int(n_days / 7)
-        # observations_df['CumulativeTotal_obs'] = observations_df.iloc[:, 0:n_weeks].sum(axis=1)
-
-        # Keep only the number of weeks over which the model is being ran
         observations_df_this_window = observations_df.iloc[:, 0:n_weeks]
-        # sum the values over all MSOAs
+        # Sum the values over all MSOAs
         observations_df_this_window_sums = observations_df_this_window.sum(axis=0)
 
         ########################################################################
         ########################################################################
-        # Find euclidean difference between cumulative number of cases over the
-        # number of days being considered
-        ########################################################################
-        ########################################################################
-        # ## Join model with obs
-        # obs_and_model_df = pd.concat(
-        #     [observations_df['CumulativeTotal_obs'], cumulative_model_diseased_by_area['CumulativeTotal_model']],
-        #     axis=1)
-        # obs_and_model_df.loc['Total'] = obs_and_model_df.sum()
-        # obs_and_model_df = obs_and_model_df.iloc[-1:]
-        #
-        # # Find the euclidean difference between the cumulative cases in model and obs
-        # difference = np.linalg.norm(
-        #     np.array(obs_and_model_df['CumulativeTotal_obs']) - np.array(obs_and_model_df['CumulativeTotal_model']))
-
-        ########################################################################
-        ########################################################################
-        # Euclidean difference - method 2
+        # Find the Euclidean difference between 2 vectors containing the number
+        # of cases each week, for the model and the observations
         ########################################################################
         ########################################################################
         difference = np.linalg.norm(
             np.array(observations_df_this_window_sums) - np.array(cumulative_model_diseased_by_area_weekly_sum))
 
-        print("Found distance in {}".format(datetime.datetime.now() - start_time))
+        # print("Found distance in {}".format(datetime.datetime.now() - start_time))
         return {"difference": difference,
                 "cumulative_model_diseased_by_area": cumulative_model_diseased_by_area}
 

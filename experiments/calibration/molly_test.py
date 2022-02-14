@@ -60,7 +60,7 @@ devon_msoa_codes =  pd.read_csv("observation_data/devon_msoa_codes.csv")
 ##########################################################################
 ##########################################################################
 # Observed cases data
-cases_msoa_weekly = pd.read_csv("observation_data/weekly_cases_msoas_aggregated_from_daily_IS.csv")
+cases_msoa_weekly = pd.read_csv("observation_data/weekly_cases_msoas_shifted_mpld_smoothed_IS.csv")
 # remove date column
 cases_msoa_weekly = cases_msoa_weekly.iloc[:, 1:]
 # Transpose
@@ -171,7 +171,7 @@ original_priors = pyabc.Distribution(**decorated_rvs)
 parameters_file = os.path.join("../../", "model_parameters/",
                                "default.yml")  # Need to tell it where the default parameters are
 # Set the size of a data assimilation window in days:
-da_window_size = 3
+da_window_size = 7
 # Dictionary with parameters for running model
 admin_params = {"quiet": True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0,
                 "run_length": da_window_size,
@@ -189,7 +189,7 @@ history_dict = {}
 starting_windows_time = datetime.datetime.now()
 
 # Define number of windows to run for
-windows = 1
+windows = 2
 
 # Loop through each window
 for window_number in range(1, windows + 1):
@@ -240,7 +240,7 @@ for window_number in range(1, windows + 1):
         observed_sum_stat=None)    # {'observation': observations_array, "individuals": individuals_df})
 
     # Run model
-    abc_history = abc.run(max_nr_populations=2)
+    abc_history = abc.run(max_nr_populations=3)
 
     # Save some info on the posterior parameter distributions.
     for t in range(0, abc.history.max_t + 1):
