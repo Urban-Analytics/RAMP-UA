@@ -25,7 +25,6 @@ class Simulator:
         Raises:
             OSError: If a GPU was requested but none is found.
         """
-        print(num_seed_days)
         nplaces = snapshot.nplaces
         npeople = snapshot.npeople
         nslots = snapshot.nslots
