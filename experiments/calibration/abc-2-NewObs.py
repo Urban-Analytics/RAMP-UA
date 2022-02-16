@@ -117,10 +117,10 @@ cases_devon_weekly = pd.read_csv("observation_data/weekly_cases_devon_aggregated
 cases_devon_weekly['CumulativeCases'] = cases_devon_weekly['OriginalCases'].cumsum()
 cases_devon_weekly.head()
 
-
 # ### Run default (manually calibrated) model
 # This shows what happens with the 'default' (manually calibrated) model
-ITERATIONS = 100  # Number of iterations to run for
+ITERATIONS = 105  # Number of iterations to run for (must be multiple of 7)
+assert (ITERATIONS /7).is_integer()
 NUM_SEED_DAYS = 5  # Number of days to seed the population
 USE_GPU = True
 STORE_DETAILED_COUNTS = False
@@ -146,16 +146,16 @@ OpenCLRunner.init(
     snapshot_filepath = SNAPSHOT_FILEPATH,
     num_seed_days = NUM_SEED_DAYS
 )
-
+#
 OpenCLRunner.update(repetitions=5)  # Temporarily use more repetitions to give a good baseline
 OpenCLRunner.update(store_detailed_counts=True)  # Temporarily output age breakdowns
 (fitness0, sim0, obs0, out_params0, summaries0) = OpenCLRunner.run_model_with_params_abc({}, return_full_details=True)
 OpenCLRunner.update(repetitions=REPETITIONS)
 OpenCLRunner.update(store_detailed_counts=STORE_DETAILED_COUNTS)
-
-# What does repetitions mean, if only end up with one set of results??
-# Why are the observations in here not as high as in molly_test.py
-
+#
+# # What does repetitions mean, if only end up with one set of results??
+# # Why are the observations in here not as high as in molly_test.py
+#
 # Check the model returns the observations correctly
 # i.e. that theyre the same length
 np.array_equal(obs0, cases_devon_daily.loc[:len(sim0)-1,"CumulativeCases"])
@@ -169,8 +169,9 @@ x = range(len(sim0))
 ax.plot(x, sim0, label="sim", color="orange")
 ax.plot(x, obs0, label="obs", color="blue")
 ax.legend()
+plt.show()
 
-#
+
 # # ### Plot output summary data
 # # #### Total counts of disease status
 # def plot_summaries(summaries, observations=None, plot_type="error_bars"):
@@ -284,7 +285,6 @@ ax.legend()
 # Need a `distance` function to calculate error. This one gets the observations and simulation data from a dataframe and calls a function that returns the Euclidean distance (L2 norm) calculate
 def distance(sim,obs):
     fit = OpenCLRunner.fit_l2(sim["data"],obs["data"])
-    print(fit)
     return fit
 
 # ### Priors
@@ -363,7 +363,8 @@ abc = pyabc.ABCSMC(
 # Define observations
 # 'Real' cumulative cases:
 # y_observed = OBSERVATIONS.loc[:ITERATIONS-1, "Cases"].values
-y_observed = cases_devon_weekly.loc[:ITERATIONS-1, "CumulativeCases"].values
+
+y_observed = cases_devon_weekly.loc[:(ITERATIONS/7)-1, "CumulativeCases"].values
 
 # Where to store results
 db_path = ("sqlite:///" + os.path.join(".", "abc-2.db"))
@@ -382,7 +383,6 @@ else:
     with open( fname, "wb" ) as f:
         pickle.dump( history, f)
 
-
 # ### Algorithm diagnostics
 _, arr_ax = plt.subplots(2, 2)
 
@@ -398,9 +398,9 @@ pyabc.visualization.plot_effective_sample_sizes(history, ax=arr_ax[1][1])
 plt.gcf().set_size_inches((12, 8))
 plt.gcf().tight_layout()
 
-
 # Plot the marginal posteriors
 fig, axes = plt.subplots(3,int(len(priors)/2), figsize=(12,10))
+fig, axes = plt.subplots(3,2, figsize=(12,10))
 
 #cmap = { 0:'k',1:'b',2:'y',3:'g',4:'r' }  # Do this automatically for len(params)
 
@@ -433,10 +433,8 @@ fig.tight_layout()
 #    ax.set_title(f"t={t}")
 # fig.tight_layout()
 
-
 # Now look at the 2D correlations (_I'm not sure how to read this_)
 pyabc.visualization.plot_histogram_matrix(history, size=(12,10))
-
 
 # ### Analyse the posterior
 # Have a look at the posterior distribution for the final population. This is made up of the posterior estimates for each particle in the popualtion and the associated weight.
@@ -447,29 +445,33 @@ _df['weight'] = _w
 posterior_df = _df.sort_values('weight', ascending=False).reset_index()
 posterior_df
 
-# This code shows how to calculate the fitness associated with each particle (not the correct way to draw from the posterior so not especially useful).
-df_fitnesses = []
-for i, row in posterior_df.iterrows():
-    param_values = { param:row[str(param)] for param in priors}
-    (_fitness, _sim, _obs, _out_params, _summaries) = \
-          OpenCLRunner.run_model_with_params_abc(param_values, return_full_details=True)
-    df_fitnesses.append(_fitness)
-    print(f"{i}, Fitness: {_fitness}")
-posterior_df['fitness'] = df_fitnesses
-plt.plot(range(len(posterior_df)), posterior_df['fitness'])
-plt.xlabel("Particle number")
-plt.ylabel("Fitness")
-plt.plot(range(len(posterior_df)), posterior_df['weight'])
-plt.xlabel("Particle number")
-plt.ylabel("Weight")
+# # This code shows how to calculate the fitness associated with each particle (not the correct way to draw from the posterior so not especially useful).
+# df_fitnesses = []
+# for i, row in posterior_df.iterrows():
+#     param_values = { param:row[str(param)] for param in priors}
+#     (_fitness, _sim, _obs, _out_params, _summaries) = \
+#           OpenCLRunner.run_model_with_params_abc(param_values, return_full_details=True)
+#     df_fitnesses.append(_fitness)
+#     print(f"{i}, Fitness: {_fitness}")
+# posterior_df['fitness'] = df_fitnesses
+# plt.plot(range(len(posterior_df)), posterior_df['fitness'])
+# plt.xlabel("Particle number")
+# plt.ylabel("Fitness")
+# plt.plot(range(len(posterior_df)), posterior_df['weight'])
+# plt.xlabel("Particle number")
+# plt.ylabel("Weight")
 
 # Now we have a posterior over the parameters. There are two ways to find the 'optimal' model:
 #  - Find the posterior mode (i.e. the set of parameters that gave the result that was the most likely to have generated the observations). This is useful because then the 'optimal' parameters can be reported and these can be set as the default for future model runs (i.e. a traditional calibration).
 #  - Sample from the posterior distribution N times (N=100?) to generate a posterior over the model outputs. This better captures the uncertainty in the parameter values and in the associated model outputs.
 
+#######################################################################################
+#######################################################################################
 # #### ABC Posterior (A) - Sample
 # Sample from the distribution of parameter posteriors to generate a distribution over the mode likely model results. Use kernel density approximation to randomly draw some equally weighted samples.
 # (This is kind of pointless as we already know what the parameter posteriors are, but we could use this mechanism to make predictions from the model).
+#######################################################################################
+#######################################################################################
 N_samples = 50
 df, w = history.get_distribution(m=0, t=history.max_t)
 
@@ -495,18 +497,19 @@ summaries_l = []  # The summaries objects
 
 negative_count = 0  # Count the number of negatives returned in the KDE posterior
 for i, sample in samples.iterrows():
-
     # Check for negatives. If needed, resample
     while (sample < 0).values.any():
         print("Found negatives. Resampling")
         negative_count += 1
         sample = kde.rvs()
+        # Added in this line as the sample was in the wrong format for the while loop
+        sample = pd.Series(sample)
         
     # Create a dictionary with the parameters and their values for this sample
     param_values = { param:sample[str(param)] for param in priors}
     
     # Run the model
-    (_fitness, _sim, _obs, _out_params, _summaries) =           OpenCLRunner.run_model_with_params_abc(param_values, return_full_details=True)
+    (_fitness, _sim, _obs, _out_params, _summaries) =  OpenCLRunner.run_model_with_params_abc(param_values, return_full_details=True)
     print(f"Fitness: {_fitness}.")
     #print(f"Fitness: {_fitness}. Sample: {sample}")
     
@@ -550,37 +553,69 @@ pickle_samples('save', fitness_l, sim_l, obs_l, out_params_l, out_calibrated_par
 
 # Normalise fitness to 0-1 to calculate transparency
 _fitness = np.array(fitness_l)  # Easier to do maths on np.array
-fitness_norm = (_fitness-min(_fitness))/(max(_fitness)-min(_fitness))
+fitness_norm = (_fitness - min(_fitness)) / (max(_fitness) - min(_fitness))
 
-fig, ax = plt.subplots(1,1, figsize=(12,8))
+############## PLOT WEEKLY DATA
+fig, ax = plt.subplots(1, 1, figsize=(12, 8))
 x = range(len(sim_l[0]))
 for i in range(len(summaries_l)):
+    ax.plot(x, sim_l[i],
+            # label=f"Particle {df.index[sample_idx[i]]}",
+            color="black", alpha=1 - fitness_norm[i]  # (1-x because high fitness is bad)
+            )
+    # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"Fitness {round(fitness_l[i])}", fontsize=8)
+    # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"P{df.index[sample_idx[i]]}, F{round(fitness_l[i])}", fontsize=8)
+# Plot observations
+ax.plot(x, obs_l[0], label="Observations", color="darkblue")
+# Plot result from manually calibrated model
+ax.plot(x, sim0, label="Initial sim", color="orange")
+ax.legend(fontsize=20)
+# plot_summaries(summaries=summaries_l[0], plot_type="error_bars", observations=OBSERVATIONS)
+ax.tick_params(axis='both', which='major', labelsize=15)
+plt.xlabel("Day", size=15)
+plt.ylabel("Cases",size=15)
+plt.show()
+
+############## PLOT DAILY DATA - eed to trim to length 100?
+fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+x = range(len(OpenCLRunner.get_cumulative_new_infections(summaries_l[1])))
+for i in range(len(summaries_l)):
     ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries_l[i]),
-            #label=f"Particle {df.index[sample_idx[i]]}",
-            color="black", alpha = 1-fitness_norm[i]  # (1-x because high fitness is bad)
-    )
-    
-    #ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"Fitness {round(fitness_l[i])}", fontsize=8)
-    #ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"P{df.index[sample_idx[i]]}, F{round(fitness_l[i])}", fontsize=8)
-ax.plot(x, obs_l[0], label="Observations", color="blue")
+            # label=f"Particle {df.index[sample_idx[i]]}",
+            color="black", alpha=1 - fitness_norm[i]  # (1-x because high fitness is bad)
+            )
+    # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"Fitness {round(fitness_l[i])}", fontsize=8)
+    # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"P{df.index[sample_idx[i]]}, F{round(fitness_l[i])}", fontsize=8)
+# Plot observations
+ax.plot(x, cases_devon_daily['CumulativeCases'][0:105], label="Observations", color="blue")
+# Plot result from manually calibrated model
 ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
-ax.legend()
-#plot_summaries(summaries=summaries_l[0], plot_type="error_bars", observations=OBSERVATIONS)
+ax.legend(fontsize=20)
+# plot_summaries(summaries=summaries_l[0], plot_type="error_bars", observations=OBSERVATIONS)
+ax.tick_params(axis='both', which='major', labelsize=15)
+plt.xlabel("Day", size=15)
+plt.ylabel("Cases",size=15)
+plt.show()
+
 
 del _fitness, fitness_norm
 
-
+###################################
 # Plot the kde of the sample results (a bit like the posterior?). See the [pygam documentation](https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html) for the GAM code to do this.
 # _The prediction intervals clearly aren't working_
+###################################
+
+# Weekly
+
 #best_paramswo long arrays with every result from every particle
-x = list(range(len(sim_l[0])))  # List of iteration numbers
+x = list(range(len(sim_l[0])))  # List of iteration numbers (i.e week numbers)
 X = []
-for _iter in x * len(summaries_l):  # One sequence of iterations (0-100) for each particle
+for _iter in x * len(summaries_l):  # One sequence of iterations (0-14) for each particle (here there are 10 particles)
     X.append([_iter]) # (The x list is odd because every element in the list needs to be a 1-element list)
 X = np.array(X)
 y = []
 for i in range(len(summaries_l)):
-    y += list(OpenCLRunner.get_cumulative_new_infections(summaries_l[i]))
+    y += list(sim_l[i])
 y = np.array(y)
 
 # Generate the GAM
@@ -601,7 +636,7 @@ ax.plot(XX, gam.prediction_intervals(XX, width=.95), color='b', ls='--', label="
 #ax.plot(XX, confi, c='r', ls='--')
 
 ax.plot(x, obs_l[0], label="Observations", color="blue")
-ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
+ax.plot(x, sim0, label="Initial sim", color="orange")
 #plt.scatter(X, y, facecolor='gray', edgecolors='none')
 ax.legend()
 #plt.scatter(X, y, facecolor='gray', edgecolors='none')
@@ -616,7 +651,7 @@ ax.set_xlabel("Iteration")
 ax.set_ylabel("Cumulative cases")
 
 ax.plot(x, obs_l[0], label="Observations", color="blue")
-ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
+ax.plot(x, sim0, label="Initial sim", color="orange")
 #plt.scatter(X, y, facecolor='gray', edgecolors='none')
 ax.legend()
 fig.colorbar(h[3], ax=ax)
@@ -624,14 +659,71 @@ fig.colorbar(h[3], ax=ax)
 ax.set_title('Density plot of results posterior');
 
 
+## Daily??
+
+#best_paramswo long arrays with every result from every particle
+x = list(range(len(sim_l[0])*7))  # List of iteration numbers (i.e week numbers)
+X = []
+for _iter in x * len(summaries_l):  # One sequence of iterations (0-14) for each particle (here there are 10 particles)
+    X.append([_iter]) # (The x list is odd because every element in the list needs to be a 1-element list)
+X = np.array(X)
+y = []
+for i in range(len(summaries_l)):
+    y +=  list(OpenCLRunner.get_cumulative_new_infections(summaries_l[i]))
+y = np.array(y)
+
+# Generate the GAM
+gam = LinearGAM( n_splines=250)
+#gam = LinearGAM( s(0, n_splines=250) )  # Linear GAM with a spline function on feature 0
+gam.gridsearch(X, y)
+#XX = gam.generate_X_grid(term=0, n=len(X))
+XX = gam.generate_X_grid(term=0)
+
+
+# Plot
+fig, ax = plt.subplots(1,1, figsize=(12,8))
+
+ax.plot(XX, gam.predict(XX), 'r--', label="Prediction")
+ax.plot(XX, gam.prediction_intervals(XX, width=.95), color='b', ls='--', label="Prediction Intervals")
+
+#pdep, confi = gam.partial_dependence(term=0, width=.95)
+#ax.plot(XX, pdep)
+#ax.plot(XX, confi, c='r', ls='--')
+
+ax.plot(x, cases_devon_daily['CumulativeCases'][0:105], label="Observations", color="blue")
+ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
+#plt.scatter(X, y, facecolor='gray', edgecolors='none')
+ax.legend()
+#plt.scatter(X, y, facecolor='gray', edgecolors='none')
+ax.set_title('95% prediction interval');
+
+
+# Do a KDE plot with a logarithmic colour scale.
+from matplotlib.colors import LogNorm
+fig, ax = plt.subplots(1,1, figsize=(10,7))
+h = ax.hist2d(x=[x[0] for x in X], y=y, bins=int(len(x)/5), norm=LogNorm())
+ax.set_xlabel("Iteration")
+ax.set_ylabel("Cumulative cases")
+
+ax.plot(x, cases_devon_daily['CumulativeCases'][0:105], label="Observations", color="blue")
+ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
+#plt.scatter(X, y, facecolor='gray', edgecolors='none')
+ax.legend()
+fig.colorbar(h[3], ax=ax)
+#plt.scatter(X, y, facecolor='gray', edgecolors='none')
+ax.set_title('Density plot of results posterior');
+
+#######################################################################################
+#######################################################################################
 # #### ABC Posterior (B) - Find the Mode(s)
 # _I can't work out how to find the modes (basically I think I need the largest value of the `kde`?) so instead just choose the parameter values from the best sample_
 # Find the 'optimal' parameters
-
+#######################################################################################
+#######################################################################################
 # Load samples if needed
 #fitness_l, sim_l, obs_l, out_params_l, summaries_l = pickle_samples("load")
 
-# Find the best parameters
+####### Find the best parameters
 best_model_idx = np.argmin(fitness_l)
 best_params = out_calibrated_params_l[best_model_idx]
 # Sanity check, the calibrated param should be the same as the one in the params object
@@ -640,8 +732,9 @@ assert np.isclose(out_calibrated_params_l[best_model_idx]['asymptomatic'],
 best_params
 
 
-# See how those parameters relate to the marginal posteriors
-fig, axes = plt.subplots(3,int(len(priors)/2), figsize=(12,8))
+######## See how those parameters relate to the marginal posteriors
+# fig, axes = plt.subplots(3,int(len(priors)/2), figsize=(12,8))
+fig, axes = plt.subplots(3,2, figsize=(12,8))
 
 for i, param in enumerate(priors.keys()):
     ax = axes.flat[i]
@@ -659,7 +752,7 @@ fig.suptitle("Optimal parameter values")
 fig.tight_layout()
 
 
-# Run the model with those parameters
+######## Run the model with those parameters
 OpenCLRunner.update(store_detailed_counts=True)  # Temporarily output age breakdowns
 (fitness1, sim1, obs1, out_params1, summaries1) = OpenCLRunner.run_model_with_params_abc(
     best_params, return_full_details=True)
@@ -670,8 +763,8 @@ np.array_equal(obs0, obs1)
 
 fig, ax = plt.subplots(1,1)
 x = range(len(sim1))
-ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="sim0", color="orange")
-ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries1), label="sim1", color="red")
+ax.plot(x, sim0, label="sim0", color="orange")
+ax.plot(x, sim1, label="sim1", color="red")
 # Add fitness text
 for a, b in [(summaries0,fitness0), (summaries1, fitness1)]:
     ax.text(x=len(x), y=max(OpenCLRunner.get_cumulative_new_infections(a)), s=f"Fit: {round(b)}", fontsize=10)
@@ -680,7 +773,7 @@ ax.legend()
 print(f"Fitness: {fitness1}")
 
 
-# Run the model with arbitray parameters (to experiment)
+######## Run the model with arbitray parameters (to experiment)
 #OpenCLRunner.update(store_detailed_counts=True)  # Temporarily output age breakdowns
 (fitness2, sim2, obs2, out_params2, summaries2) = OpenCLRunner.run_model_with_params_abc(
     {'retail': 0.9,
@@ -693,9 +786,9 @@ print(f"Fitness: {fitness1}")
 
 fig, ax = plt.subplots(1,1)
 x = range(len(sim1))
-ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="sim0 (initial)", color="orange")
-ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries1), label="sim1 (optimised)", color="red")
-ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries2), label="sim2 (new)", color="black")
+ax.plot(x, sim0, label="sim0 (initial)", color="orange")
+ax.plot(x, sim1, label="sim1 (optimised)", color="red")
+ax.plot(x, sim2, label="sim2 (new)", color="black")
 # Add fitness text
 for a, b in [(summaries0,fitness0), (summaries1, fitness1), (summaries2, fitness2) ]:
     ax.text(x=len(x), y=max(OpenCLRunner.get_cumulative_new_infections(a)), s=f"Fit: {round(b)}", fontsize=10)
@@ -704,9 +797,13 @@ ax.legend()
 print(f"Fitness: {fitness1}")
 
 
+#######################################################################################
+#######################################################################################
 # ## Spatial analysis of the posterior
 # We've seen how the aggregate, cumulative disease count varies, but how do the results vary over space?
 # Look at the distribtion of explosed people in the optimal model
+#######################################################################################
+#######################################################################################
 N=len(summaries1)
 disease_status = "exposed"
 
@@ -722,4 +819,5 @@ for i in range(N):
 
 # XXXX HERE there is too much spatial variation? Might need to reduce impact of workplace interactions. Or maybe this is interesting.
 
-
+with open('105days.pkl', 'wb') as f:
+    pickle.dump(history, f)
