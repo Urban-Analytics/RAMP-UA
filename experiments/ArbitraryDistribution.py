@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from typing import Union
+import itertools
 
 from pyabc import History
 from pyabc.transition.multivariatenormal import MultivariateNormalTransition  # For drawing from the posterior
@@ -19,8 +20,13 @@ class ArbitraryDistribution(Distribution):
     ABC run) and generating a MultivariateNormalTransition (KDE) that can be sampled
     """
     def __init__(self, abc_hist: History):
+        print("init")
         # Get the dataframe of particles (parameter point estimates) and associated weights
         dist_df, dist_w = abc_hist.get_distribution(m=0, t=abc_hist.max_t)
+        
+        if 'current_risk_beta' in dist_df.columns:
+            dist_df = dist_df.drop(columns = 'current_risk_beta')
+        
         # Create a KDE using the particles
         self.kde = MultivariateNormalTransition(scaling=1)
         self.kde.fit(dist_df, dist_w)
@@ -29,8 +35,12 @@ class ArbitraryDistribution(Distribution):
         self.abc_hist = abc_hist
 
     def display(self):
+        print("display")
         # Get the dataframe of particles (parameter point estimates) and associated weights
         dist_df, dist_w = self.abc_hist.get_distribution(m=0, t=self.abc_hist.max_t)
+
+        if 'current_risk_beta' in dist_df.columns:
+            dist_df = dist_df.drop(columns = 'current_risk_beta')
 
         fig, axes = plt.subplots(2, 4, figsize=(14, 6), sharex=True, sharey=True)
         x = np.linspace(-1, 2, 99)  # (specified so that we have some whole numbers)
@@ -53,20 +63,24 @@ class ArbitraryDistribution(Distribution):
         fig.show()
 
     def rvs(self) -> Parameter:
+        print("rvs")
         """Sample from the joint distribution, returning a Parameter object.
            Just calls rvs() on the underlying kde"""
         return self.kde.rvs()
 
     def pdf(self, x: Union[Parameter, pd.Series, pd.DataFrame]) -> Union[float, np.ndarray]:
+        print("pdf")
         """Get probability density at point `x` (product of marginals).
         Just calls pdf(x) on the underlying kde"""
         return self.kde.pdf(x)
 
     def __repr__(self):
+        print("_repr_")
         return f"<ArbitraryDistribution\n    " + \
                ",\n    ".join(str(p) for p in self.kde.X.columns) + ">"
 
     def copy(self) -> Distribution:
+        print("copy")
         """Copy the distribution.
 
         Returns
