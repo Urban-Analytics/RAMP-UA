@@ -434,7 +434,7 @@ PARAMS = OpenCLRunner.create_parameters(parameters_file=PARAMETERS_FILE)
 
 ITERATIONS = 105  # Number of iterations to run for
 assert (ITERATIONS /7).is_integer()
-NUM_SEED_DAYS = 15  # Number of days to seed the population
+NUM_SEED_DAYS = 7  # Number of days to seed the population
 USE_GPU = True
 STORE_DETAILED_COUNTS = False
 REPETITIONS = 5
@@ -541,6 +541,12 @@ pickle_samples('save', fitness_l, sim_l, obs_l, out_params_l, out_calibrated_par
 #####################################################################
 # Plot the individual results for each sample
 #####################################################################
+initial_cases = pd.read_csv("../../microsim/opencl/data/daily_cases_devon_shifted_mpld_smoothed_IS.csv")
+initial_cases['CumulativeCases'] = initial_cases['num_cases'].cumsum()
+initial_cases_weekly = pd.DataFrame({'OriginalCases':
+                                    initial_cases['num_cases'].groupby(initial_cases['num_cases'].index // 7).sum()})
+initial_cases_weekly['CumulativeCases'] = initial_cases_weekly.cumsum()
+
 # Normalise fitness to 0-1 to calculate transparency
 _fitness = np.array(fitness_l)  # Easier to do maths on np.array
 fitness_norm = (_fitness - min(_fitness)) / (max(_fitness) - min(_fitness))
@@ -556,7 +562,7 @@ for i in range(len(summaries_l)):
     # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"Fitness {round(fitness_l[i])}", fontsize=8)
     # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"P{df.index[sample_idx[i]]}, F{round(fitness_l[i])}", fontsize=8)
 # Plot observations
-ax.plot(x, obs_l[0], label="Observations", color="darkblue", linewidth= 3)
+ax.plot(x, initial_cases_weekly['CumulativeCases'][0:int((105/7))], label="Observations", linewidth=5, color="darkred")
 # Plot result from manually calibrated model
 # ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
 ax.legend(fontsize=20)
@@ -577,7 +583,7 @@ for i in range(len(summaries_l)):
     # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"Fitness {round(fitness_l[i])}", fontsize=8)
     # ax.text(x=len(sim_l[i]), y=sim_l[i][-1], s=f"P{df.index[sample_idx[i]]}, F{round(fitness_l[i])}", fontsize=8)
 # Plot observations
-ax.plot(x, cases_devon_daily['CumulativeCases'][0:105], label="Observations", color="blue")
+ax.plot(x, initial_cases['CumulativeCases'][0:105], label="Observations", linewidth = 5, color="darkred")
 # Plot result from manually calibrated model
 # ax.plot(x, OpenCLRunner.get_cumulative_new_infections(summaries0), label="Initial sim", color="orange")
 ax.legend(fontsize=20)
