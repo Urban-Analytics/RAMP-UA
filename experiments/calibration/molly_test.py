@@ -120,9 +120,6 @@ const_params_dict = {
 # Random variables are the global parameters.
 ##########################################################################
 ##########################################################################
-# The following should all be constant (overiding whatever is in the default.yml parameters file)
-OpenCLRunner.set_constants(const_params_dict)
-
 # School and retail multipliers are uniform between 0-1
 retail_rv, primary_school_rv, secondary_school_rv = (pyabc.RV("uniform", 0, 1) for _ in range(3))
 # Work needs some dampening because we know that workplaces are too big in the current implementation
@@ -307,8 +304,6 @@ for window, n_days in { "w1": 14, "w2":28}.items():
 ### Plot the parameter values being used in each window
 ##########################################################################
 ##########################################################################
-with open('C:/Users/gy17m2a/OneDrive - University of leeds/Project/RAMP-UA/experiments/calibration/2windows_history_dict.pkl', 'rb') as f:
-    history_dict = pickle.load(f)
 
 #### Final population for each window
 evenly_spaced_interval = np.linspace(0.35, 1, 3)
@@ -340,9 +335,9 @@ for i, param in enumerate(original_priors.keys()):
         elif param == 'retail' :
               ax.set_ylim(0,2)
         elif param == 'primary_school':
-              ax.set_ylim(0,1.4)              
+              ax.set_ylim(0,1.7)              
         elif param == 'work' :
-              ax.set_ylim(0,5)
+              ax.set_ylim(0,6)
               # ax.set_xlim(-1,2)
         elif param == 'asymptomatic' :
               ax.set_ylim(0,7)
@@ -353,7 +348,6 @@ for i, param in enumerate(original_priors.keys()):
         handles, labels = ax.get_legend_handles_labels()
         ax.get_legend().remove()
         color_i = color_i +1
-        
 fig.legend(handles, labels, loc='center right', fontsize = 17,
             bbox_to_anchor=(1.01, 0.17))
           # ncol = 8, bbox_to_anchor=(0.5, -0.07))
@@ -390,15 +384,15 @@ for i, param in enumerate(original_priors.keys()):
             if param=="secondary_school" :
                   ax.set_ylim(0,2.1)
             elif param=='presymptomatic':
-                  ax.set_ylim(0,3)      
+                  ax.set_ylim(0,3.5)      
             elif param =='symptomatic':
                    ax.set_ylim(0,3.5)                  
             elif param == 'retail' :
                   ax.set_ylim(0,2)
             elif param == 'primary_school':
-                  ax.set_ylim(0,1.4)              
+                  ax.set_ylim(0,1.7)              
             elif param == 'work' :
-                  ax.set_ylim(0,5)
+                  ax.set_ylim(0,15)
                   # ax.set_xlim(-1,2)
             elif param == 'asymptomatic' :
                   ax.set_ylim(0,7)
@@ -417,9 +411,6 @@ axes[2,2].set_axis_off()
 axes[2,1].set_axis_off()
 fig.tight_layout()
 fig.show()
-
-
-
 
 #############################################################################################################
 #############################################################################################################
@@ -614,35 +605,46 @@ with open('2windows_history_dict.pkl', 'wb') as f:
 #     weights_dict = pickle.load(f)
 # with open('8windows_14days_each_finalpop_history_dict.pkl', 'rb') as f:
 #     history_dict = pickle.load(f)
-#
-# ##########################################################################
-# ##########################################################################
-# ### Plot the final population for each window - parameter values
-# ##########################################################################
-# ##########################################################################
-evenly_spaced_interval = np.linspace(0, 1, 8)
-colors = [cm.autumn_r(x) for x in evenly_spaced_interval]
+
+##########################################################################
+##########################################################################
+### Plot the parameter values being used in each window
+##########################################################################
+##########################################################################
+#### Final population for each window
+evenly_spaced_interval = np.linspace(0.35, 1, 3)
+colors = [cm.Greens(x) for x in evenly_spaced_interval]
 
 fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
 for i, param in enumerate(original_priors.keys()):
-    ax = axes.flat[i]
     color_i =0
+    ax = axes.flat[i]
+    # Add parameter priors
+    # priors_x = np.linspace(-1, 2, 99)  # (specified so that we have some whole numbers)
+    # ax.plot(priors_x, pyabc.Distribution(param=all_rv[param]).pdf({"param": x}), 
+    #         color = 'black', label = 'Prior', linewidth  = 2, linestyle ='dashed')
     for history_name, history in history_dict.items():
+        print(history_name)
         color = colors[color_i]
         df, w = history.get_distribution(m=0, t=history.max_t)
         pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
-                label=history_name,
+                label=history_name, linewidth = 3,
                 #alpha=1.0 if t==0 else float(t)/abc_history.max_t, # Make earlier populations transparent
                 color= color)
-        if param!="work":
-                ax.set_xlim(0,1)
-        if param=="secondary_school" or param=='presymptomatic' or param =='symptomatic':
-              ax.set_ylim(0,2.5)
-        elif param == 'retail' or param == 'primary_school':
-              ax.set_ylim(0,1.4)
+        ax.set_xlim(-1,2)
+        if param=="secondary_school" :
+              ax.set_ylim(0,2.1)
+        elif param=='presymptomatic':
+              ax.set_ylim(0,3)      
+        elif param =='symptomatic':
+               ax.set_ylim(0,3.5)                  
+        elif param == 'retail' :
+              ax.set_ylim(0,2)
+        elif param == 'primary_school':
+              ax.set_ylim(0,1.4)              
         elif param == 'work' :
-              ax.set_ylim(0,20)
-              ax.set_xlim(0,0.4)
+              ax.set_ylim(0,5)
+              # ax.set_xlim(-1,2)
         elif param == 'asymptomatic' :
               ax.set_ylim(0,7)
         ax.legend(fontsize="small")
@@ -660,8 +662,9 @@ axes[2,1].set_axis_off()
 fig.tight_layout()
 fig.show()
 # fig.savefig("Plots/8windows_14days_each_finalpop.jpg")
-#
-#
+
+
+
 ##########################################################################
 ##########################################################################
 ### Plot all populations for each window
@@ -706,7 +709,7 @@ fig.legend(handles, labels, loc='center right', fontsize = 17,ncol =2,
             bbox_to_anchor=(1.01, 0.17))
 fig.tight_layout()
 fig.show()
-fig.savefig("Plots/8windows_14days_each_allpops.jpg")
+# fig.savefig("Plots/8windows_14days_each_allpops.jpg")
 
 
 #     # # ##########################################################################

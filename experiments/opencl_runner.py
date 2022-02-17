@@ -738,7 +738,7 @@ class OpenCLWrapper(object):
             np.array(obs_and_model_df['CumulativeTotal_obs']) - np.array(obs_and_model_df['CumulativeTotal_model']))
 
         #print("Found distance in {}".format(datetime.datetime.now() - start_time))
-        return {"difference": difference,
+        return {"difference": difference, 'cumulative_model_disease_statuses_df': cumulative_model_disease_statuses_df, 
                 "cumulative_model_diseased_by_area": cumulative_model_diseased_by_area}
 
     @staticmethod
@@ -849,5 +849,6 @@ class OpenCLWrapper(object):
             obs={'individuals': self.individuals_df, "observation": self.observations_weekly_array})
 
         return {"distance": dist['difference'], "model_number": model_number,
+                "cumulative_model_disease_statuses_df": dist['cumulative_model_disease_statuses_df'],
                 "model_run_length": self.run_length,
                 "cumulative_model_diseased_by_area": dist['cumulative_model_diseased_by_area']}
