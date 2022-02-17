@@ -106,7 +106,7 @@ class OpenCLRunner:
     @staticmethod
     def fit_l2(obs: np.ndarray, sim: np.ndarray):
         """Calculate the fitness of a model.
-
+        
          Parameters
         ----------
         obs : array_like
@@ -199,6 +199,7 @@ class OpenCLRunner:
         # current_risk_beta needs to be set first  as the OpenCL model pre-multiplies the hazard multipliers by it
         current_risk_beta = OpenCLRunner._check_if_none("current_risk_beta", current_risk_beta,
                                                         disease_params['current_risk_beta'])
+
 
         # Location hazard multipliers can be passed straight through to the LocationHazardMultipliers object.
         # If no argument was passed then the default in the parameters file is used. Note that they need to
@@ -497,8 +498,9 @@ class OpenCLRunner:
                                                model_daily_cumulative_infections[0], axis=0)
 
         # Convert to number of new infections per week (i.e. take sum of each 7 values)
-        model_weekly_new_infections = pd.Series(model_daily_new_infections).groupby(
-            pd.Series(model_daily_new_infections).index // 7).sum().values
+        model_weekly_new_infections = np.add.reduceat(model_daily_new_infections,
+                                                      np.arange(0, len(model_daily_new_infections), 7))
+        # Convert back to cumulative totals
         model_weekly_cumulative_infections = np.cumsum(model_weekly_new_infections)
 
         if not quiet:
@@ -508,7 +510,7 @@ class OpenCLRunner:
         obs_weekly_cumulative_infections = cls.OBSERVATIONS.loc[:cls.ITERATIONS - 1, "CumulativeCases"].values
         # Cut to same length as the modelled results
         obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[0:len(model_weekly_cumulative_infections)]
-        x = 1
+
         if return_full_details:
             # check same length (but obviously will be now as set length based on model)
             assert len(model_weekly_cumulative_infections) == len(obs_weekly_cumulative_infections)
@@ -576,6 +578,7 @@ class OpenCLWrapper(object):
                     raise Exception(
                         f"Parameter {key} in the constants dict is also in the random variables dict {_random_params_dict}")
             final_params = {**const_params_dict, **_random_params_dict}
+            #print(final_params)
 
         # Have a single params dict now ('final_params'), can create the Parameters object
         if self.parameters_file is None:
@@ -619,15 +622,13 @@ class OpenCLWrapper(object):
         :return: processed model results.
         """
         # Check that we receive everything that we expect to
-        # if "disease_statuses" not in raw_model_results.keys():
-        #     raise Exception(f"No 'disease_statuses' item found in the model results that are passed "
-        #                     f"to summary_stats: {raw_model_results}")
+        print(raw_model_results.keys())
+        if "disease_statuses" not in raw_model_results.keys():
+            raise Exception(f"No 'disease_statuses' item found in the model results that are passed "
+                            f"to summary_stats: {raw_model_results}")
 
-        # return {"model_summary": model_result_summary, "test": "SUMMARY_TEST"}
-        print(raw_model_results['obs_and_model_df'])
-        return {"test": "SUMMARY_TEST",
-                "distance": raw_model_results['distance'],
-                "model_summary": raw_model_results['obs_and_model_df']}
+        model_result_summary = raw_model_results['model_result']
+        return {"model_summary": model_result_summary, "test": "SUMMARY_TEST"}
 
         # Just pass the model results on. The 'distance' function can work out how good the results
         # are. The important thing is that the model summary will now be stored by ABC in the database
@@ -638,10 +639,11 @@ class OpenCLWrapper(object):
         """Calculate the distance between the number of cases in the model by MSOA compared to some observations (case data).
         All lists are assumed to be in the same MSOA order (e.g. first element in each list corresponds to the number of cases
         in the same MSOA).
-
+        
         :param sim:
         :param obs:
         """
+
         start_time = datetime.datetime.now()
 
         # Get the model run length (in days)
@@ -649,7 +651,8 @@ class OpenCLWrapper(object):
 
         #############################################################################
         # Create dataframe containing the disease status of each individual on each
-        # day the model has been ran for, and the area (MSOA) they live in
+        # day the model has been ran for, and the area (MSOA) they live in 
+        # IS THIS CUMULATIVE?
         #############################################################################
         # Get the disease status of each individual on each day in the model run
         cumulative_model_disease_statuses = sim['people_statuses_per_day']
@@ -700,52 +703,41 @@ class OpenCLWrapper(object):
             # Add this to the dataframe to store results in
             cumulative_model_diseased_by_area = pd.concat(
                 [cumulative_model_diseased_by_area, cumulative_model_disease_statuses_by_area[day]], axis=1)
+        # Add a column containing the cumulative total over all the days
+        cumulative_model_diseased_by_area['CumulativeTotal_model'] = cumulative_model_diseased_by_area.sum(axis=1)
 
         ########################################################################
         ########################################################################
-        # Find the total number of cases in each week the model is being run for
-        # summed across all the MSOAs
+        # Create dataframe containing the observed number of cases on each day
         ########################################################################
         ########################################################################
-        # Create dataframe to populate with results
-        cumulative_model_diseased_by_area_weekly_sum = pd.DataFrame()
-        # Define n weeks
-        n_weeks = int(n_days / 7)
-        # Loop through each week in n_weeks, find total number of cases in that week
-        # for each MSOA, add column to dataframe containing this total
-        for i in range(7, (n_weeks * 7) + 7, 7):
-            weekly_total = cumulative_model_diseased_by_area.iloc[:, 0:i].sum(axis=1)
-            cumulative_model_diseased_by_area_weekly_sum["week{}Sum".format(int(i / 7))] = weekly_total
-        # Sum over MSOAs
-        cumulative_model_diseased_by_area_weekly_sum = cumulative_model_diseased_by_area_weekly_sum.sum(axis=0)
-
-        ########################################################################
-        ########################################################################
-        # Find the total number of cases in each week, summed across all MSOAs
-        ########################################################################
-        ########################################################################
-        # Create dataframe containing the observed number of cases each week
+        # Get the observations
         observations = obs['observation']
+        # Create as dataframe
         observations_df = pd.DataFrame(data=observations[0:, 0:], index=cumulative_model_diseased_by_area.index,
                                        columns=['Week' + str(i) for i in range(1, observations.shape[1] + 1)])
-
-        # Trim the observations_df so as to keep only the weekly values for the
-        # weeks over which the model is being ran
+        # Add a cumulative total of cases from the first X days
         n_weeks = int(n_days / 7)
-        observations_df_this_window = observations_df.iloc[:, 0:n_weeks]
-        # Sum the values over all MSOAs
-        observations_df_this_window_sums = observations_df_this_window.sum(axis=0)
+        observations_df['CumulativeTotal_obs'] = observations_df.iloc[:, 0:n_weeks].sum(axis=1)
 
         ########################################################################
         ########################################################################
-        # Find the Euclidean difference between 2 vectors containing the number
-        # of cases each week, for the model and the observations
+        # Find euclidean difference between cumulative number of cases over the
+        # number of days being considered
         ########################################################################
         ########################################################################
+        ## Join model with obs
+        obs_and_model_df = pd.concat(
+            [observations_df['CumulativeTotal_obs'], cumulative_model_diseased_by_area['CumulativeTotal_model']],
+            axis=1)
+        obs_and_model_df.loc['Total'] = obs_and_model_df.sum()
+        obs_and_model_df = obs_and_model_df.iloc[-1:]
+
+        # Find the euclidean difference between the cumulative cases in model and obs
         difference = np.linalg.norm(
-            np.array(observations_df_this_window_sums) - np.array(cumulative_model_diseased_by_area_weekly_sum))
+            np.array(obs_and_model_df['CumulativeTotal_obs']) - np.array(obs_and_model_df['CumulativeTotal_model']))
 
-        # print("Found distance in {}".format(datetime.datetime.now() - start_time))
+        #print("Found distance in {}".format(datetime.datetime.now() - start_time))
         return {"difference": difference,
                 "cumulative_model_diseased_by_area": cumulative_model_diseased_by_area}
 
@@ -778,8 +770,7 @@ class OpenCLWrapper(object):
             # Can set the random seed to make it deterministic (None means np will choose one randomly)
             snapshot.seed_prngs(seed=None)
             # Create a simulator and upload the snapshot data to the OpenCL device
-            simulator = Simulator(snapshot, num_seed_days=self.num_seed_days, opencl_dir=self.opencl_dir,
-                                  gpu=self.use_gpu)
+            simulator = Simulator(snapshot, num_seed_days= self.num_seed_days, opencl_dir=self.opencl_dir, gpu=self.use_gpu)
             simulator.upload_all(snapshot.buffers)
 
             if not self.quiet:
@@ -787,7 +778,6 @@ class OpenCLWrapper(object):
                 print(f"Running simulation")
 
             params = Params.fromarray(snapshot.buffers.params)  # XX Why extract Params? Can't just use PARAMS?
-
             summary = Summary(snapshot,
                               store_detailed_counts=self.store_detailed_counts,
                               max_time=self.run_length  # Total length of the simulation
