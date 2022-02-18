@@ -20,7 +20,7 @@ class ArbitraryDistribution(Distribution):
     ABC run) and generating a MultivariateNormalTransition (KDE) that can be sampled
     """
     def __init__(self, abc_hist: History):
-        print("init")
+        #print("init")
         # Get the dataframe of particles (parameter point estimates) and associated weights
         dist_df, dist_w = abc_hist.get_distribution(m=0, t=abc_hist.max_t)
         
@@ -35,7 +35,7 @@ class ArbitraryDistribution(Distribution):
         self.abc_hist = abc_hist
 
     def display(self):
-        print("display")
+        #print("display")
         # Get the dataframe of particles (parameter point estimates) and associated weights
         dist_df, dist_w = self.abc_hist.get_distribution(m=0, t=self.abc_hist.max_t)
 
@@ -52,9 +52,8 @@ class ArbitraryDistribution(Distribution):
             pyabc.visualization.plot_kde_1d(
                 dist_df, dist_w,
                 xmin=0, xmax=1.5,
-                x=variable, ax=ax,
-                label="PDF t={}".format(t))
-            ax.legend()
+                x=variable, ax=ax)
+            #ax.legend()
             #fig.show()
             i=i+1
         #ax.legend()
@@ -63,24 +62,28 @@ class ArbitraryDistribution(Distribution):
         fig.show()
 
     def rvs(self) -> Parameter:
-        print("rvs")
+        #print("rvs")
         """Sample from the joint distribution, returning a Parameter object.
            Just calls rvs() on the underlying kde"""
-        return self.kde.rvs()
+        
+        val = self.kde.rvs()
+        while val['asymptomatic']<0 or val['secondary_school']<0 or val['primary_school']<0 or val['retail']<0 or val['presymptomatic']<0 or val['symptomatic']<0 or val['work']<0:
+            val = self.kde.rvs()
+        return val
 
     def pdf(self, x: Union[Parameter, pd.Series, pd.DataFrame]) -> Union[float, np.ndarray]:
-        print("pdf")
+        #print("pdf")
         """Get probability density at point `x` (product of marginals).
         Just calls pdf(x) on the underlying kde"""
         return self.kde.pdf(x)
 
     def __repr__(self):
-        print("_repr_")
+        #print("_repr_")
         return f"<ArbitraryDistribution\n    " + \
                ",\n    ".join(str(p) for p in self.kde.X.columns) + ">"
 
     def copy(self) -> Distribution:
-        print("copy")
+        #print("copy")
         """Copy the distribution.
 
         Returns
