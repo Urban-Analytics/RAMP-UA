@@ -16,13 +16,13 @@ def run_opencl(snapshot, iterations=100, data_dir="./data", use_gui=True, use_gp
     NB: in order to write output data for the OpenCL dashboard you must run in headless mode.
     """
 
-    if not quiet:
+    if quiet == False:
         print(f"\nSnapshot Size:\t{int(snapshot.num_bytes() / 1000000)} MB\n")
 
     # Create a simulator and upload the snapshot data to the OpenCL device
     simulator = Simulator(snapshot, use_gpu, num_seed_days=num_seed_days)
     simulator.upload_all(snapshot.buffers)
-    if not quiet:
+    if quiet == False:
         print(f"Platform:\t{simulator.platform_name()}\nDevice:\t\t{simulator.device_name()}\n")
 
     if use_gui:
@@ -55,8 +55,13 @@ def run_headless(simulator, snapshot, iterations, quiet, store_detailed_counts=T
     #print("run.py -- run_headless")
     summary = Summary(snapshot, store_detailed_counts=store_detailed_counts, max_time=iterations)
 
-    # only show progress bar in quiet mode
-    timestep_iterator = range(iterations) if quiet else tqdm(range(iterations), desc="Running simulation")
+    # never show progress bar     
+    timestep_iterator = range(iterations) 
+    # # only show progress bar in quiet mode  
+    # if quiet == True:
+    #     timestep_iterator = range(iterations) 
+    # else :
+    #     timestep_iterator = tqdm(range(iterations), desc="Running simulation")          
     
     for time in timestep_iterator:
         # Update parameters based on lockdown
@@ -70,13 +75,13 @@ def run_headless(simulator, snapshot, iterations, quiet, store_detailed_counts=T
         simulator.download("people_statuses", snapshot.buffers.people_statuses)
         summary.update(time, snapshot.buffers.people_statuses)
 
-    if not quiet:
-        for i in range(iterations):
-            print(f"\nDay {i}")
-            summary.print_counts(i)
+    # if quiet == False:
+    #     for i in range(iterations):
+    #         print(f"\nDay {i}")
+    #         summary.print_counts(i)
 
-    if not quiet:
-        print("\nFinished")
+    # if quiet == False:
+    #     print("\nFinished")
 
     # Download the snapshot from OpenCL to host memory
     final_state = simulator.download_all(snapshot.buffers)

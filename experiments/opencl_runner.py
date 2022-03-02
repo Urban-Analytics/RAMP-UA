@@ -7,7 +7,7 @@ import multiprocessing
 import itertools
 import yaml
 import time
-# import tqdm
+import tqdm
 import pandas as pd
 import random
 import datetime
@@ -329,9 +329,8 @@ class OpenCLRunner:
         simulator.upload_all(snapshot.buffers)
         # print(simulator.initial_cases)
 
-        print("quiet in run_open_cl_model:", quiet)
-        if quiet == False:
-            print(f"Running simulation {i + 1}.")
+        # if quiet == False:
+        #     print(f"Running simulation {i + 1}.")
         summary, final_state = run_headless(simulator, snapshot, iterations, quiet,
                                             store_detailed_counts=store_detailed_counts)
         return summary, final_state
@@ -354,7 +353,6 @@ class OpenCLRunner:
         """Run a number of models and return a list of summaries.
         :param multiprocess: Whether to run in mutliprocess mode (default False)
         """
-        print("quiet in run_open_cl_model_multi:", quiet)
         # print("opencl_runner.py - run_opencl_model_multi")
         # Prepare the function arguments. We need one set of arguments per repetition
         l_i = [i for i in range(repetitions)] if not random_ids else \
@@ -374,7 +372,6 @@ class OpenCLRunner:
         to_return = None
         start_time = time.time()
         if multiprocess:
-            print("running multiprocess")
             try:
                 # i.e. if quiet is false
                 if not quiet:
@@ -385,14 +382,15 @@ class OpenCLRunner:
                 pool.close()
         # i.e. if quiet is true
         else:
-            print("running not multiprocess")
             results = itertools.starmap(OpenCLRunner.run_opencl_model, args)
             # Return as a list to force the models to execute (otherwise this is delayed because starmap returns
             # a generator. Also means we can use tqdm to get a progress bar, which is nice.
-            #to_return = [x for x in tqdm.tqdm(results, desc="Running models", total=repetitions)]
-            to_return = results
-        if quiet == False:
-            print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)
+            if quiet == False:
+                to_return = [x for x in tqdm.tqdm(results, desc="Running models", total=repetitions)]
+            else:
+                to_return = results
+        # if quiet == False:
+        #     print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)
         return to_return
 
     @classmethod
@@ -457,7 +455,6 @@ class OpenCLRunner:
             dictionary as required by the pyabc package) unless return_full_details is True.
         """
         # print("opencl_runner.py -- run_model_with_params_abc")
-        print('quiet is ', quiet)
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
@@ -474,7 +471,7 @@ class OpenCLRunner:
         params = OpenCLRunner.create_parameters(
             parameters_file=cls.PARAMETERS_FILE,
             **input_params_dict)
-        print("quiet is now", quiet)
+
         results = OpenCLRunner.run_opencl_model_multi(
             repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params, num_seed_days=cls.NUM_SEED_DAYS,
             quiet=quiet, opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
@@ -494,8 +491,8 @@ class OpenCLRunner:
         # Convert back to cumulative totals
         model_weekly_cumulative_infections = np.cumsum(model_weekly_new_infections)
 
-        if not quiet:
-            print(f"Ran Model with {str(input_params_dict)}")
+        # if not quiet:
+        #     print(f"Ran Model with {str(input_params_dict)}")
 
         # Get observations as array
         obs_weekly_cumulative_infections = cls.OBSERVATIONS.loc[:cls.ITERATIONS - 1, "CumulativeCases"].values
@@ -765,10 +762,9 @@ class OpenCLWrapper(object):
             # Create a simulator and upload the snapshot data to the OpenCL device
             simulator = Simulator(snapshot, num_seed_days= self.num_seed_days, opencl_dir=self.opencl_dir, gpu=self.use_gpu)
             simulator.upload_all(snapshot.buffers)
-            if quiet == False:
-            #if not self.quiet:
+            #if quiet == False:
                 # print(f"Running simulation {sim_number + 1}.")
-                print(f"Running simulation")
+                #print(f"Running simulation")
 
             params = Params.fromarray(snapshot.buffers.params)  # XX Why extract Params? Can't just use PARAMS?
             summary = Summary(snapshot,
@@ -809,12 +805,12 @@ class OpenCLWrapper(object):
             summary.update(iter_count, snapshot.buffers.people_statuses)
 
             # print(len(people_statuses_per_day))
-            if quiet == False:
+            if self.quiet == False:
                 for i in range(self.run_length):
                     print(f"\nDay {i}")
                     summary.print_counts(i)
 
-            if quiet == False:
+            if self.quiet == False:
                 print("\nFinished")
 
             # Download the snapshot from OpenCL to host memory
