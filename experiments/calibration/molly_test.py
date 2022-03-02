@@ -72,7 +72,7 @@ cases_msoa_weekly = cases_msoa_weekly.T
 observations_weekly_array = cases_msoa_weekly.to_numpy()
 
 ## Get dataframe with totals for whole of Devon
-cases_devon_weekly = pd.read_csv("observation_data/weekly_cases_devon_aggregated_from_daily_IS.csv")
+cases_devon_weekly = pd.read_csv("observation_data/weekly_cases_devon_shifted_mpld_smoothed_IS.csv")
 # Create new dataframe with cumulative sums rather than cases per day
 cases_devon_weekly['CumulativeCases'] = cases_devon_weekly['OriginalCases'].cumsum()
 
@@ -80,7 +80,6 @@ cases_devon_weekly['CumulativeCases'] = cases_devon_weekly['OriginalCases'].cums
 cases_devon_daily = pd.read_csv("observation_data/daily_cases_devon_shifted_mpld_smoothed_IS.csv")
 # Create new dataframe with cumulative sums rather than cases per day
 cases_devon_daily['CumulativeCases'] = cases_devon_daily['OriginalCases'].cumsum()
-
 
 ################################
 ##########################################################################
@@ -141,6 +140,7 @@ fig, axes = plt.subplots(2, 4, figsize=(14, 6), sharex=True, sharey=True)
 x = np.linspace(-1, 2, 99)  # (specified so that we have some whole numbers)
 marker = itertools.cycle((',', '+', '.', 'o', '*'))
 for i, (var_name, variable) in enumerate(all_rv.items()):
+    print(i, var_name, variable)
     # var_name = [ k for k,v in locals().items() if v is variable][0]  # Hack to get the name of the variable
     ax = axes.flatten()[i]
     # ax.plot(x, pyabc.Distribution(param=variable).pdf({"param": x}), label = var_name, marker=next(marker), ms=3)
@@ -160,6 +160,12 @@ decorated_rvs = {name: pyabc.LowerBoundDecorator(rv, 0.0) for name, rv in all_rv
 # Define the original priors
 original_priors = pyabc.Distribution(**decorated_rvs)
 
+### Alternative option for using posterior from calibration using historical data
+# as priors
+# with open('abc-2_105days_7seeddays.pkl', 'rb') as f:
+#     old_history = pickle.load(f)
+# original_priors = ArbitraryDistribution(old_history)
+
 ##########################################################################
 ##########################################################################
 # Setup loop for running model
@@ -169,7 +175,7 @@ original_priors = pyabc.Distribution(**decorated_rvs)
 parameters_file = os.path.join("../../", "model_parameters/",
                                "default.yml")  # Need to tell it where the default parameters are
 # Set the size of a data assimilation window in days:
-da_window_size = 7
+da_window_size = 3
 # Dictionary with parameters for running model
 admin_params = {"quiet": True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0,
                 "run_length": da_window_size,
@@ -206,9 +212,6 @@ for window_number in range(1, windows + 1):
     # Define priors
     # If first window, then use user-specified (original) priors
     if window_number == 1:
-        # with open('abc-2_105days_7seeddays.pkl', 'rb') as f:
-        #     old_history = pickle.load(f)
-        # priors = ArbitraryDistribution(old_history)
         priors = original_priors
     # If a subsequent window, then generate distribution from posterior from previous window
     else:
@@ -256,53 +259,91 @@ for window_number in range(1, windows + 1):
         weights_dict["w{}, pop{}".format(window_number, t)] = w_t1
         history_dict["w{}".format(window_number)] = abc_history
 
-    # Merge dataframe and weights and sort by weight (highest weight at the top)
-    # _df['weight'] = _w
-    # posterior_df = _df.sort_values('weight', ascending=False).reset_index()
-    # posterior_df.to_csv("Plots/window_number{}_posterior_df.csv".format(window_number), index = False)
 
 #############################################################################################################
 #############################################################################################################
 # Get results at end of each window
 #############################################################################################################
 #############################################################################################################
-df = pd.DataFrame()
-fig, ax = plt.subplots()
-colors ={'w1': 'darkred', 'w2': 'darkblue'}
-for window, n_days in { "w1": 14, "w2":28}.items():
-    print(window, n_days)
-    x=range(1,n_days+1)    
-    history  = history_dict[window]   
-    weighted_sum_stats_t0 = history.get_weighted_sum_stats_for_model(t=0)[1]
+# Get model predictions, and particle fitnesses for each particle in the final 
+# population 
+abc_sum_stats = {}
+
+for window, n_days in { "w1": 7, "w2":14}.items():
     
-    evenly_spaced_interval = np.linspace(0.35, 1, 100)
-    colors = [cm.Greens(x) for x in evenly_spaced_interval]
-    fig, ax = plt.subplots()
+    # Create lists to store values for each particle
+    fitness_l, daily_preds_l, params_l = [],[],[]
+    
+    # get the history for this window    
+    history_wx  = history_dict[window]   
+    
+    # Get parameter values
+    parameter_vals_df, w = history_wx.get_distribution(m=0, t=history_wx.max_t)
+
+    # Get the summary stats for the final population for this window ([1] means keep just the 
+    # dataframe and not the array of weights)
+    weighted_sum_stats_t0 = history_wx.get_weighted_sum_stats_for_model(t=history_wx.max_t)[1]
+    # Loop through each particle and save their fitness and predictions into the lists
     for particle_no in range(0,100):
-        print(particle_no)
+        # Get data for just this particle
         particle_x_dict = weighted_sum_stats_t0[particle_no]
+        
+        # Get daily predictions
         cumulative_model_diseased_by_area = particle_x_dict["cumulative_model_diseased_by_area"]
         cumulative_model_diseased_by_area = cumulative_model_diseased_by_area.iloc[:,0:n_days]
         cumulative_model_diseased_by_area_devon_sum = cumulative_model_diseased_by_area.sum(axis=0)
     
-        # Create dataframe to populate with results
-        cumulative_model_diseased_by_area_weekly_sum = pd.DataFrame()
-        # Define n weeks
-        n_weeks = int(n_days / 7)
-        # Loop through each week in n_weeks, find total number of cases in that week
-        # for each MSOA, add column to dataframe containing this total
-        for i in range(7, (n_weeks * 7) + 7, 7):
-            weekly_total = cumulative_model_diseased_by_area.iloc[:, 0:i].sum(axis=1)
-            #cumulative_model_diseased_by_area_weekly_sum["week{}Sum".format(int(i / 7))] = weekly_total
-        # Sum over MSOAs
-        cumulative_model_diseased_by_area_weekly_sum = cumulative_model_diseased_by_area_weekly_sum.sum(axis=0)
-        df[particle_no] = cumulative_model_diseased_by_area_devon_sum
+        # Add daily predictions for this particle to list
+        daily_preds_l.append(cumulative_model_diseased_by_area_devon_sum.values)
         
-        ax.plot(x,cumulative_model_diseased_by_area_devon_sum, color = colors[particle_no])
-    
-    ax.set_xlabel("Day")
-    ax.set_ylabel("Number infections")
+        # Add fitness to list
+        fitness_l.append(particle_x_dict['distance'])
+        
+        # Add parameter values to list
+        params_l.append(parameter_vals_df.iloc[particle_no])
+        
+    # Add to dictionary for this window
+    abc_sum_stats[window] = {'fitness_ls':fitness_l, 'daily_preds_ls' :daily_preds_l,
+                             'params_ls':params_l}
 
+
+# For each window, plot the predictions rom each particle in the final population
+fig, axes = plt.subplots(1, 2, figsize=(15,8))
+axes_number = 0
+for window, n_days in { "w1": 7, "w2":14}.items():
+    # Get data for this window
+    daily_preds_ls  = abc_sum_stats[window]['daily_preds_ls']   
+    fitness_l = abc_sum_stats[window]['fitness_ls']   
+
+    # Normalise fitness to 0-1 to calculate transparency
+    _fitness = np.array(fitness_l)  # Easier to do maths on np.array
+    fitness_norm = (_fitness - min(_fitness)) / (max(_fitness) - min(_fitness))
+    
+    # define number of days these results relate to
+    x=range(1,n_days+1)    
+    
+    # For each particle, plot the predictions, coloured by fitness
+    for i in range(0,len(daily_preds_l)):
+        axes[axes_number].plot(x, daily_preds_ls[i],
+                color="black", alpha=1 - fitness_norm[i])  # (1-x because high fitness is bad)
+   
+    # Add observations
+    axes[axes_number].plot(x, initial_cases['CumulativeCases'][0:len(daily_preds_ls[0])], label="Observations", linewidth = 5, color="darkred")
+
+    # Apply labels
+    axes[axes_number].set_xlabel("Day")
+    axes[axes_number].set_ylabel("Number infections")
+    
+    axes_number =axes_number +1
+
+
+
+best_particle_idx = abc_sum_stats[window]['fitness_ls'].index(min(abc_sum_stats[window]['fitness_ls']))
+best_params =abc_sum_stats[window]['params_ls'][best_particle_idx]
+
+
+    
+    
 ##########################################################################
 ##########################################################################
 ### Plot the parameter values being used in each window
@@ -318,34 +359,16 @@ for i, param in enumerate(original_priors.keys()):
     ax = axes.flat[i]
     # Add parameter priors
     priors_x = np.linspace(-1, 2, 99)  # (specified so that we have some whole numbers)
-    ax.plot(priors_x, pyabc.Distribution(param=all_rv[param]).pdf({"param": x}), 
+    ax.plot(priors_x, pyabc.Distribution(param=all_rv[param]).pdf({"param": priors_x}), 
             color = 'black', label = 'Prior', linewidth  = 2, linestyle ='dashed')
     for history_name, history in history_dict.items():
         color = colors[color_i]
         df, w = history.get_distribution(m=0, t=history.max_t)
         pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
                 label=history_name, linewidth = 3,
-                #alpha=1.0 if t==0 else float(t)/abc_history.max_t, # Make earlier populations transparent
                 color= color)
-        if param=="secondary_school" :
-              ax.set_ylim(0,2.1)
-        elif param=='presymptomatic':
-              ax.set_ylim(0,3)      
-        elif param =='symptomatic':
-               ax.set_ylim(0,3.5)                  
-        elif param == 'retail' :
-              ax.set_ylim(0,2)
-        elif param == 'primary_school':
-              ax.set_ylim(0,1.7)              
-        elif param == 'work' :
-              ax.set_ylim(0,6)
-              # ax.set_xlim(-1,2)
-        elif param == 'asymptomatic' :
-              ax.set_ylim(0,7)
         ax.legend(fontsize="small")
         ax.set_xlim(-1,2)
-        #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
-        #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
         ax.set_title(f"{param}")
         handles, labels = ax.get_legend_handles_labels()
         ax.get_legend().remove()
@@ -371,7 +394,7 @@ for i, param in enumerate(original_priors.keys()):
     ax = axes.flat[i]
     # Add parameter priors
     priors_x = np.linspace(-1, 2, 99)  # (specified so that we have some whole numbers)
-    ax.plot(priors_x, pyabc.Distribution(param=all_rv[param]).pdf({"param": x}), 
+    ax.plot(priors_x, pyabc.Distribution(param=all_rv[param]).pdf({"param": priors_x}), 
             color = 'black', label = 'Prior', linewidth  = 2, linestyle ='dashed')
     for history_name, history in history_dict.items():
         color = colors[color_i]
@@ -382,24 +405,7 @@ for i, param in enumerate(original_priors.keys()):
                 color = color,
                 linestyle = linestyles[t],linewidth = linewidths[t])
             ax.set_xlim(-1,2)
-            if param=="secondary_school" :
-                  ax.set_ylim(0,2.1)
-            elif param=='presymptomatic':
-                  ax.set_ylim(0,3.5)      
-            elif param =='symptomatic':
-                   ax.set_ylim(0,3.5)                  
-            elif param == 'retail' :
-                  ax.set_ylim(0,2)
-            elif param == 'primary_school':
-                  ax.set_ylim(0,1.7)              
-            elif param == 'work' :
-                  ax.set_ylim(0,15)
-                  # ax.set_xlim(-1,2)
-            elif param == 'asymptomatic' :
-                  ax.set_ylim(0,7)
             ax.legend(fontsize="small")
-
-            #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
             ax.set_title(f"{param}")
             handles, labels = ax.get_legend_handles_labels()
             ax.get_legend().remove()
@@ -726,12 +732,11 @@ ani.save('basic_animation.gif', fps=3)
 ### Save dicts
 ##########################################################################
 ##########################################################################
-
 with open('2windows_7seeds_dfs_dict.pkl', 'wb') as f:
     pickle.dump(dfs_dict, f)
-with open('2windows_7seeds__ws_dict.pkl', 'wb') as f:
+with open('2windows_7seeds_ws_dict.pkl', 'wb') as f:
     pickle.dump(weights_dict, f)
-with open('2windows_7seeds__history_dict.pkl', 'wb') as f:
+with open('2windows_7seeds_history_dict.pkl', 'wb') as f:
     pickle.dump(history_dict, f)
 
 with open('2windows_7seeds_dfs_dict.pkl', 'rb') as f:
