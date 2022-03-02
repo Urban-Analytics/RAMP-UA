@@ -28,9 +28,8 @@ microsim_calibration:
   # This multiplies the risk received as individuals visit shops etc.
   risk_multiplier: 1.0
 
-
 disease: # This is where the parameter for the disease model (the R part) can go (same format the 'microsim_calibration' above)
-  current_risk_beta: 0.00555
+  current_risk_beta: 0.025239665550846085
   risk_cap: 5
   seed_days: 5
   exposed_dist: "weibull"
