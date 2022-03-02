@@ -7,7 +7,7 @@ import multiprocessing
 import itertools
 import yaml
 import time
-import tqdm
+# import tqdm
 import pandas as pd
 import random
 import datetime
@@ -185,15 +185,14 @@ class OpenCLRunner:
 
         with open(parameters_file) as f:
             parameters = yaml.load(f, Loader=yaml.SafeLoader)
-
+            
         sim_params = parameters["microsim"]  # Parameters for the dynamic microsim (python)
         calibration_params = parameters["microsim_calibration"]
         disease_params = parameters["disease"]  # Parameters for the disease model (r)
 
-        # current_risk_beta needs to be set first  as the OpenCL model pre-multiplies the hazard multipliers by it
+        # current_risk_beta needs to be set first as the OpenCL model pre-multiplies the hazard multipliers by it
         current_risk_beta = OpenCLRunner._check_if_none("current_risk_beta", current_risk_beta,
                                                         disease_params['current_risk_beta'])
-
 
         # Location hazard multipliers can be passed straight through to the LocationHazardMultipliers object.
         # If no argument was passed then the default in the parameters file is used. Note that they need to
@@ -286,7 +285,7 @@ class OpenCLRunner:
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
                          opencl_dir: str, use_gpu: bool,
                          use_healthier_pop: bool, num_seed_days: int,
-                         store_detailed_counts: bool = True, quiet=False) -> (np.ndarray, np.ndarray):
+                         store_detailed_counts: bool, quiet = bool) -> (np.ndarray, np.ndarray):
         """
         Run the OpenCL model.
         :param i: Simulation number (i.e. if run as part of an ensemble)
@@ -330,9 +329,10 @@ class OpenCLRunner:
         simulator.upload_all(snapshot.buffers)
         # print(simulator.initial_cases)
 
-        if not quiet:
+        print("quiet in run_open_cl_model:", quiet)
+        if quiet == False:
             print(f"Running simulation {i + 1}.")
-        summary, final_state = run_headless(simulator, snapshot, iterations, quiet=True,
+        summary, final_state = run_headless(simulator, snapshot, iterations, quiet,
                                             store_detailed_counts=store_detailed_counts)
         return summary, final_state
 
@@ -345,16 +345,16 @@ class OpenCLRunner:
     #
     @staticmethod
     def run_opencl_model_multi(
-            repetitions: int, iterations: int, params: Params, num_seed_days: int,
+            repetitions: int, iterations: int, params: Params, num_seed_days: int, quiet:bool,
             use_gpu: bool = False, use_healthier_pop: bool = False, store_detailed_counts: bool = False,
             opencl_dir=os.path.join(".", "microsim", "opencl"),
             snapshot_filepath=os.path.join(".", "microsim", "opencl", "snapshots", "cache.npz"),
             multiprocess=False,
-            random_ids=False,
-            quiet=False):
+            random_ids=False):
         """Run a number of models and return a list of summaries.
         :param multiprocess: Whether to run in mutliprocess mode (default False)
         """
+        print("quiet in run_open_cl_model_multi:", quiet)
         # print("opencl_runner.py - run_opencl_model_multi")
         # Prepare the function arguments. We need one set of arguments per repetition
         l_i = [i for i in range(repetitions)] if not random_ids else \
@@ -374,20 +374,24 @@ class OpenCLRunner:
         to_return = None
         start_time = time.time()
         if multiprocess:
+            print("running multiprocess")
             try:
+                # i.e. if quiet is false
                 if not quiet:
                     print("Running multiple models in multiprocess mode ... ", end="", flush=True)
                 with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
                     to_return = pool.starmap(OpenCLRunner.run_opencl_model, args)
             finally:  # Make sure they get closed (shouldn't be necessary)
                 pool.close()
+        # i.e. if quiet is true
         else:
+            print("running not multiprocess")
             results = itertools.starmap(OpenCLRunner.run_opencl_model, args)
             # Return as a list to force the models to execute (otherwise this is delayed because starmap returns
             # a generator. Also means we can use tqdm to get a progress bar, which is nice.
-            to_return = [x for x in tqdm.tqdm(results, desc="Running models", total=repetitions)]
-
-        if not quiet:
+            #to_return = [x for x in tqdm.tqdm(results, desc="Running models", total=repetitions)]
+            to_return = results
+        if quiet == False:
             print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)
         return to_return
 
@@ -423,8 +427,7 @@ class OpenCLRunner:
         results = OpenCLRunner.run_opencl_model_multi(
             repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params, num_seed_days=cls.NUM_SEED_DAYS,
             opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
-            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False
-        )
+            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False)
 
         summaries = [x[0] for x in results]
         final_results = [x[1] for x in results]
@@ -441,8 +444,7 @@ class OpenCLRunner:
             return fitness
 
     @classmethod
-    def run_model_with_params_abc(cls, input_params_dict: dict, return_full_details=False,
-                                  quiet=True):
+    def run_model_with_params_abc(cls, input_params_dict: dict, return_full_details=False, quiet= True):
         """
         Run the model, compatible with pyABC. Random variables (parameters) are passed in as a dictionary.
         For constant parameters that override the defaults (in the default.yml file) set them first
@@ -455,12 +457,12 @@ class OpenCLRunner:
             dictionary as required by the pyabc package) unless return_full_details is True.
         """
         # print("opencl_runner.py -- run_model_with_params_abc")
+        print('quiet is ', quiet)
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
 
         # Check that all input parameters are not negative
-        print("printing: ", input_params_dict.items())
         for k, v in input_params_dict.items():
             if v < 0:
                 raise Exception(f"The parameter {k}={v} < 0. "
@@ -472,12 +474,11 @@ class OpenCLRunner:
         params = OpenCLRunner.create_parameters(
             parameters_file=cls.PARAMETERS_FILE,
             **input_params_dict)
-
+        print("quiet is now", quiet)
         results = OpenCLRunner.run_opencl_model_multi(
             repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params, num_seed_days=cls.NUM_SEED_DAYS,
-            opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
-            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False, random_ids=True,
-            quiet=quiet)
+            quiet=quiet, opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
+            store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False, random_ids=True)
 
         summaries = [x[0] for x in results]
 
@@ -557,8 +558,7 @@ class OpenCLWrapper(object):
 
         # Now deal with the model parameters
         self.const_params_dict = const_params_dict
-    
-        
+
         if _random_params_dict is None:  # Only have constant params
             final_params = const_params_dict
         else:  # Have constants *and* random variables
@@ -568,7 +568,6 @@ class OpenCLWrapper(object):
                     raise Exception(
                         f"Parameter {key} in the constants dict is also in the random variables dict {_random_params_dict}")
             final_params = {**const_params_dict, **_random_params_dict}
-            #print(final_params)
 
         # Have a single params dict now ('final_params'), can create the Parameters object
         if self.parameters_file is None:
@@ -594,7 +593,6 @@ class OpenCLWrapper(object):
                 raise Exception(f"WRAPPER: The parameter {k}={v} < 0. "
                                 f"All parameters: {random_params_dict}")
 
-
         m = OpenCLWrapper(const_params_dict=self.const_params_dict,
                           quiet=self.quiet, use_gpu=self.use_gpu, store_detailed_counts=self.store_detailed_counts,
                           start_day=self.start_day, run_length=self.run_length,
@@ -617,7 +615,7 @@ class OpenCLWrapper(object):
         :return: processed model results.
         """
         # Check that we receive everything that we expect to
-        print(raw_model_results.keys())
+        #print(raw_model_results.keys())
         if "disease_statuses" not in raw_model_results.keys():
             raise Exception(f"No 'disease_statuses' item found in the model results that are passed "
                             f"to summary_stats: {raw_model_results}")
@@ -753,7 +751,7 @@ class OpenCLWrapper(object):
         OpenCLWrapper.model_counter += 1
         model_number = OpenCLWrapper.model_counter
         # Print progress statement
-        print(f"OpenclRunner is running model {model_number}")
+        #print(f"OpenclRunner is running model {model_number}")
 
         # If this is the first data assimilation window, we can just run the model as normal
         if self.start_day == 0:
@@ -767,7 +765,8 @@ class OpenCLWrapper(object):
             # Create a simulator and upload the snapshot data to the OpenCL device
             simulator = Simulator(snapshot, num_seed_days= self.num_seed_days, opencl_dir=self.opencl_dir, gpu=self.use_gpu)
             simulator.upload_all(snapshot.buffers)
-            if not self.quiet:
+            if quiet == False:
+            #if not self.quiet:
                 # print(f"Running simulation {sim_number + 1}.")
                 print(f"Running simulation")
 
@@ -778,8 +777,14 @@ class OpenCLWrapper(object):
                               )
 
             # only show progress bar in quiet mode
-            timestep_iterator = range(self.run_length) if self.quiet \
-                else tqdm(range(self.quiet), desc="Running simulation")
+            timestep_iterator = range(self.run_length)
+            # if self.quiet:
+            #     timestep_iterator = range(self.run_length)
+            # else :
+            #     else tqdm(range(self.quiet), desc="Running simulation")
+
+            # timestep_iterator = range(self.run_length) if self.quiet \
+            #     else tqdm(range(self.quiet), desc="Running simulation")
 
             # Create array to store the disease statuses for each day
             people_statuses_per_day = np.array([], dtype='uint8')
@@ -804,12 +809,12 @@ class OpenCLWrapper(object):
             summary.update(iter_count, snapshot.buffers.people_statuses)
 
             # print(len(people_statuses_per_day))
-            if not self.quiet:
+            if quiet == False:
                 for i in range(self.run_length):
                     print(f"\nDay {i}")
                     summary.print_counts(i)
 
-            if not self.quiet:
+            if quiet == False:
                 print("\nFinished")
 
             # Download the snapshot from OpenCL to host memory
@@ -836,6 +841,8 @@ class OpenCLWrapper(object):
 
         # Calculate the error ('distance') and include that in the information returned
         observations = self.observations_weekly_array
+        if model_number== 1:
+          print("Current_risk_beta is: ", self.const_params_dict['current_risk_beta'])
 
         dist = OpenCLWrapper.distance(
             sim={'model_run_length': self.run_length, 'people_statuses_per_day': people_statuses_per_day},
