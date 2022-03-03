@@ -1,3 +1,5 @@
+import warnings
+
 import pyabc
 import copy
 import numpy as np
@@ -92,3 +94,26 @@ class ArbitraryDistribution(Distribution):
             A copy of the distribution.
         """
         return copy.deepcopy(self)
+
+class GreaterThanZeroParameterTransition(MultivariateNormalTransition):
+    """A transition that slightly extends MultivariateNormalTransition to only allow new
+    distributions for which all parameters have values greater than 0"""
+
+    def rvs_single(self) -> Parameter:
+        """Override the default behaviour of the MultivariateNormalTransition class
+        to repeatedly create perturbations until all parameters are above 0. Warns if
+        it has to try more than 10 times."""
+        sample_ind = np.random.choice(self._range, p=self.w, replace=True)
+        sample = self.X.iloc[sample_ind]
+        perturbed = sample + np.random.multivariate_normal(
+            np.zeros(self.cov.shape[0]), self.cov)
+        counter = 0
+        # Check that all parameter values are > 0 and sample again if not
+        while not (perturbed > 0).all():
+            perturbed = sample + np.random.multivariate_normal(
+                np.zeros(self.cov.shape[0]), self.cov)
+            counter += 1
+            if counter % 10 == 0:
+                warnings.warn(f"NoZeroPatameterTransition has tried {counter} times to draw a sample for "
+                              f"which all parameters are greater than 0")
+        return Parameter(perturbed)
