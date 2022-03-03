@@ -10,7 +10,11 @@ import sys
 import datetime
 from matplotlib import cm
 
-os.chdir("C:/Users/gy17m2a/OneDrive - University of Leeds/Project/RAMP-UA/experiments/calibration")
+try:
+    os.chdir("C:/Users/gy17m2a/OneDrive - University of Leeds/Project/RAMP-UA/experiments/calibration")
+except:
+    print("Could not change to Molly's working directory. Continuing as normal")
+
 
 # PYABC (https://pyabc.readthedocs.io/en/latest/)
 import pyabc
@@ -22,7 +26,7 @@ logging.getLogger("pyopencl").setLevel(logging.ERROR)
 
 # Import arbitrary distribution class for using posterior estimates as new priors
 sys.path.append('..')
-from ArbitraryDistribution import ArbitraryDistribution
+from arbitrary_distribution import ArbitraryDistribution, GreaterThanZeroParameterTransition
 
 # RAMP model
 from microsim.initialisation_cache import InitialisationCache
@@ -223,6 +227,7 @@ for window_number in range(1, windows + 1):
         parameter_priors=priors,  # Priors (could be a list)
         # summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
         distance_function=OpenCLWrapper.dummy_distance,  # Distance function
+        transitions=GreaterThanZeroParameterTransition(),
         sampler=pyabc.sampler.SingleCoreSampler()
         # Single core because the model is parallelised anyway (and easier to debug)
         # sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
