@@ -64,7 +64,6 @@ class ArbitraryDistribution(Distribution):
         #print("rvs")
         """Sample from the joint distribution, returning a Parameter object.
            Just calls rvs() on the underlying kde"""
-        
         val = self.kde.rvs()
         while val['asymptomatic']<0 or val['secondary_school']<0 or val['primary_school']<0 or val['retail']<0 or val['presymptomatic']<0 or val['symptomatic']<0 or val['work']<0:
             val = self.kde.rvs()
