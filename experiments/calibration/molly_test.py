@@ -181,7 +181,7 @@ parameters_file = os.path.join("../../", "model_parameters/",
 # Set the size of a data assimilation window in days:
 da_window_size = 3
 # Dictionary with parameters for running model
-admin_params = {"quiet": True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0,
+admin_params = {"quiet": True, "use_gpu": False, "store_detailed_counts": True, "start_day": 0,
                 "run_length": da_window_size,
                 "current_particle_pop_df": None,
                 "parameters_file": parameters_file, "snapshot_file": SNAPSHOT_FILEPATH, "opencl_dir": OPENCL_DIR,
@@ -438,7 +438,7 @@ PARAMS = OpenCLRunner.create_parameters(parameters_file=PARAMETERS_FILE)
 ITERATIONS = 105  # Number of iterations to run for
 assert (ITERATIONS /7).is_integer()
 NUM_SEED_DAYS = 7  # Number of days to seed the population
-USE_GPU = True
+USE_GPU = False
 STORE_DETAILED_COUNTS = False
 REPETITIONS = 5
 USE_HEALTHIER_POP = True

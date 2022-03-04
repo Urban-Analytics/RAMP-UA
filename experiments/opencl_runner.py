@@ -273,7 +273,8 @@ class OpenCLRunner:
             # The value has been provided. Return it, but check a constant hasn't been set as well
             # (it's unlikely that someone would set a constant and then also provide a value for the same parameter)
             if param_name in cls.constants.keys():
-                raise Exception(f"A parameter {param_name} has been provided, but it has also been set as a constant")
+                raise Exception(f"A parameter '{param_name}' has been provided, but it has also been set as a constant."
+                                f"\n\tConstants are: {cls.constants.keys()}")
             return param_value
         else:  # No value provided, return a constant, if there is one, or the default otherwise
             if param_name in cls.constants.keys():
