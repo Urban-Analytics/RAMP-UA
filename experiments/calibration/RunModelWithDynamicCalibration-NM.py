@@ -18,21 +18,20 @@ from pyabc.transition.multivariatenormal import MultivariateNormalTransition  # 
 # Quieten down the pyopencl info messages (just print errors)
 import logging
 
+from experiments import arbitrary_distribution as ad
+
 logging.getLogger("pyopencl").setLevel(logging.ERROR)
 
 # Import arbitrary distribution class for using posterior estimates as new priors
-sys.path.append('..')
-from arbitrary_distribution import ArbitraryDistribution, GreaterThanZeroParameterTransition
+#from arbitrary_distribution import ArbitraryDistribution, GreaterThanZeroParameterTransition
 
 # RAMP model
 from microsim.initialisation_cache import InitialisationCache
 
 # Bespoke RAMP classes for running the model
-import sys
-
-sys.path.append('..')
-from opencl_runner import OpenCLWrapper  # Some additional functions to simplify running the OpenCL model
-from opencl_runner import OpenCLRunner
+from experiments import opencl_runner as oclr
+#from ..opencl_runner import OpenCLWrapper  # Some additional functions to simplify running the OpenCL model
+#from ..opencl_runner import OpenCLRunner
 
 # Set this to False to recalculate all results (good on HPC or whatever).
 # If true then it loads pre-calculated results from pickle files (much quicker)
@@ -77,7 +76,7 @@ cases_msoa_daily = cases_msoa_daily.add_prefix('Day')
 
 
 PARAMETERS_FILE = os.path.join("../../","model_parameters", "default.yml")
-PARAMS = OpenCLRunner.create_parameters(parameters_file=PARAMETERS_FILE)
+PARAMS = oclr.OpenCLRunner.create_parameters(parameters_file=PARAMETERS_FILE)
 
 
 OPENCL_DIR = os.path.join("..", "..", "microsim", "opencl")
@@ -94,24 +93,24 @@ assert (ITERATIONS /7).is_integer() # check it is divisible by 7
 NUM_SEED_DAYS = 7  # Number of days to seed the population
 USE_GPU = False
 STORE_DETAILED_COUNTS = False
-REPETITIONS = 5
+REPETITIONS = 2 # XXXX
 USE_HEALTHIER_POP = True
 
 # Think x by 7 because daily data is used in running model?
 assert ITERATIONS < len(cases_devon_weekly)*7,     f"Have more iterations ({ITERATIONS}) than observations ({len(cases_devon_weekly)*7})."
 
 # Initialise the class so that its ready to run the model.
-OpenCLRunner.init( iterations = ITERATIONS, repetitions = REPETITIONS, observations = cases_devon_weekly,
+oclr.OpenCLRunner.init( iterations = ITERATIONS, repetitions = REPETITIONS, observations = cases_devon_weekly,
     use_healthier_pop = USE_HEALTHIER_POP, use_gpu = USE_GPU, store_detailed_counts = STORE_DETAILED_COUNTS,
     parameters_file = PARAMETERS_FILE, opencl_dir = OPENCL_DIR,snapshot_filepath = SNAPSHOT_FILEPATH,
     num_seed_days = NUM_SEED_DAYS)
 
 
-OpenCLRunner.update(repetitions=5)  # Temporarily use more repetitions to give a good baseline
-OpenCLRunner.update(store_detailed_counts=True)  # Temporarily output age breakdowns
-(fitness_manualcalibration, sim_manualcalibration, obs_manualcalibration, out_params_manualcalibration, summaries_manualcalibration) = OpenCLRunner.run_model_with_params_abc({}, return_full_details=True, quiet = False)
-OpenCLRunner.update(repetitions=REPETITIONS)
-OpenCLRunner.update(store_detailed_counts=STORE_DETAILED_COUNTS)
+oclr.OpenCLRunner.update(repetitions=REPETITIONS)  # Temporarily use more repetitions to give a good baseline
+oclr.OpenCLRunner.update(store_detailed_counts=True)  # Temporarily output age breakdowns
+(fitness_manualcalibration, sim_manualcalibration, obs_manualcalibration, out_params_manualcalibration, summaries_manualcalibration) = oclr.OpenCLRunner.run_model_with_params_abc({}, return_full_details=True, quiet = False)
+oclr.OpenCLRunner.update(repetitions=REPETITIONS)
+oclr.OpenCLRunner.update(store_detailed_counts=STORE_DETAILED_COUNTS)
 
 
 
@@ -120,13 +119,13 @@ best_params = {'retail': 0.5234169902075426, 'primary_school': 0.818985263600096
                'work': 0.07179707294863724, 'presymptomatic': 0.3870375860336805, 'symptomatic': 0.6581503001512558, 
                'asymptomatic': 0.2609686051991401, 'current_risk_beta': 0.01786588871820107}
 const_params_dict = {"home": 1.0}
-OpenCLRunner.set_constants(const_params_dict)
+oclr.OpenCLRunner.set_constants(const_params_dict)
 
 ## Run model with these best parameters
-OpenCLRunner.update(store_detailed_counts=True)  # Temporarily output age breakdowns
-(distance_mc2, sim_mc2, obs_mc2, out_params_mc2, summaries_mc2) = OpenCLRunner.run_model_with_params_abc(
+oclr.OpenCLRunner.update(store_detailed_counts=True)  # Temporarily output age breakdowns
+(distance_mc2, sim_mc2, obs_mc2, out_params_mc2, summaries_mc2) = oclr.OpenCLRunner.run_model_with_params_abc(
     best_params, return_full_details=True, quiet = False)
-OpenCLRunner.update(store_detailed_counts=STORE_DETAILED_COUNTS)
+oclr.OpenCLRunner.update(store_detailed_counts=STORE_DETAILED_COUNTS)
 
 
 
@@ -146,7 +145,7 @@ ax.legend()
 
 
 const_params_dict = { "current_risk_beta": 0.025239665550846085,"home": 1.0}
-OpenCLRunner.set_constants(const_params_dict)
+oclr.OpenCLRunner.set_constants(const_params_dict)
 
 
 
@@ -228,10 +227,6 @@ admin_params = {"quiet": True, "use_gpu": USE_GPU, "store_detailed_counts": True
 
 
 
-sys.path.append('..')
-from opencl_runner import OpenCLWrapper  # Some additional functions to simplify running the OpenCL model
-from opencl_runner import OpenCLRunner
-
 # Create dictionaries to store the dfs, weights or history from each window (don't need all of these, but testing for now)
 dfs_dict, weights_dict, history_dict = {}, {},{}
 
@@ -250,9 +245,10 @@ for window_number in range(1, windows + 1):
     print("Running for {} days".format(da_window_size * window_number))
 
     # Create template for model
-    template = OpenCLWrapper(const_params_dict, **admin_params)
+    oclr.OpenCLRunner.temp = 1
+    template = oclr.OpenCLWrapper(const_params_dict, **admin_params)
     # Not sure why this is needed. Wthout it we get an error when passing the template object to ABCSMC below
-    template.__name__ = OpenCLWrapper.__name__
+    template.__name__ = oclr.OpenCLWrapper.__name__
 
     # Define priors
     # If first window, then use user-specified (original) priors
@@ -260,19 +256,20 @@ for window_number in range(1, windows + 1):
         priors = original_priors
     # If a subsequent window, then generate distribution from posterior from previous window
     else:
-        priors = ArbitraryDistribution(abc_history)
+        priors = ad.ArbitraryDistribution(abc_history)
 
     # Set up model
     abc = pyabc.ABCSMC(
         models=template,  # Model (could be a list)
         parameter_priors=priors,  # Priors (could be a list)
         # summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
-        distance_function=OpenCLWrapper.dummy_distance,  # Distance function
-        #sampler=pyabc.sampler.SingleCoreSampler(),
-        transitions=GreaterThanZeroParameterTransition())
+        distance_function=oclr.OpenCLWrapper.dummy_distance,  # Distance function
+        transitions=ad.GreaterThanZeroParameterTransition(),
         # Single core because the model is parallelised anyway (and easier to debug)
-        # sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
+        sampler=pyabc.sampler.SingleCoreSampler(),
+        #sampler=pyabc.sampler.MulticoreEvalParallelSampler(),  # The default sampler
         #transition=transition,  # Define how to transition from one population to the next
+    )
 
     # Prepare to run the model
     db_path = ("sqlite:///" + "ramp_da.db")  # Path to database

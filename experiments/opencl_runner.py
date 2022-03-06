@@ -12,6 +12,7 @@ import pandas as pd
 import random
 import datetime
 import copy
+import warnings
 
 from typing import List
 from microsim.opencl.ramp.snapshot import Snapshot
@@ -265,6 +266,7 @@ class OpenCLRunner:
 
         return p
 
+    _warnings_about_constants = set()  # Hacky way to limit the number of warnings in _check_if_none()
     @classmethod
     def _check_if_none(cls, param_name, param_value, default_value):
         """Checks whether the given param is None. If so, it will return a constant value, if it has
@@ -272,9 +274,14 @@ class OpenCLRunner:
         if param_value is not None:
             # The value has been provided. Return it, but check a constant hasn't been set as well
             # (it's unlikely that someone would set a constant and then also provide a value for the same parameter)
+            # ** Actually there's a bit of a bug here. If a constant is set which also exists in the params.yml
+            # file then this warning is thrown even though it might not be a problem
             if param_name in cls.constants.keys():
-                raise Exception(f"A parameter '{param_name}' has been provided, but it has also been set as a constant."
-                                f"\n\tConstants are: {cls.constants.keys()}")
+                if not param_name in OpenCLRunner._warnings_about_constants:  # Don't warn more than once
+                    OpenCLRunner._warnings_about_constants.add(param_name)
+                    warnings.warn(f"A parameter '{param_name}' has been provided, but it has also been set as a constant."
+                              f"If you meant to do this then it's fine"
+                              f"\n\tConstants are: {cls.constants.keys()}")
             return param_value
         else:  # No value provided, return a constant, if there is one, or the default otherwise
             if param_name in cls.constants.keys():
@@ -317,6 +324,7 @@ class OpenCLRunner:
         # print("arrays not equal")
 
         # set params
+
         snapshot.update_params(params)
 
         # set the random seed of the model for each repetition, otherwise it is completely deterministic
