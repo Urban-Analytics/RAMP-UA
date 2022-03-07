@@ -116,4 +116,6 @@ class GreaterThanZeroParameterTransition(MultivariateNormalTransition):
             if counter % 10 == 0:
                 warnings.warn(f"NoZeroPatameterTransition has tried {counter} times to draw a sample for "
                               f"which all parameters are greater than 0")
+        #TEMP:
+        print(f"NoZeroPatameterTransition.rvs() called {counter} times")
         return Parameter(perturbed)
