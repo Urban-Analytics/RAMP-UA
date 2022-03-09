@@ -105,7 +105,7 @@ class OpenCLRunner:
     @staticmethod
     def fit_l2(obs: np.ndarray, sim: np.ndarray):
         """Calculate the fitness of a model.
-        
+
          Parameters
         ----------
         obs : array_like
@@ -185,7 +185,7 @@ class OpenCLRunner:
 
         with open(parameters_file) as f:
             parameters = yaml.load(f, Loader=yaml.SafeLoader)
-            
+
         sim_params = parameters["microsim"]  # Parameters for the dynamic microsim (python)
         calibration_params = parameters["microsim_calibration"]
         disease_params = parameters["disease"]  # Parameters for the disease model (r)
@@ -285,7 +285,7 @@ class OpenCLRunner:
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
                          opencl_dir: str, use_gpu: bool,
                          use_healthier_pop: bool, num_seed_days: int,
-                         store_detailed_counts: bool, quiet = bool) -> (np.ndarray, np.ndarray):
+                         store_detailed_counts: bool, quiet=bool) -> (np.ndarray, np.ndarray):
         """
         Run the OpenCL model.
         :param i: Simulation number (i.e. if run as part of an ensemble)
@@ -323,8 +323,7 @@ class OpenCLRunner:
 
         # Create a simulator and upload the snapshot data to the OpenCL device
         simulator = Simulator(snapshot, opencl_dir=opencl_dir, gpu=use_gpu, num_seed_days=num_seed_days)
-        
-        
+
         # print(simulator)
         simulator.upload_all(snapshot.buffers)
         # print(simulator.initial_cases)
@@ -344,7 +343,7 @@ class OpenCLRunner:
     #
     @staticmethod
     def run_opencl_model_multi(
-            repetitions: int, iterations: int, params: Params, num_seed_days: int, quiet:bool,
+            repetitions: int, iterations: int, params: Params, num_seed_days: int, quiet: bool,
             use_gpu: bool = False, use_healthier_pop: bool = False, store_detailed_counts: bool = False,
             opencl_dir=os.path.join(".", "microsim", "opencl"),
             snapshot_filepath=os.path.join(".", "microsim", "opencl", "snapshots", "cache.npz"),
@@ -435,14 +434,14 @@ class OpenCLRunner:
         # Compare these to the observations
         obs = cls.OBSERVATIONS.loc[:cls.ITERATIONS - 1, "Cases"].values
         assert len(sim) == len(obs)
-        fitness = OpenCLRunner.fit_l2(obs,sim)
+        fitness = OpenCLRunner.fit_l2(obs, sim)
         if return_full_details:
             return fitness, sim, obs, params, summaries
         else:
             return fitness
 
     @classmethod
-    def run_model_with_params_abc(cls, input_params_dict: dict, return_full_details=False, quiet= True):
+    def run_model_with_params_abc(cls, input_params_dict: dict, return_full_details=False, quiet=True):
         """
         Run the model, compatible with pyABC. Random variables (parameters) are passed in as a dictionary.
         For constant parameters that override the defaults (in the default.yml file) set them first
@@ -498,7 +497,7 @@ class OpenCLRunner:
         obs_weekly_cumulative_infections = cls.OBSERVATIONS.loc[:cls.ITERATIONS - 1, "CumulativeCases"].values
         # Cut to same length as the modelled results
         obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[0:len(model_weekly_cumulative_infections)]
-
+        x=1
         if return_full_details:
             # check same length (but obviously will be now as set length based on model)
             assert len(model_weekly_cumulative_infections) == len(obs_weekly_cumulative_infections)
@@ -506,7 +505,7 @@ class OpenCLRunner:
             fitness = OpenCLRunner.fit_l2(obs_weekly_cumulative_infections, model_weekly_cumulative_infections)
             return fitness, model_weekly_cumulative_infections, obs_weekly_cumulative_infections, params, summaries
         else:  # Return the expected counts in a dictionary
-            return {"data": model_weekly_cumulative_infections}
+            return {"data": model_weekly_cumulative_infections, "data_daily":model_daily_cumulative_infections }
 
 
 class OpenCLWrapper(object):
@@ -584,7 +583,7 @@ class OpenCLWrapper(object):
         # (Is creation of m actually necessary? Probably not. Advantageous though for when we want
         # to call methods like m.run()
 
-        #print("printing random_params: ", random_params_dict.items())
+        # print("printing random_params: ", random_params_dict.items())
         for k, v in random_params_dict.items():
             if v < 0:
                 raise Exception(f"WRAPPER: The parameter {k}={v} < 0. "
@@ -612,7 +611,7 @@ class OpenCLWrapper(object):
         :return: processed model results.
         """
         # Check that we receive everything that we expect to
-        #print(raw_model_results.keys())
+        # print(raw_model_results.keys())
         if "disease_statuses" not in raw_model_results.keys():
             raise Exception(f"No 'disease_statuses' item found in the model results that are passed "
                             f"to summary_stats: {raw_model_results}")
@@ -629,7 +628,7 @@ class OpenCLWrapper(object):
         """Calculate the distance between the number of cases in the model by MSOA compared to some observations (case data).
         All lists are assumed to be in the same MSOA order (e.g. first element in each list corresponds to the number of cases
         in the same MSOA).
-        
+
         :param sim:
         :param obs:
         """
@@ -641,7 +640,7 @@ class OpenCLWrapper(object):
 
         #############################################################################
         # Create dataframe containing the disease status of each individual on each
-        # day the model has been ran for, and the area (MSOA) they live in 
+        # day the model has been ran for, and the area (MSOA) they live in
         # IS THIS CUMULATIVE?
         #############################################################################
         # Get the disease status of each individual on each day in the model run
@@ -727,7 +726,7 @@ class OpenCLWrapper(object):
         difference = np.linalg.norm(
             np.array(obs_and_model_df['CumulativeTotal_obs']) - np.array(obs_and_model_df['CumulativeTotal_model']))
 
-        #print("Found distance in {}".format(datetime.datetime.now() - start_time))
+        # print("Found distance in {}".format(datetime.datetime.now() - start_time))
         return {"difference": difference,
                 "cumulative_model_diseased_by_area": cumulative_model_diseased_by_area}
 
@@ -748,7 +747,7 @@ class OpenCLWrapper(object):
         OpenCLWrapper.model_counter += 1
         model_number = OpenCLWrapper.model_counter
         # Print progress statement
-        #print(f"OpenclRunner is running model {model_number}")
+        # print(f"OpenclRunner is running model {model_number}")
 
         # If this is the first data assimilation window, we can just run the model as normal
         if self.start_day == 0:
@@ -760,17 +759,15 @@ class OpenCLWrapper(object):
             # Can set the random seed to make it deterministic (None means np will choose one randomly)
             snapshot.seed_prngs(seed=None)
             # Create a simulator and upload the snapshot data to the OpenCL device
-            simulator = Simulator(snapshot, num_seed_days= self.num_seed_days, opencl_dir=self.opencl_dir, gpu=self.use_gpu)
+            simulator = Simulator(snapshot, num_seed_days=self.num_seed_days, opencl_dir=self.opencl_dir,
+                                  gpu=self.use_gpu)
             simulator.upload_all(snapshot.buffers)
-            #if quiet == False:
-                # print(f"Running simulation {sim_number + 1}.")
-                #print(f"Running simulation")
+            # if quiet == False:
+            # print(f"Running simulation {sim_number + 1}.")
+            # print(f"Running simulation")
 
             params = Params.fromarray(snapshot.buffers.params)  # XX Why extract Params? Can't just use PARAMS?
-            summary = Summary(snapshot,
-                              store_detailed_counts=self.store_detailed_counts,
-                              max_time=self.run_length  # Total length of the simulation
-                              )
+            summary = Summary(snapshot,store_detailed_counts=self.store_detailed_counts,max_time=self.run_length)  # Total length of the simulation
 
             # only show progress bar in quiet mode
             timestep_iterator = range(self.run_length)
@@ -799,10 +796,11 @@ class OpenCLWrapper(object):
                 simulator.download("people_statuses", snapshot.buffers.people_statuses)
                 # Save the people's statuses
                 people_statuses_per_day = np.append(people_statuses_per_day, snapshot.buffers.people_statuses, axis=0)
-                # print(len(people_statuses_per_day))
-            # Download the statuses at the end of the window (no need to do this now as we do it at the end of the for loop)
-            # simulator.download("people_statuses", snapshot.buffers.people_statuses)
-            summary.update(iter_count, snapshot.buffers.people_statuses)
+
+                # Download the statuses at the end of the window (no need to do this now as we do it at the end of the for loop)
+                # simulator.download("people_statuses", snapshot.buffers.people_statuses)
+                # Update the summary with this new data
+                summary.update(iter_count, snapshot.buffers.people_statuses)
 
             # print(len(people_statuses_per_day))
             if self.quiet == False:
@@ -830,15 +828,15 @@ class OpenCLWrapper(object):
             raise Exception("Not implemented yet")
 
         # Return any useful information from the model.
-        #print("OpenclRunner ran model {} in {}".format(model_number, datetime.datetime.now() - start_time))
+        # print("OpenclRunner ran model {} in {}".format(model_number, datetime.datetime.now() - start_time))
 
         # Could return the disease statuses (not currently needed)
         # disease_statuses = snapshot.buffers.people_statuses.copy()
 
         # Calculate the error ('distance') and include that in the information returned
         observations = self.observations_weekly_array
-        if model_number== 1:
-          print("Current_risk_beta is: ", self.const_params_dict['current_risk_beta'])
+        if model_number == 1:
+            print("Current_risk_beta is: ", self.const_params_dict['current_risk_beta'])
 
         dist = OpenCLWrapper.distance(
             sim={'model_run_length': self.run_length, 'people_statuses_per_day': people_statuses_per_day},
