@@ -162,6 +162,7 @@ class OpenCLRunner:
                           primary_school: float = None,
                           secondary_school: float = None,
                           home: float = None,
+                          nightclubs: float= None,
                           work: float = None,
                           ):
         """Create a params object with the given arguments. This replicates the functionality in
@@ -194,6 +195,8 @@ class OpenCLRunner:
         location_hazard_multipliers = LocationHazardMultipliers(
             retail=current_risk_beta * OpenCLRunner._check_if_none("retail",
                 retail, calibration_params["hazard_location_multipliers"]["Retail"]),
+            nightclubs=current_risk_beta * OpenCLRunner._check_if_none("nightclubs",
+                nightclubs, calibration_params["hazard_location_multipliers"]["Nightclubs"]),
             primary_school=current_risk_beta * OpenCLRunner._check_if_none("primary_school",
                 primary_school, calibration_params["hazard_location_multipliers"]["PrimarySchool"]),
             secondary_school=current_risk_beta * OpenCLRunner._check_if_none("secondary_school",

@@ -884,6 +884,7 @@ def create_dashboard(parameters_file):
       "Retail": ColumnNames.Activities.RETAIL,
       "Work": ColumnNames.Activities.WORK,
       "Home": ColumnNames.Activities.HOME,
+      "Nightclubs": ColumnNames.Activities.NIGHTCLUBS,
     }
 
     # default list of tools for plots
@@ -904,6 +905,7 @@ def create_dashboard(parameters_file):
       "SecondarySchool": "red",
       "Work": "black",
       "Home": "green",
+      "Nightclubs":"pink"
     }
     # colours for heatmaps and choropleths for conditions (colours_ch_cond) and venues/danger scores (colours_ch_danger)
     colours_ch_cond = {
