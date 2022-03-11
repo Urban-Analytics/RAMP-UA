@@ -148,8 +148,8 @@ class OpenCLRunner:
         Get cumulative infections per day by summing all the non-susceptible people
         :param summaries: A list of Summary objects created by running the OpenCL model
         """
-        iters = len(summaries[0].total_counts[DiseaseStatus.Exposed.value])  # Number of iterations for each repetition
-        total_not_susceptible = np.zeros(iters)  # Total people not susceptible per iteration
+        days = len(summaries[0].total_counts[DiseaseStatus.Exposed.value])  # Number of iterations for each repetition
+        total_not_susceptible = np.zeros(days)  # Total people not susceptible per iteration
         for d, disease_status in enumerate(DiseaseStatus):
             if disease_status != DiseaseStatus.Susceptible:
                 mean = OpenCLRunner.get_mean_total_counts(summaries, d)  # Mean number of people with that disease
@@ -498,14 +498,15 @@ class OpenCLRunner:
         # Cut to same length as the modelled results
         obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[0:len(model_weekly_cumulative_infections)]
         x=1
+        fitness = OpenCLRunner.fit_l2(obs_weekly_cumulative_infections, model_weekly_cumulative_infections)
         if return_full_details:
             # check same length (but obviously will be now as set length based on model)
             assert len(model_weekly_cumulative_infections) == len(obs_weekly_cumulative_infections)
             # Can compare these to the observations to get a fitness
-            fitness = OpenCLRunner.fit_l2(obs_weekly_cumulative_infections, model_weekly_cumulative_infections)
             return fitness, model_weekly_cumulative_infections, obs_weekly_cumulative_infections, params, summaries
         else:  # Return the expected counts in a dictionary
-            return {"data": model_weekly_cumulative_infections, "data_daily":model_daily_cumulative_infections }
+            return {"data": model_weekly_cumulative_infections, "data_daily":model_daily_cumulative_infections,
+                    'distance':fitness}
 
 
 class OpenCLWrapper(object):
@@ -827,7 +828,78 @@ class OpenCLWrapper(object):
             #
             raise Exception("Not implemented yet")
 
-        # Return any useful information from the model.
+        sim = OpenCLRunner.get_cumulative_new_infections([summary])
+        sim_total = np.sum(sim)
+
+        n_days = 14
+        ## Create dataframe where each row is an individual, and each column contains the number of cases for each individual
+        # on a certain day
+        # cumulative_model_disease_statuses is a 1D array with the results for each individual on each day stacked on top of each other
+        # and so to get the results for each day, need to split off each 695,309 results and add to new column
+        cumulative_model_disease_statuses_df = pd.DataFrame()
+        colnames = []
+        for i in range(1, n_days + 1):
+            colnames.append('Day' + str(i))
+            df = pd.DataFrame(people_statuses_per_day[(695309 * (i - 1)):(695309 * i)])
+            cumulative_model_disease_statuses_df = pd.concat([cumulative_model_disease_statuses_df, df], axis=1)
+        cumulative_model_disease_statuses_df.columns = colnames
+
+        ###### Load dataframe containing info on all individuals
+        individuals_df = self.individuals_df
+        # Keep just column with the MSOA area code each individual lives in
+        individuals_df = individuals_df[['area']]
+
+        # Join DF containing disease status of each individual on each day to the DF containing info on each individual
+        # including which MSOA they are found within
+        cumulative_model_disease_statuses_df = pd.concat([cumulative_model_disease_statuses_df, individuals_df], axis=1)
+
+        ########################################################################
+        ########################################################################
+        # Get the number of individuals in disease states 1-4 for each area (MSOA)
+        # for each day the model is run for
+        ########################################################################
+        ########################################################################
+        #### Find the total number of people in a disease status for each MSOA on each day
+        # Create empty dataframe to population
+        cumulative_model_diseased_by_area = pd.DataFrame()
+        # Loop through each day...
+        for i in range(1, n_days + 1):
+            day = 'Day' + str(i)
+            # Find the total number of individuals in each disease status on this day
+            cumulative_model_disease_statuses_by_area = (
+                pd.crosstab([cumulative_model_disease_statuses_df.area], cumulative_model_disease_statuses_df[day]))
+            # Add a column with the total number in any of the disease states
+            # list the disease status columns to include
+            columns_in_df = list(cumulative_model_disease_statuses_by_area.columns.values)
+            columns_to_include = [i for i in [1.0, 2.0, 3.0, 4.0] if i in columns_in_df]
+            # Filter out columns we don't want to include
+            cumulative_model_disease_statuses_by_area[day] = cumulative_model_disease_statuses_by_area[
+                columns_to_include].sum(axis=1)
+            # Add this to the dataframe to store results in
+            cumulative_model_diseased_by_area = pd.concat(
+                [cumulative_model_diseased_by_area, cumulative_model_disease_statuses_by_area[day]], axis=1)
+        # Add a column containing the cumulative total over all the days
+        cumulative_model_diseased_by_area['CumulativeTotal_model'] = cumulative_model_diseased_by_area.sum(axis=1)
+
+        ########################################################################
+        ########################################################################
+        # Create dataframe containing the observed number of cases on each day
+        ########################################################################
+        ########################################################################
+        # Get the observations
+        observations = self.observations_weekly_array
+        # Create as dataframe
+        observations_df = pd.DataFrame(data=observations[0:, 0:], index=cumulative_model_diseased_by_area.index,
+                                       columns=['Week' + str(i) for i in range(1, observations.shape[1] + 1)])
+        # Add a cumulative total of cases from the first X days
+        n_weeks = int(n_days / 7)
+        observations_df['CumulativeTotal_obs'] = observations_df.iloc[:, 0:n_weeks].sum(axis=1)
+
+        # Keep just totals
+        observations_df = observations_df['CumulativeTotal_obs']
+        observations_total = np.sum(observations_df)
+
+      # Return any useful information from the model.
         # print("OpenclRunner ran model {} in {}".format(model_number, datetime.datetime.now() - start_time))
 
         # Could return the disease statuses (not currently needed)
@@ -835,13 +907,18 @@ class OpenCLWrapper(object):
 
         # Calculate the error ('distance') and include that in the information returned
         observations = self.observations_weekly_array
+
         if model_number == 1:
             print("Current_risk_beta is: ", self.const_params_dict['current_risk_beta'])
 
-        dist = OpenCLWrapper.distance(
-            sim={'model_run_length': self.run_length, 'people_statuses_per_day': people_statuses_per_day},
-            obs={'individuals': self.individuals_df, "observation": self.observations_weekly_array})
+        # dist = OpenCLWrapper.distance(
+        #     sim={'model_run_length': self.run_length, 'people_statuses_per_day': people_statuses_per_day},
+        #     obs={'individuals': self.individuals_df, "observation": self.observations_weekly_array})
 
-        return {"distance": dist['difference'], "model_number": model_number,
+        dist  = np.linalg.norm(np.array(observations_total) - np.array(sim_total))
+        return {"distance":dist,
+                #"distance": dist['difference'],
+                "model_number": model_number,
                 "model_run_length": self.run_length,
-                "cumulative_model_diseased_by_area": dist['cumulative_model_diseased_by_area']}
+                "cumulative_model_diseased_by_area_mymethod": cumulative_model_diseased_by_area,
+                "cumulative_model_diseased_by_area_gcni" : sim}
