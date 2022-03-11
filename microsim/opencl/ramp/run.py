@@ -2,6 +2,7 @@ import pickle
 from tqdm import tqdm
 import pandas as pd
 import os
+import numpy as np
 
 from microsim.opencl.ramp.inspector import Inspector
 from microsim.opencl.ramp.params import Params
