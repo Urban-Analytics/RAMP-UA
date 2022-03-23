@@ -5,7 +5,14 @@
 The observations data being used for seeding the model and in calibration of the model with ABC is created in [`CreatingObservations-Daily.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/CreatingObservations-Daily.ipynb)
 
 A variation of the method used to create the data in this script was also investigated, but was concluded to be less effective.   
-The [`TestingMethod`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/TestingMethod/) directory contains [`CreatingObservations-InterpolateFirst.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/TestingMethod/CreatingObservations-Daily-InterpolateFirst.ipynb), the notebook used for testing this method, as well as [`CreatingObservations-InterpolateSecond.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/TestingMethod/CreatingObservations-Daily-InterpolateSecond.ipynb) which contains the same method as in [`CreatingObservations-Daily.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/CreatingObservations-Daily.ipynb) but with some additional code to compare to the other method. This directory also contains the `csv` files created by both of these scripts.  This work concldues that 
+The [`TestingMethod`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/TestingMethod/) directory contains [`CreatingObservations-InterpolateFirst.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/TestingMethod/CreatingObservations-Daily-InterpolateFirst.ipynb), the notebook used for testing this method, as well as [`CreatingObservations-InterpolateSecond.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/TestingMethod/CreatingObservations-Daily-InterpolateSecond.ipynb) which contains the same method as in [`CreatingObservations-Daily.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/CreatingObservations-Daily.ipynb) but with some additional code to compare to the other method. This directory also contains the `csv` files created by both of these scripts.  
+
+The method in [`CreatingObservations-Daily.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/CreatingObservations-Daily.ipynb) converts weekly data showing the number of new positive test results in the last 7 day period into an estimate of the number of new cases each day. This conversion process includes the following steps (with more details provided in the notebook):
+
+* Shifting the data back in time by 6 days
+* Multiplying the data by a month-specific multiplier
+* Linearly interpolating from weekly to daily data
+* Smoothing the data
 
 ### Previous methods
 Two methods were previously applied to generate the observations data. 
