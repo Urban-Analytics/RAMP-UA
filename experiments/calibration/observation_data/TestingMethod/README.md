@@ -1,6 +1,6 @@
 ## Testing methods for preparing estimates of daily Covid cases in Devon
 
-This directory contains two ipython notebooks exploring two variations on a general method for descibing estimates of daily Covid cases in Devon.  
+This directory contains two ipython notebooks exploring two variations on a general method for estimating daily Covid cases in Devon.  
 Both the methods use government data on reported weekly positive test results, and attempt to convert this to a true number of daily infections.  
 This involves the following steps, more info on which is provided within the notebooks.
 
