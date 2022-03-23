@@ -16,16 +16,13 @@ The method in [`CreatingObservations-Daily.ipynb`](https://github.com/Urban-Anal
 
 More details on these stages are provided in the notebook.
 
-This directory contains the following `csv` files which are produced in the notebook:
-* weekly_cases_devon/msoas.csv
+This directory contains the following `csv` files which are produced in the notebook. In each case for both the whole of Devon and for each MSOA individually:
+* weekly_cases_*.csv
   * This contains the weekly test result data after shifting and multiplying
-* daily_cases_devon/msoas.csv
+* daily_cases_*.csv
   * This contains the shifted, multiplied data, interpolated to daily values and smoothed
-* weekly_cases_devon/msoas_aggregated_from_daily.csv
+* weekly_cases_*_aggregated_from_daily.csv
   * This contains data resulting from reaggregating the daily data from the stage above to weekly values (i.e. the shifted, multiplied and then interpolated to daily values and smoothed). 
-
-
-
 
 
 ### Previous methods
