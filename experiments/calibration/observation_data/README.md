@@ -4,12 +4,8 @@
 ### Current method
 The observations data being used for seeding the model and in calibration of the model with ABC is created in [`CreatingObservations-Daily.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/CreatingObservations-Daily.ipynb)
 
-A variation of the method used to create the data in this script was also investigated.   
-The [`TestingMethod`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/TestingMethod/) directory contains [`CreatingObservations-InterpolateFirst.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/TestingMethod/CreatingObservations-Daily-InterpolateFirst.ipynb), the notebook used for testing this method, as well as [`CreatingObservations-InterpolateSecond.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/TestingMethod/CreatingObservations-Daily-InterpolateSecond.ipynb) which contains the same method as in [`CreatingObservations-Daily.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/CreatingObservations-Daily.ipynb) but with some additional code to compare to the other method. 
-
-
-
-in `CreatingObservations-Daily-InterpolateFirst.ipynb`, but it is concluded that the results of this are not as realistic.
+A variation of the method used to create the data in this script was also investigated, but was concluded to be less effective.   
+The [`TestingMethod`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/TestingMethod/) directory contains [`CreatingObservations-InterpolateFirst.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/TestingMethod/CreatingObservations-Daily-InterpolateFirst.ipynb), the notebook used for testing this method, as well as [`CreatingObservations-InterpolateSecond.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/TestingMethod/CreatingObservations-Daily-InterpolateSecond.ipynb) which contains the same method as in [`CreatingObservations-Daily.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/CreatingObservations-Daily.ipynb) but with some additional code to compare to the other method. This directory also contains the `csv` files created by both of these scripts.  This work concldues that 
 
 ### Previous methods
 Two methods were previously applied to generate the observations data. 
