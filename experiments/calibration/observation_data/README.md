@@ -18,12 +18,14 @@ More details on these stages are provided in the notebook.
 
 This directory contains the following `csv` files which are produced in the notebook. In each case for both the whole of Devon and for each MSOA individually:
 * weekly_cases_*.csv
-  * This contains the weekly test result data after shifting and multiplying
+  * This is the weekly test result data after shifting and multiplying
+  * This data is used in the distance function for evaluating the model performance during ABC
 * daily_cases_*.csv
-  * This contains the shifted, multiplied data, interpolated to daily values and smoothed
+  * This is the shifted, multiplied data, interpolated to daily values and smoothed
+  * daily_cases_devon.csv is used for seeding the model 
 * weekly_cases_*_aggregated_from_daily.csv
-  * This contains data resulting from reaggregating the daily data from the stage above to weekly values (i.e. the shifted, multiplied and then interpolated to daily values and smoothed). 
-
+  * This is data resulting from reaggregating the daily data from the stage above to weekly values (i.e. the shifted, multiplied, interpolated to daily,  smoothed data). This data is slightly different to the original shifted, multiplied weekly data. 
+  * This data is not currently used for anything
 
 ### Previous methods
 Two methods were previously applied to generate the observations data. 
