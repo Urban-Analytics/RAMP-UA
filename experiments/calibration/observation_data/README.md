@@ -22,7 +22,8 @@ This directory contains the following `csv` files which are produced in the note
   * This data is used in the distance function for evaluating the model performance during ABC
 * daily_cases_*.csv
   * This is the shifted, multiplied data, interpolated to daily values and smoothed
-  * daily_cases_devon.csv is used for seeding the model 
+  * daily_cases_devon.csv is used for seeding the model. For this purpose it is read from the [`microsim/opencl/data/`](
+https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/microsim/opencl/data) directory.
 * weekly_cases_*_aggregated_from_daily.csv
   * This is data resulting from reaggregating the daily data from the stage above to weekly values (i.e. the shifted, multiplied, interpolated to daily,  smoothed data). This data is slightly different to the original shifted, multiplied weekly data. 
   * This data is not currently used for anything
