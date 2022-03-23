@@ -2,6 +2,7 @@
 ##  Preparing estimates of daily Covid cases in Devon
 
 ### Current method
+#### Script
 The observations data being used for seeding the model and in calibration of the model with ABC is created in [`CreatingObservations-Daily.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/CreatingObservations-Daily.ipynb)
 
 A variation of the method used to create the data in this script was also investigated, but was concluded to be less effective.   
@@ -16,6 +17,7 @@ The method in [`CreatingObservations-Daily.ipynb`](https://github.com/Urban-Anal
 
 More details on these stages are provided in the notebook.
 
+#### Outputs
 This directory contains the following `csv` files which are produced in the notebook. In each case for both the whole of Devon and for each MSOA individually:
 * weekly_cases_*.csv
   * This is the weekly test result data after shifting and multiplying
