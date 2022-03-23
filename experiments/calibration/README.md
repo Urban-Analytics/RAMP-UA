@@ -1,6 +1,6 @@
 # RAMP Calibration
 
-This directory holds the files used for performing both an initial calibration of the model to establish a value for current_risk_beta (which is a parameter controlling the general transmissability of the disease in the model), and for performing dynamic calibration of the model to allow the parameteristation to be adapted as the model runs forward in time and the behaviour of the disease evolves.  
+This directory holds the files used for performing both an initial calibration of the model to establish a value for current_risk_beta (which is a parameter controlling the general transmissability of the disease in the model), and for performing dynamic calibration of the model to allow the parameteristation of the individual and location hazard paramaters to be adapted as the model runs forward in time and the behaviour of the disease evolves.  
 
 ## ../opencl_runner.py
 
