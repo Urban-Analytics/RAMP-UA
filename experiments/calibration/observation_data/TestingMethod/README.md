@@ -14,7 +14,9 @@ The main difference between the notebooks is the order in which these steps are 
 ## Results
 The csv's files in this directory are the outputs from these two notebooks:  
 * *_IF.csv are from CreatingObservations-Daily-InterpolateFirst.ipynb
-* *_IS.csv are from CreatingObservations-Daily-InterpolateSecon.ipynb
+* *_IS.csv are from CreatingObservations-Daily-InterpolateSecond.ipynb
+
+In each case, there are csv's with cases for MSOAs in Devon individually, and for the whole of Devon, and at both a daily and weekly time-step.  
 
 ## Conclusions
 The results from the two notebooks are compared, and it is concluded that the results from [`CreatingObservations-Daily-InterpolateSecond.ipynb.R`](https://github.com/Urban-Analytics/RAMP-UA/tree/Mollys_DA/experiments/calibration/observation_data/TestingMethod/CreatingObservations-Daily-InterpolateSecond.ipynb) are better, and so this script is used to produce the observations used in the model.   
