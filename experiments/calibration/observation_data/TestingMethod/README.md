@@ -9,8 +9,10 @@ This involves the following steps, more info on which is provided within the not
 * Linearly interpolating from weekly to daily data
 * Smoothing the data
 
-The main difference between the notebooks is the order in which these steps are performed.  
-The results from the two notebooks are compared, and it is concluded that the results from [`CreatingObservations-Daily-InterpolateSecond.ipynb'](https://github.com/Urban-Analytics/RAMP-UA/tree/Mollys_DA/experiments/calibration/observation_data/TestingMethod/CreatingObservations-Daily-InterpolateSecond.ipynb) are better, so 
+The main difference between the notebooks is the order in which these steps are performed. 
+
+## Conclusions
+The results from the two notebooks are compared, and it is concluded that the results from [`CreatingObservations-Daily-InterpolateSecond.ipynb.R`](https://github.com/Urban-Analytics/RAMP-UA/tree/Mollys_DA/experiments/calibration/observation_data/TestingMethod/CreatingObservations-Daily-InterpolateSecond.ipynb) are better, and so this script is used to produce the observations used in the model   
 
 
 
