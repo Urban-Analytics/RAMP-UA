@@ -11,15 +11,13 @@ A variation of the method used to create the data in this script is also investi
 Two methods were previously applied to generate the observations data. 
 
 #### 1. gam_cases.csv
-The R script `getUKCovidTimeSeries.R` retrieves the latest covid case and hospital admissions data, and gets the case data for Devon `devon_cases.csv`. The `gam_cases.R` script is then used to smooth the cases, creating the output `gam_cases.csv`.
-
-
+The R script [`getUKCovidTimeSeries.R`](https://github.com/Urban-Analytics/RAMP-UA/blob/master/experiments/calibration/observation_data/getUKCovidTimeSeries.R) retrieves the latest covid case and hospital admissions data, and produces the case data for Devon [`devon_cases.csv`](https://github.com/Urban-Analytics/RAMP-UA/tree/master/experiments/calibration/observation_data/devon_cases.csv). The [`gam_cases.R`](https://github.com/Urban-Analytics/RAMP-UA/blob/master/experiments/calibration/observation_data/gam_cases.R) script is then used to smooth the cases, creating the output `gam_cases.csv`.
 
 #### 2. england_initial_cases.csv
-A second approach was based on modelling daily case data from the weekly cases at hospital and biweekly infection survey results.
+A second approach was based on modelling daily case data from the weekly cases at hospital and bi-weekly infection survey results.
 
 `https://github.com/Urban-Analytics/RAMP-UA/blob/Ecotwins-withCommuting/lab/createSeedingFiles.R`
 
-This creates "england_initial_cases.csv" in which D0 refers to 05/03/20
+This creates [`england_initial_cases.csv`])https://github.com/Urban-Analytics/RAMP-UA/tree/master/experiments/calibration/observation_data/england_initial_cases.csv) in which D0 refers to 05/03/20.
 
-#### 2. Hadrien [`getUKCovidTimeSeries.R`](https://github.com/Urban-Analytics/RAMP-UA/tree/master/experiments/calibration/observation_data)
+
