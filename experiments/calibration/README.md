@@ -1,6 +1,6 @@
 # RAMP Calibration
 
-This directory holds various files that have been used to explore different methods for calibrating the RAMP model, and to see whether automatic calibrate might help to teach us about the possible values for parameters that we don't have reliable (real world) estimates for.
+This directory holds the files used for performing both an initial calibration of the model to establish a value for current_risk_beta (which is...), and for performing dynamic calibration of the model to allow the parameteristation to be adapted as the model runs forward in time and the beheaviour of the disease may be evolving.  
 
 ## ../opencl_runner.py
 
