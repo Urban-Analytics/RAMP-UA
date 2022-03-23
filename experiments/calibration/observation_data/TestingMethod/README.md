@@ -15,7 +15,7 @@ The main difference between the notebooks is the order in which these steps are 
 The results from the two notebooks are compared, and it is concluded that the results from [`CreatingObservations-Daily-InterpolateSecond.ipynb.R`](https://github.com/Urban-Analytics/RAMP-UA/tree/Mollys_DA/experiments/calibration/observation_data/TestingMethod/CreatingObservations-Daily-InterpolateSecond.ipynb) are better, and so this script is used to produce the observations used in the model.   
   
 These observations are used for seeding the model in the [`microsim/opencl/data/`](
-https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/microsim/opencl/data) directory, and also as the observations for calirbating the model with ABC in the [`experiments/calibration`](
+https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/microsim/opencl/data) directory, and also as the observations for calibrating the model with ABC in the [`experiments/calibration`](
 https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration) directory.
 
 
