@@ -14,7 +14,8 @@ Each ABC population contains 100 particles or parameter vectors. For the final p
 
 PLOT all the current risk beta values for final population!? to check distribution
 
-
 ## RunModelWithDynamicCalibration.ipynb
 
-Contains code for running the model with dynamic calibration using ABC. This runs the model forward in time, but allowing for emerging data on case numbers to be fed in every two weeks, and for model parameter values to be updated accordingly. 
+Contains code for running the model with dynamic calibration using ABC. This runs the model forward in time, but allowing for emerging data on case numbers to be fed in every two weeks, and for model parameter values to be updated accordingly. In this, the optimal current risk beta value from the initial model calibration stage is set as a constant. Priors are provided for the other location and individual hazards. The model is run for 14 days initially with ABC and ten populations. At the end of this period the parameter vectors from the 100 particles in the final population are used to produce parameter value distributions. These are then used as priors and the model is run again, this time for 28 days. 
+
+Q: if we are assuming that parameter values change over time, then surely applying them over the whole time period always starting from day 0, is not optimal??
