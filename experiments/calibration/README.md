@@ -1,21 +1,20 @@
 # RAMP Calibration
 
-This directory holds the files used for performing both an initial calibration of the model to establish a value for current_risk_beta (which is...), and for performing dynamic calibration of the model to allow the parameteristation to be adapted as the model runs forward in time and the beheaviour of the disease may be evolving.  
+This directory holds the files used for performing both an initial calibration of the model to establish a value for current_risk_beta (which is a parameter controlling the general transmissability of the disease in the model), and for performing dynamic calibration of the model to allow the parameteristation to be adapted as the model runs forward in time and the behaviour of the disease evolves.  
 
 ## ../opencl_runner.py
 
 Contains useful convenience functions for working with the OpenCL model and extracting useful data from the results. In particular see the `run_model*` functions.
 
-## calibration.ipynb
+## InitialModelCalibration.ipynb
 
-Example of calibration using a basic minimisation algorithm (Nelder-Mead Simplex), Differential Evolution (a genetic algorithm) and Approximate Bayesian Computation on one parameter
+Contains code which calibrates the location (home, retail, work, school) and individual (symptomatic, asymptomatic, presymptomatic) hazard parameters, as well as the current risk beta parameter. In this script, these parameters are calibrated once using historical data and Approximate Bayesian Computation (ABC). The model is run for 133 days which covers the period from March up until July 2020. Ten populations are used in the ABC process. Prior distributions are initially defined for the parameters based on knowledge from other diseases.
 
-## abc-1.ipynb
+Each ABC population contains 100 particles or parameter vectors. For the final population the best particle is defined as that with the lowest distance value (between the predictions made using the particle's parameter values and the observations data). The current risk beta value from this particle is taken to be the optimal current risk beta value for the model. 
 
-Multi-parameter calibration of the model using ABC and then make predictions using the posterior of the parameters.
-
-## abc-2.ipynb
-
-Based on `abc-1.py` but calibrates on the location-specific hazard multipliers. 
+PLOT all the current risk beta values for final population!? to check distribution
 
 
+## RunModelWithDynamicCalibration.ipynb
+
+Contains code for running the model with dynamic calibration using ABC. This runs the model forward in time, but allowing for emerging data on case numbers to be fed in every two weeks, and for model parameter values to be updated accordingly. 
