@@ -1,10 +1,4 @@
 # Outstanding issues
 
-* As the model runs forward in time and the behaviour of the disease evolves, the parameterisation of the model may need to change in order to predict accurately. Dynamic calibration of the model, whereby as new data becomes available 
-* 
-* 
-* The aim is to dynamically calibrate the model parameters, so that as the disease evolves over time, and the values of the parameters might change
+* As the model runs forward in time and the behaviour of the disease evolves, the parameterisation of the model may need to change in order to make accurate predictions. To allow for this, the model is set up to run with dynamic calibration. The model is run with ABC over 14 day intervals. After the first 14 day period the posterior estimate of the parameter values is then used as a prior for the next 14 days. However, currently, instead of the model continuing to run from day 15 in the second interval, it starts again from day 0 and continues up to day 28, and then in the enxt instance starts from day 0 and continues up to day 42. Given the assumption that parameter values are changing over time, this is not optimal, as we are always calihbrating on the whole time period,r ather than just the last 14 days. 
 
-
-
-* Q: if we are assuming that parameter values change over time, then surely applying them over the whole time period always starting from day 0, is not optimal??
