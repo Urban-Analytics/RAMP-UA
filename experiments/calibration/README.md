@@ -10,6 +10,8 @@ Contains useful convenience functions for working with the OpenCL model and extr
 
 This contains code to take an abc_history object (output from an ABC run), and to generate a distribution using KDE from the parameter values of the final population from the ABC run. This is required so that the posterior from an ABC run can be re-used as the prior in a new run. 
 
+It also contains the GreaterThanZeroParameterTransition class. This is because when using pyabc's default MultiVariateNormal transition negative values end up being selected for various parameters. As all parameters relate to the risk associated with various locations/individual's disease states, having a negative value is non-sensical.  
+
 ## InitialModelCalibration.ipynb
 
 Contains code which calibrates the location (home, retail, work, school) and individual (symptomatic, asymptomatic, presymptomatic) hazard parameters, as well as the current risk beta parameter. In this script, these parameters are calibrated once using historical data and Approximate Bayesian Computation (ABC). The model is run for 133 days which covers the period from March up until July 2020. Ten populations are used in the ABC process. Prior distributions are initially defined for the parameters based on knowledge from other diseases.
