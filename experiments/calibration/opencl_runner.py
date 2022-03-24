@@ -1,4 +1,4 @@
-# Generic functions that are used in the experiments notebooks
+# Generic functions that are used in the calibration notebooks
 # Useful to put them in here so that they can be shared across notebooks
 # and can be tested (see tests/experiements/opencl_runner_tests.py)
 import os
@@ -104,7 +104,7 @@ class OpenCLRunner:
 
     @staticmethod
     def fit_l2(obs: np.ndarray, sim: np.ndarray):
-        """Calculate the fitness of a model.
+        """Calculate the fitness of a model using the Euclidean distance.
 
          Parameters
         ----------
@@ -146,13 +146,19 @@ class OpenCLRunner:
     def get_cumulative_daily_infections(summaries):
         """
         Get cumulative infections per day by summing all the non-susceptible people
+        Each day this counts the number of people not in the susceptible group (including those dead and recovered). 
+        This essentially counts the number of people who have tested positive (i.e. left the susceptible group and joined one of the other groups) so far, on that day. 
         :param summaries: A list of Summary objects created by running the OpenCL model
         """
+        # Get the number of days that the model has been run for
         days = len(summaries[0].total_counts[DiseaseStatus.Exposed.value])  # Number of iterations for each repetition
+        # Create an array which will count the number not susceptible on each day (begin with each day having a value of 0)
         total_not_susceptible = np.zeros(days)  # Total people not susceptible per iteration
+        # Loop through each disease status, and if it is not 'susceptible', then count the mean number of people in that
+        # disease state across the 5 iterations of the model run, and add it to the total count of non-susceptible people on that day 
         for d, disease_status in enumerate(DiseaseStatus):
             if disease_status != DiseaseStatus.Susceptible:
-                mean = OpenCLRunner.get_mean_total_counts(summaries, d)  # Mean number of people with that disease
+                mean = OpenCLRunner.get_mean_total_counts(summaries, d)  
                 total_not_susceptible = total_not_susceptible + mean
         return total_not_susceptible
 
@@ -334,13 +340,12 @@ class OpenCLRunner:
                                             store_detailed_counts=store_detailed_counts)
         return summary, final_state
 
-    #
+    
     # Functions to run the model in multiprocess mode.
-    # Don't wory currently on OS X, something to do with calling multiprocessing from a notebook
+    # Doesn't work currently on OS X, something to do with calling multiprocessing from a notebook
     # This is a workaround to allow multiprocessing.Pool to work in the pf_experiments_plots notebook.
     # The function called by pool.map ('count_wiggles') needs to be defined in this separate file and imported.
     # https://stackoverflow.com/questions/41385708/multiprocessing-example-giving-attributeerror/42383397
-    #
     @staticmethod
     def run_opencl_model_multi(
             repetitions: int, iterations: int, params: Params, num_seed_days: int, quiet: bool,
@@ -352,7 +357,6 @@ class OpenCLRunner:
         """Run a number of models and return a list of summaries.
         :param multiprocess: Whether to run in mutliprocess mode (default False)
         """
-        # print("opencl_runner.py - run_opencl_model_multi")
         # Prepare the function arguments. We need one set of arguments per repetition
         l_i = [i for i in range(repetitions)] if not random_ids else \
             [random.randint(1, 100000) for _ in range(repetitions)]
@@ -399,6 +403,7 @@ class OpenCLRunner:
         Run the model, compatible with pyABC. Random variables (parameters) are passed in as a dictionary.
         For constant parameters that override the defaults (in the default.yml file) set them first
         with the `set_constants` method.
+        
         :param return_full_details: If True then rather than just returning the normal results,
             it returns a tuple of the following:
              (fitness value, simulated results, observations, the Params object, summaries list)
@@ -416,8 +421,6 @@ class OpenCLRunner:
             if v < 0:
                 raise Exception(f"The parameter {k}={v} < 0. "
                                 f"All parameters: {input_params_dict}")
-
-        # Check if there are any constants that should
 
         # Splat the input_params_dict to automatically set any parameters that have been inlcluded
         params = OpenCLRunner.create_parameters( parameters_file=cls.PARAMETERS_FILE, **input_params_dict)
@@ -712,6 +715,10 @@ class OpenCLWrapper(object):
         return sim["distance"]
 
     def run(self):
+        """
+        Runs the model, this is called in OpenCLWrapper.__call__
+        
+        """
         # store start time in order to store run time
         start_time = datetime.datetime.now()
 
@@ -742,30 +749,29 @@ class OpenCLWrapper(object):
                                   gpu=self.use_gpu)
             simulator.upload_all(snapshot.buffers)
             # if quiet == False:
-            # print(f"Running simulation {sim_number + 1}.")
-            # print(f"Running simulation")
+            #    print(f"Running simulation {sim_number + 1}.")
 
             ########## equivalent to run_headless
-            params = Params.fromarray(snapshot.buffers.params)  # XX Why extract Params? Can't just use PARAMS?
-            summary = Summary(snapshot,store_detailed_counts=self.store_detailed_counts,max_time=self.run_length)  # Total length of the simulation
+            # XX Why extract Params? Can't just use PARAMS?
+            params = Params.fromarray(snapshot.buffers.params)  
+            # Create summary
+            summary = Summary(snapshot,store_detailed_counts=self.store_detailed_counts,max_time=self.run_length)  
 
-            # only show progress bar in quiet mode
+            # Define model run length to use to iterate
             timestep_iterator = range(self.run_length)
+            # only show progress bar in quiet mode
             # if self.quiet:
             #     timestep_iterator = range(self.run_length)
             # else :
             #     else tqdm(range(self.quiet), desc="Running simulation")
 
-            # timestep_iterator = range(self.run_length) if self.quiet \
-            #     else tqdm(range(self.quiet), desc="Running simulation")
-
             # Create array to store the disease statuses for each day
             people_statuses_per_day = np.array([], dtype='uint8')
-            iter_count = 0  # Count the total number of iterations
-            # Run for iterations days
+            day_count = 0  # Count the total number of iterations
+            # Run for each day
             for _ in timestep_iterator:
                 # Update parameters based on lockdown
-                params.set_lockdown_multiplier(snapshot.lockdown_multipliers, iter_count)
+                params.set_lockdown_multiplier(snapshot.lockdown_multipliers, day_count)
                 simulator.upload("params", params.asarray())
                 params.asarray()
                 # Step the simulator
@@ -780,10 +786,11 @@ class OpenCLWrapper(object):
                 # simulator.download("people_statuses", snapshot.buffers.people_statuses)
                 # Update the summary with this new data
                 summary.update(iter_count, snapshot.buffers.people_statuses)
+                
+                # Step the day count on by one
+                day_count += 1
 
-                iter_count += 1
-
-            # print(len(people_statuses_per_day))
+             # Print progress statement
             if self.quiet == False:
                 for i in range(self.run_length):
                     print(f"\nDay {i}")
@@ -793,7 +800,6 @@ class OpenCLWrapper(object):
                 print("\nFinished")
 
             # Download the snapshot from OpenCL to host memory
-            # XX This is 'None'.
             final_state = simulator.download_all(snapshot.buffers)
 
             pass
