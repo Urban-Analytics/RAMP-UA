@@ -2,9 +2,13 @@
 
 This directory holds the files used for performing both an initial calibration of the model to establish a value for current_risk_beta (which is a parameter controlling the general transmissability of the disease in the model), and for performing dynamic calibration of the model to allow the parameteristation of the individual and location hazard paramaters to be adapted as the model runs forward in time and the behaviour of the disease evolves.  
 
-## ../opencl_runner.py
+## opencl_runner.py
 
 Contains useful convenience functions for working with the OpenCL model and extracting useful data from the results. In particular see the `run_model*` functions.
+
+## ArbitraryDistribution.py
+
+This contains code to take an abc_history object (output from an ABC run), and to generate a distribution using KDE from the parameter values of the final population from the ABC run. This is required so that the posterior from an ABC run can be re-used as the prior in a new run. 
 
 ## InitialModelCalibration.ipynb
 
