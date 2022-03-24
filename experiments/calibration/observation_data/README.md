@@ -28,15 +28,21 @@ Lauer et al (2020): "The median incubation period was estimated to be 5.1 days (
 <b> Conclusion: use a lag time of 5 days </b>
 
 2.	Proportion of positive cases picked up by testing
-3.	
-Need to account for the underlying proportion of asymptomatic people who are not taking tests
-The number of positive cases being picked up by testing will change over time as testing capacity develops
 
+Need to account for the underlying proportion of asymptomatic people who are not taking tests.   
+The number of positive cases being picked up by testing will change over time as testing capacity develops.
 
+Phipps et al (2020): Applies a back casting approach to estimate a distribution for the true cumulative number of infections in 15 developed countries. This includes for the UK a graph of an estimated detection rate of Covid-19 for each month. 
+Noh and Danuser (2021): Actual cumulative cases were estimated to be 5–20 times greater than the confirmed cases
+Li et al (2021): This research used data from China in a model to show the proportion of asymptomatic cases among COVID-19 infected individuals was 42%
+Ma et al (2021): Global study showing 40.5% of those with confirmed Covid cases are asymptomatic.
 
 Cheng, C., Zhang, D., Dang, D., Geng, J., Zhu, P., Yuan, M., Liang, R., Yang, H., Jin, Y., Xie, J. and Chen, S., 2021. The incubation period of COVID-19: a global meta-analysis of 53 studies and a Chinese observation study of 11 545 patients. Infectious diseases of poverty, 10(05), pp.1-13.  
 Lauer, S.A., Grantz, K.H., Bi, Q., Jones, F.K., Zheng, Q., Meredith, H.R., Azman, A.S., Reich, N.G. and Lessler, J., 2020. The incubation period of coronavirus disease 2019 (COVID-19) from publicly reported confirmed cases: estimation and application. Annals of internal medicine, 172(9), pp.577-582.  
+Li, C., Zhu, Y., Qi, C., Liu, L., Zhang, D., Wang, X., She, K., Jia, Y., Liu, T., He, D. and Xiong, M., 2021. Estimating the Prevalence of Asymptomatic COVID-19 Cases and Their Contribution in Transmission-Using Henan Province, China, as an Example. Frontiers in medicine, 8.
+Ma, Qiuyue, Jue Liu, Qiao Liu, Liangyu Kang, Runqing Liu, Wenzhan Jing, Yu Wu, and Min Liu. "Global percentage of asymptomatic SARS-CoV-2 infections among the tested population and individuals with confirmed COVID-19 diagnosis: a systematic review and meta-analysis." JAMA network open 4, no. 12 (2021): e2137257-e2137257.
 McAloon, C., Collins, Á., Hunt, K., Barber, A., Byrne, A.W., Butler, F., Casey, M., Griffin, J., Lane, E., McEvoy, D. and Wall, P., 2020. Incubation period of COVID-19: a rapid systematic review and meta-analysis of observational research. BMJ open, 10(8), p.e039652.  
+Noh, J. and Danuser, G., 2021. Estimation of the fraction of COVID-19 infected people in US states and countries worldwide. PloS one, 16(2), p.e0246772.
 Paul, S. and Lorin, E., 2021. Distribution of incubation periods of COVID-19 in the Canadian context. Scientific Reports, 11(1), pp.1-9.  
 Phipps, S.J., Grafton, R.Q. and Kompas, T., 2020. Robust estimates of the true (population) infection rate for COVID-19: a backcasting approach. Royal Society Open Science, 7(11), p.200909.
 
