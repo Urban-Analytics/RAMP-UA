@@ -6,11 +6,23 @@ There are two main issues with this recorded positive test result data:
 1.	There is a lag between the time of a positive test result and the time of infection
 2.	Tests do not pick up all positive cases
 
+These two issues could be corrected for by:
+1.	Shifting positive test results back in time (based on data on lag between infection and positive result)
+2.	Using a multiplier on the number of positive cases (based on data on the proportion of positive case results being picked up by tests)
+
+This would assume:
+1.	Individuals go for a test on the day that symptoms develops; and that all of those with positive test results went for a test due to developing symptoms (rather than e.g. exposure to a confirmed case)
+2.	Depends on what data used:
+ a.	Could use data on proportion of cases that are asymptomatic (which would assume that all positive test results are for symptomatic people, and that tests do not pick up any asymptomatic people)
+ b.	Alternatively use data on estimated detection rates, in which case any assumption made in this research will be carried over
 
 
 
-### Current method
-#### Script
+
+
+
+## Method
+### Script
 The observations data being used for seeding the model and in calibration of the model with ABC is created in [`CreatingObservations-Daily.ipynb`](https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/experiments/calibration/observation_data/CreatingObservations-Daily.ipynb)
 
 A variation of the method used to create the data in this script was also investigated, but was concluded to be less effective.   
