@@ -37,7 +37,7 @@ The method in [`CreatingObservations-Daily.ipynb`](https://github.com/Urban-Anal
 
 More details on these stages are provided in the notebook.
 
-#### Outputs
+## Outputs
 This directory contains the following `csv` files which are produced in the notebook. In each case for both the whole of Devon and for each MSOA individually:
 * weekly_cases_*.csv
   * This is the weekly test result data after shifting and multiplying
