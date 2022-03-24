@@ -1,6 +1,6 @@
 # RAMP Calibration
 
-This directory holds the files used for performing both an initial calibration of the model to establish a value for current_risk_beta (which is a parameter controlling the general transmissability of the disease in the model), and for performing dynamic calibration of the model to allow the parameteristation of the individual and location hazard paramaters to be adapted as the model runs forward in time and the behaviour of the disease evolves.  
+This directory holds the files used for adapting the ABM to to allow it to be optimised in response to data emerging in real time. This involves performing dynamic calibration (i.e. re-calibrating at every model time step) using ABC to allow the parameteristation of the individual and location hazard paramaters to be adapted as the model runs forward in time and the behaviour of the disease evolves. Previously, the ABM was just calibrated once using historical data and ABC. An initial calibration is still required here to establish a value for current_risk_beta (which is a parameter controlling the general transmissability of the disease in the model).
 
 ## opencl_runner.py
 
