@@ -1,5 +1,13 @@
-# Observation data
-##  Preparing estimates of daily Covid cases in Devon
+# Observations of daily COVID-19 cases in Devon
+## Background
+Observations of COVID-19 infection rates are required in order to validate the performance of the model.  
+The government publishes data on COVID-19 including weekly rolling sums of positive test results for MSOAs.  
+There are two main issues with this recorded positive test result data:  
+1.	There is a lag between the time of a positive test result and the time of infection
+2.	Tests do not pick up all positive cases
+
+
+
 
 ### Current method
 #### Script
@@ -30,7 +38,7 @@ https://github.com/Urban-Analytics/RAMP-UA/blob/Mollys_DA/microsim/opencl/data) 
   * This is data resulting from reaggregating the daily data from the stage above to weekly values (i.e. the shifted, multiplied, interpolated to daily,  smoothed data). This data is slightly different to the original shifted, multiplied weekly data. 
   * This data is not currently used for anything
 
-### Previous methods
+# Previous methods for deriving observations data
 Two methods were previously applied to generate the observations data. 
 
 #### 1. gam_cases.csv
