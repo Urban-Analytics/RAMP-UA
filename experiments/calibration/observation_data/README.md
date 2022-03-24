@@ -13,7 +13,7 @@ These two issues could be corrected for by:
 This would assume:
 1.	Individuals go for a test on the day that symptoms develops; and that all of those with positive test results went for a test due to developing symptoms (rather than e.g. exposure to a confirmed case)
 2.	Depends on what data used:  
- a.	Could use data on proportion of cases that are asymptomatic (which would assume that all positive test results are for symptomatic people, and that tests do not pick up any asymptomatic people)
+ a.	Could use data on proportion of cases that are asymptomatic (which would assume that all positive test results are for symptomatic people, and that tests do not pick up any asymptomatic people)  
  b.	Alternatively use data on estimated detection rates, in which case any assumption made in this research will be carried over
 
 
