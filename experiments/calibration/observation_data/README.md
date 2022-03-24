@@ -16,8 +16,27 @@ This would assume:
  a.	Could use data on proportion of cases that are asymptomatic (which would assume that all positive test results are for symptomatic people, and that tests do not pick up any asymptomatic people)  
  b.	Alternatively use data on estimated detection rates, in which case any assumption made in this research will be carried over
 
+## Evidence
+
+1.	Lag between infection and positive test result (conclusion seems to be ~5/6 days?)
+Cheng et al (2021): "The pooled mean incubation period of COVID-19 was 6.0 days (95% confidence interval [CI] 5.6–6.5) globally, 6.5 days (95% CI 6.1–6.9) in the mainland of China, and 4.6 days (95% CI 4.1–5.1) outside the mainland of China"
+Paul and Lorin (2021): "The estimated mean incubation period we obtain is 6.74 days"
+McAloon et al (2020): "The corresponding mean (95% CIs) was 5.8 (95% CI 5.0 to 6.7) days"
+Lauer et al (2020): "The median incubation period was estimated to be 5.1 days (95% CI, 4.5 to 5.8 days)" (Study based in China)
+
+Cheng, C., Zhang, D., Dang, D., Geng, J., Zhu, P., Yuan, M., Liang, R., Yang, H., Jin, Y., Xie, J. and Chen, S., 2021. The incubation period of COVID-19: a global meta-analysis of 53 studies and a Chinese observation study of 11 545 patients. Infectious diseases of poverty, 10(05), pp.1-13.
+Lauer, S.A., Grantz, K.H., Bi, Q., Jones, F.K., Zheng, Q., Meredith, H.R., Azman, A.S., Reich, N.G. and Lessler, J., 2020. The incubation period of coronavirus disease 2019 (COVID-19) from publicly reported confirmed cases: estimation and application. Annals of internal medicine, 172(9), pp.577-582.
+McAloon, C., Collins, Á., Hunt, K., Barber, A., Byrne, A.W., Butler, F., Casey, M., Griffin, J., Lane, E., McEvoy, D. and Wall, P., 2020. Incubation period of COVID-19: a rapid systematic review and meta-analysis of observational research. BMJ open, 10(8), p.e039652.
+Paul, S. and Lorin, E., 2021. Distribution of incubation periods of COVID-19 in the Canadian context. Scientific Reports, 11(1), pp.1-9.
+
+2.	Proportion of positive cases picked up by testing
+Need to account for the underlying proportion of asymptomatic people who are not taking tests
+The number of positive cases being picked up by testing will change over time as testing capacity develops
 
 
+
+
+Phipps, S.J., Grafton, R.Q. and Kompas, T., 2020. Robust estimates of the true (population) infection rate for COVID-19: a backcasting approach. Royal Society Open Science, 7(11), p.200909.
 
 
 
