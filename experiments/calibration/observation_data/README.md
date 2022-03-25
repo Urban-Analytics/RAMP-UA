@@ -40,7 +40,7 @@ The number of positive cases being picked up by testing will change over time as
 <b>Conclusion </b>
 Use monthly scaling factors from Phipps et al (2020) to adjust positive test results into an estimation of true infections
 
-References
+References  
 <i>Cheng, C., Zhang, D., Dang, D., Geng, J., Zhu, P., Yuan, M., Liang, R., Yang, H., Jin, Y., Xie, J. and Chen, S., 2021. The incubation period of COVID-19: a global meta-analysis of 53 studies and a Chinese observation study of 11 545 patients. Infectious diseases of poverty, 10(05), pp.1-13.  
 Lauer, S.A., Grantz, K.H., Bi, Q., Jones, F.K., Zheng, Q., Meredith, H.R., Azman, A.S., Reich, N.G. and Lessler, J., 2020. The incubation period of coronavirus disease 2019 (COVID-19) from publicly reported confirmed cases: estimation and application. Annals of internal medicine, 172(9), pp.577-582.  
 Li, C., Zhu, Y., Qi, C., Liu, L., Zhang, D., Wang, X., She, K., Jia, Y., Liu, T., He, D. and Xiong, M., 2021. Estimating the Prevalence of Asymptomatic COVID-19 Cases and Their Contribution in Transmission-Using Henan Province, China, as an Example. Frontiers in medicine, 8.
