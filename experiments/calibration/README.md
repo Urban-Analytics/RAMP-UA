@@ -18,8 +18,6 @@ Contains code which calibrates the location (home, retail, work, school) and ind
 
 Each ABC population contains 100 particles or parameter vectors. For the final population the best particle is defined as that with the lowest distance value (between the predictions made using the particle's parameter values and the observations data). The current risk beta value from this particle is taken to be the optimal current risk beta value for the model. 
 
-PLOT all the current risk beta values for final population!? to check distribution
-
 ## RunModelWithDynamicCalibration.ipynb
 
 Contains code for running the model with dynamic calibration using ABC. This runs the model forward in time, but allowing for emerging data on case numbers to be fed in every two weeks, and for model parameter values to be updated accordingly.  
