@@ -16,4 +16,4 @@
 * Need to also look at how parameter values change when running model with dynamic calibration over longer period - i.e. do we see a clear change in the parameterisation or not? What could this tell us about evolution of the disease?
 
 * Still need to assess whether there is an improvement in predictive ability from running the model with Bayesian updating of parameters, compared to running a  model calibrated once with historical data. This will require running the model with the 'optimal' values from the initial model calibration script (I think)
-   * Is this not just what we've already done in both the InitialModelCalibration.ipynb and RunModelWithDynamicCalibration.ipynb scripts?     
+   * Is this not just what we've already done in both the InitialModelCalibration.ipynb and RunModelWithDynamicCalibration.ipynb scripts? Is it just a case of adding     the results from this to a plot showing the results from running the model with dynamic calibration, once we've run this for a longer period (currently only ran   for a maximum of 28 days)    
