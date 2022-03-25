@@ -1,6 +1,6 @@
 # RAMP Calibration
 
-This directory holds the files used for performing both an initial calibration of the model to establish a value for current_risk_beta (which is a parameter controlling the general transmissability of the disease in the model), and for performing dynamic calibration of the model to allow the parameteristation of the individual and location hazard paramaters to be adapted as the model runs forward in time and the behaviour of the disease evolves.  
+This directory holds the files used for adapting the ABM to to allow it to be optimised in response to data emerging in real time. This involves performing dynamic calibration (i.e. re-calibrating at every model time step) using ABC to allow the parameteristation of the individual and location hazard paramaters to be adapted as the model runs forward in time and the behaviour of the disease evolves. Previously, the ABM was just calibrated once using historical data and ABC. An initial calibration is still required here to establish a value for current_risk_beta (which is a parameter controlling the general transmissability of the disease in the model).
 
 ## opencl_runner.py
 
@@ -10,13 +10,13 @@ Contains useful convenience functions for working with the OpenCL model and extr
 
 This contains code to take an abc_history object (output from an ABC run), and to generate a distribution using KDE from the parameter values of the final population from the ABC run. This is required so that the posterior from an ABC run can be re-used as the prior in a new run. 
 
+It also contains the GreaterThanZeroParameterTransition class. This is because when using pyabc's default MultiVariateNormal transition negative values end up being selected for various parameters. As all parameters relate to the risk associated with various locations/individual's disease states, having a negative value is non-sensical.  
+
 ## InitialModelCalibration.ipynb
 
 Contains code which calibrates the location (home, retail, work, school) and individual (symptomatic, asymptomatic, presymptomatic) hazard parameters, as well as the current risk beta parameter. In this script, these parameters are calibrated once using historical data and Approximate Bayesian Computation (ABC). The model is run for 133 days which covers the period from March up until July 2020. Ten populations are used in the ABC process. Prior distributions are initially defined for the parameters based on knowledge from other diseases.
 
 Each ABC population contains 100 particles or parameter vectors. For the final population the best particle is defined as that with the lowest distance value (between the predictions made using the particle's parameter values and the observations data). The current risk beta value from this particle is taken to be the optimal current risk beta value for the model. 
-
-PLOT all the current risk beta values for final population!? to check distribution
 
 ## RunModelWithDynamicCalibration.ipynb
 
