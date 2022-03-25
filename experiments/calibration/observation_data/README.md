@@ -37,8 +37,7 @@ The number of positive cases being picked up by testing will change over time as
 <i>Li et al (2021)</i>: This research used data from China in a model to show the proportion of asymptomatic cases among COVID-19 infected individuals was 42%
 <i>Ma et al (2021)</i>: Global study showing 40.5% of those with confirmed Covid cases are asymptomatic.
 
-<b>Conclusion </b>
-Use monthly scaling factors from Phipps et al (2020) to adjust positive test results into an estimation of true infections
+<b>Conclusion: Use monthly scaling factors from Phipps et al (2020) to adjust positive test results into an estimation of true infections</b>
 
 <ins>References</ins>   
 <i>Cheng, C., Zhang, D., Dang, D., Geng, J., Zhu, P., Yuan, M., Liang, R., Yang, H., Jin, Y., Xie, J. and Chen, S., 2021. The incubation period of COVID-19: a global meta-analysis of 53 studies and a Chinese observation study of 11 545 patients. Infectious diseases of poverty, 10(05), pp.1-13.  
