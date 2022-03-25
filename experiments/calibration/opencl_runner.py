@@ -599,6 +599,13 @@ class OpenCLWrapper(object):
 
 #     # @staticmethod
 #     def distance(sim: dict, obs: dict):
+
+#       """"
+#       old code used for calculating distance
+#       Kept here as contains useful code for using data for each MSOA
+#       However, careful, as realised the method implemented here of summing each day the number of people in disease states 1-4 does not    make sense.
+#        What this data is showing is the number of people who have the disease on that day, rather than the number of new infections that day (which is what the observations data shows, and why we can sum up the daily counts each day to get a cumulative count). The number of people with the disease on e.g. day 3 and day 4 will therefore likely contain a lot of the same people, and so summing up the total number of infected people on each day during a window will involve A LOT of double counting. 
+#       """
 #         """Calculate the distance between the number of cases in the model by MSOA compared to some observations (case data).
 #         All lists are assumed to be in the same MSOA order (e.g. first element in each list corresponds to the number of cases
 #         in the same MSOA).
