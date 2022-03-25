@@ -20,7 +20,7 @@ This would assume:
 
 1.	Lag between infection and positive test result  
   
-Cheng et al (2021): "The pooled mean incubation period of COVID-19 was 6.0 days (95% confidence interval [CI] 5.6–6.5) globally, 6.5 days (95% CI 6.1–6.9) in the mainland of China, and 4.6 days (95% CI 4.1–5.1) outside the mainland of China"  
+<i>Cheng et al (2021)</ins>: "The pooled mean incubation period of COVID-19 was 6.0 days (95% confidence interval [CI] 5.6–6.5) globally, 6.5 days (95% CI 6.1–6.9) in the mainland of China, and 4.6 days (95% CI 4.1–5.1) outside the mainland of China"  
 Paul and Lorin (2021): "The estimated mean incubation period we obtain is 6.74 days"  
 McAloon et al (2020): "The corresponding mean (95% CIs) was 5.8 (95% CI 5.0 to 6.7) days"  
 Lauer et al (2020): "The median incubation period was estimated to be 5.1 days (95% CI, 4.5 to 5.8 days)" (Study based in China)  
