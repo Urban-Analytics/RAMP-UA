@@ -38,6 +38,10 @@ colnames(gm) <- c("CTY20","date","day","change")
 nat <- aggregate(gm$change, by = list(gm$day), FUN = mean, na.rm = TRUE)$x
 gm$change[is.na(gm$change)] <- nat[gm$day[is.na(gm$change)]+1]
 
+# Restore missing dates
+ref <- as.Date(0:max(gm$day) , origin = min(gm$date,na.rm = T))
+gm$date[is.na(gm$date)] <- ref[gm$day[is.na(gm$date)] + 1]
+
 # Output file
 gm$change <- round(gm$change/100 + 1,2)
 write.table(gm,"timeAtHomeIncreaseCTY.csv",row.names = F,sep=",")
