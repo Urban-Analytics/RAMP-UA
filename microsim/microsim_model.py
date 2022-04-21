@@ -104,8 +104,7 @@ class Microsim:
         """
         Run the model (call the step() function) for the given number of iterations.
         :param iterations: The number of iterations to run
-        :param repnr: The repition number of this model. Like an ID. Used to create new unique directory for this
-         model instance.
+        :param repnr: The repetition number of this model. Like an ID. Used to create new unique directory for this model instance.
         """
         # Now that this model is being run we know it's ID (repetition number)
         assert self.repnr == -1  # The ID should not have been set yet

@@ -17,8 +17,8 @@ import random
 import copy
 import multiprocessing
 
-from microsim_model import Microsim
-from column_names import ColumnNames
+from microsim.microsim_model import Microsim
+from microsim.column_names import ColumnNames
 
 
 class MicrosimInit(Microsim):
