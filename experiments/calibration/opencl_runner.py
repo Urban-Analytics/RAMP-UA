@@ -792,7 +792,7 @@ class OpenCLWrapper(object):
                 # Download the statuses at the end of the window (no need to do this now as we do it at the end of the for loop)
                 # simulator.download("people_statuses", snapshot.buffers.people_statuses)
                 # Update the summary with this new data
-                summary.update(iter_count, snapshot.buffers.people_statuses)
+                summary.update(day_count, snapshot.buffers.people_statuses)
                 
                 # Step the day count on by one
                 day_count += 1
