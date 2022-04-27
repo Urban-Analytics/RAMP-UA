@@ -14,7 +14,7 @@ class InitialCases:
         #print("initial_cases.py -- InitialCases __init")
         # load initial case data
         #self.initial_cases = pd.read_csv(os.path.join(data_dir, "devon_initial_cases.csv"))
-        self.initial_cases = pd.read_csv(os.path.join(data_dir, "daily_cases_devon_shifted_mpld_smoothed_IS.csv"))
+        self.initial_cases = pd.read_csv(os.path.join(data_dir, "daily_cases_devon.csv"))
         # self.initial_cases['Date'] = range(1,len(self.initial_cases)+1)
         # print(self.initial_cases)
         # self.initial_cases.rename(columns={'Date': '', 'OriginalCases':'num_cases'}, inplace = True)

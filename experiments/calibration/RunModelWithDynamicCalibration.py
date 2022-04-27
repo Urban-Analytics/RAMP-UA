@@ -52,6 +52,7 @@ import datetime
 from matplotlib import cm
 
 # os.chdir("C:/Users/gy17m2a/OneDrive - University of Leeds/Project/RAMP-UA/experiments/calibration")
+os.chdir("/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration")
 
 # PYABC (https://pyabc.readthedocs.io/en/latest/)
 import pyabc
@@ -65,6 +66,7 @@ logging.getLogger("pyopencl").setLevel(logging.ERROR)
 from arbitrary_distribution import ArbitraryDistribution, GreaterThanZeroParameterTransition
 
 # RAMP model
+sys.path.append("../../")
 from microsim.initialisation_cache import InitialisationCache
 
 # Bespoke RAMP classes for running the model
@@ -161,7 +163,7 @@ current_risk_beta_val =0.019
 ITERATIONS = 105  # Number of days to run for
 assert (ITERATIONS /7).is_integer() # check it is divisible by 7 
 NUM_SEED_DAYS = 14  # Number of days to seed the population
-USE_GPU = True
+USE_GPU = False
 STORE_DETAILED_COUNTS = False
 REPETITIONS = 5
 USE_HEALTHIER_POP = True
@@ -207,11 +209,11 @@ OpenCLRunner.update(store_detailed_counts=STORE_DETAILED_COUNTS)
 np.array_equal(obs_manualcalibration, cases_devon_daily[:len(sim_manualcalibration)-1])
 
 # Plot
-fig, ax = plt.subplots(1,1)
-x = range(len(sim_manualcalibration))
-ax.plot(x, sim_manualcalibration, label="sim", color="orange")
-ax.plot(x, obs_manualcalibration, label="obs", color="blue")
-ax.legend()
+#fig, ax = plt.subplots(1,1)
+#x = range(len(sim_manualcalibration))
+#ax.plot(x, sim_manualcalibration, label="sim", color="orange")
+#ax.plot(x, obs_manualcalibration, label="obs", color="blue")
+#ax.legend()
 
 
 # ## Run model with dynamic calibration
@@ -247,20 +249,20 @@ all_rv = {
     "presymptomatic": presymptomatic_rv, "symptomatic": symptomatic_rv, "asymptomatic": asymptomatic_rv}
 
 # Plot priors
-fig, axes = plt.subplots(2, 4, figsize=(14, 6), sharex=True, sharey=True)
-x = np.linspace(-1, 2, 99)  # (specified so that we have some whole numbers)
-marker = itertools.cycle((',', '+', '.', 'o', '*'))
-for i, (var_name, variable) in enumerate(all_rv.items()):
-    # var_name = [ k for k,v in locals().items() if v is variable][0]  # Hack to get the name of the variable
-    ax = axes.flatten()[i]
-    # ax.plot(x, pyabc.Distribution(param=variable).pdf({"param": x}), label = var_name, marker=next(marker), ms=3)
-    ax.plot(x, pyabc.Distribution(param=variable).pdf({"param": x}))
-    ax.set_title(var_name)
-    ax.axvline(x=0.0, ls='--', color="grey", label="x=0")
-    ax.axvline(x=1.0, ls='--', color="grey", label="x=1")
-# fig.tight_layout()
-fig.suptitle("Priors")
-fig.show()
+#fig, axes = plt.subplots(2, 4, figsize=(14, 6), sharex=True, sharey=True)
+#x = np.linspace(-1, 2, 99)  # (specified so that we have some whole numbers)
+#marker = itertools.cycle((',', '+', '.', 'o', '*'))
+#for i, (var_name, variable) in enumerate(all_rv.items()):
+#    # var_name = [ k for k,v in locals().items() if v is variable][0]  # Hack to get the name of the variable
+#    ax = axes.flatten()[i]
+#    # ax.plot(x, pyabc.Distribution(param=variable).pdf({"param": x}), label = var_name, marker=next(marker), ms=3)
+#    ax.plot(x, pyabc.Distribution(param=variable).pdf({"param": x}))
+#    ax.set_title(var_name)
+#    ax.axvline(x=0.0, ls='--', color="grey", label="x=0")
+#    ax.axvline(x=1.0, ls='--', color="grey", label="x=1")
+## fig.tight_layout()
+#fig.suptitle("Priors")
+#fig.show()
 
 ## Create a distrubtion from these random variables
 decorated_rvs = {name: pyabc.LowerBoundDecorator(rv, 0.0) for name, rv in all_rv.items()}
@@ -290,7 +292,7 @@ print(f"Activity locations: {activity_locations}")
 
 
 # Dictionary with parameters for running model
-admin_params = {"quiet": True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0,  "run_length": da_window_size,
+admin_params = {"quiet": True, "use_gpu": USE_GPU, "store_detailed_counts": True, "start_day": 0,  "run_length": da_window_size,
                 "current_particle_pop_df": None,  "parameters_file": PARAMETERS_FILE, "snapshot_file": SNAPSHOT_FILEPATH, 
                 "opencl_dir": OPENCL_DIR, "individuals_df": individuals_df, 
                 "observations_weekly_array": cases_devon_weekly,'num_seed_days' :NUM_SEED_DAYS}
@@ -307,11 +309,16 @@ dfs_dict, weights_dict, history_dict = {}, {},{}
 # Store starting time to use to calculate how long processing the whole window has taken
 starting_windows_time = datetime.datetime.now()
 
-# Define number of windows to run for
-windows = 2
+# Define number of and number of populations to run for,
+windows = 7
+n_pops = 4
 
+
+## ***********************
+
+## ***********************  
 # Loop through each window
-for window_number in range(1, windows + 1):
+for window_number in range(5, windows + 1):
     print("Window number: ", window_number)
 
     # Edit the da_window size in the admin params
@@ -325,8 +332,13 @@ for window_number in range(1, windows + 1):
 
     # Define priors
     # If first window, then use user-specified (original) priors
-    if window_number == 1:
-        priors = original_priors
+    if window_number == 6:
+        fname = "/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration/7windows_window5, 4pops_Crb0.019.pkl"
+        with open(fname, "rb") as f:
+                  history_dict = pickle.load(f)
+        abc_history = history_dict['w4']
+        priors = ArbitraryDistribution(abc_history)
+        
     # If a subsequent window, then generate distribution from posterior from previous window
     else:
         priors = ArbitraryDistribution(abc_history)
@@ -353,7 +365,7 @@ for window_number in range(1, windows + 1):
     run_id = abc.new(db=db_path,observed_sum_stat=None)  # {'observation': observations_array, "individuals": individuals_df}
 
     # Run model
-    abc_history = abc.run(max_nr_populations=6)
+    abc_history = abc.run(max_nr_populations=n_pops)
 
     # Save some info on the posterior parameter distributions.
     for t in range(0, abc.history.max_t + 1):
@@ -365,480 +377,11 @@ for window_number in range(1, windows + 1):
         dfs_dict["w{},pop{}".format(window_number, t)] = df_t1
         weights_dict["w{}, pop{}".format(window_number, t)] = w_t1
         history_dict["w{}".format(window_number)] = abc_history
-
-
-# #### Save abc_history object
-
-# In[ ]:
-
-
-# fname = "2windows_4pops_Crb0.01878.pkl".format(current_risk_beta)
-# with open( fname, "wb" ) as f:
-#         pickle.dump( history_dict, f)
-# # with open(fname, "rb") as f:
-# #             history_dict = pickle.load(f)
-
-
-# ## Assess how parameter values change over time with dynamic calibration
-
-# ### Parameter values of final population for each window
-
-# In[17]:
-
-
-# define colour map
-evenly_spaced_interval = np.linspace(0.35, 1, 3)
-colors = [cm.Greens(x) for x in evenly_spaced_interval]
-colors =  ['orange', 'darkred']
-
-fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
-for i, param in enumerate(original_priors.keys()):
-    color_i =0
-    ax = axes.flat[i]
-    # Add parameter priors
-    priors_x = np.linspace(-1, 2, 99)  # (specified so that we have some whole numbers)
-    ax.plot(priors_x, pyabc.Distribution(param=all_rv[param]).pdf({"param": priors_x}), 
-            color = 'black', label = 'Prior', linewidth  = 1, linestyle ='dashed')
-    
-    for history_name, history in history_dict.items():
-        color = colors[color_i]
-        df, w = history.get_distribution(m=0, t=history.max_t)
-        pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
-                label=history_name, linewidth = 4,
-                color= color)
-        ax.legend(fontsize="small")
-        ax.set_title(f"{param}")
-        handles, labels = ax.get_legend_handles_labels()
-        ax.get_legend().remove()
-        color_i = color_i +1
-fig.legend(handles, labels, loc='center right', fontsize = 17,
-            bbox_to_anchor=(1.01, 0.17))
-          # ncol = 8, bbox_to_anchor=(0.5, -0.07))
-axes[2,2].set_axis_off()
-axes[2,1].set_axis_off()
-fig.tight_layout()
-fig.show()
-# fig.savefig("Plots/8windows_14days_each_finalpop.jpg")
-
-
-# ### Parameter values for all populations for each window
-
-# In[18]:
-
-
-# define colour map and line style to use in intermediate populations
-evenly_spaced_interval = np.linspace(0.35, 1, 5)
-colors = [cm.Greens(x) for x in evenly_spaced_interval]
-linestyles = ['dashed','dashed','dashed','dashed', 'solid'] # check this is same length as n populations
-linewidths = [2,2,2,2,4]
-colors =  ['orange', 'darkred']
-
-# Set up plot
-fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
-for i, param in enumerate(original_priors.keys()):
-    color_i =0
-    ax = axes.flat[i]
-    # Add parameter priors
-    priors_x = np.linspace(-1, 2, 99)  # (specified so that we have some whole numbers)
-    ax.plot(priors_x, pyabc.Distribution(param=all_rv[param]).pdf({"param": priors_x}), 
-            color = 'black', label = 'Prior', linewidth  = 3, linestyle ='solid')
-    for history_name, history in history_dict.items():
-        color = colors[color_i]
-        for t in range(history.max_t + 1):
-            df, w = history.get_distribution(m=0, t=t)
-            pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
-                label="{}, pop {}".format(history_name, t),
-                color = color, linestyle = linestyles[t],linewidth = linewidths[t])
-            ax.legend(fontsize="small")
-            ax.set_title(f"{param}")
-            handles, labels = ax.get_legend_handles_labels()
-            ax.get_legend().remove()
-        color_i = color_i +1
-    if param!="work":
-            ax.set_xlim(-0.5,1.5)        
-    if param=="work":
-        ax.set_xlim(-0.05,0.1)
-    if param =='asymptomatic':
-         ax.set_xlim(-0.05,0.1)    
-fig.legend(handles, labels, loc='center right', fontsize = 12,
-            bbox_to_anchor=(1.01, 0.17))
-axes[2,2].set_axis_off()
-axes[2,1].set_axis_off()
-fig.tight_layout()
-fig.show()
-
-
-# ## Compare model predictions from dynamically calibrated model against observations
-
-# ### Model predictions from within dynamic calibration window
-# #### Get model predictions, and particle distances for each particle in all of the populations 
-
-# In[19]:
-
-
-# Create dictionary to store results for each window
-abc_sum_stats = {}
-
-# Loop through each calibration window, defining the number of days it covered
-for t in range(0,history.n_populations):
-    print(t)
-    for window, n_days in { "w1": 14, "w2":28}.items():
-
-        # Create lists to store values for each particle
-        distance_l, daily_preds_l, params_l = [],[],[]
-
-        # get the history for this window    
-        history_wx  = history_dict[window]   
-
-        # Get parameter values
-        parameter_vals_df, w = history_wx.get_distribution(m=0, t=t)
-
-        # Get the summary stats for the final population for this window ([1] means keep just the 
-        # dataframe and not the array of weights)
-        weighted_sum_stats_t0 = history_wx.get_weighted_sum_stats_for_model(t=t)[1]
-     
-        # Loop through each particle and save their distance and predictions into the lists
-        for particle_no in range(0,100):
-            # Get data for just this particle
-            particle_x_dict = weighted_sum_stats_t0[particle_no]
-
-            # Get daily predictions
-            cumulative_model_diseased_devon = particle_x_dict["model_daily_cumulative_infections"]     
-            cumulative_model_diseased_devon = cumulative_model_diseased_devon[0:n_days]
-
-            # Add daily predictions for this particle to list
-            daily_preds_l.append(cumulative_model_diseased_devon)
-
-            # Add distance to list
-            distance_l.append(particle_x_dict['distance'])
-
-            # Add parameter values to list
-            params_l.append(parameter_vals_df.iloc[particle_no])
-
-        # Add to dictionary for this window
-        abc_sum_stats["{}_{}".format(window,t)] = {'distance_l':distance_l, 'daily_preds_l' :daily_preds_l, 'params_l':params_l}
-
-
-# #### For each window, plot the predictions made by each particle in the final population 
-
-# In[24]:
-
-
-# Create figure
-fig, axes = plt.subplots(1, 2, figsize=(12,4))
-axes_number = 0
-for window, n_days in { "w1": 14, "w2":28}.items():
-    t = history.max_t
-    # Find the best particle
-    best_particle_idx = abc_sum_stats["{}_{}".format(window,t)]['distance_l'].index(min(abc_sum_stats["{}_{}".format(window,t)]['distance_l']))
-
-    # Get data for this window
-    daily_preds_l  = abc_sum_stats["{}_{}".format(window,t)]['daily_preds_l']   
-    distance_l = abc_sum_stats["{}_{}".format(window,t)]['distance_l']   
-
-    # Normalise distance to 0-1 to calculate transparency
-    _distance = np.array(distance_l)  # Easier to do maths on np.array
-    distance_norm = (_distance - min(_distance)) / (max(_distance) - min(_distance))
-
-    # define number of days these results relate to
-    x=range(1,n_days+1)    
-
-    # For each particle, plot the predictions, coloured by distance
-    for i in range(0,len(daily_preds_l)):
-        axes[axes_number].plot(x, daily_preds_l[i], color="black", alpha=1-distance_norm[i])  # (1-x because high distance is bad)
-
-    # Add the best particle
-    axes[axes_number].plot(x, daily_preds_l[best_particle_idx], color="green", linewidth = 3,
-                          label = 'Best particle')  # (1-x because high distance is bad)
-
-    # Add observations
-    axes[axes_number].plot(x, cases_devon_daily[0:len(daily_preds_l[0])], label="Observations",
-                           linewidth = 3, color="darkred")
-
-    # Apply labels
-    axes[axes_number].set_xlabel("Day")
-    axes[axes_number].set_ylabel("Number infections")
-    axes[axes_number].set_title("{}".format(window))
-
-    # Apply legend
-    axes[axes_number].legend(fontsize="large")
-
-    axes_number =axes_number +1
-
-# Set full plot title
-fig.suptitle('POPULATION {} -- Number of infections predicted by each particle within each window'.format(t))
-
-
-# #### For the final window, plot the predictions made by each particle in each population
-
-# In[28]:
-
-
-# Create figure
-fig, axes = plt.subplots(1, 4, figsize=(15,4), sharey=True)
-axes_number = 0
-for t in range(0, history.max_t):
-    window, n_days = 'w2', 28
-    # Find the best particle
-    best_particle_idx = abc_sum_stats["{}_{}".format(window,t)]['distance_l'].index(min(abc_sum_stats["{}_{}".format(window,t)]['distance_l']))
-
-    # Get data for this window
-    daily_preds_l  = abc_sum_stats["{}_{}".format(window,t)]['daily_preds_l']   
-    distance_l = abc_sum_stats["{}_{}".format(window,t)]['distance_l']   
-
-    # Normalise distance to 0-1 to calculate transparency
-    _distance = np.array(distance_l)  # Easier to do maths on np.array
-    distance_norm = (_distance - min(_distance)) / (max(_distance) - min(_distance))
-
-    # define number of days these results relate to
-    x=range(1,n_days+1)    
-
-    # For each particle, plot the predictions, coloured by distance
-    for i in range(0,len(daily_preds_l)):
-        axes[axes_number].plot(x, daily_preds_l[i], color="black", alpha=1-distance_norm[i])  # (1-x because high distance is bad)
-
-    # Add the best particle
-    axes[axes_number].plot(x, daily_preds_l[best_particle_idx], color="green", linewidth = 3,
-                          label = 'Best particle')  # (1-x because high distance is bad)
-
-    # Add observations
-    axes[axes_number].plot(x, cases_devon_daily[0:len(daily_preds_l[0])], label="Observations",
-                           linewidth = 3, color="darkred")
-
-    # Apply labels
-    axes[axes_number].set_xlabel("Day")
-    axes[axes_number].set_ylabel("Number infections")
-    axes[axes_number].set_title("Pop {}".format(t))
-
-    # Apply legend
-    axes[axes_number].legend(fontsize="large")
-
-    axes_number =axes_number +1
-
-# Set full plot title
-fig.suptitle('Number of infections predicted by each particle within each window'.format(t))
-
-
-# ### Model predictions for future
-
-# #### Set up OpenCL runner
-
-# In[32]:
-
-
-# Initialise the class so that its ready to run the model.
-OpenCLRunner.init(iterations = 105,  repetitions = 5,observations = cases_devon_weekly, use_healthier_pop = True, 
-    use_gpu = True, store_detailed_counts = False, parameters_file = PARAMETERS_FILE,opencl_dir = OPENCL_DIR,
-    snapshot_filepath = SNAPSHOT_FILEPATH,num_seed_days = 7) 
-# Set constants 
-const_params_dict = { "current_risk_beta": current_risk_beta_val,"home": 1.0}
-OpenCLRunner.set_constants(const_params_dict)
-
-
-# ### Use parameters from dynamic calibration process to run model for 105 days
-
-# In[35]:
-
-
-# Define the number of samples to take from the posterior distribution of parameters
-N_samples = 30
-
-# # Create dictionary to store results for each window
-windows_dict ={}
-
-for window in ['w1', 'w2']:
-
-    # Define abc_history object from final window
-    abc_history = history_dict[window]
-
-    # Get dataframe of posterior parameter values
-    df, w = abc_history.get_distribution(m=0, t=abc_history.max_t)
-
-    # Sample from the dataframe of posteriors using KDE
-    kde = MultivariateNormalTransition(scaling=1)
-    kde.fit(df, w)
-    samples = kde.rvs(N_samples)
-
-    # Now run N models and store the results of each one
-    distance_l, sim_l, obs_l, out_params_l,out_calibrated_params_l, summaries_l = [],[],[],[],[],[] 
-
-    negative_count = 0  # Count the number of negatives returned in the KDE posterior
-    for i, sample in samples.iterrows():
-        # Check for negatives. If needed, resample
-        while (sample < 0).values.any():
-            #print("Found negatives. Resampling")
-            negative_count += 1
-            sample = kde.rvs()
-            # Added in this line as the sample was in the wrong format for the while loop
-            sample = pd.Series(sample)
-
-        # Create a dictionary with the parameters and their values for this sample
-        param_values = sample.to_dict()
-        #print(param_values)
-
-        # _summaries = 
-        (_distance, _sim, _obs, _out_params, _summaries) =             OpenCLRunner.run_model_with_params_abc(param_values, return_full_details=True)
-        #print(f"distance: {_distance}.")
-
-        distance_l.append(_distance)
-        sim_l.append(_sim)
-        obs_l.append(_obs)
-        out_params_l.append(_out_params)
-        out_calibrated_params_l.append(param_values)
-        summaries_l.append(_summaries)
-
-    print(f"Finished sampling. Ignored {negative_count} negative samples.")
-
-    # add to dictionary
-    windows_dict[window] = {'distance': distance_l, 'sim': sim_l, 'obs':obs_l, 'summaries': summaries_l, 
-                           'out_calibrated_params': out_calibrated_params_l, 'out_params': out_params_l}
-
-
-# #### Plot the individual results for each sample and compare to observations
-
-# In[33]:
-
-
-windows= ['w1','w2']
-
-# create 3x1 subplots
-fig, axs = plt.subplots(nrows=2, ncols=1, constrained_layout=True, figsize = (12,8))
-fig.suptitle('Predicted cases for 105 days')
-
-# clear subplots
-for ax in axs:
-    ax.remove()
-
-# add subfigure per subplot
-gridspec = axs[0].get_subplotspec().get_gridspec()
-subfigs = [fig.add_subfigure(gs) for gs in gridspec]
-
-windows_i = 0
-for row, subfig in enumerate(subfigs):
-    subfig.suptitle('Window {}'.format(row+1), fontsize = 15)
-    this_windows_dict = windows_dict[windows[windows_i]]
-    # create 1x3 subplots per subfig
-    axs = subfig.subplots(nrows=1, ncols=2, sharey= True)
-    for col, ax in enumerate(axs):
         
-        # Plot model values
-        _distance = np.array(this_windows_dict['distance'])  # Easier to do maths on np.array
-        distance_norm = (_distance - min(_distance)) / (max(_distance) - min(_distance))
-        
-        # Plot observations
-        if col == 0:
-            x = range(len(this_windows_dict['sim'][0]))
-            for i in range(len(this_windows_dict['summaries'])):
-                ax.plot(x, this_windows_dict['sim'][i],
-                color="black", alpha=1 - distance_norm[i]) # (1-x because high distance is bad)
-            ax.plot(x, cases_devon_daily_summed_weekly[0:int((105/7))], label="Observations", linewidth=5, color="blue")
-            ax.set_title('Weekly')    
-        elif col ==1:
-            x = range(len(OpenCLRunner.get_cumulative_daily_infections(this_windows_dict['summaries'][1])))
-            for i in range(len(this_windows_dict['summaries'])):
-                ax.plot(x, OpenCLRunner.get_cumulative_daily_infections(this_windows_dict['summaries'][i]),
-                color="black", alpha=1 - distance_norm[i]) # (1-x because high distance is bad)
-            ax.plot(x, cases_devon_daily[0:105], label="Observations", linewidth = 5, color="blue")
-            ax.set_title('Daily')
-    
-    # move on to next window
-    windows_i = windows_i+1
+    fname = "{}windows_window{}, {}pops_Crb{}.pkl".format(windows, window_number, n_pops, current_risk_beta_val)
+    with open( fname, "wb" ) as f:
+            pickle.dump( history_dict, f)
 
 
-# ### Run model with single 'best' estimate of parameter values 
 
-# #### Find the sample drawn from the posterior distribution which has the smallest distance (best performing!)
-
-# In[51]:
-
-
-# Find the index of the lowest distance value
-best_params_dict = {}
-best_sim_dict = {}
-
-for window in ['w1', 'w2']:
-    # Find the index of the lowest distance value
-    best_model_idx = np.argmin(windows_dict[window]['distance'])
-    # Find the corresponding parameter values
-    best_params = windows_dict[window]['out_calibrated_params'][best_model_idx]
-
-    ## Run model with these best parameters
-    OpenCLRunner.update(store_detailed_counts=True)  # Temporarily output age breakdowns
-    (distance_bestparams, sim_bestparams, obs_bestparams, out_params_bestparams, summaries_bestparams) = OpenCLRunner.run_model_with_params_abc(
-        best_params, return_full_details=True, quiet = True)
-    OpenCLRunner.update(store_detailed_counts=STORE_DETAILED_COUNTS)
-
-    # Add to dictionary
-    best_params_dict['{}'.format(window)]= best_params
-    best_sim_dict['{}'.format(window)] = sim_bestparams
-
-
-# #### See how the parameters from the particle with the lowest distance relate to the marginal posteriors
-
-# In[52]:
-
-
-# define colour map
-evenly_spaced_interval = np.linspace(0.35, 1, 3)
-colors = [cm.Greens(x) for x in evenly_spaced_interval]
-
-fig, axes = plt.subplots(3,int(len(original_priors)/2), figsize=(12,10))
-for i, param in enumerate(original_priors.keys()):
-    color_i =0
-    ax = axes.flat[i]  
-    for history_name, history in history_dict.items():
-        color = colors[color_i]
-        df, w = history.get_distribution(m=0, t=history.max_t)
-        pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
-                label=history_name, linewidth = 4,
-                color= color)
-        ax.legend(fontsize="small")
-        ax.set_title(f"{param}")
-        handles, labels = ax.get_legend_handles_labels()
-        ax.get_legend().remove()
-        color_i = color_i +1
-        ax.axvline(x=best_params[param], color="grey", linestyle="solid")
-    ax.text(x=best_params[param], y=0.9*ax.get_ylim()[1], s=str(round(best_params[param],3)), fontsize=8)
-    ax.set_title(f"{param}")    
-fig.legend(handles, labels, loc='center right', fontsize = 17,
-            bbox_to_anchor=(1.01, 0.17))
-          # ncol = 8, bbox_to_anchor=(0.5, -0.07))
-axes[2,2].set_axis_off()
-axes[2,1].set_axis_off()
-fig.tight_layout()
-fig.show()
-# fig.savefig("Plots/8windows_14days_each_finalpop.jpg")
-
-
-# #### Run model with 'best' parameter values
-
-# In[57]:
-
-
-fig, ax = plt.subplots(1,1)
-# ax.plot(x, sim_manualcalibration, label="manual_calibration", color="green")
-ax.plot(range(len(cases_devon_daily_summed_weekly[0:(int(ITERATIONS/7))])), 
-       cases_devon_daily_summed_weekly[0:(int(ITERATIONS/7))], label="obs", color="blue")
-
-for window in ['w1', 'w2']:
-    best_sim = best_sim_dict["{}".format(window)]
-    col = 'red' if window == 'w1' else 'green'
-    # Add to plot
-    ax.plot(range(len(best_sim)), best_sim, label="BestParams - {}".format(window), color=col,
-           linestyle='solid')
-    ax.legend()
-
-
-# ### Compare spatial distribution
-# 
-# Can't do this currently as OpenCLRunner doesn't return a breakdown by MSOA
-
-# ### Save/pickle
-
-# In[41]:
-
-
-fname = "2windows_7seeds_OldDistance_abc.pkl"
-with open( fname, "wb" ) as f:
-        pickle.dump( history, f)
 
