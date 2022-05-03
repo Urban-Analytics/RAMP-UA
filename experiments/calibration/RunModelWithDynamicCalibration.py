@@ -63,9 +63,11 @@ import logging
 logging.getLogger("pyopencl").setLevel(logging.ERROR)
 
 # Import arbitrary distribution class for using posterior estimates as new priors
+sys.path.append("/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration")
 from arbitrary_distribution import ArbitraryDistribution, GreaterThanZeroParameterTransition
 
 # RAMP model
+sys.path.append("/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration")
 sys.path.append("../../")
 from microsim.initialisation_cache import InitialisationCache
 
@@ -318,7 +320,7 @@ n_pops = 4
 
 ## ***********************  
 # Loop through each window
-for window_number in range(5, windows + 1):
+for window_number in range(1, windows + 1):
     print("Window number: ", window_number)
 
     # Edit the da_window size in the admin params
@@ -332,12 +334,13 @@ for window_number in range(5, windows + 1):
 
     # Define priors
     # If first window, then use user-specified (original) priors
-    if window_number == 6:
-        fname = "/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration/7windows_window5, 4pops_Crb0.019.pkl"
-        with open(fname, "rb") as f:
-                  history_dict = pickle.load(f)
-        abc_history = history_dict['w4']
-        priors = ArbitraryDistribution(abc_history)
+    if window_number == 1:
+        priors = original_priors
+        # fname = "/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration/7windows_window{}, 4pops_Crb0.019.pkl".format(window_number-1)
+        # with open(fname, "rb") as f:
+        #           history_dict = pickle.load(f)
+        # abc_history = history_dict['w{}'.format(window_number-1)]
+        # priors = ArbitraryDistribution(abc_history)
         
     # If a subsequent window, then generate distribution from posterior from previous window
     else:
@@ -378,9 +381,9 @@ for window_number in range(5, windows + 1):
         weights_dict["w{}, pop{}".format(window_number, t)] = w_t1
         history_dict["w{}".format(window_number)] = abc_history
         
-    fname = "{}windows_window{}, {}pops_Crb{}.pkl".format(windows, window_number, n_pops, current_risk_beta_val)
-    with open( fname, "wb" ) as f:
-            pickle.dump( history_dict, f)
+    # fname = "{}windows_window{}, {}pops_Crb{}_new.pkl".format(windows, window_number, n_pops, current_risk_beta_val)
+    # with open( fname, "wb" ) as f:
+    #         pickle.dump( history_dict, f)
 
 
 
