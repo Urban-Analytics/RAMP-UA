@@ -312,9 +312,8 @@ dfs_dict, weights_dict, history_dict = {}, {},{}
 starting_windows_time = datetime.datetime.now()
 
 # Define number of and number of populations to run for,
-windows = 1
+windows = 7
 n_pops = 4
-
 
 ## ***********************
 
@@ -324,8 +323,8 @@ for window_number in range(1, windows + 1):
     print("Window number: ", window_number)
 
     # Edit the da_window size in the admin params
-    admin_params['run_length'] = admin_params['run_length'] * window_number
-    print("Running for {} days".format(da_window_size * window_number))
+    admin_params['run_length'] =  da_window_size * window_number
+    print("Running for {} days".format(admin_params['run_length']))
 
     # Create template for model
     template = OpenCLWrapper(const_params_dict, **admin_params)

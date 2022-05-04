@@ -117,7 +117,7 @@ class OpenCLRunner:
             raise Exception(f"Lengths should be the same, not {len(obs)}) and {len(sim)}")
         if np.array(obs).shape != np.array(sim).shape:
             raise Exception("fShapes should be the same")
-
+        #print("length of obs: ", len(obs), "length of sim: ", len(sim))
         return np.linalg.norm(np.array(obs) - np.array(sim))
 
     @staticmethod
