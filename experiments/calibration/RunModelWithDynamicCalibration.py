@@ -312,7 +312,7 @@ dfs_dict, weights_dict, history_dict = {}, {},{}
 starting_windows_time = datetime.datetime.now()
 
 # Define number of and number of populations to run for,
-windows = 7
+windows = 1
 n_pops = 4
 
 
@@ -359,7 +359,7 @@ for window_number in range(1, windows + 1):
         #transition=transition,  # Define how to transition from one population to the next
 
     # Prepare to run the model
-    db_path = ("sqlite:///" + "ramp_da.db")  # Path to database
+    db_path = ("sqlite:///" + "ramp_da_new.db")  # Path to database
 
     # abc.new() needs the database location and any observations that we will use (these are passed to the
     # distance_function provided to pyabc.ABCSMC above). Currently the observations are provided to the model
@@ -370,20 +370,20 @@ for window_number in range(1, windows + 1):
     # Run model
     abc_history = abc.run(max_nr_populations=n_pops)
 
-    # Save some info on the posterior parameter distributions.
-    for t in range(0, abc.history.max_t + 1):
+    # # Save some info on the posterior parameter distributions.
+    # for t in range(0, abc.history.max_t + 1):
 
-        # for this t (population) extract the 100 particle parameter values, and their weights
-        df_t1, w_t1 = abc.history.get_distribution(m=0, t=t)
+    #     # for this t (population) extract the 100 particle parameter values, and their weights
+    #     df_t1, w_t1 = abc.history.get_distribution(m=0, t=t)
 
-        # Save these for use in plotting the prior on the plot of parameter values in each population
-        dfs_dict["w{},pop{}".format(window_number, t)] = df_t1
-        weights_dict["w{}, pop{}".format(window_number, t)] = w_t1
-        history_dict["w{}".format(window_number)] = abc_history
+    #     # Save these for use in plotting the prior on the plot of parameter values in each population
+    #     dfs_dict["w{},pop{}".format(window_number, t)] = df_t1
+    #     weights_dict["w{}, pop{}".format(window_number, t)] = w_t1
+    #     history_dict["w{}".format(window_number)] = abc_history
         
-    # fname = "{}windows_window{}, {}pops_Crb{}_new.pkl".format(windows, window_number, n_pops, current_risk_beta_val)
-    # with open( fname, "wb" ) as f:
-    #         pickle.dump( history_dict, f)
+    fname = "{}windows_window{}, {}pops_Crb{}_new2.pkl".format(windows, window_number, n_pops, current_risk_beta_val)
+    with open( fname, "wb" ) as f:
+             pickle.dump(abc_history, f)
 
 
 
