@@ -21,3 +21,4 @@ pip isntall pyopengl
 
 ramp-ua-min
 conda create --name ramp-ua-min -c conda-forge python=3.7 pyopencl=2020.2.2 numpy pandas=1.0.3 geopandas matplotlib
+pip install glfw imgui pyopengl
