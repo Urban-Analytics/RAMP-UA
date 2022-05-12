@@ -50,6 +50,7 @@ import matplotlib.pyplot as plt
 import sys
 import datetime
 from matplotlib import cm
+import time
 
 # os.chdir("C:/Users/gy17m2a/OneDrive - University of Leeds/Project/RAMP-UA/experiments/calibration")
 os.chdir("/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration")
@@ -86,6 +87,13 @@ LOAD_PICKLES = True
 # Cases_devon_daily is created through linear interpolation of the weekly data. This daily data is required for seeding the model. Because the interpolation is carried out for each MSOA seperately, when the data is joined back together for the whole of Devon it is not exactly equivalent to cases_devon_weekly. 
 # 
 # Currently, we are using the original cases_devon_weekly data in the distance function to evaluate the performance of the model. This makes sense because it is the most accurate weekly data that we have. However, it means when comparing the weekly model results to the observations, the model doesn't seem to be exactly the same as the observations, even during the seeding process. (Within the distance function all particles will be equally far from the observations during the seeding process, so shouldn't negatively affect things in this sense).
+
+
+# In[2]:
+# Generate unique timestamp
+import time
+seconds = int(time.time())
+
 
 # In[2]:
 
@@ -313,14 +321,17 @@ starting_windows_time = datetime.datetime.now()
 
 # Define number of and number of populations to run for,
 windows = 8
-n_pops = 10
-restart = True
-next_pop = 4
+n_pops = 20
+restart = False
+next_pop = 7
+n_particles = 100
 
+print("Running for {} windows, with {} particles per population and {} populations".format(windows, n_particles, n_pops))
 ## ***********************  
 # Loop through each window
 if restart == False:
   for window_number in range(1, windows + 1):
+      window_start_time = time.time()
       print("Window number: ", window_number)
   
       # Edit the da_window size in the admin params
@@ -348,13 +359,14 @@ if restart == False:
           # summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
           distance_function=OpenCLWrapper.dummy_distance,  # Distance function
           sampler=pyabc.sampler.SingleCoreSampler(),
-          transitions=GreaterThanZeroParameterTransition())
+          transitions=GreaterThanZeroParameterTransition(),
+          population_size = n_particles)
           # Single core because the model is parallelised anyway (and easier to debug)
           # sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
           #transition=transition,  # Define how to transition from one population to the next
   
       # Prepare to run the model
-      db_path = ("sqlite:///" + "ramp_da_new.db")  # Path to database
+      db_path = ("sqlite:///" + "ramp_da_{}.db".format(seconds))  # Path to database
   
       # abc.new() needs the database location and any observations that we will use (these are passed to the
       # distance_function provided to pyabc.ABCSMC above). Currently the observations are provided to the model
@@ -365,70 +377,96 @@ if restart == False:
       # Run model
       abc_history = abc.run(max_nr_populations=n_pops)
   
+      # Save some info on the posterior parameter distributions.
+      for t in range(0, abc.history.max_t + 1):
+    
+        # for this t (population) extract the 100 particle parameter values, and their weights
+        df, w = abc.history.get_distribution(m=0, t=t)
+    
+        # Save these for use in plotting the prior on the plot of parameter values in each population
+        dfs_dict["w{},pop{}".format(window_number, t)] = df
+        weights_dict["w{}, pop{}".format(window_number, t)] = w
+        history_dict["w{}".format(window_number)] = abc_history
+           
+        # Add weights to dataframe
+        df['weights'] = w
+        
+        # Save df
+        df.to_csv("Outputs/New/df_t{}_{}windows_window{}, {}pops_{}particles_Crb{}_{}.csv".format(t, windows, window_number, n_pops, n_particles, current_risk_beta_val, seconds))
+        
       # Save abc_history object    
-      fname = "Outputs/{}windows_window{}, {}pops_Crb{}.pkl".format(windows, window_number, n_pops, current_risk_beta_val)
+      fname = "Outputs/New/abc_history_{}windows_window{}, {}pops_{}particles_Crb{}_{}.pkl".format(windows, window_number, n_pops, n_particles, current_risk_beta_val, seconds)
       with open( fname, "wb" ) as f:
                pickle.dump(abc_history, f)
 
 
-
-if restart == True:
-  # Loop through each window
-  for window_number in range(next_pop, windows + 1):
-      print("Window number: ", window_number)
+# if restart == True:
+#   # Loop through each window
+#   for window_number in range(next_pop, windows + 1):
+#       print("Window number: ", window_number)
   
-      # Edit the da_window size in the admin params
-      admin_params['run_length'] =  da_window_size * window_number
-      print("Running for {} days".format(admin_params['run_length']))
+#       # Edit the da_window size in the admin params
+#       admin_params['run_length'] =  da_window_size * window_number
+#       print("Running for {} days".format(admin_params['run_length']))
   
-      # Create template for model
-      template = OpenCLWrapper(const_params_dict, **admin_params)
-      # Not sure why this is needed. Wthout it we get an error when passing the template object to ABCSMC below
-      template.__name__ = OpenCLWrapper.__name__
+#       # Create template for model
+#       template = OpenCLWrapper(const_params_dict, **admin_params)
+#       # Not sure why this is needed. Wthout it we get an error when passing the template object to ABCSMC below
+#       template.__name__ = OpenCLWrapper.__name__
   
-      # Define priors
-      # If first window, then use user-specified (original) priors
-      if window_number == next_pop:
-          fname = "/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration/{}windows_window{}, {}pops_Crb0.019.pkl".format(windows, window_number-1, n_pops)
-          print(fname)
-          with open(fname, "rb") as f:
-                     abc_history = pickle.load(f)
-          print(abc_history)
-          #abc_history = history_dict['w{}'.format(window_number-1)]
-          priors = ArbitraryDistribution(abc_history)
+#       # Define priors
+#       # If first window, then use user-specified (original) priors
+#       if window_number == next_pop:
+#           fname = "/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration/{}windows_window{}, {}pops_Crb0.019.pkl".format(windows, window_number-1, n_pops)
+#           print(fname)
+#           with open(fname, "rb") as f:
+#                      abc_history = pickle.load(f)
+#           print(abc_history)
+#           #abc_history = history_dict['w{}'.format(window_number-1)]
+#           priors = ArbitraryDistribution(abc_history)
           
-      # If a subsequent window, then generate distribution from posterior from previous window
-      else:
-          priors = ArbitraryDistribution(abc_history)
+#       # If a subsequent window, then generate distribution from posterior from previous window
+#       else:
+#           priors = ArbitraryDistribution(abc_history)
   
-      # Set up model
-      abc = pyabc.ABCSMC(
-          models=template,  # Model (could be a list)
-          parameter_priors=priors,  # Priors (could be a list)
-          # summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
-          distance_function=OpenCLWrapper.dummy_distance,  # Distance function
-          sampler=pyabc.sampler.SingleCoreSampler(),
-          transitions=GreaterThanZeroParameterTransition())
-          # Single core because the model is parallelised anyway (and easier to debug)
-          # sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
-          #transition=transition,  # Define how to transition from one population to the next
+#       # Set up model
+#       abc = pyabc.ABCSMC(
+#           models=template,  # Model (could be a list)
+#           parameter_priors=priors,  # Priors (could be a list)
+#           # summary_statistics=OpenCLWrapper.summary_stats,  # Summary statistics function (output passed to 'distance')
+#           distance_function=OpenCLWrapper.dummy_distance,  # Distance function
+#           sampler=pyabc.sampler.SingleCoreSampler(),
+#           transitions=GreaterThanZeroParameterTransition())
+#           # Single core because the model is parallelised anyway (and easier to debug)
+#           # sampler=pyabc.sampler.MulticoreEvalParallelSampler()  # The default sampler
+#           #transition=transition,  # Define how to transition from one population to the next
   
-      # Prepare to run the model
-      db_path = ("sqlite:///" + "ramp_da_new.db")  # Path to database
+#       # Prepare to run the model
+#       db_path = ("sqlite:///" + "ramp_da_{}.db".format(seconds))  # Path to database
   
-      # abc.new() needs the database location and any observations that we will use (these are passed to the
-      # distance_function provided to pyabc.ABCSMC above). Currently the observations are provided to the model
-      # when it is initialised and these are then used at the end of the model run() function. So they don't
-      # need to be provided here.
-      run_id = abc.new(db=db_path,observed_sum_stat=None)  # {'observation': observations_array, "individuals": individuals_df}
+#       # abc.new() needs the database location and any observations that we will use (these are passed to the
+#       # distance_function provided to pyabc.ABCSMC above). Currently the observations are provided to the model
+#       # when it is initialised and these are then used at the end of the model run() function. So they don't
+#       # need to be provided here.
+#       run_id = abc.new(db=db_path,observed_sum_stat=None)  # {'observation': observations_array, "individuals": individuals_df}
   
-      # Run model
-      abc_history = abc.run(max_nr_populations=n_pops)
+#       # Run model
+#       abc_history = abc.run(max_nr_populations=n_pops)
   
-  
-      # Save abc_history object    
-      fname = "Outputs/{}windows_window{}, {}pops_Crb{}.pkl".format(windows, window_number, n_pops, current_risk_beta_val)
-      with open( fname, "wb" ) as f:
-               pickle.dump(abc_history, f)
+#       # Save some info on the posterior parameter distributions.
+#       for t in range(0, abc.history.max_t + 1):
+    
+#         # for this t (population) extract the 100 particle parameter values, and their weights
+#         df_t, w_t = abc.history.get_distribution(m=0, t=t)
+    
+#         # Save these for use in plotting the prior on the plot of parameter values in each population
+#         dfs_dict["w{},pop{}".format(window_number, t)] = df_t1
+#         weights_dict["w{}, pop{}".format(window_number, t)] = w_t1
+#         history_dict["w{}".format(window_number)] = abc_history
+        
+#         # Save abc_history object    
+#       fname = "Outputs/{}windows_window{}, {}pops_Crb{}_{}.pkl".format(windows, window_number, n_pops, current_risk_beta_val, seconds)
+#       with open( fname, "wb" ) as f:
+#                pickle.dump(abc_history, f)
 
 
