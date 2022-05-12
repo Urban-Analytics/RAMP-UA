@@ -11,7 +11,7 @@
 ### Install pocl
 Download the wheel from: https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyopencl  
 Selecting correct version for python version and whether computer is 32 or 64 bit. E.g. for Python 3.7 and 64 bit system then choose 
-```pyopencl-2022.1-cp37-cp37m-win_amd64.whl```
+```pyopencl-2022.1-cp37-cp37m-win_amd64.whl```  
 Then ```pip install C:/Users/gy17m2a/Downloads/pyopencl-2022.1-cp37-cp37m-win_amd64.whl```
 
 ### Install further packages
