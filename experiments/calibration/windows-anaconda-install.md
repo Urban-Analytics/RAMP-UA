@@ -12,6 +12,7 @@
 Download the wheel from: https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyopencl  
 Selecting correct version for python version and whether computer is 32 or 64 bit. E.g. for Python 3.7 and 64 bit system then choose 
 ```pyopencl-2022.1-cp37-cp37m-win_amd64.whl```  
+
 Then ```pip install C:/Users/gy17m2a/Downloads/pyopencl-2022.1-cp37-cp37m-win_amd64.whl```
 
 ### Install further packages
@@ -22,8 +23,7 @@ Then ```pip install C:/Users/gy17m2a/Downloads/pyopencl-2022.1-cp37-cp37m-win_am
 ```pip install pyopengl```  
 
 ### Install rpy2
-rpy2 wheel? was this necessary?
-In ```microsim/main.py``` add the following to the script:
-
-```os.environ['R_HOME'] = 'C:/Users/gy17m2a/AppData/Local/Programs/R/R-4.2.0' #path to your R installation
-os.environ['R_USER'] = 'C:/ProgramData/Anaconda3/envs/analyse_results/Lib/site-packages/rpy2' #path depends on where you installed Python. Mine is the Anaconda distribution```
+rpy2 wheel? was this necessary?  
+In ```microsim/main.py``` add the following to the script:  
+```os.environ['R_HOME'] = 'C:/Users/gy17m2a/AppData/Local/Programs/R/R-4.2.0' #path to your R installation  
+os.environ['R_USER'] = 'C:/ProgramData/Anaconda3/envs/analyse_results/Lib/site-packages/rpy2' #path depends on where you installed Python. Mine is the Anaconda distribution```  
