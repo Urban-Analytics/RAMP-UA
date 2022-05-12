@@ -25,5 +25,5 @@ Then ```pip install C:/Users/gy17m2a/Downloads/pyopencl-2022.1-cp37-cp37m-win_am
 ### Install rpy2
 rpy2 wheel? was this necessary?  
 In ```microsim/main.py``` add the following to the script:  
-```os.environ['R_HOME'] = 'C:/Users/gy17m2a/AppData/Local/Programs/R/R-4.2.0' #path to your R installation  
-os.environ['R_USER'] = 'C:/ProgramData/Anaconda3/envs/analyse_results/Lib/site-packages/rpy2' #path depends on where you installed Python. Mine is the Anaconda distribution```  
+```os.environ['R_HOME'] = 'C:/Users/gy17m2a/AppData/Local/Programs/R/R-4.2.0' #path to your R installation```  
+```os.environ['R_USER'] = 'C:/ProgramData/Anaconda3/envs/analyse_results/Lib/site-packages/rpy2' #path depends on where you installed Python. Mine is the Anaconda distribution```  
