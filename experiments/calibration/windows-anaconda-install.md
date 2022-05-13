@@ -21,6 +21,7 @@ Then ```pip install C:/Users/gy17m2a/Downloads/pyopencl-2022.1-cp37-cp37m-win_am
 ```pip install glfw```  
 ```pip install imgui```  
 ```pip install pyopengl```  
+```pip install tqdm```  
 
 ### Install rpy2
 rpy2 wheel? was this necessary?  
