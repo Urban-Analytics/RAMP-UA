@@ -24,6 +24,10 @@ Then ```pip install C:/Users/gy17m2a/Downloads/pyopencl-2022.1-cp37-cp37m-win_am
 ```pip install tqdm```  
 
 ### Install rpy2
+Check R is installed on the computer
+```conda install rpy2```
+```pip install tzlocal```
+```pip install convertbng```
 rpy2 wheel? was this necessary?  
 In ```microsim/main.py``` add the following to the script:  
 ```os.environ['R_HOME'] = 'C:/Users/gy17m2a/AppData/Local/Programs/R/R-4.2.0'``` #path to your R installation  
