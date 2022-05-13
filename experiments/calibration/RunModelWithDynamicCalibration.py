@@ -53,7 +53,7 @@ from matplotlib import cm
 import time
 
 # os.chdir("C:/Users/gy17m2a/OneDrive - University of Leeds/Project/RAMP-UA/experiments/calibration")
-os.chdir("/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration")
+#os.chdir("/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration")
 
 # PYABC (https://pyabc.readthedocs.io/en/latest/)
 import pyabc
@@ -68,7 +68,7 @@ sys.path.append("/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration")
 from arbitrary_distribution import ArbitraryDistribution, GreaterThanZeroParameterTransition
 
 # RAMP model
-sys.path.append("/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration")
+#sys.path.append("/nfs/a319/gy17m2a/RAMP-UA/experiments/calibration")
 sys.path.append("../../")
 from microsim.initialisation_cache import InitialisationCache
 
@@ -93,7 +93,7 @@ LOAD_PICKLES = True
 # Generate unique timestamp
 import time
 seconds = int(time.time())
-
+print(seconds)
 
 # In[2]:
 
