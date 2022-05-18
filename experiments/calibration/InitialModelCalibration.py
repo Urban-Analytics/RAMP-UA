@@ -73,7 +73,11 @@ import logging
 logging.getLogger("pyopencl").setLevel(logging.ERROR)
 
 # RAMP model
+sys.path.append("../../")
 from microsim.initialisation_cache import InitialisationCache
+
+# Import arbitrary distribution class for using posterior estimates as new priors
+from arbitrary_distribution import ArbitraryDistribution, GreaterThanZeroParameterTransition
 
 # Bespoke RAMP classes for running the model
 from opencl_runner import OpenCLWrapper  # Some additional functions to simplify running the OpenCL model
@@ -159,7 +163,7 @@ cases_devon_daily_summed_weekly = cases_devon_daily[week_end_days]
 ITERATIONS = 133  # Number of iterations to run for
 assert (ITERATIONS /7).is_integer() # check it is divisible by 7 
 NUM_SEED_DAYS = 14  # Number of days to seed the population
-USE_GPU = True
+USE_GPU = False
 STORE_DETAILED_COUNTS = False
 REPETITIONS = 5
 USE_HEALTHIER_POP = True
@@ -278,10 +282,10 @@ print(f"Activity locations: {activity_locations}")
 
 
 # Dictionary with parameters for running model
-admin_params = {"quiet": True, "use_gpu": True, "store_detailed_counts": True, "start_day": 0,  "run_length": run_length,
+admin_params = {"quiet": True, "use_gpu": USE_GPU, "store_detailed_counts": True, "start_day": 0,  "run_length": run_length,
                 "current_particle_pop_df": None,  "parameters_file": PARAMETERS_FILE, "snapshot_file": SNAPSHOT_FILEPATH, 
                 "opencl_dir": OPENCL_DIR, "individuals_df": individuals_df, "observations_weekly_array": cases_devon_weekly,
-                'num_seed_days' :14}
+                'num_seed_days' :NUM_SEED_DAYS}
 
 
 # ### Set-up ABC
@@ -343,303 +347,301 @@ abc_history.n_populations
 
 # In[184]:
 
-
-fname = "InitialModelCalibration-10pops-133days.pkl"
+fname = "InitialModelCalibration-20pops-200particles-133days.pkl"
 with open( fname, "wb" ) as f:
         pickle.dump(abc_history, f)
 
+# # ### Analyse the posterior parameter distribution
+# # Have a look at the posterior distribution for the final population. This is made up of the posterior estimates for each particle in the popualtion and the associated weight.
+# # 
+# # Note about the distrubtion returned by get_distribution: With each iteration, the algorithm decreases epsilon. So in the end all particles should be within some small distance, epsilon, of the observations. However, within this range, the particles will be randomly distributed. The weight of the particle is a function of the prior and of the number of other particles that are close by, so we wouldn't necessarily expect that particles with high weight should have better fitness than those of low weight. It's just looking at the wrong thing.
 
-# ### Analyse the posterior parameter distribution
-# Have a look at the posterior distribution for the final population. This is made up of the posterior estimates for each particle in the popualtion and the associated weight.
-# 
-# Note about the distrubtion returned by get_distribution: With each iteration, the algorithm decreases epsilon. So in the end all particles should be within some small distance, epsilon, of the observations. However, within this range, the particles will be randomly distributed. The weight of the particle is a function of the prior and of the number of other particles that are close by, so we wouldn't necessarily expect that particles with high weight should have better fitness than those of low weight. It's just looking at the wrong thing.
-
-# In[23]:
-
-
-_df, _w = abc_history.get_distribution(m=0, t=abc_history.max_t)
-# Merge dataframe and weights and sort by weight (highest weight at the top)
-_df['weight'] = _w
-posterior_df = _df.sort_values('weight', ascending=False).reset_index()
-posterior_df
+# # In[23]:
 
 
-# #### Plot the marginal posteriors  
-# The estimates of the optimal values for each parameter individually
-
-# In[25]:
-
-
-fig, axes = plt.subplots(3,3, figsize=(12,10))
-# define colour map
-evenly_spaced_interval = np.linspace(0.35, 1, 12)
-colors = [cm.Greens(x) for x in evenly_spaced_interval]
-
-for i, param in enumerate(original_priors.keys()):
-    ax = axes.flat[i]
-    # Add parameter priors
-    priors_x = np.linspace(-1, 2, 99)  # (specified so that we have some whole numbers)
-    ax.plot(priors_x, pyabc.Distribution(param=all_rv[param]).pdf({"param": priors_x}), 
-            color = 'black', label = 'Prior', linewidth  = 1, linestyle ='dashed')
-    # Add distributions
-    for t in range(abc_history.max_t + 1):
-        color = colors[t]
-        df, w = abc_history.get_distribution(m=0, t=t)
-        pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax, 
-            label=f"t={t}", 
-            #alpha=1.0 if t==0 else float(t)/history.max_t, # Make earlier populations transparent
-            color= 'black' if t==abc_history.max_t else color) # Make the last one black
-        if param!="work":
-            ax.set_xlim(-0.5,1.5)
-        if param =='work':
-             ax.set_xlim(-0.2,0.5)          
-        if param =='current_risk_beta':
-             ax.set_xlim(-0.2,0.5)                   
-        ax.legend(fontsize="small")
-        #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
-        #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
-        ax.set_title(f"{param}")
-axes[2,2].set_axis_off()        
-fig.tight_layout()
+# _df, _w = abc_history.get_distribution(m=0, t=abc_history.max_t)
+# # Merge dataframe and weights and sort by weight (highest weight at the top)
+# _df['weight'] = _w
+# posterior_df = _df.sort_values('weight', ascending=False).reset_index()
+# posterior_df
 
 
-# ### Analyse the model predictions within each ABC calibration population
+# # #### Plot the marginal posteriors  
+# # The estimates of the optimal values for each parameter individually
 
-# #### Store predictions and distances for each particle in each population 
-
-# In[26]:
+# # In[25]:
 
 
-# Create dictionary to store results for each population
-abc_sum_stats = {}
+# fig, axes = plt.subplots(3,3, figsize=(12,10))
+# # define colour map
+# evenly_spaced_interval = np.linspace(0.35, 1, 12)
+# colors = [cm.Greens(x) for x in evenly_spaced_interval]
 
-# Loop through each population
-for t in range(0,abc_history.max_t+1):
-    # Create lists to store values for each particle
-    data_daily_l = []
-    distances_l = []
+# for i, param in enumerate(original_priors.keys()):
+#     ax = axes.flat[i]
+#     # Add parameter priors
+#     priors_x = np.linspace(-1, 2, 99)  # (specified so that we have some whole numbers)
+#     ax.plot(priors_x, pyabc.Distribution(param=all_rv[param]).pdf({"param": priors_x}), 
+#             color = 'black', label = 'Prior', linewidth  = 1, linestyle ='dashed')
+#     # Add distributions
+#     for t in range(abc_history.max_t + 1):
+#         color = colors[t]
+#         df, w = abc_history.get_distribution(m=0, t=t)
+#         pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax, 
+#             label=f"t={t}", 
+#             #alpha=1.0 if t==0 else float(t)/history.max_t, # Make earlier populations transparent
+#             color= 'black' if t==abc_history.max_t else color) # Make the last one black
+#         if param!="work":
+#             ax.set_xlim(-0.5,1.5)
+#         if param =='work':
+#              ax.set_xlim(-0.2,0.5)          
+#         if param =='current_risk_beta':
+#              ax.set_xlim(-0.2,0.5)                   
+#         ax.legend(fontsize="small")
+#         #ax.axvline(x=posterior_df.loc[1,param], color="grey", linestyle="dashed")
+#         #ax.set_title(f"{param}: {posterior_df.loc[0,param]}")
+#         ax.set_title(f"{param}")
+# axes[2,2].set_axis_off()        
+# fig.tight_layout()
 
-    # Get the summary stats for this population
-    # ([1] means keep just the dataframe and not the array of weights)
-    weighted_sum_stats = abc_history.get_weighted_sum_stats_for_model(t=t)[1]
 
-    # Loop through each particle and save their distance and predictions into the lists
-    for particle_no in range(0,100):
-        # Get data for just this particle
-        particle_x_dict = weighted_sum_stats[particle_no]
-        # Get daily predictions
-        data_daily = particle_x_dict["model_daily_cumulative_infections"]     
-        # Add daily msoa predictions for this particle to list
-        data_daily_l.append(data_daily)
+# # ### Analyse the model predictions within each ABC calibration population
+
+# # #### Store predictions and distances for each particle in each population 
+
+# # In[26]:
+
+
+# # Create dictionary to store results for each population
+# abc_sum_stats = {}
+
+# # Loop through each population
+# for t in range(0,abc_history.max_t+1):
+#     # Create lists to store values for each particle
+#     data_daily_l = []
+#     distances_l = []
+
+#     # Get the summary stats for this population
+#     # ([1] means keep just the dataframe and not the array of weights)
+#     weighted_sum_stats = abc_history.get_weighted_sum_stats_for_model(t=t)[1]
+
+#     # Loop through each particle and save their distance and predictions into the lists
+#     for particle_no in range(0,100):
+#         # Get data for just this particle
+#         particle_x_dict = weighted_sum_stats[particle_no]
+#         # Get daily predictions
+#         data_daily = particle_x_dict["model_daily_cumulative_infections"]     
+#         # Add daily msoa predictions for this particle to list
+#         data_daily_l.append(data_daily)
         
-        # Add distances to list
-        distances_l.append(particle_x_dict['distance'])
+#         # Add distances to list
+#         distances_l.append(particle_x_dict['distance'])
     
-    # Add lists to dictionaries    
-    abc_sum_stats["t{}_distances".format(t)] = distances_l
-    abc_sum_stats["t{}_dailydata".format(t)] = data_daily_l
+#     # Add lists to dictionaries    
+#     abc_sum_stats["t{}_distances".format(t)] = distances_l
+#     abc_sum_stats["t{}_dailydata".format(t)] = data_daily_l
 
 
-# #### Create plot of daily cumulative infections with one subplot per population and one line per particle
+# # #### Create plot of daily cumulative infections with one subplot per population and one line per particle
 
-# In[153]:
+# # In[153]:
 
 
-# Create figure
-fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(15, 6), sharex=True)
+# # Create figure
+# fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(15, 6), sharex=True)
 
-# Loop through each population (t) and each axes on the subplot 
-for t,ax in zip(range(0,abc_history.max_t+1),axs.ravel()):
+# # Loop through each population (t) and each axes on the subplot 
+# for t,ax in zip(range(0,abc_history.max_t+1),axs.ravel()):
     
-    # Get the data for this population
-    data_daily_l = abc_sum_stats["t{}_dailydata".format(t)]
-    distance_l = abc_sum_stats["t{}_distances".format(t)]
+#     # Get the data for this population
+#     data_daily_l = abc_sum_stats["t{}_dailydata".format(t)]
+#     distance_l = abc_sum_stats["t{}_distances".format(t)]
     
-    # Normalise distance to 0-1 to calculate transparency
-    _distance = np.array(distance_l)  # Easier to do maths on np.array
-    distance_norm = (_distance - min(_distance)) / (max(_distance) - min(_distance))
+#     # Normalise distance to 0-1 to calculate transparency
+#     _distance = np.array(distance_l)  # Easier to do maths on np.array
+#     distance_norm = (_distance - min(_distance)) / (max(_distance) - min(_distance))
     
-    # Create x axis object, with position for each day 
-    day_nos = range(0,len(data_daily_l[t])) 
+#     # Create x axis object, with position for each day 
+#     day_nos = range(0,len(data_daily_l[t])) 
     
-    # For each particle, plot the predictions, coloured by distance
-    for i in range(0,len(data_daily_l)):
-        ax.plot(day_nos, data_daily_l[i],color="black", alpha=1-distance_norm[i])  # (1-x because high distance is bad)
+#     # For each particle, plot the predictions, coloured by distance
+#     for i in range(0,len(data_daily_l)):
+#         ax.plot(day_nos, data_daily_l[i],color="black", alpha=1-distance_norm[i])  # (1-x because high distance is bad)
 
-    # Add observations
-    ax.plot(day_nos, cases_devon_daily[0:len(data_daily_l[0])], label="Observations", linewidth = 3, color="darkred")
+#     # Add observations
+#     ax.plot(day_nos, cases_devon_daily[0:len(data_daily_l[0])], label="Observations", linewidth = 3, color="darkred")
 
-    # Apply labels
-    ax.set_title("Pop {}".format(t))
+#     # Apply labels
+#     ax.set_title("Pop {}".format(t))
 
-    # Set full plot title
-    fig.suptitle("Number of cases over time for each particle in population vs observations")
+#     # Set full plot title
+#     fig.suptitle("Number of cases over time for each particle in population vs observations")
 
-fig.text(0.5, 0.04, 'Day', ha='center')
-fig.text(0.07, 0.5, 'Number of infections', va='center', rotation='vertical')
-ax.legend(fontsize="medium")
-
-
-# #### Create plot of daily cumulative infections with one subplot per population and the line showing the predictions of the best performing particle
-
-# In[150]:
+# fig.text(0.5, 0.04, 'Day', ha='center')
+# fig.text(0.07, 0.5, 'Number of infections', va='center', rotation='vertical')
+# ax.legend(fontsize="medium")
 
 
-# Create figure
-fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(15, 6), sharex=True, sharey = True)
+# # #### Create plot of daily cumulative infections with one subplot per population and the line showing the predictions of the best performing particle
 
-# Loop through each population (t) and each axes on the subplot 
-for t, ax in zip(range(0,abc_history.max_t+1),axs.ravel()):
+# # In[150]:
+
+
+# # Create figure
+# fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(15, 6), sharex=True, sharey = True)
+
+# # Loop through each population (t) and each axes on the subplot 
+# for t, ax in zip(range(0,abc_history.max_t+1),axs.ravel()):
         
-    data_daily_l = abc_sum_stats["t{}_dailydata".format(t)]
-    distance_l = abc_sum_stats["t{}_distances".format(t)]
+#     data_daily_l = abc_sum_stats["t{}_dailydata".format(t)]
+#     distance_l = abc_sum_stats["t{}_distances".format(t)]
 
-    # Find the best particle
-    best_particle_idx = distance_l.index(min(distance_l))
+#     # Find the best particle
+#     best_particle_idx = distance_l.index(min(distance_l))
         
-    # Add observations
-    ax.plot(x, cases_devon_daily[0:len(data_daily_l[0])], label="Observations", linewidth = 3, color="darkred")
+#     # Add observations
+#     ax.plot(x, cases_devon_daily[0:len(data_daily_l[0])], label="Observations", linewidth = 3, color="darkred")
 
-    # Add the best particle
-    ax.plot(x, data_daily_l[best_particle_idx], color="green", linewidth = 3,label = 'Best particle')
+#     # Add the best particle
+#     ax.plot(x, data_daily_l[best_particle_idx], color="green", linewidth = 3,label = 'Best particle')
     
-    # Add text with distance value for best performing particle
-    ax.text(50, 60, 'Distance = {}'.format(round(distance_l[best_particle_idx],1)), fontsize = 10)
+#     # Add text with distance value for best performing particle
+#     ax.text(50, 60, 'Distance = {}'.format(round(distance_l[best_particle_idx],1)), fontsize = 10)
         
-    # Apply labels
-    ax.set_title("Pop {}".format(t))
+#     # Apply labels
+#     ax.set_title("Pop {}".format(t))
 
-fig.text(0.5, 0.04, 'Day', ha='center')
-fig.text(0.07, 0.5, 'Number of infections', va='center', rotation='vertical')
-fig.suptitle("Number of cases over time for best performing particle vs observations")
-
-
-# ## Find the optimal value for Current Risk Beta (and other parameters)
-
-# Plot the relationship between currrent risk beta and distance for the final population
-
-# In[141]:
+# fig.text(0.5, 0.04, 'Day', ha='center')
+# fig.text(0.07, 0.5, 'Number of infections', va='center', rotation='vertical')
+# fig.suptitle("Number of cases over time for best performing particle vs observations")
 
 
-# Get the list of distances for the final population
-distance_l = abc_sum_stats["t{}_distances".format(10)]
+# # ## Find the optimal value for Current Risk Beta (and other parameters)
 
-# Find the best particle (i.e. the minimum distance)
-best_particle_idx = distance_l.index(min(distance_l))
+# # Plot the relationship between currrent risk beta and distance for the final population
 
-# Get the parameter values associated with each particle in final population
-params_df, _w = abc_history.get_distribution(m=0, t=abc_history.max_t)
-
-# Plot once with all particles
-plt.scatter(params_df['current_risk_beta'], distance_l)
-# Plot with just best particle in a different colour
-plt.scatter(params_df['current_risk_beta'].iloc[best_particle_idx], distance_l[best_particle_idx], c = 'red')
-plt.xlabel('Current_risk_beta value')
-plt.ylabel('Distance')
+# # In[141]:
 
 
-# Plot the relationship between currrent risk beta and distance for each population
+# # Get the list of distances for the final population
+# distance_l = abc_sum_stats["t{}_distances".format(10)]
 
-# In[146]:
+# # Find the best particle (i.e. the minimum distance)
+# best_particle_idx = distance_l.index(min(distance_l))
+
+# # Get the parameter values associated with each particle in final population
+# params_df, _w = abc_history.get_distribution(m=0, t=abc_history.max_t)
+
+# # Plot once with all particles
+# plt.scatter(params_df['current_risk_beta'], distance_l)
+# # Plot with just best particle in a different colour
+# plt.scatter(params_df['current_risk_beta'].iloc[best_particle_idx], distance_l[best_particle_idx], c = 'red')
+# plt.xlabel('Current_risk_beta value')
+# plt.ylabel('Distance')
 
 
-# Create figure
-fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(15, 6), sharex=True, sharey = True)
+# # Plot the relationship between currrent risk beta and distance for each population
 
-# Loop through each population (t) and each axes on the subplot 
-for t, ax in zip(range(0,abc_history.max_t+1),axs.ravel()):
+# # In[146]:
+
+
+# # Create figure
+# fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(15, 6), sharex=True, sharey = True)
+
+# # Loop through each population (t) and each axes on the subplot 
+# for t, ax in zip(range(0,abc_history.max_t+1),axs.ravel()):
         
-    # Get the list of distances for the final population
-    distance_l = abc_sum_stats["t{}_distances".format(t)]
+#     # Get the list of distances for the final population
+#     distance_l = abc_sum_stats["t{}_distances".format(t)]
 
-    # Find the best particle (i.e. the minimum distance)
-    best_particle_idx = distance_l.index(min(distance_l))
+#     # Find the best particle (i.e. the minimum distance)
+#     best_particle_idx = distance_l.index(min(distance_l))
 
-    # Get the parameter values associated with each particle in final population
-    params_df, _w = abc_history.get_distribution(m=0, t=abc_history.max_t)
+#     # Get the parameter values associated with each particle in final population
+#     params_df, _w = abc_history.get_distribution(m=0, t=abc_history.max_t)
 
-#     plt.hist(params_df['current_risk_beta'], bins = 20)
-    ax.scatter(params_df['current_risk_beta'], distance_l)
-    ax.scatter(params_df['current_risk_beta'].iloc[best_particle_idx], distance_l[best_particle_idx], c = 'red')
-#     ax.xlabel('Current_risk_beta value')
-#     ax.ylabel('Distance')
+# #     plt.hist(params_df['current_risk_beta'], bins = 20)
+#     ax.scatter(params_df['current_risk_beta'], distance_l)
+#     ax.scatter(params_df['current_risk_beta'].iloc[best_particle_idx], distance_l[best_particle_idx], c = 'red')
+# #     ax.xlabel('Current_risk_beta value')
+# #     ax.ylabel('Distance')
 
-fig.text(0.5, 0.04, 'Day', ha='center')
-fig.text(0.07, 0.5, 'Number of infections', va='center', rotation='vertical')
-
-
-# For the final population find the best performing particle (i.e. the one with the minimum distance value) and get the parameter values associated with this particle
-
-# In[155]:
+# fig.text(0.5, 0.04, 'Day', ha='center')
+# fig.text(0.07, 0.5, 'Number of infections', va='center', rotation='vertical')
 
 
-# Get the list of distances for the final population
-distance_l = abc_sum_stats["t{}_distances".format(abc_history.max_t )]
+# # For the final population find the best performing particle (i.e. the one with the minimum distance value) and get the parameter values associated with this particle
 
-# Find the best particle (i.e. the minimum distance)
-best_particle_idx = distance_l.index(min(distance_l))
-
-# Get the parameter values associated with each particle in final population
-params_df, _w = abc_history.get_distribution(m=0, t=abc_history.max_t)
-
-# Find the parameters associated with the best particle
-best_params = params_df.iloc[best_particle_idx]
-best_params
+# # In[155]:
 
 
-# See how the 'optimal' parameter values relate to the marginal posterior distributions
+# # Get the list of distances for the final population
+# distance_l = abc_sum_stats["t{}_distances".format(abc_history.max_t )]
 
-# In[161]:
+# # Find the best particle (i.e. the minimum distance)
+# best_particle_idx = distance_l.index(min(distance_l))
 
+# # Get the parameter values associated with each particle in final population
+# params_df, _w = abc_history.get_distribution(m=0, t=abc_history.max_t)
 
-fig, axes = plt.subplots(3,3, figsize=(12,8))
-
-for i, param in enumerate(original_priors.keys()):
-    ax = axes.flat[i]
-    df, w = abc_history.get_distribution(m=0, t=abc_history.max_t)
-    pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
-            label=f"{param} PDF t={t}",
-            alpha=1.0 if t==0 else float(t)/abc_history.max_t, # Make earlier populations transparent
-            color= "black" if t==abc_history.max_t else None # Make the last one black)
-    ax.axvline(x=best_params[param], color="grey", linestyle="dashed")
-    ax.text(x=best_params[param], y=0.9*ax.get_ylim()[1], s=str(round(best_params[param],3)), fontsize=12)
-    ax.set_title(f"{param}")
-fig.suptitle("Optimal parameter values")
-fig.tight_layout()
+# # Find the parameters associated with the best particle
+# best_params = params_df.iloc[best_particle_idx]
+# best_params
 
 
-# Run the model with the 'optimal' parameter values
+# # See how the 'optimal' parameter values relate to the marginal posterior distributions
 
-# In[162]:
-
-
-OpenCLRunner.update(store_detailed_counts=True)  # Temporarily output age breakdowns
-(distance_bp, sim_bp, obs_bp, out_params_bp, summaries_bp) = OpenCLRunner.run_model_with_params_abc(
-    best_params, return_full_details=True, quiet = False)
-OpenCLRunner.update(store_detailed_counts=STORE_DETAILED_COUNTS)
+# # In[161]:
 
 
-# In[175]:
+# fig, axes = plt.subplots(3,3, figsize=(12,8))
+
+# for i, param in enumerate(original_priors.keys()):
+#     ax = axes.flat[i]
+#     df, w = abc_history.get_distribution(m=0, t=abc_history.max_t)
+#     pyabc.visualization.plot_kde_1d(df, w, x=param, ax=ax,
+#             label=f"{param} PDF t={t}",
+#             alpha=1.0 if t==0 else float(t)/abc_history.max_t, # Make earlier populations transparent
+#             color= "black" if t==abc_history.max_t else None # Make the last one black)
+#     ax.axvline(x=best_params[param], color="grey", linestyle="dashed")
+#     ax.text(x=best_params[param], y=0.9*ax.get_ylim()[1], s=str(round(best_params[param],3)), fontsize=12)
+#     ax.set_title(f"{param}")
+# fig.suptitle("Optimal parameter values")
+# fig.tight_layout()
 
 
-# Create figure
-fig, [ax1, ax2] = plt.subplots(nrows=1, ncols=2, figsize=(20, 8))
+# # Run the model with the 'optimal' parameter values
 
-##### daily data
-x = range(1, len(OpenCLRunner.get_cumulative_daily_infections(summaries_bp))+1)
-ax1.plot(x, OpenCLRunner.get_cumulative_daily_infections(summaries_bp), label="sim1", color="red")
-ax1.plot(x, cases_devon_daily[0:len(OpenCLRunner.get_cumulative_daily_infections(summaries_bp))], label="obs", color="blue")
-ax1.legend()
-ax1.tick_params(axis='both', which='major', labelsize=15)
-ax1.set_xlabel("Day", size=15)
-ax1.set_ylabel("Cases",size=15)
+# # In[162]:
 
-###### weekly data
-x = range(1, len(sim_bp)+1)
-ax2.plot(x, sim_bp, label="sim1", color="red")
-ax2.plot(x, obs_bp, label="obs", color="blue")
-ax2.legend()
-ax2.tick_params(axis='both', which='major', labelsize=15)
-ax2.set_xlabel("Week", size=15)
-ax2.set_ylabel("Cases",size=15)   
+
+# OpenCLRunner.update(store_detailed_counts=True)  # Temporarily output age breakdowns
+# (distance_bp, sim_bp, obs_bp, out_params_bp, summaries_bp) = OpenCLRunner.run_model_with_params_abc(
+#     best_params, return_full_details=True, quiet = False)
+# OpenCLRunner.update(store_detailed_counts=STORE_DETAILED_COUNTS)
+
+
+# # In[175]:
+
+
+# # Create figure
+# fig, [ax1, ax2] = plt.subplots(nrows=1, ncols=2, figsize=(20, 8))
+
+# ##### daily data
+# x = range(1, len(OpenCLRunner.get_cumulative_daily_infections(summaries_bp))+1)
+# ax1.plot(x, OpenCLRunner.get_cumulative_daily_infections(summaries_bp), label="sim1", color="red")
+# ax1.plot(x, cases_devon_daily[0:len(OpenCLRunner.get_cumulative_daily_infections(summaries_bp))], label="obs", color="blue")
+# ax1.legend()
+# ax1.tick_params(axis='both', which='major', labelsize=15)
+# ax1.set_xlabel("Day", size=15)
+# ax1.set_ylabel("Cases",size=15)
+
+# ###### weekly data
+# x = range(1, len(sim_bp)+1)
+# ax2.plot(x, sim_bp, label="sim1", color="red")
+# ax2.plot(x, obs_bp, label="obs", color="blue")
+# ax2.legend()
+# ax2.tick_params(axis='both', which='major', labelsize=15)
+# ax2.set_xlabel("Week", size=15)
+# ax2.set_ylabel("Cases",size=15)   
 
