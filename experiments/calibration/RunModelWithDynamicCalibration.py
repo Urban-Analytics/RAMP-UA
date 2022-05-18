@@ -321,7 +321,7 @@ starting_windows_time = datetime.datetime.now()
 
 # Define number of and number of populations to run for,
 windows = 8
-n_pops = 20
+n_pops = 10
 restart = False
 next_pop = 7
 n_particles = 100
