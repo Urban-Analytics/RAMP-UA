@@ -12,7 +12,7 @@
 ##############################################################
 # ### Parameter calibration
 ##############################################################
-# The <ins>location</ins> and <ins>individual</ins> hazards, and the current risk beta rating must be calibrated to find the values which best reproduce real life observations. Here, the parameter values are calibrated once using historical data and Approximate Bayesian Computation (ABC). 
+# The location and individual hazards, and the current risk beta rating must be calibrated to find the values which best reproduce real life observations. Here, the parameter values are calibrated once using historical data and Approximate Bayesian Computation (ABC). 
 
 # Prior distributions for each parameter are defined and then ABC approximates the likelihoods of different parameter values by running the model a large number of times. Each time parameter values are drawn randomly from the prior distributions, and the parameter values from the simulations with results closest to the observations are kept. A fitness function is used to assess the similarity of model results to observations. In this case, the Euclidean difference between the observed number of cases per week and the simulated number of cases per week is calculated. 
 
@@ -23,40 +23,33 @@
 ##############################################################
 # ABC requires prior distributions to be specified for the parameters.
 
-# <ins>Location hazards</ins> 
+# Location hazards
 #  - `Home` (transmission hazard associated with being with an infected individual at home)
-#      - <i>Fixed at 1.0, so all other multipliers are relative to this. This is almost certaintly the most risky activity (i.e. transmission at home is very likely) so no other priors allow values above 1.0. </i>
+#      - Fixed at 1.0, so all other multipliers are relative to this. This is almost certaintly the most risky activity (i.e. transmission at home is very likely) so no other priors allow values above 1.0. </i>
 #  - `Retail` (transmission hazard associated with being with an infected individual in a shop)
-#      - <i> Uniform between 0 and 1 </i>
+#      - Uniform between 0 and 1 
 #  - `PrimarySchool` (transmission hazard associated with being with an infected individual at primary school)
-#      - <i> Uniform between 0 and 1 </i> 
+#      - Uniform between 0 and 1
 #  - `SecondarySchool` (transmission hazard associated with being with an infected individual at secondary school)
-#      - <i> Uniform between 0 and 1 </i> 
+#      - Uniform between 0 and 1 
 #  - `Work` (transmission hazard associated with being with an infected individual at work)
-#      - <i> Uniform between 0 and 1 </i> 
+#      - Uniform between 0 and 1 
  
-# <ins> Individual hazards</ins> 
+# Individual hazards
 #  - `asymptomatic` (transmission hazard associated with asymptomatic individuals)  
-#       - <i> This is tricky because we don't know the hazard associated with asymptomatic transmission. James Salter used a prior of: N(0.444, 0.155) which gives the middle 95% as [0.138, 0.75] ([0.138 estimated here](https://www.medrxiv.org/content/10.1101/2020.06.04.20121434v2), [0.58 estimated here](https://jammi.utpjournals.press/doi/abs/10.3138/jammi-2020-0030), [0.75 estimated here (Table 1)](https://www.cdc.gov/coronavirus/2019-ncov/hcp/planning-scenarios.html). </i>
+#       - This is tricky because we don't know the hazard associated with asymptomatic transmission. James Salter used a prior of: N(0.444, 0.155) which gives the middle 95% as [0.138, 0.75] ([0.138 estimated here](https://www.medrxiv.org/content/10.1101/2020.06.04.20121434v2), [0.58 estimated here](https://jammi.utpjournals.press/doi/abs/10.3138/jammi-2020-0030), [0.75 estimated here (Table 1)](https://www.cdc.gov/coronavirus/2019-ncov/hcp/planning-scenarios.html). </i>
 #  - `presymptomatic` (transmission hazard associated with presymptomatic individuals)  
-#     - <i> Same as asymptomatic (but abc-2.iypnb fixes them at 1 ? </i>
+#     - Same as asymptomatic (but abc-2.iypnb fixes them at 1 ? 
 #  - `symptomatic` (transmission hazard associated with symptomatic individuals)   
-#     - <i> Same as asymptomatic (but abc-2.iypnb fixes them at 1 ?)</i>       
+#     -  Same as asymptomatic (but abc-2.iypnb fixes them at 1 ?)      
 
-# <ins> Other hazards</ins> 
+# Other hazards
 # - `current_risk_beta`  
 
 ##############################################################
 # To adapt an ABM to allow it to be optimised in response to data emerging in real time. This would mean performing dynamic calibration (i.e. re calibrating at every model time step) using ABC. -->
 # At the moment, however, such predictive ABMs are generally calibrated once, using historical data to adjust their more flexible parameters such that the model predicts present and past conditions well. The models are then allowed to roll forward in time, independent of the world, to make a prediction. As the systems modelled are usually complex, it is likely that over longer time periods such models diverge from realistic estimates. Even over shorter time periods there is little done to check model performance, let alone constrain it. -->
 ##############################################################
-
-
-# ## Import modules
-
-# In[1]:
-
-
 #### Import modules required
 import multiprocessing as mp
 import numpy as np
