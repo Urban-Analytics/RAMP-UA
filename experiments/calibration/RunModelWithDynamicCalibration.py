@@ -126,34 +126,6 @@ assert os.path.isfile(SNAPSHOT_FILEPATH), f"Snapshot doesn't exist: {SNAPSHOT_FI
 current_risk_beta_val =0.019
 
 #####################################################################################
-## Run model with default parameter values 
-#####################################################################################
-
-#####################################################################################
-# This shows what happens with the 'default' (manually calibrated) model.  
-# These parameters are from the 'optimal' particle in the InitialModelCalibration.ipynb script, in which the model is ran with ABC with ten populations for 133 days.
-#####################################################################################
-
-#### Initialise model
-## Define parameters
-ITERATIONS = 105  # Number of days to run for
-assert (ITERATIONS /7).is_integer() # check it is divisible by 7 
-NUM_SEED_DAYS = 14  # Number of days to seed the population
-USE_GPU = False
-STORE_DETAILED_COUNTS = False
-REPETITIONS = 5
-USE_HEALTHIER_POP = True
-
-# Think x by 7 because daily data is used in running model?
-assert ITERATIONS < len(cases_devon_weekly)*7,     f"Have more iterations ({ITERATIONS}) than observations ({len(cases_devon_weekly)*7})."
-
-# Initialise the class so that its ready to run the model.
-OpenCLRunner.init( iterations = ITERATIONS, repetitions = REPETITIONS, observations =  cases_devon_weekly.T,
-    use_healthier_pop = USE_HEALTHIER_POP, use_gpu = USE_GPU, store_detailed_counts = STORE_DETAILED_COUNTS,
-    parameters_file = PARAMETERS_FILE, opencl_dir = OPENCL_DIR,snapshot_filepath = SNAPSHOT_FILEPATH,
-    num_seed_days = NUM_SEED_DAYS)
-
-#####################################################################################
 ## Define prior parameter values for running with dynamic calibration 
 #####################################################################################
 #### Define constants (not touched by ABC. Include parameters that should not be optimised)
