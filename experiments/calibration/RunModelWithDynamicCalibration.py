@@ -1,9 +1,11 @@
 #####################################################################################
 #####################################################################################
 # Running RAMP OpenCL model with dynamic calibration
-
-# ### Parameter definitions
 #####################################################################################
+#####################################################################################
+
+#####################################################################################
+# ### Parameter definitions
 # The OpenCL RAMP model creates a synthetic population and simulates the movements of individuals between various locations (home, work, school, shops). If an individual is infected then they impart an infection risk on to the locations that they visit. The severity of this infection risk is determined by whether the individual is presymptomatic, asymptomatic or symptomatic (the **individual's hazard rating**). The locations in the model thus come to have an infection risk, based upon how many infected individuals from each infection status have visited. When susceptible individuals without the disease visit these locations their risk of being infected is determined by the location's infection risk, alongside the transmission hazard associated with that kind of location (the location's hazard rating). An additional hazard rating, the current risk beta, is used to control the general transmissability of the disease (?) 
 
 # ### Parameter calibration
@@ -32,9 +34,6 @@
 #     - <i> Same as asymptomatic (but abc-2.iypnb fixes them at 1 ? </i>
 #  - `symptomatic` (transmission hazard associated with symptomatic individuals)   
 #     - <i> Same as asymptomatic (but abc-2.iypnb fixes them at 1 ?)</i>       
-
-#####################################################################################
-#####################################################################################
 
 #####################################################################################
 ### Import modules
@@ -77,11 +76,14 @@ LOAD_PICKLES = True
 
 #####################################################################################
 ### Create observed cases data
+#####################################################################################
 
+#####################################################################################
 # Cases_devon_weekly is based on government data recording the number of new cases each week, per MSOA. It has been corrected to account for lags and other shortcomings in the testing process, and summed up to cover the whole of Devon. Full details are here: http://localhost:8888/notebooks/Users/gy17m2a/OneDrive%20-%20University%20of%20Leeds/Project/RAMP-UA/experiments/calibration/observation_data/CreatingObservations-Daily-InterpolateSecond.ipynb
 # Cases_devon_daily is created through linear interpolation of the weekly data. This daily data is required for seeding the model. Because the interpolation is carried out for each MSOA seperately, when the data is joined back together for the whole of Devon it is not exactly equivalent to cases_devon_weekly. 
 # Currently, we are using the original cases_devon_weekly data in the distance function to evaluate the performance of the model. This makes sense because it is the most accurate weekly data that we have. However, it means when comparing the weekly model results to the observations, the model doesn't seem to be exactly the same as the observations, even during the seeding process. (Within the distance function all particles will be equally far from the observations during the seeding process, so shouldn't negatively affect things in this sense).
 #####################################################################################
+
 # Generate unique timestamp
 seconds = int(time.time())
 print(seconds)
@@ -125,10 +127,13 @@ current_risk_beta_val =0.019
 
 #####################################################################################
 ## Run model with default parameter values 
+#####################################################################################
 
+#####################################################################################
 # This shows what happens with the 'default' (manually calibrated) model.  
 # These parameters are from the 'optimal' particle in the InitialModelCalibration.ipynb script, in which the model is ran with ABC with ten populations for 133 days.
 #####################################################################################
+
 #### Initialise model
 ## Define parameters
 ITERATIONS = 105  # Number of days to run for
