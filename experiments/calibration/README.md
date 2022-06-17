@@ -38,6 +38,5 @@ Analyses the results of running the model with dynamic calibration. Explores the
 
 ## Outputs
 
-Contains the .pkl files from running the model 
+Contains the .pkl files from running the model (in the two files listed above), as well as the database files that the pickle files draw from.
 
-## *.db
