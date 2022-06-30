@@ -4,7 +4,7 @@ import os
 
 
 class InitialCases:
-    def __init__(self, area_codes, not_home_probs, data_dir="microsim/opencl/data/"):
+    def __init__(self, area_codes, not_home_probs, data_dir="microsim/opencl/data/", seed_days_start_day=1):
         """
         This class loads the initial cases data for seeding infections in the model.
         Once the data is loaded it selects the people from higher risk area codes who
@@ -14,7 +14,7 @@ class InitialCases:
         #print("initial_cases.py -- InitialCases __init")
         # load initial case data
         #self.initial_cases = pd.read_csv(os.path.join(data_dir, "devon_initial_cases.csv"))
-        self.initial_cases = pd.read_csv(os.path.join(data_dir, "daily_cases_devon.csv"))
+        self.initial_cases = pd.read_csv(os.path.join(data_dir, "daily_cases_devon.csv"))[seed_days_start_day-1:].reset_index(drop= True)
         # self.initial_cases['Date'] = range(1,len(self.initial_cases)+1)
         # print(self.initial_cases)
         # self.initial_cases.rename(columns={'Date': '', 'OriginalCases':'num_cases'}, inplace = True)
@@ -33,9 +33,6 @@ class InitialCases:
 
     def get_seed_people_ids_for_day(self, day):
         """Randomly choose a given number of people ids from the high risk people"""
-        #print("initial-cases.py -- get_seed_people_ids_for_day")
-        #test = self.initial_cases
-        #print(test.head())
         num_cases = self.initial_cases.loc[day, "num_cases"]        
         #num_cases = self.initial_cases.loc[day, "OriginalCases"]
         num_cases = int(num_cases)

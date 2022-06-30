@@ -14,8 +14,8 @@ class Simulator:
     Class to manage all OpenCL owned simulator state. Including methods to transfer data buffers to/from OpenCL devices
     and a step() method to execute the kernels to calculate one timestep of the model.
     """
-
-    def __init__(self, snapshot, num_seed_days, gpu=True, opencl_dir="microsim/opencl/"):
+    print("Simulator")
+    def __init__(self, snapshot, num_seed_days, seed_days_start_day = 1, gpu=True, opencl_dir="microsim/opencl/"):
         """Initialise OpenCL context, kernels, and buffers for the simulator.
 
         Args:
@@ -115,9 +115,10 @@ class Simulator:
         self.kernels = kernels
 
         data_dir = os.path.join(opencl_dir, "data/")
-        self.initial_cases = InitialCases(snapshot.area_codes, snapshot.not_home_probs, data_dir)
+        self.initial_cases = InitialCases(snapshot.area_codes, snapshot.not_home_probs, data_dir, seed_days_start_day)
 
         self.num_seed_days = num_seed_days
+        self.seed_days_start_day = seed_days_start_day
 
     def platform_name(self):
         """The name of the OpenCL platform being used for simulation."""
@@ -198,9 +199,7 @@ class Simulator:
         max_hazard_val = np.finfo(np.float32).max
 
         people_hazards = np.zeros(self.npeople, dtype=np.float32)
-
         initial_case_ids = self.initial_cases.get_seed_people_ids_for_day(self.time)
-
         # set hazard to maximum float val, so these people will have infection_prob=1
         # and will transition to exposed state
         people_hazards[initial_case_ids] = max_hazard_val
