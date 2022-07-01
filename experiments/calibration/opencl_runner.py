@@ -35,7 +35,7 @@ class OpenCLRunner:
     @classmethod
     def init(cls, iterations: int, repetitions: int, observations: pd.DataFrame, use_gpu: bool,
              use_healthier_pop: bool, store_detailed_counts: bool, parameters_file: str, opencl_dir: str,
-             snapshot_filepath: str, num_seed_days: int, seed_days_start_day: int):
+             snapshot_filepath: str, num_seed_days: int):
         """
         The class variables determine how the model should run. They need to be class variables
         because the 'run_model_with_params' function, which is called by calibration libraries, can only take
@@ -61,13 +61,12 @@ class OpenCLRunner:
         cls.SNAPSHOT_FILEPATH = snapshot_filepath
         cls.initialised = True
         cls.NUM_SEED_DAYS = num_seed_days
-        cls.SEED_DAYS_START_DAY = seed_days_start_day
 
     @classmethod
     def update(cls, iterations: int = None, repetitions: int = None, observations: pd.DataFrame = None,
                use_gpu: bool = None, use_healthier_pop=None, store_detailed_counts: bool = None,
-               parameters_file: str = None, opencl_dir: str = None, snapshot_filepath: str = None, 
-               seed_days_start_day: int = None):
+               parameters_file: str = None,
+               opencl_dir: str = None, snapshot_filepath: str = None):
         """
         Update any of the variables that have already been initialised
         """
@@ -91,8 +90,6 @@ class OpenCLRunner:
             cls.OPENCL_DIR = opencl_dir
         if snapshot_filepath is not None:
             cls.SNAPSHOT_FILEPATH = snapshot_filepath
-        if seed_days_start_day is not None:
-            cls.SEED_DAYS_START_DAY = seed_days_start_day            
 
     @classmethod
     def set_constants(cls, constants):
@@ -108,7 +105,6 @@ class OpenCLRunner:
     @staticmethod
     def fit_l2(obs: np.ndarray, sim: np.ndarray):
         """Calculate the fitness of a model using the Euclidean distance.
-
          Parameters
         ----------
         obs : array_like
@@ -293,7 +289,7 @@ class OpenCLRunner:
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
                          opencl_dir: str, use_gpu: bool,
-                         use_healthier_pop: bool, num_seed_days: int, seed_days_start_day: int, 
+                         use_healthier_pop: bool, num_seed_days: int,
                          store_detailed_counts: bool, quiet=bool) -> (np.ndarray, np.ndarray):
         """
         Run the OpenCL model.
@@ -308,6 +304,7 @@ class OpenCLRunner:
         :param quiet: Whether to print a message when the model starts
         :return: A summary python array that contains the results for each iteration and a final state
         """
+        # print("opencl_runner.py -- run_opencl_model")
         # load snapshot
         # print(snapshot_filepath)
         snapshot = Snapshot.load_full_snapshot(path=snapshot_filepath)
@@ -328,9 +325,10 @@ class OpenCLRunner:
 
         # set the random seed of the model for each repetition, otherwise it is completely deterministic
         snapshot.seed_prngs(i)
+
         # Create a simulator and upload the snapshot data to the OpenCL device
-        simulator = Simulator(snapshot, num_seed_days=num_seed_days, 
-                              seed_days_start_day= seed_days_start_day, gpu=use_gpu,opencl_dir=opencl_dir)
+        simulator = Simulator(snapshot, opencl_dir=opencl_dir, gpu=use_gpu, num_seed_days=num_seed_days)
+
         # print(simulator)
         simulator.upload_all(snapshot.buffers)
         # print(simulator.initial_cases)
@@ -349,8 +347,8 @@ class OpenCLRunner:
     # https://stackoverflow.com/questions/41385708/multiprocessing-example-giving-attributeerror/42383397
     @staticmethod
     def run_opencl_model_multi(
-            repetitions: int, iterations: int, params: Params, num_seed_days: int, seed_days_start_day: int, 
-            quiet: bool, use_gpu: bool = False, use_healthier_pop: bool = False, store_detailed_counts: bool = False,
+            repetitions: int, iterations: int, params: Params, num_seed_days: int, quiet: bool,
+            use_gpu: bool = False, use_healthier_pop: bool = False, store_detailed_counts: bool = False,
             opencl_dir=os.path.join(".", "microsim", "opencl"),
             snapshot_filepath=os.path.join(".", "microsim", "opencl", "snapshots", "cache.npz"),
             multiprocess=False,
@@ -358,8 +356,6 @@ class OpenCLRunner:
         """Run a number of models and return a list of summaries.
         :param multiprocess: Whether to run in mutliprocess mode (default False)
         """
-        print("Running starting on seed day {}".format(seed_days_start_day))
-        
         # Prepare the function arguments. We need one set of arguments per repetition
         l_i = [i for i in range(repetitions)] if not random_ids else \
             [random.randint(1, 100000) for _ in range(repetitions)]
@@ -370,11 +366,11 @@ class OpenCLRunner:
         l_use_gpu = [use_gpu] * repetitions
         l_use_healthier_pop = [use_healthier_pop] * repetitions
         l_num_seed_days = [num_seed_days] * repetitions
-        l_seed_days_start_day = [seed_days_start_day] * repetitions
         l_store_detailed_counts = [store_detailed_counts] * repetitions
         l_quiet = [quiet] * repetitions  # Whether or not to print info
+
         args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_use_gpu, l_use_healthier_pop,
-                   l_num_seed_days, l_seed_days_start_day, l_store_detailed_counts, l_quiet)
+                   l_num_seed_days, l_store_detailed_counts, l_quiet)
         to_return = None
         start_time = time.time()
         if multiprocess:
@@ -383,7 +379,6 @@ class OpenCLRunner:
                 if not quiet:
                     print("Running multiple models in multiprocess mode ... ", end="", flush=True)
                 with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
-                    print("multipeorces")
                     to_return = pool.starmap(OpenCLRunner.run_opencl_model, args)
             finally:  # Make sure they get closed (shouldn't be necessary)
                 pool.close()
@@ -396,7 +391,6 @@ class OpenCLRunner:
                 to_return = [x for x in tqdm.tqdm(results, desc="Running models", total=repetitions)]
             else:
                 to_return = results
-                
         # if quiet == False:
         #     print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)
         return to_return
@@ -420,6 +414,7 @@ class OpenCLRunner:
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
+
         # Check that all input parameters are not negative
         for k, v in input_params_dict.items():
             if v < 0:
@@ -428,12 +423,13 @@ class OpenCLRunner:
 
         # Splat the input_params_dict to automatically set any parameters that have been inlcluded
         params = OpenCLRunner.create_parameters( parameters_file=cls.PARAMETERS_FILE, **input_params_dict)
+
         # Run the model
         results = OpenCLRunner.run_opencl_model_multi(
             repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params, num_seed_days=cls.NUM_SEED_DAYS,
-            seed_days_start_day = cls.SEED_DAYS_START_DAY, quiet=quiet, opencl_dir=cls.OPENCL_DIR,
-            snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
+            quiet=quiet, opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
             store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False, random_ids=True)
+
         # Create summary objects containing the model results
         summaries = [x[0] for x in results]
 
@@ -755,8 +751,8 @@ class OpenCLWrapper(object):
             # Can set the random seed to make it deterministic (None means np will choose one randomly)
             snapshot.seed_prngs(seed=None)
             # Create a simulator and upload the snapshot data to the OpenCL device
-            simulator = Simulator(snapshot, num_seed_days=self.num_seed_days, seed_days_start_day = self.seed_days_start_day,
-                                  gpu=self.use_gpu, opencl_dir=self.opencl_dir)
+            simulator = Simulator(snapshot, num_seed_days=self.num_seed_days, opencl_dir=self.opencl_dir,
+                                  gpu=self.use_gpu)
             simulator.upload_all(snapshot.buffers)
             # if quiet == False:
             #    print(f"Running simulation {sim_number + 1}.")

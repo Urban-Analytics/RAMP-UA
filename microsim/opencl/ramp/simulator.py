@@ -14,14 +14,12 @@ class Simulator:
     Class to manage all OpenCL owned simulator state. Including methods to transfer data buffers to/from OpenCL devices
     and a step() method to execute the kernels to calculate one timestep of the model.
     """
-    print("Simulator")
-    def __init__(self, snapshot, num_seed_days, seed_days_start_day = 1, gpu=True, opencl_dir="microsim/opencl/"):
-        """Initialise OpenCL context, kernels, and buffers for the simulator.
 
+    def __init__(self, snapshot, num_seed_days, gpu=True, opencl_dir="microsim/opencl/"):
+        """Initialise OpenCL context, kernels, and buffers for the simulator.
         Args:
             snapshot (Snapshot): snapshot containing data and number of places, people and slots
             gpu (bool): Whether to try to use a discrete GPU, set to false to use CPU.
-
         Raises:
             OSError: If a GPU was requested but none is found.
         """
@@ -115,10 +113,9 @@ class Simulator:
         self.kernels = kernels
 
         data_dir = os.path.join(opencl_dir, "data/")
-        self.initial_cases = InitialCases(snapshot.area_codes, snapshot.not_home_probs, data_dir, seed_days_start_day)
+        self.initial_cases = InitialCases(snapshot.area_codes, snapshot.not_home_probs, data_dir)
 
         self.num_seed_days = num_seed_days
-        self.seed_days_start_day = seed_days_start_day
 
     def platform_name(self):
         """The name of the OpenCL platform being used for simulation."""
@@ -145,7 +142,6 @@ class Simulator:
 
     def upload_all(self, host_buffers):
         """Upload to every device buffer, errors if host_buffers is missing a field.
-
         Args:
             host_buffers: A Buffers namedtuple containing numpy arrays.
         """
@@ -154,7 +150,6 @@ class Simulator:
 
     def download_all(self, host_buffers):
         """Downloads every device buffer, errors if host_buffers is missing a field.
-
         Args:
             host_buffers: A dict of string names to numpy buffers.
         """
@@ -199,7 +194,9 @@ class Simulator:
         max_hazard_val = np.finfo(np.float32).max
 
         people_hazards = np.zeros(self.npeople, dtype=np.float32)
+
         initial_case_ids = self.initial_cases.get_seed_people_ids_for_day(self.time)
+
         # set hazard to maximum float val, so these people will have infection_prob=1
         # and will transition to exposed state
         people_hazards[initial_case_ids] = max_hazard_val
@@ -209,4 +206,3 @@ class Simulator:
         # run only the update statuses kernel so that people transition through disease states
         self.step_kernel("people_update_statuses")
         self.time += np.uint32(1)
-
