@@ -14,7 +14,6 @@ class Simulator:
     Class to manage all OpenCL owned simulator state. Including methods to transfer data buffers to/from OpenCL devices
     and a step() method to execute the kernels to calculate one timestep of the model.
     """
-    print("Simulator")
     def __init__(self, snapshot, num_seed_days, seed_days_start_day = 1, gpu=True, opencl_dir="microsim/opencl/"):
         """Initialise OpenCL context, kernels, and buffers for the simulator.
         Args:
@@ -114,7 +113,6 @@ class Simulator:
 
         data_dir = os.path.join(opencl_dir, "data/")
         self.initial_cases = InitialCases(snapshot.area_codes, snapshot.not_home_probs, data_dir, seed_days_start_day)
-
         self.num_seed_days = num_seed_days
         self.seed_days_start_day = seed_days_start_day
 
