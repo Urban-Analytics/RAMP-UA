@@ -443,7 +443,7 @@ class OpenCLRunner:
         # Get the cumulative number of infections per day (i.e. simulated results)
         # i.e the total number of cases there has been up to this point, for each day
         model_daily_cumulative_infections = OpenCLRunner.get_cumulative_daily_infections(summaries)
-        print("Model daily infections: ", model_daily_cumulative_infections)
+        #print("Model daily infections: ", model_daily_cumulative_infections)
         ##### Convert this to the cumulative number of infections at the end of each week
         # Get the number of days the model was ran for
         n_days = len(summaries[0].total_counts[DiseaseStatus.Exposed.value])
@@ -465,7 +465,7 @@ class OpenCLRunner:
         # (defined by the seeding process)
         n_weeks = int(n_days / 7)
         model_start_week =  int(cls.SEED_DAYS_START_DAY/7) + 1
-        print("Model starting from week {}, and running for {}".format(model_start_week, n_weeks))
+        print("Model starting from week {}, and running for {} weeks".format(model_start_week, n_weeks))
         
         # Keep only as many weeks of data as are in the model results
         #obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[model_start_week -1:n_weeks+model_start_week]
@@ -475,12 +475,15 @@ class OpenCLRunner:
         
         # For any model runs which is not being started from week 1 of the data we need to corect for the fact
         # that the observations as given to the class are cumulative        
-        # Do this by         
+        # Do this by trimming to only be the weeks of data that we need, and then finding
+        # the cumulative weekly sums at this stage
         if model_start_week != 1:
             obs_weekly_cumulative_infections = cases_devon_weekly_raw_values['OriginalCases'][model_start_week-1:n_weeks+model_start_week].cumsum().values
-        
+        else:
+            obs_weekly_cumulative_infections = cls.OBSERVATIONS
+            
         # Keep only amount of data needed
-        obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[model_start_week -1:n_weeks+model_start_week]
+        obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[model_start_week -1:n_weeks+model_start_week-1]
                 
         print("obs weekly cumulative infections ", obs_weekly_cumulative_infections)
         print("model weekly cumulative infections ", model_weekly_cumulative_infections)
