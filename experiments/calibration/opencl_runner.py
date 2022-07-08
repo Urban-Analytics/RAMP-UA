@@ -67,7 +67,7 @@ class OpenCLRunner:
     def update(cls, iterations: int = None, repetitions: int = None, observations: pd.DataFrame = None,
                use_gpu: bool = None, use_healthier_pop=None, store_detailed_counts: bool = None,
                parameters_file: str = None, opencl_dir: str = None, snapshot_filepath: str = None, 
-               seed_days_start_day: int = None):
+               num_seed_days: int = None, seed_days_start_day: int = None):
         """
         Update any of the variables that have already been initialised
         """
@@ -92,7 +92,9 @@ class OpenCLRunner:
         if snapshot_filepath is not None:
             cls.SNAPSHOT_FILEPATH = snapshot_filepath
         if seed_days_start_day is not None:
-            cls.SEED_DAYS_START_DAY = seed_days_start_day            
+            cls.SEED_DAYS_START_DAY = seed_days_start_day          
+        if num_seed_days is not None:
+            cls.NUM_SEED_DAYS = num_seed_days                  
 
     @classmethod
     def set_constants(cls, constants):
@@ -481,9 +483,8 @@ class OpenCLRunner:
             obs_weekly_cumulative_infections = cases_devon_weekly_raw_values['OriginalCases'][model_start_week-1:n_weeks+model_start_week-1].cumsum().values
         else:
             obs_weekly_cumulative_infections = cls.OBSERVATIONS
-            
-        # Keep only amount of data needed
-        obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[model_start_week -1:n_weeks+model_start_week-1]
+            # Keep only amount of data needed
+            obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[model_start_week -1:n_weeks+model_start_week-1]
                 
         print("obs weekly cumulative infections ", obs_weekly_cumulative_infections)
         print("model weekly cumulative infections ", model_weekly_cumulative_infections)
