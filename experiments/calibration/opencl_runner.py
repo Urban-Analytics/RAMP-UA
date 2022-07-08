@@ -478,7 +478,7 @@ class OpenCLRunner:
         # Do this by trimming to only be the weeks of data that we need, and then finding
         # the cumulative weekly sums at this stage
         if model_start_week != 1:
-            obs_weekly_cumulative_infections = cases_devon_weekly_raw_values['OriginalCases'][model_start_week-1:n_weeks+model_start_week].cumsum().values
+            obs_weekly_cumulative_infections = cases_devon_weekly_raw_values['OriginalCases'][model_start_week-1:n_weeks+model_start_week-1].cumsum().values
         else:
             obs_weekly_cumulative_infections = cls.OBSERVATIONS
             
