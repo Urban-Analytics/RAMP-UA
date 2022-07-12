@@ -467,7 +467,7 @@ class OpenCLRunner:
         # (defined by the seeding process)
         n_weeks = int(n_days / 7)
         model_start_week =  int(cls.SEED_DAYS_START_DAY/7) + 1
-        print("Model starting from week {}, and running for {} weeks".format(model_start_week, n_weeks))
+        #print("Model starting from week {}, and running for {} weeks".format(model_start_week, n_weeks))
         
         # Keep only as many weeks of data as are in the model results
         #obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[model_start_week -1:n_weeks+model_start_week]
@@ -486,8 +486,8 @@ class OpenCLRunner:
             # Keep only amount of data needed
             obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[model_start_week -1:n_weeks+model_start_week-1]
                 
-        print("obs weekly cumulative infections ", obs_weekly_cumulative_infections)
-        print("model weekly cumulative infections ", model_weekly_cumulative_infections)
+        #print("obs weekly cumulative infections ", obs_weekly_cumulative_infections)
+        #print("model weekly cumulative infections ", model_weekly_cumulative_infections)
         # find the distance between the vector of weekly values
         distance = OpenCLRunner.fit_l2(obs_weekly_cumulative_infections, model_weekly_cumulative_infections)
 
