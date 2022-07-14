@@ -65,7 +65,7 @@ class OpenCLRunner:
     @classmethod
     def update(cls, iterations: int = None, repetitions: int = None, observations: pd.DataFrame = None,
                use_gpu: bool = None, use_healthier_pop=None, store_detailed_counts: bool = None,
-               parameters_file: str = None,
+               parameters_file: str = None, num_seed_days: int = None, 
                opencl_dir: str = None, snapshot_filepath: str = None):
         """
         Update any of the variables that have already been initialised
@@ -82,6 +82,8 @@ class OpenCLRunner:
             cls.USE_GPU = use_gpu
         if use_healthier_pop is not None:
             cls.USE_HEALTHIER_POP = use_healthier_pop
+        if num_seed_days is not None:
+            cls.NUM_SEED_DAYS = num_seed_days
         if store_detailed_counts is not None:
             cls.STORE_DETAILED_COUNTS = store_detailed_counts
         if parameters_file is not None:
