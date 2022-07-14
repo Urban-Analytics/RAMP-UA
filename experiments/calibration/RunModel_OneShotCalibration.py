@@ -53,6 +53,7 @@ import matplotlib.pyplot as plt
 import sys
 import datetime
 from matplotlib import cm
+import time
 
 # PYABC (https://pyabc.readthedocs.io/en/latest/)
 import pyabc
@@ -153,6 +154,14 @@ original_priors = pyabc.Distribution(**decorated_rvs)
 #####################################################################################
 # Set-up model for running 
 #####################################################################################
+# Generate unique timestamp
+seconds = int(time.time())
+print(seconds)
+
+NUM_SEED_DAYS = 14
+USE_GPU = False
+ITERATIONS = 42
+
 # Initialise the population
 DATA_DIR = os.path.join("..", "..", "devon_data")
 cache_dir = os.path.join(DATA_DIR, "caches")
@@ -187,7 +196,7 @@ abc = pyabc.ABCSMC(models=template, parameter_priors=original_priors, distance_f
                   population_size = n_particles)
 
 # Prepare to run the model
-db_path = ("sqlite:///" + "test3.db")  # Path to database
+db_path = ("sqlite:///" + "Outputs/RunModel_OneShotCalibration/ramp_da_{}pops_{}particles_{}days_{}.db".format(n_pops, n_particles,ITERATIONS, seconds))  # Path to database
 
 # abc.new() needs the database location and any observations that we will use (these are passed to the distance_function
 # provided to pyabc.ABCSMC above). Currently the observations are provided to the model when it is initialised and 
