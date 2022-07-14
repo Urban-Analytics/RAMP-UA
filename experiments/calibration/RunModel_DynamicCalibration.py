@@ -157,6 +157,9 @@ original_priors = pyabc.Distribution(**decorated_rvs)
 #####################################################################################
 # Set the size of a data assimilation window in days:
 da_window_size =14
+NUM_SEED_DAYS = 14
+USE_GPU = False
+
 
 # Initialise the population
 DATA_DIR = os.path.join("..", "..", "devon_data")
