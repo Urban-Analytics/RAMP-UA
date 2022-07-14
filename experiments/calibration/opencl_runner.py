@@ -35,7 +35,7 @@ class OpenCLRunner:
     @classmethod
     def init(cls, iterations: int, repetitions: int, observations: pd.DataFrame, use_gpu: bool,
              use_healthier_pop: bool, store_detailed_counts: bool, parameters_file: str, opencl_dir: str,
-             snapshot_filepath: str, num_seed_days: int, seed_days_start_day: int):
+             snapshot_filepath: str, num_seed_days: int):
         """
         The class variables determine how the model should run. They need to be class variables
         because the 'run_model_with_params' function, which is called by calibration libraries, can only take
@@ -61,13 +61,12 @@ class OpenCLRunner:
         cls.SNAPSHOT_FILEPATH = snapshot_filepath
         cls.initialised = True
         cls.NUM_SEED_DAYS = num_seed_days
-        cls.SEED_DAYS_START_DAY = seed_days_start_day
 
     @classmethod
     def update(cls, iterations: int = None, repetitions: int = None, observations: pd.DataFrame = None,
                use_gpu: bool = None, use_healthier_pop=None, store_detailed_counts: bool = None,
-               parameters_file: str = None, opencl_dir: str = None, snapshot_filepath: str = None, 
-               num_seed_days: int = None, seed_days_start_day: int = None):
+               parameters_file: str = None,
+               opencl_dir: str = None, snapshot_filepath: str = None):
         """
         Update any of the variables that have already been initialised
         """
@@ -91,10 +90,6 @@ class OpenCLRunner:
             cls.OPENCL_DIR = opencl_dir
         if snapshot_filepath is not None:
             cls.SNAPSHOT_FILEPATH = snapshot_filepath
-        if seed_days_start_day is not None:
-            cls.SEED_DAYS_START_DAY = seed_days_start_day          
-        if num_seed_days is not None:
-            cls.NUM_SEED_DAYS = num_seed_days                  
 
     @classmethod
     def set_constants(cls, constants):
@@ -294,7 +289,7 @@ class OpenCLRunner:
     @staticmethod
     def run_opencl_model(i: int, iterations: int, snapshot_filepath: str, params,
                          opencl_dir: str, use_gpu: bool,
-                         use_healthier_pop: bool, num_seed_days: int, seed_days_start_day: int, 
+                         use_healthier_pop: bool, num_seed_days: int,
                          store_detailed_counts: bool, quiet=bool) -> (np.ndarray, np.ndarray):
         """
         Run the OpenCL model.
@@ -309,6 +304,7 @@ class OpenCLRunner:
         :param quiet: Whether to print a message when the model starts
         :return: A summary python array that contains the results for each iteration and a final state
         """
+        # print("opencl_runner.py -- run_opencl_model")
         # load snapshot
         # print(snapshot_filepath)
         snapshot = Snapshot.load_full_snapshot(path=snapshot_filepath)
@@ -329,11 +325,13 @@ class OpenCLRunner:
 
         # set the random seed of the model for each repetition, otherwise it is completely deterministic
         snapshot.seed_prngs(i)
+
         # Create a simulator and upload the snapshot data to the OpenCL device
-        simulator = Simulator(snapshot, num_seed_days=num_seed_days, 
-                              seed_days_start_day= seed_days_start_day, gpu=use_gpu,opencl_dir=opencl_dir)
+        simulator = Simulator(snapshot, opencl_dir=opencl_dir, gpu=use_gpu, num_seed_days=num_seed_days)
+
         # print(simulator)
         simulator.upload_all(snapshot.buffers)
+        # print(simulator.initial_cases)
 
         # if quiet == False:
         #     print(f"Running simulation {i + 1}.")
@@ -349,8 +347,8 @@ class OpenCLRunner:
     # https://stackoverflow.com/questions/41385708/multiprocessing-example-giving-attributeerror/42383397
     @staticmethod
     def run_opencl_model_multi(
-            repetitions: int, iterations: int, params: Params, num_seed_days: int, seed_days_start_day: int, 
-            quiet: bool, use_gpu: bool = False, use_healthier_pop: bool = False, store_detailed_counts: bool = False,
+            repetitions: int, iterations: int, params: Params, num_seed_days: int, quiet: bool,
+            use_gpu: bool = False, use_healthier_pop: bool = False, store_detailed_counts: bool = False,
             opencl_dir=os.path.join(".", "microsim", "opencl"),
             snapshot_filepath=os.path.join(".", "microsim", "opencl", "snapshots", "cache.npz"),
             multiprocess=False,
@@ -358,8 +356,6 @@ class OpenCLRunner:
         """Run a number of models and return a list of summaries.
         :param multiprocess: Whether to run in mutliprocess mode (default False)
         """
-        #print("Running starting on seed day {}".format(seed_days_start_day))
-        
         # Prepare the function arguments. We need one set of arguments per repetition
         l_i = [i for i in range(repetitions)] if not random_ids else \
             [random.randint(1, 100000) for _ in range(repetitions)]
@@ -370,11 +366,11 @@ class OpenCLRunner:
         l_use_gpu = [use_gpu] * repetitions
         l_use_healthier_pop = [use_healthier_pop] * repetitions
         l_num_seed_days = [num_seed_days] * repetitions
-        l_seed_days_start_day = [seed_days_start_day] * repetitions
         l_store_detailed_counts = [store_detailed_counts] * repetitions
         l_quiet = [quiet] * repetitions  # Whether or not to print info
+
         args = zip(l_i, l_iterations, l_snapshot_filepath, l_params, l_opencl_dir, l_use_gpu, l_use_healthier_pop,
-                   l_num_seed_days, l_seed_days_start_day, l_store_detailed_counts, l_quiet)
+                   l_num_seed_days, l_store_detailed_counts, l_quiet)
         to_return = None
         start_time = time.time()
         if multiprocess:
@@ -383,7 +379,6 @@ class OpenCLRunner:
                 if not quiet:
                     print("Running multiple models in multiprocess mode ... ", end="", flush=True)
                 with multiprocessing.Pool(processes=int(os.cpu_count())) as pool:
-                    print("multipeorces")
                     to_return = pool.starmap(OpenCLRunner.run_opencl_model, args)
             finally:  # Make sure they get closed (shouldn't be necessary)
                 pool.close()
@@ -396,7 +391,6 @@ class OpenCLRunner:
                 to_return = [x for x in tqdm.tqdm(results, desc="Running models", total=repetitions)]
             else:
                 to_return = results
-                
         # if quiet == False:
         #     print(f".. finished, took {round(float(time.time() - start_time), 2)}s)", flush=True)
         return to_return
@@ -420,6 +414,7 @@ class OpenCLRunner:
         if not cls.initialised:
             raise Exception("The OpenCLRunner class needs to be initialised first. "
                             "Call the OpenCLRunner.init() function")
+
         # Check that all input parameters are not negative
         for k, v in input_params_dict.items():
             if v < 0:
@@ -428,12 +423,13 @@ class OpenCLRunner:
 
         # Splat the input_params_dict to automatically set any parameters that have been inlcluded
         params = OpenCLRunner.create_parameters( parameters_file=cls.PARAMETERS_FILE, **input_params_dict)
+
         # Run the model
         results = OpenCLRunner.run_opencl_model_multi(
             repetitions=cls.REPETITIONS, iterations=cls.ITERATIONS, params=params, num_seed_days=cls.NUM_SEED_DAYS,
-            seed_days_start_day = cls.SEED_DAYS_START_DAY, quiet=quiet, opencl_dir=cls.OPENCL_DIR,
-            snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
+            quiet=quiet, opencl_dir=cls.OPENCL_DIR, snapshot_filepath=cls.SNAPSHOT_FILEPATH, use_gpu=cls.USE_GPU,
             store_detailed_counts=cls.STORE_DETAILED_COUNTS, multiprocess=False, random_ids=True)
+
         # Create summary objects containing the model results
         summaries = [x[0] for x in results]
 
@@ -445,7 +441,7 @@ class OpenCLRunner:
         # Get the cumulative number of infections per day (i.e. simulated results)
         # i.e the total number of cases there has been up to this point, for each day
         model_daily_cumulative_infections = OpenCLRunner.get_cumulative_daily_infections(summaries)
-        #print("Model daily infections: ", model_daily_cumulative_infections)
+
         ##### Convert this to the cumulative number of infections at the end of each week
         # Get the number of days the model was ran for
         n_days = len(summaries[0].total_counts[DiseaseStatus.Exposed.value])
@@ -456,38 +452,17 @@ class OpenCLRunner:
 
         ########################################################################
         ########################################################################
-        # Create array containing the cumulative number of positive test 
+        # Create array containing the cumulatuve number of positive test 
         # results there have been so far observed on each day
         ########################################################################
         ########################################################################
         # Get the observations
-        #obs_weekly_cumulative_infections = cls.OBSERVATIONS
-            
-        # Find the number of weeks model being ran for, and the week which it is starting from
-        # (defined by the seeding process)
-        n_weeks = int(n_days / 7)
-        model_start_week =  int(cls.SEED_DAYS_START_DAY/7) + 1
-        #print("Model starting from week {}, and running for {} weeks".format(model_start_week, n_weeks))
-        
+        obs_weekly_cumulative_infections = cls.OBSERVATIONS
+
         # Keep only as many weeks of data as are in the model results
-        #obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[model_start_week -1:n_weeks+model_start_week]
-        
-        # Read in the original observations data (not cumulative)
-        cases_devon_weekly_raw_values = pd.read_csv('observation_data/weekly_cases_devon.csv')
-        
-        # For any model runs which is not being started from week 1 of the data we need to corect for the fact
-        # that the observations as given to the class are cumulative        
-        # Do this by trimming to only be the weeks of data that we need, and then finding
-        # the cumulative weekly sums at this stage
-        if model_start_week != 1:
-            obs_weekly_cumulative_infections = cases_devon_weekly_raw_values['OriginalCases'][model_start_week-1:n_weeks+model_start_week-1].cumsum().values
-        else:
-            obs_weekly_cumulative_infections = cls.OBSERVATIONS
-            # Keep only amount of data needed
-            obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[model_start_week -1:n_weeks+model_start_week-1]
-                
-        #print("obs weekly cumulative infections ", obs_weekly_cumulative_infections)
-        #print("model weekly cumulative infections ", model_weekly_cumulative_infections)
+        n_weeks = int(n_days / 7)
+        obs_weekly_cumulative_infections = obs_weekly_cumulative_infections[0:n_weeks]
+
         # find the distance between the vector of weekly values
         distance = OpenCLRunner.fit_l2(obs_weekly_cumulative_infections, model_weekly_cumulative_infections)
 
@@ -775,10 +750,9 @@ class OpenCLWrapper(object):
             snapshot.update_params(self.params)
             # Can set the random seed to make it deterministic (None means np will choose one randomly)
             snapshot.seed_prngs(seed=None)
-            print("Seed days start day", self.seed_days_start_day)
             # Create a simulator and upload the snapshot data to the OpenCL device
-            simulator = Simulator(snapshot, num_seed_days=self.num_seed_days, seed_days_start_day = self.seed_days_start_day,
-                                  gpu=self.use_gpu, opencl_dir=self.opencl_dir)
+            simulator = Simulator(snapshot, num_seed_days=self.num_seed_days, opencl_dir=self.opencl_dir,
+                                  gpu=self.use_gpu)
             simulator.upload_all(snapshot.buffers)
             # if quiet == False:
             #    print(f"Running simulation {sim_number + 1}.")
