@@ -157,9 +157,6 @@ original_priors = pyabc.Distribution(**decorated_rvs)
 #####################################################################################
 # Set the size of a data assimilation window in days:
 da_window_size =14
-NUM_SEED_DAYS = 14
-USE_GPU = False
-
 
 # Initialise the population
 DATA_DIR = os.path.join("..", "..", "devon_data")
@@ -233,7 +230,7 @@ for window_number in range(1, windows + 1):
       #transition=transition,  # Define how to transition from one population to the next
 
   # Prepare to run the model
-  db_path = ("sqlite:///" + "Outputs/RunModel_DynamicCalibration/ramp_da_{}pops_{}particles_{}.db".format(n_pops, n_particles, seconds))  # Path to database
+  db_path = ("sqlite:///" + "ramp_da_{}.db".format(seconds))  # Path to database
 
   # abc.new() needs the database location and any observations that we will use (these are passed to the
   # distance_function provided to pyabc.ABCSMC above). Currently the observations are provided to the model
