@@ -17,9 +17,11 @@ class Simulator:
 
     def __init__(self, snapshot, num_seed_days, gpu=True, opencl_dir="microsim/opencl/"):
         """Initialise OpenCL context, kernels, and buffers for the simulator.
+
         Args:
             snapshot (Snapshot): snapshot containing data and number of places, people and slots
             gpu (bool): Whether to try to use a discrete GPU, set to false to use CPU.
+
         Raises:
             OSError: If a GPU was requested but none is found.
         """
@@ -142,6 +144,7 @@ class Simulator:
 
     def upload_all(self, host_buffers):
         """Upload to every device buffer, errors if host_buffers is missing a field.
+
         Args:
             host_buffers: A Buffers namedtuple containing numpy arrays.
         """
@@ -150,6 +153,7 @@ class Simulator:
 
     def download_all(self, host_buffers):
         """Downloads every device buffer, errors if host_buffers is missing a field.
+
         Args:
             host_buffers: A dict of string names to numpy buffers.
         """
@@ -206,3 +210,4 @@ class Simulator:
         # run only the update statuses kernel so that people transition through disease states
         self.step_kernel("people_update_statuses")
         self.time += np.uint32(1)
+

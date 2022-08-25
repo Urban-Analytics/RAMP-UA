@@ -47,4 +47,4 @@ class InitialCases:
         # remove people from high_risk_ids so they are not chosen again
         self.high_risk_ids = np.setdiff1d(self.high_risk_ids, selected_ids)
 
-        return 
+        return selected_ids
