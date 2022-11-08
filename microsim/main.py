@@ -9,7 +9,15 @@ Created on Wed Apr 29 19:59:25 2020
 """
 import sys
 
+import os
+os.environ['R_HOME'] = 'C:/Users/gy17m2a/AppData/Local/Programs/R/R-4.2.0' #path to your R installation
+os.environ['R_USER'] = 'C:/ProgramData/Anaconda3/envs/analyse_results/Lib/site-packages/rpy2' #path depends on where you installed Python. Mine is the Anaconda distribution
+
 sys.path.append("microsim")  # This is only needed when testing. I'm so confused about the imports
+sys.path.append("C:/users/gy17m2a/OneDrive - University of Leeds/Project/RAMP-UA-new/")
+print(os.getcwd())
+print(sys.path)
+
 import multiprocessing
 import pandas as pd
 

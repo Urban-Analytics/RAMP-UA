@@ -27,6 +27,8 @@ class Params:
     """Convenience class for setting simulator parameters. Also holds the hard-coded default values
     (these defaults should not usually be used; parameters should be read from the parameters file)"""
 
+    user_warning_printed = False  # To prevent a particular warning being printed more than once
+
     def __init__(self,
                  location_hazard_multipliers=LocationHazardMultipliers(
                         retail=0.00655,
@@ -45,15 +47,17 @@ class Params:
                  diabetes_multiplier=1,
                  bloodpressure_multiplier=1,
                  overweight_sympt_mplier= 1,
-                 warn=True  # Can surpress warnings about using default values
+                 warn=True  # Can suppress warnings about using default values
                  ):
 
         # Warn if the default values are being used (note that this isn't perfect; this will be called
         # if the defaults in the parameter file match these hard-coded defaults, but that's unlikely
-        if location_hazard_multipliers == Params.__init__.__defaults__[0] or \
-                individual_hazard_multipliers == Params.__init__.__defaults__[1]:
+        if (location_hazard_multipliers == Params.__init__.__defaults__[0] or \
+                individual_hazard_multipliers == Params.__init__.__defaults__[1]) and \
+                not Params.user_warning_printed:
             warnings.warn("Params object is being created using hard-coded default values, "
-                          "not those in the parameters file.")
+                          "not those in the parameters file. This warning will not be displayed again.")
+            Params.user_warning_printed = True
 
         if obesity_multipliers is None:
             obesity_multipliers = [1, 1.48, 1.48, 1.48]

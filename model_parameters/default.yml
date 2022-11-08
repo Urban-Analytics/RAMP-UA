@@ -2,7 +2,7 @@
 # These can also be passed as command line arguments
 microsim:
   scenario: "BaselineScenario" # name for scenario directory
-  iterations: 80 # Number of model iterations. 0 means just run the initialisation.
+  iterations: 10 # Number of model iterations. 0 means just run the initialisation.
   data-dir: devon_data # Root directory to load data from
   output: true # Whether to generate output or not
   output-every-iteration: false # Can optionally write output at every iteration, not just at the end
@@ -28,9 +28,8 @@ microsim_calibration:
   # This multiplies the risk received as individuals visit shops etc.
   risk_multiplier: 1.0
 
-
 disease: # This is where the parameter for the disease model (the R part) can go (same format the 'microsim_calibration' above)
-  current_risk_beta: 0.00555
+  current_risk_beta: 0.025239665550846085
   risk_cap: 5
   seed_days: 5
   exposed_dist: "weibull"

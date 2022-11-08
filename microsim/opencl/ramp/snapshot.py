@@ -15,6 +15,7 @@ class Snapshot:
 
     def __init__(self, nplaces, npeople, nslots, time, area_codes, not_home_probs, lockdown_multipliers, buffers,
                  name="cache"):
+        #print("snapshoy.py -- snapshot __init__")
         self.name = name
         self.nplaces = nplaces
         self.npeople = npeople
@@ -181,6 +182,7 @@ class Snapshot:
     @classmethod
     def load_full_snapshot(cls, path):
         """Creates a snapshot by reading the .npz file from the provided path."""
+        #print("snapshot.py -- load_full_snapshot")
         with np.load(path, allow_pickle=True) as file_data:
             nplaces = file_data["nplaces"]
             npeople = file_data["npeople"]
