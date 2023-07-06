@@ -7,5 +7,5 @@ PyOpenGL==3.1.5
 pytools==2020.3.1
 six==1.15.0
 pytest==5.4.1
-scipy==1.5.2
+scipy==1.10.0
 tqdm
